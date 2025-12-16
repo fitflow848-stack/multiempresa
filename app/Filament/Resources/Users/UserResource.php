@@ -7,23 +7,23 @@ use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\Pages\ViewUser;
 use App\Filament\Resources\Users\Schemas\UserForm;
-use App\Filament\Resources\Users\Schemas\UserInfolist;
 use App\Filament\Resources\Users\Tables\UsersTable;
 use App\Models\User;
+use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource;
-use Filament\Forms\Form;
-use Filament\Infolists\Infolist;
+use Filament\Schemas\Schema;
 use Filament\Tables\Table;
 
 class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-users';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-users';
+
+    protected static string|UnitEnum|null $navigationGroup = 'Administración';
 
     protected static ?string $recordTitleAttribute = 'name';
-
-    protected static ?string $navigationGroup = 'Administración';
 
     protected static ?string $modelLabel = 'Usuario';
 
@@ -31,26 +31,16 @@ class UserResource extends Resource
 
     protected static ?int $navigationSort = 1;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return UserForm::configure($form);
-    }
-
-    public static function infolist(Infolist $infolist): Infolist
-    {
-        return UserInfolist::configure($infolist);
+        return $schema->schema(
+            UserForm::schema()
+        );
     }
 
     public static function table(Table $table): Table
     {
         return UsersTable::configure($table);
-    }
-
-    public static function getRelations(): array
-    {
-        return [
-            //
-        ];
     }
 
     public static function getPages(): array
@@ -65,6 +55,7 @@ class UserResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::count();
+        return (string) static::getModel()::count();
     }
 }
+

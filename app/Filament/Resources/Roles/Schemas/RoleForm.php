@@ -4,8 +4,8 @@ namespace App\Filament\Resources\Roles\Schemas;
 
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Form;
+use Filament\Schemas\Components\Form;
+use Filament\Schemas\Components\Section;
 use Spatie\Permission\Models\Permission;
 
 class RoleForm

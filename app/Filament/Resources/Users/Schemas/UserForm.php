@@ -2,22 +2,19 @@
 
 namespace App\Filament\Resources\Users\Schemas;
 
-use App\Models\Company;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\Section;
-use Filament\Forms\Form;
+use Filament\Schemas\Components\Section;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 
 class UserForm
 {
-    public static function configure(Form $form): Form
+    public static function schema(): array
     {
-        return $form
-            ->schema([
+        return [
                 Section::make('Información Personal')
                     ->schema([
                         TextInput::make('name')
@@ -66,24 +63,9 @@ class UserForm
                         
                         Select::make('company_id')
                             ->label('Empresa')
-                            ->relationship('company', 'name')
+                            ->relationship('company', 'razon_social')
                             ->searchable()
                             ->preload()
-                            ->createOptionForm([
-                                TextInput::make('name')
-                                    ->label('Nombre de la Empresa')
-                                    ->required(),
-                                TextInput::make('ruc')
-                                    ->label('RUC')
-                                    ->required(),
-                                TextInput::make('email')
-                                    ->label('Email')
-                                    ->email(),
-                                TextInput::make('phone')
-                                    ->label('Teléfono'),
-                                TextInput::make('address')
-                                    ->label('Dirección'),
-                            ])
                             ->native(false),
                         
                         Select::make('roles')
@@ -100,6 +82,6 @@ class UserForm
                             ->helperText('Determina si el usuario puede acceder al sistema'),
                     ])
                     ->columns(2),
-            ]);
+        ];
     }
 }

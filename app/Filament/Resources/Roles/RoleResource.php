@@ -5,22 +5,22 @@ namespace App\Filament\Resources\Roles;
 use App\Filament\Resources\Roles\Pages\CreateRole;
 use App\Filament\Resources\Roles\Pages\EditRole;
 use App\Filament\Resources\Roles\Pages\ListRoles;
-use App\Filament\Resources\Roles\Schemas\RoleForm;
 use App\Filament\Resources\Roles\Tables\RolesTable;
 use Spatie\Permission\Models\Role;
+use BackedEnum;
+use UnitEnum;
 use Filament\Resources\Resource;
-use Filament\Forms\Form;
 use Filament\Tables\Table;
 
 class RoleResource extends Resource
 {
     protected static ?string $model = Role::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-shield-check';
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-shield-check';
+
+    protected static UnitEnum|string|null $navigationGroup = 'Administración';
 
     protected static ?string $recordTitleAttribute = 'name';
-
-    protected static ?string $navigationGroup = 'Administración';
 
     protected static ?string $modelLabel = 'Rol';
 
@@ -28,21 +28,9 @@ class RoleResource extends Resource
 
     protected static ?int $navigationSort = 3;
 
-    public static function form(Form $form): Form
-    {
-        return RoleForm::configure($form);
-    }
-
     public static function table(Table $table): Table
     {
         return RolesTable::configure($table);
-    }
-
-    public static function getRelations(): array
-    {
-        return [
-            //
-        ];
     }
 
     public static function getPages(): array
@@ -56,6 +44,6 @@ class RoleResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::count();
+        return (string) static::getModel()::count();
     }
 }

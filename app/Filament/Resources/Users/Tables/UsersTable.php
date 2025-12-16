@@ -28,7 +28,7 @@ class UsersTable
                     ->searchable()
                     ->icon('heroicon-o-envelope'),
                     
-                TextColumn::make('company.name')
+                TextColumn::make('company.razon_social')
                     ->label('Empresa')
                     ->searchable()
                     ->sortable()
@@ -69,7 +69,7 @@ class UsersTable
             ->filters([
                 SelectFilter::make('company_id')
                     ->label('Empresa')
-                    ->relationship('company', 'name'),
+                    ->relationship('company', 'razon_social'),
                     
                 SelectFilter::make('roles')
                     ->label('Rol')

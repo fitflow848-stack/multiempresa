@@ -101,10 +101,18 @@ class RoleAndPermissionSeeder extends Seeder
             'products.view',
         ]);
 
-        // Asignar el rol de admin al primer usuario creado
+        // Asignar el rol de admin al primer usuario creado y asignar empresa
         $adminUser = User::first();
         if ($adminUser) {
             $adminUser->assignRole('admin');
+            
+            // Si no tiene company_id, asignar la primera empresa
+            if (!$adminUser->company_id) {
+                $company = \App\Models\Company::first();
+                if ($company) {
+                    $adminUser->update(['company_id' => $company->id]);
+                }
+            }
         }
     }
 }

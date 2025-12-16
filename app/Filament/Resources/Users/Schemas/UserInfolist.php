@@ -4,12 +4,12 @@ namespace App\Filament\Resources\Users\Schemas;
 
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\IconEntry;
-use Filament\Infolists\Components\Section;
-use Filament\Infolists\Infolist;
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
 
 class UserInfolist
 {
-    public static function configure(Infolist $infolist): Infolist
+    public static function configure(Schema $infolist): Schema
     {
         return $infolist
             ->schema([
@@ -43,7 +43,7 @@ class UserInfolist
 
                 Section::make('Información del Sistema')
                     ->schema([
-                        TextEntry::make('company.name')
+                        TextEntry::make('company.razon_social')
                             ->label('Empresa')
                             ->default('Sin empresa asignada'),
                         

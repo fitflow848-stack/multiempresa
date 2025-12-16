@@ -16,8 +16,8 @@ class CompaniesTable
     {
         return $table
             ->columns([
-                TextColumn::make('name')
-                    ->label('Nombre')
+                TextColumn::make('razon_social')
+                    ->label('Razon Social')
                     ->searchable()
                     ->sortable(),
                     

@@ -72,12 +72,4 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->hasAnyRole(['admin', 'supervisor']);
     }
-
-    /**
-     * Relación con la empresa.
-     */
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
-    }
 }
