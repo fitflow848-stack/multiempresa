@@ -9,6 +9,7 @@ class SubFamilia extends Model
 {
     use HasFactory;
 
+    protected $table = 'subfamilias';
     protected $fillable = ['familia_id', 'nombre'];
 
     public function familia()
