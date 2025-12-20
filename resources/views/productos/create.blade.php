@@ -925,7 +925,7 @@
                 // Crear form dinámico para POST (incluye CSRF)
                 const form = $('<form>', {
                     method: 'POST',
-                    action: '/productos/quick-create/step2'
+                    action: '{{env('APP_URL')}}/productos/quick-create/step2'
                 });
 
                 // CSRF token
