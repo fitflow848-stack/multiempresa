@@ -473,11 +473,19 @@
 
             // URLs (si prefieres rutas nombradas, asigna window.routes desde Blade)
             const URLS = {
-                familiasIndex: '{{env('APP_URL')}}/familias',
-                familiasStore: '{{env('APP_URL')}}/familias',
-                familiaSubfamilias: (id) => `{{env('APP_URL')}}/familias/${id}/subfamilias`,
-                subfamiliasIndex: '{{env('APP_URL')}}/subfamilias',
-                subfamiliasStore: '{{env('APP_URL')}}/subfamilias'
+                // Rutas simples
+                familiasIndex: '{{ route('familias.index') }}',
+                familiasStore: '{{ route('familias.store') }}',
+                subfamiliasIndex: '{{ route('subfamilias.index') }}',
+                subfamiliasStore: '{{ route('subfamilias.store') }}',
+
+                // Ruta con parámetro dinámico
+                familiaSubfamilias: (id) => {
+                    // Generamos la ruta en Blade usando un placeholder 'ID_PLACEHOLDER'
+                    let url = '{{ route('familias.subfamilias', ['familia' => 'ID_PLACEHOLDER']) }}';
+                    // Reemplazamos el placeholder con el ID real de JS
+                    return url.replace('ID_PLACEHOLDER', id);
+                }
             };
 
             // Estado local
@@ -925,7 +933,7 @@
                 // Crear form dinámico para POST (incluye CSRF)
                 const form = $('<form>', {
                     method: 'POST',
-                    action: '{{env('APP_URL')}}/productos/quick-create/step2'
+                    action: '{{ env('APP_URL') }}/productos/quick-create/step2'
                 });
 
                 // CSRF token

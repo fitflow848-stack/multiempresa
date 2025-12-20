@@ -231,6 +231,9 @@
                         Swal.fire('Error', msg, 'error');
                     });
             });
+            $('#btn-open-quick-create').on('click', function() {
+                location.href = '{{ route('productos.step1') }}';
+            });
         });
     </script>
 
