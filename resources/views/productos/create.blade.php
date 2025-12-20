@@ -271,7 +271,7 @@
                         const nombre = result.value;
 
                         $.ajax({
-                            url: '/marcas',
+                            url: '{{env('APP_URL')}}/marcas',
                             method: 'POST',
                             data: {
                                 nombre: nombre
@@ -407,7 +407,7 @@
                         const payload = result.value;
 
                         $.ajax({
-                            url: '/unidades',
+                            url: '{{env('APP_URL')}}/unidades',
                             method: 'POST',
                             data: payload,
                             headers: {
