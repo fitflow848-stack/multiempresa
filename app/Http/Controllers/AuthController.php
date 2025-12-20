@@ -32,7 +32,7 @@ class AuthController extends Controller
             $request->session()->regenerate();
             
             // Redirigir a la ruta solicitada originalmente o al POS
-            $intended = $request->session()->get('url.intended', route('pos.index'));
+            $intended = $request->session()->get('url.intended', route('principal.index'));
             return redirect($intended);
         }
 

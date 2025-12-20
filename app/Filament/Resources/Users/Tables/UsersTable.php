@@ -67,13 +67,23 @@ class UsersTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                // Company filter con fallback para labels null
                 SelectFilter::make('company_id')
                     ->label('Empresa')
-                    ->relationship('company', 'razon_social'),
-                    
+                    ->options(function () {
+                        return \App\Models\Company::all()
+                            ->mapWithKeys(fn($c) => [$c->id => $c->razon_social ?? 'Sin asignar'])
+                            ->toArray();
+                    }),
+
+                // Roles filter con fallback (usa id => name)
                 SelectFilter::make('roles')
                     ->label('Rol')
-                    ->relationship('roles', 'name')
+                    ->options(function () {
+                        return \Spatie\Permission\Models\Role::all()
+                            ->mapWithKeys(fn($r) => [$r->id => $r->name ?? 'Sin nombre'])
+                            ->toArray();
+                    })
                     ->multiple(),
                     
                 Filter::make('is_active')
