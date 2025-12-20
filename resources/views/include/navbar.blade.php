@@ -9,7 +9,7 @@
 
         <!-- Main Navigation Menu -->
         <div class="navbar-menu">
-            <a href="#" class="nav-link {{ request()->is('compras*') ? 'active' : '' }}">
+            <a href="{{ route('compras.create') }}" class="nav-link {{ request()->is('compras*') ? 'active' : '' }}">
                 <span class="nav-icon">📦</span>
                 Compras
             </a>
