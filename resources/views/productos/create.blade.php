@@ -473,11 +473,11 @@
 
             // URLs (si prefieres rutas nombradas, asigna window.routes desde Blade)
             const URLS = {
-                familiasIndex: '/familias',
-                familiasStore: '/familias',
-                familiaSubfamilias: (id) => `/familias/${id}/subfamilias`,
-                subfamiliasIndex: '/subfamilias',
-                subfamiliasStore: '/subfamilias'
+                familiasIndex: '{{env('APP_URL')}}/familias',
+                familiasStore: '{{env('APP_URL')}}/familias',
+                familiaSubfamilias: (id) => `{{env('APP_URL')}}/familias/${id}/subfamilias`,
+                subfamiliasIndex: '{{env('APP_URL')}}/subfamilias',
+                subfamiliasStore: '{{env('APP_URL')}}/subfamilias'
             };
 
             // Estado local
