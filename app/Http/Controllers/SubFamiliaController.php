@@ -7,7 +7,7 @@ use App\Models\Familia;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
-class SubfamiliaController extends Controller
+class SubFamiliaController extends Controller
 {
     // Listado de subfamilias (opcional, con filtro por familia_id)
     public function index(Request $request)

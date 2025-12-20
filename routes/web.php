@@ -10,7 +10,7 @@ use App\Http\Controllers\MarcaController;
 use App\Http\Controllers\PrincipalController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProveedorController;
-use App\Http\Controllers\SubfamiliaController;
+use App\Http\Controllers\SubFamiliaController;
 use App\Http\Controllers\UnidadMedidaController;
 use Illuminate\Support\Facades\Route;
 
@@ -76,8 +76,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/familias/{familia}/subfamilias', [FamiliaController::class, 'subfamilias'])->name('familias.subfamilias');
 
     // Subfamilias
-    Route::get('/subfamilias', [SubfamiliaController::class, 'index'])->name('subfamilias.index');
-    Route::post('/subfamilias', [SubfamiliaController::class, 'store'])->name('subfamilias.store');
+    Route::get('/subfamilias', [SubFamiliaController::class, 'index'])->name('subfamilias.index');
+    Route::post('/subfamilias', [SubFamiliaController::class, 'store'])->name('subfamilias.store');
 
     // Rutas del módulo de almacén
     Route::prefix('almacen')->name('almacen.')->group(function () {
