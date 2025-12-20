@@ -14,6 +14,6 @@ class Familia extends Model
     // Relaciones
     public function subfamilias()
     {
-        return $this->hasMany(Subfamilia::class);
+        return $this->hasMany(SubFamilia::class);
     }
 }
