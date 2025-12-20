@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Subfamilia;
+use App\Models\SubFamilia;
 use App\Models\Familia;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
