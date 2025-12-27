@@ -15,7 +15,11 @@ class PosController extends Controller
         $user = Auth::user();
         $company = $user->company;
 
-        return view('pos.index', compact('user', 'company'));
+        $sucursales = DB::table('sucursales')
+            ->where('company_id', $company->id)
+            ->get();
+
+        return view('pos.index', compact('user', 'company', 'sucursales'));
     }
 
     public function getProducts(Request $request)

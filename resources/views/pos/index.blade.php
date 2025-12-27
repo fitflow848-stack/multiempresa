@@ -118,7 +118,11 @@
     <div class="pos-container">
         <div class="left-sidebar">
             <div class="company-header">
-                <div>PURINA</div>
+                <select name="sucursal" id="sucursal-select">
+                    @foreach ($sucursales as $sucursal)
+                        <option value="{{ $sucursal->id }}">{{ $sucursal->nombre }}</option>
+                    @endforeach
+                </select>
                 <div class="company-options">
                     <div><i class="fa-solid fa-user-group"></i> Clientes</div>
                     <div><i class="fa-solid fa-book-open"></i> Comprobantes</div>

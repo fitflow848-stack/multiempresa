@@ -15,6 +15,9 @@ class AlmacenController extends Controller
     {
         $user = Auth::user();
         $company = Company::find($user->company_id);
+        $sucursales = DB::table('sucursales')
+            ->where('company_id', $company->id)
+            ->get();
         // Obtener stock agregado por producto a partir de los ingresos
         $stocks = DB::table('almacen_ingreso_detalle as d')
             ->join('productos as p', 'p.id', 'd.producto_id')
@@ -33,7 +36,7 @@ class AlmacenController extends Controller
 
         $productos = $stocks;
 
-        return view('almacen.index', compact('user', 'company', 'productos'));
+        return view('almacen.index', compact('user', 'company', 'productos', 'sucursales'));
     }
 
     public function ajustarExistencias($id)

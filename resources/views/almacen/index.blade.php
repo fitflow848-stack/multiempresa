@@ -29,8 +29,10 @@
                 <div class="search-row">
                     <div class="form-group">
                         <label>Local:</label>
-                        <select class="form-control" name="local">
-                            <option value="PURINA">PURINA</option>
+                        <select class="form-control" name="sucursal" id="sucursal-select">
+                            @foreach ($sucursales as $sucursal)
+                                <option value="{{ $sucursal->id }}">{{ $sucursal->nombre }}</option>
+                            @endforeach
                         </select>
                     </div>
 
@@ -88,32 +90,33 @@
                     </tr>
                 </thead>
                 <tbody>
-                @if(isset($productos) && count($productos) > 0)
-                    @foreach($productos as $index => $p)
+                    @if (isset($productos) && count($productos) > 0)
+                        @foreach ($productos as $index => $p)
+                            <tr>
+                                <td>{{ $index + 1 }}</td>
+                                <td>Principal</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>{{ $p->producto ?? '-' }}</td>
+                                <td>{{ number_format($p->existencias, 2) }}</td>
+                                <td>{{ isset($p->costo) ? number_format($p->costo, 2) : '-' }}</td>
+                                <td>{{ isset($p->pvp) ? number_format($p->pvp, 2) : '-' }}</td>
+                                <td>{{ isset($p->pvpd) ? number_format($p->pvpd, 2) : '-' }}</td>
+                                <td>{{ isset($p->pvc) ? number_format($p->pvc, 2) : '-' }}</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>
+                                    <a href="{{ route('almacen.ajustar-existencias', $p->producto_id) }}"
+                                        class="btn btn-sm btn-primary">Ajustar</a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    @else
                         <tr>
-                            <td>{{ $index + 1 }}</td>
-                            <td>Principal</td>
-                            <td>-</td>
-                            <td>-</td>
-                            <td>{{ $p->producto ?? '-' }}</td>
-                            <td>{{ number_format($p->existencias, 2) }}</td>
-                            <td>{{ isset($p->costo) ? number_format($p->costo,2) : '-' }}</td>
-                            <td>{{ isset($p->pvp) ? number_format($p->pvp,2) : '-' }}</td>
-                            <td>{{ isset($p->pvpd) ? number_format($p->pvpd,2) : '-' }}</td>
-                            <td>{{ isset($p->pvc) ? number_format($p->pvc,2) : '-' }}</td>
-                            <td>-</td>
-                            <td>-</td>
-                            <td>-</td>
-                            <td>
-                                <a href="{{ route('almacen.ajustar-existencias', $p->producto_id) }}" class="btn btn-sm btn-primary">Ajustar</a>
-                            </td>
+                            <td colspan="14">No se encontraron productos en almacén.</td>
                         </tr>
-                    @endforeach
-                @else
-                    <tr>
-                        <td colspan="14">No se encontraron productos en almacén.</td>
-                    </tr>
-                @endif
+                    @endif
                 </tbody>
             </table>
         </div>
@@ -153,5 +156,5 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-   
+
 @endsection
