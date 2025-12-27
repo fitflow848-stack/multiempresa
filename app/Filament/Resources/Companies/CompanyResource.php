@@ -53,6 +53,13 @@ class CompanyResource extends Resource
         ];
     }
 
+    // public static function getRelations(): array
+    // {
+    //     return [
+    //         RelationManagers\SucursalesRelationManager::class,
+    //     ];
+    // }
+
     public static function getNavigationBadge(): ?string
     {
         return (string) static::getModel()::count();

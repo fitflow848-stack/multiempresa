@@ -83,4 +83,12 @@ class Company extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    /**
+     * Sucursales (branches) de la empresa
+     */
+    public function sucursales(): HasMany
+    {
+        return $this->hasMany(Sucursal::class, 'company_id');
+    }
 }

@@ -1,154 +1,224 @@
 @extends('layout.app')
 
 @section('content')
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.1.1/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 
-    <div class="container py-4">
-        <h1 class="h5 mb-4">Registrar Compras</h1>
+{{-- ===================== STYLES ===================== --}}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.1.1/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
 
-        <form method="POST" action="{{route('compras.store')}}" id="compra-form">
-            @csrf
+<style>
+    .page-title { font-weight: 600; }
+    .card {
+        border: 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,.05);
+        border-radius: .75rem;
+    }
+    .card-header {
+        background: #f8f9fa;
+        font-weight: 600;
+    }
+    .table thead th {
+        position: sticky;
+        top: 0;
+        background: #fff;
+        z-index: 1;
+    }
+    .summary-box {
+        background: #f8fafc;
+        border-radius: .75rem;
+        padding: 1rem;
+    }
+    .summary-box .total {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #0d6efd;
+    }
+</style>
 
-            <div class="card mb-4">
-                <div class="card-header">Ticket</div>
-                <div class="card-body">
-                    <div class="row g-3 align-items-end">
-                        <div class="col-12 col-lg-6">
-                            <label for="proveedor_select" class="form-label small text-muted">Proveedor</label>
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal"
-                                    data-bs-target="#proveedorModal" aria-label="Alta proveedor">+</button>
-                                <select id="proveedor_select" name="proveedor_id" class="form-select form-select-sm" style="width:100%"></select>
-                            </div>
-                        </div>
+<div class="container py-4">
 
-                        <div class="col-6 col-lg-2">
-                            <label for="presupuesto" class="form-label small text-muted">Presupuesto</label>
-                            <select id="presupuesto" name="presupuesto" class="form-select form-select-sm">
-                                <option>Compra</option>
-                                <option>Servicio</option>
-                            </select>
-                        </div>
+    {{-- ===================== HEADER ===================== --}}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="page-title mb-1">🧾 Registrar Compra</h1>
+            <div class="text-muted small">Gestión de comprobantes y productos</div>
+        </div>
 
-                        <div class="col-6 col-lg-2">
-                            <label for="tipo" class="form-label small text-muted">Tipo</label>
-                            <select id="tipo" name="tipo" class="form-select form-select-sm">
-                                <option>Ticket</option>
-                                <option>Factura</option>
-                                <option>Boleta</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="row g-3 mt-3">
-                        <div class="col-12 col-md-6">
-                            <label for="fecha_emision" class="form-label small text-muted">Fecha Emisión</label>
-                            <input id="fecha_emision" name="fecha_emision" type="date" class="form-control form-control-sm" />
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label for="fecha_pago" class="form-label small text-muted">Fecha Pago</label>
-                            <input id="fecha_pago" name="fecha_pago" type="date" class="form-control form-control-sm" />
-                        </div>
-                    </div>
-
-                    <div class="d-flex flex-wrap gap-3 align-items-center mt-3">
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="moneda" id="moneda_sol" value="sol" checked>
-                            <label class="form-check-label small" for="moneda_sol">Sol</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="moneda" id="moneda_usd" value="usd">
-                            <label class="form-check-label small" for="moneda_usd">Dólar</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="credito" name="credito">
-                            <label class="form-check-label small" for="credito">Crédito</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="percepcion" name="percepcion">
-                            <label class="form-check-label small" for="percepcion">Percepción</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="inc_impuesto" name="inc_impuesto">
-                            <label class="form-check-label small" for="inc_impuesto">Inc. Impuesto</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Productos</span>
-                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal"
-                        data-bs-target="#productSearchModal">...</button>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-sm mb-0 align-middle">
-                            <thead class="table-light small text-muted">
-                                <tr>
-                                    <th>#</th>
-                                    <th>CB</th>
-                                    <th>Descripción</th>
-                                    <th class="text-end">Cantidad</th>
-                                    <th class="text-end">Costo/Unid.</th>
-                                    <th class="text-end">Dscto</th>
-                                    <th class="text-end">VCPC</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card mb-4">
-                <div class="card-header">Resumen</div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-12 col-md-2">
-                            <label class="form-label small text-muted">Total Bruto</label>
-                            <input name="total_bruto" type="number" step="0.01" class="form-control form-control-sm text-end" value="0.00" readonly />
-                        </div>
-                        <div class="col-12 col-md-2">
-                            <label class="form-label small text-muted">Total Descuento</label>
-                            <input name="total_descuento" type="number" step="0.01" class="form-control form-control-sm text-end" value="0.00" readonly />
-                        </div>
-                        <div class="col-12 col-md-2">
-                            <label class="form-label small text-muted">Bruto Neto</label>
-                            <input name="bruto_neto" type="number" step="0.01" class="form-control form-control-sm text-end" value="0.00" readonly />
-                        </div>
-                        <div class="col-12 col-md-2">
-                            <label class="form-label small text-muted">Total Impuesto</label>
-                            <input name="total_impuesto" type="number" step="0.01" class="form-control form-control-sm text-end" value="0.00" readonly />
-                        </div>
-                        <div class="col-12 col-md-2">
-                            <label class="form-label small text-muted">Total Neto</label>
-                            <input name="total_neto" type="number" step="0.01" class="form-control form-control-sm text-end" value="0.00" readonly />
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="d-flex justify-content-end gap-2 mb-4">
-                <a href="{{ url()->previous() }}" class="btn btn-outline-secondary">Cancelar</a>
-                <button type="submit" class="btn btn-primary">Guardar</button>
-            </div>
-        </form>
-
-        @include('compras.partials.modal-proveedor')
-        @include('compras.partials.modal-producto-search')
+        <div class="d-flex gap-2">
+            <a href="{{ url()->previous() }}" class="btn btn-outline-secondary">
+                Cancelar
+            </a>
+            <button form="compra-form" type="submit" class="btn btn-primary">
+                💾 Guardar Compra
+            </button>
+        </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    {{-- ===================== FORM ===================== --}}
+    <form method="POST" action="{{ route('compras.store') }}" id="compra-form">
+        @csrf
 
-    <script>
+        {{-- ===================== TICKET ===================== --}}
+        <div class="card mb-4">
+            <div class="card-header">📄 Datos del comprobante</div>
+            <div class="card-body">
+
+                <div class="row g-3">
+                    <div class="col-lg-6">
+                        <label class="form-label">Proveedor</label>
+                        <div class="input-group">
+                            <button type="button" class="btn btn-outline-secondary"
+                                data-bs-toggle="modal" data-bs-target="#proveedorModal">+</button>
+                            <select id="proveedor_select" name="proveedor_id" class="form-select"></select>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-3">
+                        <label class="form-label">Presupuesto</label>
+                        <select name="presupuesto" class="form-select">
+                            <option value="Compra">Compra</option>
+                            <option value="Servicio">Servicio</option>
+                        </select>
+                    </div>
+
+                    <div class="col-lg-3">
+                        <label class="form-label">Tipo</label>
+                        <select name="tipo" class="form-select">
+                            <option>Ticket</option>
+                            <option>Factura</option>
+                            <option>Boleta</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-3 mt-2">
+                    <div class="col-md-6">
+                        <label class="form-label">Fecha Emisión</label>
+                        <input type="date" name="fecha_emision" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Fecha Pago</label>
+                        <input type="date" name="fecha_pago" class="form-control">
+                    </div>
+                </div>
+
+                {{-- OPCIONES --}}
+                <div class="border rounded p-3 mt-3">
+                    <div class="fw-semibold mb-2">Opciones</div>
+                    <div class="d-flex flex-wrap gap-4 align-items-center">
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="moneda" value="sol" checked>
+                            <label class="form-check-label">Soles</label>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="moneda" value="usd">
+                            <label class="form-check-label">Dólares</label>
+                        </div>
+
+                        <div class="vr"></div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="credito">
+                            <label class="form-check-label">Crédito</label>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="percepcion">
+                            <label class="form-check-label">Percepción</label>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="inc_impuesto">
+                            <label class="form-check-label">Inc. Impuesto</label>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        {{-- ===================== PRODUCTOS ===================== --}}
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>📦 Productos</span>
+                <button type="button" class="btn btn-sm btn-outline-primary"
+                    data-bs-toggle="modal" data-bs-target="#productSearchModal">
+                    ➕ Agregar producto
+                </button>
+            </div>
+
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>CB</th>
+                                <th>Descripción</th>
+                                <th class="text-end">Cantidad</th>
+                                <th class="text-end">Costo</th>
+                                <th class="text-end">Dscto</th>
+                                <th class="text-end">VCPC</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{-- JS --}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {{-- ===================== RESUMEN ===================== --}}
+        <div class="card mb-4">
+            <div class="card-header">💰 Resumen</div>
+            <div class="card-body">
+                <div class="summary-box">
+                    <div class="row g-3">
+                        <div class="col-md-2">
+                            <label class="form-label">Bruto</label>
+                            <input name="total_bruto" class="form-control text-end" readonly value="0.00">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Descuento</label>
+                            <input name="total_descuento" class="form-control text-end" readonly value="0.00">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Bruto Neto</label>
+                            <input name="bruto_neto" class="form-control text-end" readonly value="0.00">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Impuestos</label>
+                            <input name="total_impuesto" class="form-control text-end" readonly value="0.00">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Total Neto</label>
+                            <input name="total_neto" class="form-control text-end total" readonly value="0.00">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </form>
+
+    {{-- ===================== MODALES ===================== --}}
+    @include('compras.partials.modal-proveedor')
+    @include('compras.partials.modal-producto-search')
+
+</div>
+
+{{-- ===================== SCRIPTS ===================== --}}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
         $(function() {
             $.ajaxSetup({
                 headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' }
@@ -238,4 +308,5 @@
     </script>
 
    @include('compras.partials.js.compra-product-search-and-add')
+
 @endsection

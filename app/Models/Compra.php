@@ -12,7 +12,7 @@ class Compra extends Model
     protected $fillable = [
         'proveedor_id','fecha_emision','fecha_pago','moneda','credito','percepcion','inc_impuesto',
         'total_bruto','total_descuento','bruto_neto','total_impuesto','total_neto','flete','total_pagar',
-        'tipo','presupuesto','local_destino','received_at'
+        'tipo','presupuesto','local_destino','received_at', 'recibido', 'id_usuario'
     ];
 
     protected $casts = [
@@ -25,5 +25,15 @@ class Compra extends Model
     public function lineas()
     {
         return $this->hasMany(CompraLinea::class, 'compra_id');
+    }
+
+    public function proveedor()
+    {
+        return $this->belongsTo(Proveedor::class, 'proveedor_id');
+    }
+
+    public function usuario()
+    {
+        return $this->belongsTo(User::class, 'id_usuario');
     }
 }

@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\AlmacenIngresoDetalle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class AlmacenController extends Controller
 {
@@ -13,10 +15,24 @@ class AlmacenController extends Controller
     {
         $user = Auth::user();
         $company = Company::find($user->company_id);
-        
-        // TODO: Obtener productos reales de la base de datos
-        $productos = $this->getMockProducts();
-        
+        // Obtener stock agregado por producto a partir de los ingresos
+        $stocks = DB::table('almacen_ingreso_detalle as d')
+            ->join('productos as p', 'p.id', 'd.producto_id')
+            ->select(
+                'd.producto_id',
+                'p.nombre as producto',
+                'p.codigo_barras as codigo_barras',
+                DB::raw('SUM(d.cantidad) as existencias'),
+                DB::raw('AVG(d.costo) as costo'),
+                DB::raw('AVG(d.pvp) as pvp'),
+                DB::raw('AVG(d.pvpd) as pvpd'),
+                DB::raw('AVG(d.pvc) as pvc')
+            )
+            ->groupBy('d.producto_id', 'p.nombre', 'p.codigo_barras')
+            ->get();
+
+        $productos = $stocks;
+
         return view('almacen.index', compact('user', 'company', 'productos'));
     }
 

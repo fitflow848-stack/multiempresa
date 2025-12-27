@@ -82,7 +82,6 @@ class ProductoController extends Controller
                 'attr_fecha_vencimiento' => $request['attr_fecha_vencimiento'] ?? false,
                 'attr_lote_produccion' => $request['attr_lote_produccion'] ?? false,
                 'attr_venta_menudeo' => $request['attr_venta_menudeo'] ?? false,
-
                 'codigo_barras' => $request['cb'] ?? null,
                 'registro_sanitario' => $request['registro_sanitario'] ?? null,
                 'presentacion_modelo' => $request['presentacion_modelo'] ?? null,
@@ -125,8 +124,8 @@ class ProductoController extends Controller
 
             DB::commit();
 
-            return redirect()->route('compras.create')
-                ->with('success', 'Producto creado correctamente.');
+            // return redirect()->route('compras.create')
+            //     ->with('success', 'Producto creado correctamente.');
         } catch (\Throwable $e) {
             DB::rollBack();
             // registra el error en logs y vuelve con mensaje

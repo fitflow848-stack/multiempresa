@@ -10,6 +10,7 @@ use App\Http\Controllers\MarcaController;
 use App\Http\Controllers\PrincipalController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProveedorController;
+use App\Http\Controllers\RecibirProductoController;
 use App\Http\Controllers\SubFamiliaController;
 use App\Http\Controllers\UnidadMedidaController;
 use Illuminate\Support\Facades\Route;
@@ -30,25 +31,26 @@ Route::middleware(['auth'])->group(function () {
 
     Route::prefix('pos')->name('pos.')->group(function () {
         Route::get('/', [PosController::class, 'index'])->name('index');
+        Route::get('/emitir', [PosController::class, 'emitir'])->name('emitir');
         Route::get('/products', [PosController::class, 'getProducts'])->name('products');
         Route::post('/sale', [PosController::class, 'createSale'])->name('sale.create');
     });
-
+Route::get('/pos/buscar-productos', [PosController::class, 'buscar'])->name('pos.buscar');
     Route::prefix('compras')->name('compras.')->group(function () {
-        Route::get('/create', [ComprasController::class, 'index'])->name('create');
-
-        // ruta POST para /compras
+        Route::get('/', [ComprasController::class, 'index'])->name('index');
+        Route::post('/data', [ComprasController::class, 'data'])->name('data');
+        Route::get('/create', [ComprasController::class, 'create'])->name('create');
         Route::post('/', [ComprasController::class, 'store'])->name('store');
-
-        // Página de éxito (muestra el ticket creado)
         Route::get('/{compra}/success', [ComprasController::class, 'success'])->name('success');
-
-        // Ver compra
         Route::get('/{compra}', [ComprasController::class, 'show'])->name('show');
-
-        // Recibir ticket (vista y guardar recepción)
         Route::get('/{compra}/recibir', [ComprasController::class, 'receiveForm'])->name('receive');
         Route::post('/{compra}/recibir', [ComprasController::class, 'storeReception'])->name('receive.store');
+        Route::get('/{compra}/recibir/procesar', [ComprasController::class, 'processReception'])->name('receive.process');
+        Route::post('/{compra}/recibir/productos', [ComprasController::class, 'storeReceptionProducts'])->name('receive.products.store');
+        // Batch reception routes
+        Route::post('/recibir/seleccionados', [ComprasController::class, 'startBatchReception'])->name('receive.start_batch');
+        Route::get('/recibir/batch', [ComprasController::class, 'processBatch'])->name('receive.batch');
+        Route::post('/recibir/batch/next', [ComprasController::class, 'receiveAndNext'])->name('receive.batch.next');
     });
 
     Route::prefix('productos')->name('productos.')->group(function () {
@@ -57,6 +59,13 @@ Route::middleware(['auth'])->group(function () {
             ->name('quick.step2');
         Route::post('/store/producto', [ProductoController::class, 'store'])->name('store');
         Route::get('/api/productos', [ProductoController::class, 'search'])->name('search');
+    });
+
+    Route::prefix('recibir-productos')->name('recibir-productos.')->group(function () {
+        Route::get('/', [RecibirProductoController::class, 'index'])->name('index');
+        Route::get('/{id}/detalle', [RecibirProductoController::class, 'detalle']);
+        Route::post('/confirmacion', [RecibirProductoController::class, 'confirmacion'])->name('confirmacion');
+        Route::post('/guardar', [RecibirProductoController::class, 'guardar'])->name('guardar');
     });
 
     Route::post('/proveedores', [ProveedorController::class, 'store'])->name('proveedores.store');
