@@ -566,6 +566,23 @@
         });
 
         function verificarClienteSeleccionado() {
+            // Primero restaurar el ticket guardado si existe
+            const ticketGuardado = sessionStorage.getItem('ticketGuardadoPOS');
+            if (ticketGuardado) {
+                try {
+                    ticket = JSON.parse(ticketGuardado);
+                    renderTicket();
+                    mostrarNotificacion(`Se restauraron ${ticket.length} productos al ticket`);
+                    
+                    // Limpiar ticket guardado
+                    sessionStorage.removeItem('ticketGuardadoPOS');
+                } catch (error) {
+                    console.error('Error al restaurar ticket:', error);
+                    sessionStorage.removeItem('ticketGuardadoPOS');
+                }
+            }
+            
+            // Luego verificar si hay cliente seleccionado
             const clienteData = sessionStorage.getItem('clienteSeleccionadoPOS');
             if (clienteData) {
                 try {
@@ -579,6 +596,19 @@
                 } catch (error) {
                     console.error('Error al cargar cliente seleccionado:', error);
                     sessionStorage.removeItem('clienteSeleccionadePOS');
+                }
+            } else {
+                // Si no hay cliente seleccionado pero había uno guardado, restaurarlo
+                const clienteGuardado = sessionStorage.getItem('clienteGuardadoPOS');
+                if (clienteGuardado) {
+                    try {
+                        clienteActual = JSON.parse(clienteGuardado);
+                        document.getElementById('footer-cliente').innerText = clienteActual.nombre;
+                        sessionStorage.removeItem('clienteGuardadoPOS');
+                    } catch (error) {
+                        console.error('Error al restaurar cliente guardado:', error);
+                        sessionStorage.removeItem('clienteGuardadoPOS');
+                    }
                 }
             }
         }
@@ -679,6 +709,11 @@
 
         // Función para navegar a clientes marcando que viene desde POS
         function navegarAClientes() {
+            // Guardar el ticket actual antes de navegar
+            if (ticket.length > 0) {
+                sessionStorage.setItem('ticketGuardadoPOS', JSON.stringify(ticket));
+                sessionStorage.setItem('clienteGuardadoPOS', JSON.stringify(clienteActual));
+            }
             sessionStorage.setItem('navegandoDesdePOS', 'true');
             window.location.href = '{{ route("clientes.index") }}';
         }

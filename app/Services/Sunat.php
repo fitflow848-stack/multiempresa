@@ -112,9 +112,9 @@ class Sunat
             "moneda" => $venta->moneda == 1 ? "PEN" : "USD",
             "serie" => (string) $venta->serie,
             "numero" => (string) $numeroSinCeros,
-            "fecha_emision" => (string) $venta->fecha_emision,
+            "fecha_emision" => date('Y-m-d', strtotime($venta->fecha_emision)),
             // por defecto la fecha_vencimiento en venta se toma (se puede sobreescribir luego)
-            "fecha_vencimiento" => (string) ($venta->fecha_vencimiento ?? date('Y-m-d')),
+            "fecha_vencimiento" => (string) (date('Y-m-d', strtotime($venta->fecha_vencimiento)) ?? date('Y-m-d')),
             "forma_pago" => $forma_pago,
             "cuotas_credito" => [],
             "cliente" => [
@@ -233,15 +233,15 @@ class Sunat
                 // Si no hay cuotas en la venta pero es credito, crear una única cuota con fecha_vencimiento y monto total (bruto)
                 $data['cuotas_credito'] = [
                     [
-                        'fecha' => (string) ($venta->fecha_vencimiento ?? $venta->fecha_emision),
+                        'fecha' => (string) (date('Y-m-d', strtotime($venta->fecha_vencimiento)) ?? date('Y-m-d', strtotime($venta->fecha_emision))),
                         'monto' => (float) $total
                     ]
                 ];
-                $data['fecha_vencimiento'] = (string) ($venta->fecha_vencimiento ?? $venta->fecha_emision);
+                $data['fecha_vencimiento'] = (string) (date('Y-m-d', strtotime($venta->fecha_vencimiento)) ?? date('Y-m-d', strtotime($venta->fecha_emision)));
             }
         } else {
             // contado: dejar cuotas_credito vacío y fecha_vencimiento = fecha_emision (o venta->fecha_vencimiento si se quiere)
-            $data['fecha_vencimiento'] = (string) ($venta->fecha_vencimiento ?? $venta->fecha_emision);
+            $data['fecha_vencimiento'] = (string) (date('Y-m-d', strtotime($venta->fecha_vencimiento)) ?? date('Y-m-d', strtotime($venta->fecha_emision)));
         }
         // devolver JSON sin escapar Unicode
         return json_encode($data, JSON_UNESCAPED_UNICODE);
