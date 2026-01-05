@@ -30,22 +30,28 @@
                         <div class="col-12 col-md-6">
                             <label class="form-label small text-muted">Lab. hab</label>
                             <div class="input-group">
-                                <input type="text" name="laboratorio" id="np-laboratorio"
-                                    class="form-control form-control-sm" placeholder="Laboratorio / Habilitación">
+                                <select id="np-laboratorio" name="laboratorio_id" class="form-select form-select-sm">
+                                    <option value="">-- seleccionar laboratorio --</option>
+                                    @foreach ($laboratorios ?? [] as $laboratorio)
+                                        <option value="{{ $laboratorio->id }}">{{ $laboratorio->nombre }}</option>
+                                    @endforeach
+                                </select>
                                 <button type="button" class="btn btn-sm btn-outline-secondary" id="np-lab-add"
                                     title="Agregar laboratorio">+</button>
                             </div>
+                            <div class="form-text small text-muted">Usa + para crear nuevo laboratorio si hace falta.</div>
                         </div>
 
                         <div class="col-12 col-md-6">
                             <label class="form-label small text-muted">Fam/Subfam</label>
-                            <div class="input-group">
-                                <select name="familia" id="np-familia" class="form-select form-select-sm">
+                            <div class="input-group position-relative">
+                                <select name="familia" id="np-familia" class="form-select form-select-sm" readonly style="pointer-events: none;">
                                     <option value="">-- seleccionar --</option>
                                     <option value="nutrientes">NUTRIENTES</option>
                                     <option value="fertilizantes">FERTILIZANTES</option>
                                     <option value="varios">VARIOS</option>
                                 </select>
+                                <div class="select-overlay" style="position: absolute; top: 0; left: 0; right: 42px; bottom: 0; z-index: 10; cursor: pointer;"></div>
                                 <button type="button" class="btn btn-sm btn-outline-secondary" id="np-fam-add"
                                     title="Agregar familia">+</button>
                             </div>
@@ -466,6 +472,124 @@
 
         })(jQuery);
 
+        // Funcionalidad para Laboratorio
+        (function($) {
+            'use strict';
+
+            // Reusar funciones definidas para otros modales
+            function toastSuccess(message) {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: message,
+                    showConfirmButton: false,
+                    timer: 2000,
+                    timerProgressBar: true
+                });
+            }
+
+            function showValidationErrors(errors) {
+                let html = '<ul style="text-align:left;margin:0;padding-left:1.2em;">';
+                for (const key in errors) {
+                    if (Object.prototype.hasOwnProperty.call(errors, key)) {
+                        errors[key].forEach(msg => {
+                            html += `<li>${msg}</li>`;
+                        });
+                    }
+                }
+                html += '</ul>';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Errores',
+                    html: html
+                });
+            }
+
+            $(function() {
+                $('#np-lab-add').on('click', function(e) {
+                    e.preventDefault();
+
+                    Swal.fire({
+                        title: 'Nuevo laboratorio',
+                        input: 'text',
+                        inputLabel: 'Nombre del laboratorio',
+                        inputPlaceholder: 'Ej. LABORATORIO XYZ',
+                        showCancelButton: true,
+                        confirmButtonText: 'Guardar',
+                        preConfirm: (value) => {
+                            if (!value || !value.trim()) {
+                                Swal.showValidationMessage('El nombre es requerido');
+                                return false;
+                            }
+                            return value.trim();
+                        }
+                    }).then((result) => {
+                        if (!result.isConfirmed) return;
+
+                        const nombre = result.value;
+
+                        $.ajax({
+                            url: '{{env('APP_URL')}}/laboratorios',
+                            method: 'POST',
+                            data: {
+                                nombre: nombre
+                            },
+                            headers: {
+                                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                            },
+                            success: function(data, textStatus, jqXHR) {
+                                const status = jqXHR.status; // 200 = existente, 201 = creado
+                                const id = data.id;
+                                const nombreResp = data.nombre;
+
+                                // Verificar si ya existe la opción (por id)
+                                let $select = $('#np-laboratorio');
+                                if ($select.find('option[value="' + id + '"]').length === 0) {
+                                    // agregar nueva opción
+                                    const option = new Option(nombreResp, id, true, true);
+                                    $select.append(option);
+                                } else {
+                                    // si existe, seleccionarla y actualizar texto por si cambió
+                                    $select.find('option[value="' + id + '"]').text(nombreResp).prop('selected', true);
+                                }
+
+                                // Si usas select2, disparar evento para refrescar
+                                if ($select.hasClass('select2-hidden-accessible')) {
+                                    $select.trigger('change.select2');
+                                }
+
+                                if (status === 201) {
+                                    toastSuccess('Laboratorio creado');
+                                } else {
+                                    toastSuccess('Laboratorio disponible');
+                                }
+                            },
+                            error: function(jqXHR, textStatus, errorThrown) {
+                                if (jqXHR.status === 422) {
+                                    // errores de validación Laravel
+                                    const json = jqXHR.responseJSON;
+                                    if (json && json.errors) {
+                                        showValidationErrors(json.errors);
+                                        return;
+                                    }
+                                }
+
+                                // otro error
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: jqXHR.responseJSON && jqXHR.responseJSON.message ?
+                                        jqXHR.responseJSON.message :
+                                        'Hubo un error al guardar el laboratorio'
+                                });
+                            }
+                        });
+                    });
+                });
+            });
+        })(jQuery);
+
 
         // Requiere jQuery, Bootstrap JS y SweetAlert2 (ya los cargas en la vista)
         (function($) {
@@ -689,9 +813,16 @@
 
             // Initialize
             $(function() {
-                // Abrir modal desde el botón existente #np-fam-add o también al hacer click en el select
-                $('#np-fam-add, #np-familia').on('click', function(e) {
+                // Prevenir que el select se abra
+                $('#np-familia').on('mousedown keydown', function(e) {
                     e.preventDefault();
+                    return false;
+                });
+
+                // Abrir modal desde el botón existente #np-fam-add o el overlay del select
+                $('#np-fam-add, .select-overlay').on('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
                     // Reset estado
                     selectedFamilia = null;
                     selectedSubfamilia = null;
@@ -946,7 +1077,7 @@
 
                 // Campos a enviar (ajusta nombres según tu validación en controller)
                 const map = {
-                    laboratorio: '#np-laboratorio',
+                    laboratorio_id: '#np-laboratorio',
                     familia_id: '#np-familia',
                     // si usas select2 y guarda id en value, está bien
                     subfamilia_id: '#np-subfamilia',

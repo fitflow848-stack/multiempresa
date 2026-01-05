@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Marca;
 use App\Models\UnidadMedida;
+use App\Models\Laboratorio;
 use App\Models\Producto;
 use App\Models\ProductoLinea;
 use Illuminate\Http\Request;
@@ -18,14 +19,15 @@ class ProductoController extends Controller
     {
         $marcas = Marca::all();
         $unidades = UnidadMedida::all();
-        return view('productos.create', compact('marcas', 'unidades'));
+        $laboratorios = Laboratorio::all();
+        return view('productos.create', compact('marcas', 'unidades', 'laboratorios'));
     }
 
     public function step2(Request $request)
     {
         // Validación mínima de los campos que vienen del quick form
         $data = $request->validate([
-            'laboratorio' => ['nullable', 'string', 'max:255'],
+            'laboratorio_id' => ['nullable', 'integer'],
             'familia_id' => ['nullable', 'integer'],
             'subfamilia_id' => ['nullable', 'integer'],
             'nombre' => ['required', 'string', 'max:1000'],
@@ -70,7 +72,7 @@ class ProductoController extends Controller
             $productoData = [
                 'id_empresa' => Auth::user()->company_id,
                 'nombre' => $request['nombre'],
-                'laboratorio' => $request['laboratorio'] ?? null,
+                'laboratorio_id' => $request['laboratorio_id'] ?? null,
                 'familia_id' => $request['familia_id'] ?? null,
                 'subfamilia_id' => $request['subfamilia_id'] ?? null,
                 'marca_id' => $request['marca_id'] ?? null,
@@ -124,8 +126,8 @@ class ProductoController extends Controller
 
             DB::commit();
 
-            // return redirect()->route('compras.create')
-            //     ->with('success', 'Producto creado correctamente.');
+            return redirect()->route('compras.create')
+                ->with('success', 'Producto creado correctamente.');
         } catch (\Throwable $e) {
             DB::rollBack();
             // registra el error en logs y vuelve con mensaje

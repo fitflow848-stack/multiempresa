@@ -8,6 +8,7 @@ use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ComprasController;
 use App\Http\Controllers\ComprobantesController;
 use App\Http\Controllers\FamiliaController;
+use App\Http\Controllers\LaboratorioController;
 use App\Http\Controllers\MarcaController;
 use App\Http\Controllers\PrincipalController;
 use App\Http\Controllers\ProductoController;
@@ -115,6 +116,9 @@ Route::middleware(['auth'])->group(function () {
 
     Route::post('/marcas', [MarcaController::class, 'store'])->name('marcas.store');
     Route::get('/marcas', [MarcaController::class, 'index'])->name('marcas.index');
+
+    Route::post('/laboratorios', [LaboratorioController::class, 'store'])->name('laboratorios.store');
+    Route::get('/laboratorios', [LaboratorioController::class, 'index'])->name('laboratorios.index');
 
     Route::post('/unidades', [UnidadMedidaController::class, 'store'])->name('unidades.store');
     Route::get('/unidades', [UnidadMedidaController::class, 'index'])->name('unidades.index');
