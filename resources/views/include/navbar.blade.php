@@ -21,6 +21,10 @@
                 <span class="nav-icon">🛒</span>
                 Ventas
             </a>
+            <a href="{{ route('comprobantes.index') }}" class="nav-link {{ request()->is('comprobantes*') ? 'active' : '' }}">
+                <span class="nav-icon">🧾</span>
+                Comprobantes
+            </a>
             <a href="#" class="nav-link {{ request()->is('tesoreria*') ? 'active' : '' }}">
                 <span class="nav-icon">💰</span>
                 Tesorería

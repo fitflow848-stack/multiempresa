@@ -38,6 +38,20 @@ class CompanyForm
                         TextInput::make('tipo_contribuyente')
                             ->label('Tipo de Contribuyente')
                             ->maxLength(100),
+                            
+                        FileUpload::make('logo')
+                            ->label('Logo de la Empresa')
+                            ->image()
+                            ->directory('company-logos')
+                            ->disk('public')
+                            ->visibility('public')
+                            ->acceptedFileTypes(['image/png', 'image/jpg', 'image/jpeg'])
+                            ->maxSize(2048) // 2MB máximo
+                            ->imageResizeMode('contain')
+                            ->imageResizeTargetWidth(300)
+                            ->imageResizeTargetHeight(300)
+                            ->helperText('Formatos aceptados: PNG, JPG, JPEG. Tamaño máximo: 2MB')
+                            ->columnSpanFull(),
                     ])
                     ->columns(2),
 

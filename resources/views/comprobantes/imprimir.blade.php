@@ -1,0 +1,131 @@
+@extends('layouts.print')
+
+@section('title', 'Imprimir Comprobante')
+
+@section('content')
+<div class="print-container">
+    <div class="company-header text-center mb-3">
+        <h3>{{ $company->razon_social }}</h3>
+        <p class="mb-1">RUC: {{ $company->ruc }}</p>
+        <p class="mb-1">{{ $company->direccion }}</p>
+        <p class="mb-0">Tel: {{ $company->telefono }}</p>
+    </div>
+
+    <hr>
+
+    <div class="document-header mb-3">
+        <div class="row">
+            <div class="col-6">
+                <h4>{{ strtoupper($venta->tipo_documento ?? 'TICKET') }}</h4>
+                <p class="mb-1"><strong>Nro:</strong> {{ $venta->serie }}-{{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}</p>
+                <p class="mb-1"><strong>Fecha:</strong> {{ $venta->fecha_emision->format('d/m/Y H:i') }}</p>
+            </div>
+            <div class="col-6 text-end">
+                @if($venta->cliente)
+                <p class="mb-1"><strong>Cliente:</strong> {{ $venta->cliente->nombre }}</p>
+                <p class="mb-1"><strong>{{ $venta->cliente->tipo_documento }}:</strong> {{ $venta->cliente->numero_documento }}</p>
+                @if($venta->cliente->direccion)
+                <p class="mb-1"><strong>Dirección:</strong> {{ $venta->cliente->direccion }}</p>
+                @endif
+                @else
+                <p class="mb-1"><strong>Cliente:</strong> CLIENTE PARTICULAR</p>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    <div class="items-table mb-3">
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Descripción</th>
+                    <th class="text-center">Cant.</th>
+                    <th class="text-end">P.Unit</th>
+                    <th class="text-end">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($venta->detalles as $detalle)
+                <tr>
+                    <td>{{ $detalle->item }}</td>
+                    <td>{{ $detalle->descripcion }}</td>
+                    <td class="text-center">{{ $detalle->cantidad }}</td>
+                    <td class="text-end">{{ number_format($detalle->precio_unitario, 2) }}</td>
+                    <td class="text-end">{{ number_format($detalle->precio_total, 2) }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+
+    <div class="totals mb-3">
+        <div class="row">
+            <div class="col-8"></div>
+            <div class="col-4">
+                <div class="d-flex justify-content-between">
+                    <span>Subtotal:</span>
+                    <span>S/ {{ number_format($venta->total - $venta->igv, 2) }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>IGV (18%):</span>
+                    <span>S/ {{ number_format($venta->igv, 2) }}</span>
+                </div>
+                <div class="d-flex justify-content-between border-top pt-2">
+                    <strong>Total:</strong>
+                    <strong>S/ {{ number_format($venta->total, 2) }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if($venta->observacion)
+    <div class="observations mb-3">
+        <strong>Observaciones:</strong>
+        <p>{{ $venta->observacion }}</p>
+    </div>
+    @endif
+
+    <div class="footer text-center mt-4">
+        <p class="mb-1">Estado: 
+            <span class="badge bg-{{ $venta->pagado ? 'success' : 'warning' }}">
+                {{ $venta->pagado ? 'PAGADO' : 'PENDIENTE' }}
+            </span>
+        </p>
+        <small class="text-muted">Documento generado el {{ now()->format('d/m/Y H:i') }}</small>
+    </div>
+</div>
+
+@push('styles')
+<style>
+@media print {
+    .print-container {
+        font-size: 12px;
+    }
+    
+    .company-header h3 {
+        font-size: 16px;
+    }
+    
+    .document-header h4 {
+        font-size: 14px;
+    }
+}
+
+.print-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+</style>
+@endpush
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    // Auto-imprimir al cargar la página
+    window.print();
+});
+</script>
+@endpush
+@endsection

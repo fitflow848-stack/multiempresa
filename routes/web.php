@@ -4,7 +4,9 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\AlmacenController;
 use App\Http\Controllers\ApiDocumentosController;
+use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ComprasController;
+use App\Http\Controllers\ComprobantesController;
 use App\Http\Controllers\FamiliaController;
 use App\Http\Controllers\MarcaController;
 use App\Http\Controllers\PrincipalController;
@@ -32,10 +34,49 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('pos')->name('pos.')->group(function () {
         Route::get('/', [PosController::class, 'index'])->name('index');
         Route::get('/emitir', [PosController::class, 'emitir'])->name('emitir');
+        Route::post('/emitir', [PosController::class, 'emitir'])->name('emitir.post');
+        Route::post('/save-venta', [PosController::class, 'saveVenta'])->name('save-venta');
+        Route::post('/obtener-siguiente-numero', [PosController::class, 'obtenerSiguienteNumeroSerie'])->name('obtener-siguiente-numero');
         Route::get('/products', [PosController::class, 'getProducts'])->name('products');
         Route::post('/sale', [PosController::class, 'createSale'])->name('sale.create');
+        Route::get('/pdf/{id}', [PosController::class, 'pdfVenta'])->name('pdfVenta');
+        Route::post('/sendDocumentoSunat/{id}', [PosController::class, 'sendDocumentoSunat'])->name('sendDocumentoSunat');
     });
-Route::get('/pos/buscar-productos', [PosController::class, 'buscar'])->name('pos.buscar');
+
+    Route::prefix('comprobantes')->name('comprobantes.')->group(function () {
+        Route::get('/', [ComprobantesController::class, 'index'])->name('index');
+        Route::get('/{id}/detalle', [ComprobantesController::class, 'detalle'])->name('detalle');
+        Route::get('/{id}/imprimir', [ComprobantesController::class, 'imprimir'])->name('imprimir');
+        Route::post('/seleccionar-todo', [ComprobantesController::class, 'seleccionarTodo'])->name('seleccionar-todo');
+        Route::post('/cancelar', [ComprobantesController::class, 'cancelar'])->name('cancelar');
+        Route::post('/devolver', [ComprobantesController::class, 'devolver'])->name('devolver');
+    });
+
+    Route::get('/pos/buscar-productos', [PosController::class, 'buscar'])->name('pos.buscar');
+    Route::get('/pos/obtener-lotes', [PosController::class, 'obtenerLotes'])->name('pos.lotes');
+    Route::get('/pos/elegir-stock', [PosController::class, 'elegirStock'])->name('pos.elegir-stock');
+    Route::get('/pos/buscar-clientes', [PosController::class, 'buscarClientes'])->name('pos.buscar-clientes');
+    Route::post('/pos/consultar-reniec', [PosController::class, 'consultarReniec'])->name('pos.consultar-reniec');
+    Route::post('/pos/crear-cliente', [PosController::class, 'crearCliente'])->name('pos.crear-cliente');
+    
+    // Rutas del módulo de clientes
+    Route::prefix('clientes')->name('clientes.')->group(function () {
+        Route::get('/', [ClienteController::class, 'index'])->name('index');
+        Route::post('/data', [ClienteController::class, 'data'])->name('data');
+        Route::get('/create', [ClienteController::class, 'create'])->name('create');
+        Route::post('/', [ClienteController::class, 'store'])->name('store');
+        Route::get('/{cliente}', [ClienteController::class, 'show'])->name('show');
+        Route::get('/{cliente}/edit', [ClienteController::class, 'edit'])->name('edit');
+        Route::put('/{cliente}', [ClienteController::class, 'update'])->name('update');
+        Route::delete('/{cliente}', [ClienteController::class, 'destroy'])->name('destroy');
+        Route::post('/buscar-dni', [ClienteController::class, 'buscarPorDni'])->name('buscar-dni');
+        Route::post('/crear-desde-reniec', [ClienteController::class, 'crearDesdeReniec'])->name('crear-desde-reniec');
+        Route::post('/buscar-pos', [ClienteController::class, 'buscarParaPos'])->name('buscar-pos');
+    });
+    
+    // Rutas adicionales para APIs de documentos
+    Route::post('/api/documento/dni', [ApiDocumentosController::class, 'getDni'])->name('apidocumento.dni');
+    
     Route::prefix('compras')->name('compras.')->group(function () {
         Route::get('/', [ComprasController::class, 'index'])->name('index');
         Route::post('/data', [ComprasController::class, 'data'])->name('data');

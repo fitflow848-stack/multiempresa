@@ -15,6 +15,7 @@ class Company extends Model
         'razon_social',
         'nombre_comercial',
         'tipo_contribuyente',
+        'logo', // Campo para el logo de la empresa
 
         'rep_nombre',
         'rep_document_type',
@@ -90,5 +91,35 @@ class Company extends Model
     public function sucursales(): HasMany
     {
         return $this->hasMany(Sucursal::class, 'company_id');
+    }
+
+    /**
+     * Obtener la URL completa del logo
+     */
+    public function getLogoUrlAttribute(): ?string
+    {
+        if (!$this->logo) {
+            return null;
+        }
+
+        // Si el logo ya es una URL completa, devolverla tal como está
+        if (filter_var($this->logo, FILTER_VALIDATE_URL)) {
+            return $this->logo;
+        }
+
+        // Si es una ruta relativa, construir la URL completa
+        return asset('storage/' . $this->logo);
+    }
+
+    /**
+     * Obtener la ruta completa del archivo del logo para uso interno
+     */
+    public function getLogoPathAttribute(): ?string
+    {
+        if (!$this->logo) {
+            return null;
+        }
+
+        return storage_path('app/public/' . $this->logo);
     }
 }
