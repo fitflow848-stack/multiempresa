@@ -445,12 +445,11 @@ class PosController extends Controller
                     
                     $detalle = new VentaDetalle();
                     $detalle->id_venta = $venta->id_venta;
-                    $detalle->id_producto = $item['producto_id'] ?? null;
-                    $detalle->descripcion = $item['nombre'] ?? 'Producto sin nombre';
+                    $detalle->servicio_id = $item['producto_id'] ?? null;
+                    $detalle->nombre_servicio = $item['nombre'] ?? 'Producto sin nombre';
                     $detalle->cantidad = $cantidad;
                     $detalle->precio_unitario = $precio_unitario;
-                    $detalle->precio_total = $precio_total;
-                    $detalle->igv = $igv_detalle;
+                    $detalle->importe = $precio_total;
                     $detalle->orden = $index + 1;
                     $detalle->save();
                     

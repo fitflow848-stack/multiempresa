@@ -13,11 +13,11 @@ class VentaDetalle extends Model
 
     protected $fillable = [
         'id_venta',
-        'id_producto',
-        'descripcion',
+        'servicio_id',
+        'nombre_servicio',
         'cantidad',
         'precio_unitario',
-        'precio_total',
+        'importe',
         'igv',
         'orden'
     ];
@@ -43,7 +43,7 @@ class VentaDetalle extends Model
      */
     public function producto()
     {
-        return $this->belongsTo(Producto::class, 'id_producto');
+        return $this->belongsTo(Producto::class, 'servicio_id');
     }
 
     // Scope para ordenar por item
