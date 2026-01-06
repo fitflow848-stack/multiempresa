@@ -386,18 +386,20 @@ class PosController extends Controller
                 $clienteId = $clienteData['id'];
             }
 
-            // Calcular totales
-            $subtotal = 0;
+            // Calcular totales - Los precios PVP ya incluyen IGV
+            $total_con_igv = 0;
             if (is_array($ticket)) {
                 foreach ($ticket as $item) {
                     if (isset($item['precio']) && isset($item['cantidad'])) {
-                        $subtotal += floatval($item['precio']) * intval($item['cantidad']);
+                        $total_con_igv += floatval($item['precio']) * intval($item['cantidad']);
                     }
                 }
             }
 
-            $igv = round($subtotal * 0.18, 2);
-            $total = round($subtotal + $igv, 2);
+            // Separar IGV del total (precio ya incluye IGV del 18%)
+            $subtotal = round($total_con_igv / 1.18, 2);  // Base sin IGV
+            $igv = round($total_con_igv - $subtotal, 2);  // IGV = Total - Base
+            $total = $total_con_igv;  // Total es el precio con IGV incluido
 
             // Obtener siguiente número de serie
             $siguienteNumero = $this->obtenerSiguienteNumero($company->id, $request->serie, $request->tipo_documento);
@@ -433,17 +435,28 @@ class PosController extends Controller
             // Crear detalles de la venta
             if (is_array($ticket)) {
                 foreach ($ticket as $index => $item) {
+                    $precio_unitario = floatval($item['precio'] ?? 0);
+                    $cantidad = intval($item['cantidad'] ?? 1);
+                    $precio_total = $precio_unitario * $cantidad;
+                    
+                    // Calcular IGV del detalle (precio ya incluye IGV)
+                    $precio_unitario_sin_igv = round($precio_unitario / 1.18, 4);
+                    $igv_detalle = round($precio_total - ($precio_unitario_sin_igv * $cantidad), 2);
+                    
                     $detalle = new VentaDetalle();
                     $detalle->id_venta = $venta->id_venta;
-                    $detalle->servicio_id = $item['producto_id'] ?? null;
-                    $detalle->nombre_servicio = $item['nombre'] ?? 'Producto sin nombre';
-                    $detalle->cantidad = intval($item['cantidad'] ?? 1);
-                    $detalle->precio_unitario = floatval($item['precio'] ?? 0);
-                    $detalle->importe = floatval($item['precio'] ?? 0) * intval($item['cantidad'] ?? 1);
+                    $detalle->id_producto = $item['producto_id'] ?? null;
+                    $detalle->descripcion = $item['nombre'] ?? 'Producto sin nombre';
+                    $detalle->cantidad = $cantidad;
+                    $detalle->precio_unitario = $precio_unitario;
+                    $detalle->precio_total = $precio_total;
+                    $detalle->igv = $igv_detalle;
+                    $detalle->orden = $index + 1;
                     $detalle->save();
+                    
                     // Actualizar stock si es necesario
                     if (isset($item['almacen_detalle_id'])) {
-                        $this->actualizarStock($item['almacen_detalle_id'], intval($item['cantidad'] ?? 1));
+                        $this->actualizarStock($item['almacen_detalle_id'], $cantidad);
                     }
                 }
             }

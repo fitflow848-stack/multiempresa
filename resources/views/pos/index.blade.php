@@ -760,18 +760,21 @@
                 return;
             }
             
-            // Calcular totales
+            // Calcular totales - Los precios ya incluyen IGV
+            let total_con_igv = 0;
             let subtotal = 0;
             let igv = 0;
             let total = 0;
             
             ticket.forEach(item => {
                 const itemTotal = parseFloat(item.precio) * parseInt(item.cantidad);
-                subtotal += itemTotal;
+                total_con_igv += itemTotal;
             });
             
-            igv = subtotal * 0.18;
-            total = subtotal + igv;
+            // Separar IGV del total (precio ya incluye IGV del 18%)
+            subtotal = Math.round((total_con_igv / 1.18) * 100) / 100;  // Base sin IGV
+            igv = Math.round((total_con_igv - subtotal) * 100) / 100;   // IGV calculado
+            total = total_con_igv;  // Total es el precio con IGV incluido
             
             // Preparar datos para enviar
             const datosVenta = {
