@@ -725,6 +725,13 @@
                 return;
             }
             
+            // Validar que haya un cliente seleccionado (diferente del cliente por defecto)
+            if (!clienteActual || !clienteActual.id || clienteActual.nombre === 'Cliente Contado') {
+                alert('Debe seleccionar un cliente antes de emitir el comprobante. Haga clic en el área del cliente para seleccionar uno.');
+                mostrarBuscadorClientes();
+                return;
+            }
+            
             document.getElementById('modal-tipo-documento').style.display = 'flex';
         }
 
@@ -741,6 +748,18 @@
 
         // Función para emitir venta con el tipo de documento seleccionado
         function emitirVentaConTipo(tipoDocumento) {
+            // Doble validación antes de proceder
+            if (ticket.length === 0) {
+                alert('No hay productos en el ticket para emitir');
+                return;
+            }
+            
+            if (!clienteActual || !clienteActual.id || clienteActual.nombre === 'Cliente Contado') {
+                alert('Error: No se ha seleccionado un cliente válido');
+                mostrarBuscadorClientes();
+                return;
+            }
+            
             // Calcular totales
             let subtotal = 0;
             let igv = 0;

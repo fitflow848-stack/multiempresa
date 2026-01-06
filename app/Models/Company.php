@@ -71,9 +71,10 @@ class Company extends Model
         'porcentaje_igv' => 'decimal:2',
         'cert_expires_at' => 'datetime',
         'fecha_alta' => 'datetime',
-        'sol_password' => 'encrypted',
-        'ose_password' => 'encrypted',
-        'cert_password' => 'encrypted',
+        // Comentamos temporalmente la encriptación automática para evitar errores en Filament
+        // 'sol_password' => 'encrypted',
+        // 'ose_password' => 'encrypted', 
+        // 'cert_password' => 'encrypted',
     ];
 
 
@@ -121,5 +122,29 @@ class Company extends Model
         }
 
         return storage_path('app/public/' . $this->logo);
+    }
+
+    /**
+     * Métodos para manejar encriptación manual si es necesario
+     */
+    public function setSolPasswordAttribute($value)
+    {
+        // Si el valor no está vacío, lo guardamos tal como está
+        // Puedes agregar encriptación manual aquí si lo necesitas en el futuro
+        $this->attributes['sol_password'] = $value;
+    }
+
+    public function setOsePasswordAttribute($value)
+    {
+        // Si el valor no está vacío, lo guardamos tal como está  
+        // Puedes agregar encriptación manual aquí si lo necesitas en el futuro
+        $this->attributes['ose_password'] = $value;
+    }
+
+    public function setCertPasswordAttribute($value)
+    {
+        // Si el valor no está vacío, lo guardamos tal como está
+        // Puedes agregar encriptación manual aquí si lo necesitas en el futuro
+        $this->attributes['cert_password'] = $value;
     }
 }

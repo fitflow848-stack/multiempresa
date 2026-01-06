@@ -182,7 +182,7 @@
             <table class="info-table">
                 <tr>
                     <td>Señor(es):</td>
-                    <td>{{ $cliente->razon_social }}</td>
+                    <td>{{ $cliente->nombre }}</td>
                     <td>Moneda:</td>
                     <td>{{ $venta->moneda == 1 ? 'Soles' : 'Dólares' }}</td>
                 </tr>
