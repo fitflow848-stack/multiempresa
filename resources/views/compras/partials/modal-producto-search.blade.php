@@ -13,51 +13,80 @@
                         <div class="mb-3 pb-2 border-bottom">
                             <h6 class="text-primary">Buscar</h6>
 
-                            <form id="product-search-form" class="row g-2 align-items-center">
-                                <div class="col-auto">
-                                    <label class="form-label small-muted mb-1">CB</label>
+                            <form id="product-search-form" class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-barcode mr-1"></i>
+                                        Código Barras
+                                    </label>
                                     <input type="text" name="cb" id="search-cb"
-                                        class="form-control form-control-sm" placeholder="Código Barras">
+                                        class="form-control form-control-sm" placeholder="Buscar por CB">
                                 </div>
 
-                                <div class="col-auto">
-                                    <label class="form-label small-muted mb-1">Ref.</label>
+                                <div class="col-md-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-hashtag mr-1"></i>
+                                        Referencia
+                                    </label>
                                     <input type="text" name="ref" id="search-ref"
-                                        class="form-control form-control-sm" placeholder="código referencia">
+                                        class="form-control form-control-sm" placeholder="Código ref.">
                                 </div>
 
-                                <div class="col-auto" style="min-width:320px; flex:1;">
-                                    <label class="form-label small-muted mb-1">Nombre</label>
+                                <div class="col-md-6">
+                                    <label class="form-label">
+                                        <i class="fas fa-search mr-1"></i>
+                                        Nombre del Producto
+                                    </label>
                                     <div class="input-group">
                                         <input type="text" name="q" id="search-q"
-                                            class="form-control form-control-sm" placeholder="nombre | marca ó modelo">
-                                        <button class="btn btn-sm btn-outline-secondary" id="btn-open-quick-create"
-                                            type="button" title="Alta rápida">+</button>
+                                            class="form-control form-control-sm" placeholder="Buscar por nombre, marca o modelo">
+                                        <button class="btn btn-sm btn-success" id="btn-open-quick-create"
+                                            type="button" title="Crear producto rápido">
+                                            <i class='bx  bx-plus'></i> 
+                                        </button>
                                     </div>
                                 </div>
 
                                 <div class="col-12">
-                                    <div class="form-check form-check-inline ms-1">
-                                        <input class="form-check-input" type="checkbox" id="filter-stock-min"
-                                            name="stock_min">
-                                        <label class="form-check-label small" for="filter-stock-min">Stock Mínimo</label>
+                                    <div class="d-flex flex-wrap gap-3 align-items-center">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="filter-stock-min"
+                                                name="stock_min">
+                                            <label class="form-check-label" for="filter-stock-min">
+                                                <i class="fas fa-exclamation-triangle text-warning mr-1"></i>
+                                                Stock Mínimo
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="filter-por-proveedor"
+                                                name="por_proveedor">
+                                            <label class="form-check-label" for="filter-por-proveedor">
+                                                <i class="fas fa-truck text-info mr-1"></i>
+                                                Por Proveedor
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="filter-obsoletos"
+                                                name="obsoletos">
+                                            <label class="form-check-label" for="filter-obsoletos">
+                                                <i class="fas fa-archive text-secondary mr-1"></i>
+                                                Obsoletos
+                                            </label>
+                                        </div>
+                                        
+                                        <div class="ms-auto">
+                                            <button id="btn-product-search" type="submit"
+                                                class="btn btn-primary btn-sm">
+                                                <i class="fas fa-search mr-1"></i>
+                                                Buscar
+                                            </button>
+                                            <button id="btn-product-clear" type="button"
+                                                class="btn btn-outline-secondary btn-sm">
+                                                <i class="fas fa-eraser mr-1"></i>
+                                                Limpiar
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" id="filter-por-proveedor"
-                                            name="por_proveedor">
-                                        <label class="form-check-label small" for="filter-por-proveedor">Por
-                                            Proveedor</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" id="filter-obsoletos"
-                                            name="obsoletos">
-                                        <label class="form-check-label small" for="filter-obsoletos">Obsoletos</label>
-                                    </div>
-
-                                    <button id="btn-product-search" type="submit"
-                                        class="btn btn-sm btn-primary ms-3">Buscar</button>
-                                    <button id="btn-product-clear" type="button"
-                                        class="btn btn-sm btn-outline-secondary ms-1">Limpiar</button>
                                 </div>
                             </form>
                         </div>

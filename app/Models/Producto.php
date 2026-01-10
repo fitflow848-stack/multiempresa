@@ -39,6 +39,16 @@ class Producto extends Model
         'pvc_dto',
         'costo_operativo',
         'peso',
+        // Nuevos campos extendidos
+        'caracteristicas',
+        'almacenamiento',
+        'seguridad',
+        'ficha_tecnica',
+        'imagen_principal',
+        'imagenes_adicionales',
+        'imagen_alt',
+        'imagen_titulo',
+        'imagen_fuente',
     ];
 
     protected $casts = [
@@ -48,6 +58,12 @@ class Producto extends Model
         'attr_lote_produccion' => 'boolean',
         'attr_venta_menudeo' => 'boolean',
         'precio_compra' => 'decimal:2',
+        // Nuevos campos JSON
+        'caracteristicas' => 'array',
+        'almacenamiento' => 'array',
+        'seguridad' => 'array',
+        'ficha_tecnica' => 'array',
+        'imagenes_adicionales' => 'array',
         'pvp' => 'decimal:2',
         'pv_docena' => 'decimal:2',
         'pvp_dto' => 'decimal:2',
@@ -81,5 +97,20 @@ class Producto extends Model
     public function unidadMedida()
     {
         return $this->belongsTo(\App\Models\UnidadMedida::class, 'unidad_medida_id');
+    }
+
+    public function presentacion()
+    {
+        return $this->belongsTo(\App\Models\Presentacion::class, 'presentacion_id');
+    }
+
+    public function concentracion()
+    {
+        return $this->belongsTo(\App\Models\Concentracion::class, 'concentracion_id');
+    }
+
+    public function laboratorio()
+    {
+        return $this->belongsTo(\App\Models\Laboratorio::class, 'laboratorio_id');
     }
 }

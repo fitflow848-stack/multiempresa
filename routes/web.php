@@ -7,9 +7,11 @@ use App\Http\Controllers\ApiDocumentosController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ComprasController;
 use App\Http\Controllers\ComprobantesController;
+use App\Http\Controllers\ConcentracionController;
 use App\Http\Controllers\FamiliaController;
 use App\Http\Controllers\LaboratorioController;
 use App\Http\Controllers\MarcaController;
+use App\Http\Controllers\PresentacionController;
 use App\Http\Controllers\PrincipalController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProveedorController;
@@ -59,7 +61,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/pos/buscar-clientes', [PosController::class, 'buscarClientes'])->name('pos.buscar-clientes');
     Route::post('/pos/consultar-reniec', [PosController::class, 'consultarReniec'])->name('pos.consultar-reniec');
     Route::post('/pos/crear-cliente', [PosController::class, 'crearCliente'])->name('pos.crear-cliente');
-    
+
     // Rutas del módulo de clientes
     Route::prefix('clientes')->name('clientes.')->group(function () {
         Route::get('/', [ClienteController::class, 'index'])->name('index');
@@ -74,10 +76,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/crear-desde-reniec', [ClienteController::class, 'crearDesdeReniec'])->name('crear-desde-reniec');
         Route::post('/buscar-pos', [ClienteController::class, 'buscarParaPos'])->name('buscar-pos');
     });
-    
+
     // Rutas adicionales para APIs de documentos
     Route::post('/api/documento/dni', [ApiDocumentosController::class, 'getDni'])->name('apidocumento.dni');
-    
+
     Route::prefix('compras')->name('compras.')->group(function () {
         Route::get('/', [ComprasController::class, 'index'])->name('index');
         Route::post('/data', [ComprasController::class, 'data'])->name('data');
@@ -97,8 +99,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::prefix('productos')->name('productos.')->group(function () {
         Route::get('/quick-create/step1', [ProductoController::class, 'step1'])->name('step1');
-        Route::post('/quick-create/step2', [ProductoController::class, 'step2'])
-            ->name('quick.step2');
+        Route::post('/quick-create/step2', [ProductoController::class, 'step2'])->name('step2');
         Route::post('/store/producto', [ProductoController::class, 'store'])->name('store');
         Route::get('/api/productos', [ProductoController::class, 'search'])->name('search');
     });
@@ -132,6 +133,35 @@ Route::middleware(['auth'])->group(function () {
     // Subfamilias
     Route::get('/subfamilias', [SubFamiliaController::class, 'index'])->name('subfamilias.index');
     Route::post('/subfamilias', [SubFamiliaController::class, 'store'])->name('subfamilias.store');
+
+    // Presentaciones API
+    Route::prefix('api/presentaciones')->name('api.presentaciones.')->group(function () {
+        Route::get('/', [PresentacionController::class, 'index'])->name('index');
+        Route::post('/', [PresentacionController::class, 'store'])->name('store');
+        Route::get('/{presentacion}', [PresentacionController::class, 'show'])->name('show');
+        Route::put('/{presentacion}', [PresentacionController::class, 'update'])->name('update');
+        Route::delete('/{presentacion}', [PresentacionController::class, 'destroy'])->name('destroy');
+        Route::post('/{presentacion}/activate', [PresentacionController::class, 'activate'])->name('activate');
+    });
+
+    // Concentraciones API
+    Route::prefix('api/concentraciones')->name('api.concentraciones.')->group(function () {
+        Route::get('/', [ConcentracionController::class, 'index'])->name('index');
+        Route::post('/', [ConcentracionController::class, 'store'])->name('store');
+        Route::get('/{concentracion}', [ConcentracionController::class, 'show'])->name('show');
+        Route::put('/{concentracion}', [ConcentracionController::class, 'update'])->name('update');
+        Route::delete('/{concentracion}', [ConcentracionController::class, 'destroy'])->name('destroy');
+        Route::post('/{concentracion}/activate', [ConcentracionController::class, 'activate'])->name('activate');
+    });
+
+    // API para obtener producto por ID
+    Route::get('/api/productos/{id}', [ProductoController::class, 'getById'])->name('productos.api.get');
+
+    // Ruta para manejar datos de sesión temporal
+    Route::post('/session/store', function (Illuminate\Http\Request $request) {
+        session([$request->key => $request->value]);
+        return response()->json(['success' => true]);
+    })->name('session.store');
 
     // Rutas del módulo de almacén
     Route::prefix('almacen')->name('almacen.')->group(function () {

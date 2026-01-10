@@ -4,7 +4,11 @@
 
         $(function() {
             // CSRF for ajax is already set in blade via $.ajaxSetup (if not, uncomment)
-            // $.ajaxSetup({ headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') } });
+            $.ajaxSetup({
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                }
+            });
 
             const productosSearchUrl = $('#product-search-form').length ? $('#product-search-form').data(
                 'url') || '{{ route('productos.search') }}' : '{{ route('productos.search') }}';
@@ -13,7 +17,7 @@
             const $count = $('#product-search-count');
 
             // referencias tabla compra
-            const $productosTbody = $('table.table tbody');
+            const $productosTbody = $('#productos-tbody');
             const $totalBruto = $('input[name="total_bruto"]');
             const $totalDescuento = $('input[name="total_descuento"]');
             const $brutoNeto = $('input[name="bruto_neto"]');
@@ -142,56 +146,125 @@
                         .precio_linea.precio_compra) : 0);
 
                 const descuento = 0;
-                const vcpc = '';
-
                 const idx = lineIndex++;
+
+                // Hide no-products message
+                $('#no-products').hide();
+
                 const row = $(`
             <tr data-idx="${idx}">
-                <td class="px-2 align-middle">${idx+1}<input type="hidden" name="product_id[]" value="${escapeHtml(product.id)}"></td>
-                <td class="px-2"><input name="cb[]" type="text" class="form-control form-control-sm" value="${escapeHtml(product.cb || '')}"></td>
-                <td class="px-2"><input name="descripcion[]" type="text" class="form-control form-control-sm" value="${escapeHtml(product.nombre || '')}"></td>
-                <td class="px-2" style="width:110px"><input name="cantidad[]" type="number" step="1" min="0" class="form-control form-control-sm text-end line-qty" value="${cantidad}"></td>
-                <td class="px-2" style="width:130px"><input name="costo[]" type="number" step="0.01" class="form-control form-control-sm text-end line-cost" value="${Number(costo).toFixed(2)}"></td>
-                <td class="px-2" style="width:110px"><input name="descuento[]" type="number" step="0.01" class="form-control form-control-sm text-end line-discount" value="${Number(descuento).toFixed(2)}"></td>
-                <td class="px-2" style="width:110px"><input name="vcpc[]" type="text" class="form-control form-control-sm text-end line-vcpc" value="${escapeHtml(vcpc)}"></td>
-                <td class="px-2 text-center" style="width:60px"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-line">Eliminar</button></td>
+                <td class="text-center">${idx}
+                    <input type="hidden" name="product_id[]" value="${escapeHtml(product.id)}">
+                </td>
+                <td>
+                    <input name="codigo[]" type="text" class="form-control form-control-sm" 
+                           value="${escapeHtml(product.cb || product.codigo_ref || '')}" readonly>
+                </td>
+                <td>
+                    <input name="descripcion[]" type="text" class="form-control form-control-sm" 
+                           value="${escapeHtml(product.nombre || '')}" readonly>
+                </td>
+                <td>
+                    <input name="cantidad[]" type="number" step="1" min="1" 
+                           class="form-control form-control-sm text-center cantidad-input" value="${cantidad}">
+                </td>
+                <td>
+                    <input name="costo[]" type="number" step="0.01" min="0" 
+                           class="form-control form-control-sm text-end costo-input" value="${Number(costo).toFixed(2)}">
+                </td>
+                <td>
+                    <input name="descuento[]" type="number" step="0.01" min="0" 
+                           class="form-control form-control-sm text-end descuento-input" value="${Number(descuento).toFixed(2)}">
+                </td>
+                <td class="text-end total-line">S/ ${(cantidad * costo - descuento).toFixed(2)}</td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-line" title="Eliminar">
+                        <i class='bx  bx-x-circle'></i> 
+                    </button>
+                </td>
             </tr>
         `);
 
                 $productosTbody.append(row);
-                recalcTotals();
+
+                // Call the global function to recalculate totals
+                if (window.calculateTotals) {
+                    window.calculateTotals();
+                }
+
+                // Auto-guardar después de agregar producto desde modal
+                if (window.autoSaveCompraData) {
+                    setTimeout(window.autoSaveCompraData, 500);
+                    console.log('Auto-guardado ejecutado después de agregar producto desde modal');
+                }
             }
 
             // remove
             $(document).on('click', '.btn-remove-line', function() {
                 $(this).closest('tr').remove();
-                recalcTotals();
-                // renumber
-                $('table.table tbody tr').each(function(i, tr) {
-                    $(tr).find('td:first').contents().filter(function() {
-                        return this.nodeType === 3;
-                    }).first().replaceWith((i + 1).toString());
+
+                // Show no-products message if no products left
+                if ($('#productos-tbody tr:not(#no-products)').length === 0) {
+                    $('#no-products').show();
+                }
+
+                // Call the global function to recalculate totals
+                if (window.calculateTotals) {
+                    window.calculateTotals();
+                }
+
+                // renumber rows
+                $('#productos-tbody tr:not(#no-products)').each(function(i, tr) {
+                    $(tr).find('td:first').html((i + 1) +
+                        '<input type="hidden" name="product_id[]" value="' +
+                        $(tr).find('input[name="product_id[]"]').val() + '">');
                 });
+
+                // Auto-guardar después de eliminar producto
+                if (window.autoSaveCompraData) {
+                    setTimeout(window.autoSaveCompraData, 500);
+                    console.log('Auto-guardado ejecutado después de eliminar producto');
+                }
             });
 
             // recalc on input changes
-            $(document).on('input change', '.line-qty, .line-cost, .line-discount', debounce(function() {
-                recalcTotals();
-            }, 200));
+            $(document).on('input change', '.cantidad-input, .costo-input, .descuento-input', function() {
+                // Update line total
+                const $row = $(this).closest('tr');
+                const cantidad = parseFloat($row.find('.cantidad-input').val()) || 0;
+                const costo = parseFloat($row.find('.costo-input').val()) || 0;
+                const descuento = parseFloat($row.find('.descuento-input').val()) || 0;
+                const total = (cantidad * costo) - descuento;
+
+                $row.find('.total-line').text('S/ ' + total.toFixed(2));
+
+                // Call the global function to recalculate totals
+                if (window.calculateTotals) {
+                    window.calculateTotals();
+                }
+
+                // Auto-guardar después de cambiar cantidades/costos/descuentos
+                if (window.autoSaveCompraData) {
+                    clearTimeout(window.autoSaveTimeout);
+                    window.autoSaveTimeout = setTimeout(window.autoSaveCompraData, 1000);
+                }
+            });
 
             // recalc totals function
             function recalcTotals() {
                 let totalBruto = 0;
                 let totalDescuento = 0;
+                let productCount = 0;
 
-                $('table.table tbody tr').each(function() {
+                $('#productos-tbody tr:not(#no-products)').each(function() {
                     const $tr = $(this);
-                    const qty = parseFloat($tr.find('.line-qty').val()) || 0;
-                    const cost = parseFloat($tr.find('.line-cost').val()) || 0;
-                    const disc = parseFloat($tr.find('.line-discount').val()) || 0;
+                    const qty = parseFloat($tr.find('.cantidad-input').val()) || 0;
+                    const cost = parseFloat($tr.find('.costo-input').val()) || 0;
+                    const disc = parseFloat($tr.find('.descuento-input').val()) || 0;
                     const lineBruto = qty * cost;
                     totalBruto += lineBruto;
                     totalDescuento += isNaN(disc) ? 0 : disc;
+                    productCount++;
                 });
 
                 const brutoNeto = totalBruto - totalDescuento;
@@ -201,34 +274,51 @@
                 const flete = parseFloat($flete.val()) || 0;
                 const totalPagar = totalNeto + flete;
 
+                // Update displays using the global elements
+                $('#subtotal-display').text('S/ ' + totalBruto.toFixed(2));
+                $('#descuento-display').text('S/ ' + totalDescuento.toFixed(2));
+                $('#impuestos-display').text('S/ ' + totalImpuesto.toFixed(2));
+                $('#total-display').text('S/ ' + totalNeto.toFixed(2));
+                $('#productos-count').text(productCount);
+
+                // Update hidden form inputs
                 $totalBruto.val(Number(totalBruto).toFixed(2));
                 $totalDescuento.val(Number(totalDescuento).toFixed(2));
                 $brutoNeto.val(Number(brutoNeto).toFixed(2));
                 $totalImpuesto.val(Number(totalImpuesto).toFixed(2));
                 $totalNeto.val(Number(totalNeto).toFixed(2));
-                $totalPagar.val(Number(totalPagar).toFixed(2));
+                if ($totalPagar.length) {
+                    $totalPagar.val(Number(totalPagar).toFixed(2));
+                }
+
+                // Show/hide no products message
+                if (productCount === 0) {
+                    $('#no-products').show();
+                } else {
+                    $('#no-products').hide();
+                }
             }
 
-            $flete.on('input change', debounce(function() {
-                recalcTotals();
-            }, 200));
+            // Connect with flete input if exists
+            if ($flete.length) {
+                $flete.on('input change', function() {
+                    recalcTotals();
+                });
+            }
+
             $(document).on('change', '#inc_impuesto', function() {
                 recalcTotals();
             });
 
             $('#compra-form').on('submit', function(e) {
-                const lines = $('table.table tbody tr').length;
+                const lines = $('#productos-tbody tr:not(#no-products)').length;
                 if (lines === 0) {
                     e.preventDefault();
                     Swal.fire('Atención', 'Agrega al menos un producto a la compra', 'warning');
                     return false;
                 }
-                recalcTotals();
                 // allow submit
             });
-
-            // Trigger initial recalc
-            recalcTotals();
 
             // util
             function debounce(fn, delay) {
