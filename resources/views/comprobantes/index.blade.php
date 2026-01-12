@@ -161,7 +161,7 @@
                                                         data-venta-id="{{ $venta->id_venta }}" title="Ver detalle">
                                                         <i class="fas fa-eye"></i>
                                                     </button>
-                                                    @if ($venta->ventaSunat->nombre_xml)
+                                                    @if (isset($venta->ventaSunat->nombre_xml) &&$venta->ventaSunat->nombre_xml)
                                                         <a href="{{ env('APP_URL') }}/storage/xml_sunat/{{ $venta->ventaSunat->nombre_xml }}.xml"
                                                             target="_blank" class="btn btn-sm btn-info"
                                                             alt="ver archivo XML" title="ver archivo XML"> <i

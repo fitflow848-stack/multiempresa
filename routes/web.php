@@ -19,6 +19,7 @@ use App\Http\Controllers\RecibirProductoController;
 use App\Http\Controllers\SubFamiliaController;
 use App\Http\Controllers\UnidadMedidaController;
 use App\Http\Controllers\CotizacionController;
+use App\Http\Controllers\CierreCajaController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -63,6 +64,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/emitir', [CotizacionController::class, 'emitir'])->name('emitir');
         Route::post('/emitir', [CotizacionController::class, 'emitir'])->name('emitir.post');
         Route::post('/save-cotizacion', [CotizacionController::class, 'saveCotizacion'])->name('save-cotizacion');
+    });
+
+    // Rutas del módulo de cierre de caja
+    Route::prefix('cierre-caja')->name('cierre-caja.')->group(function () {
+        Route::get('/', [CierreCajaController::class, 'index'])->name('index');
+        Route::get('/create', [CierreCajaController::class, 'create'])->name('create');
+        Route::post('/', [CierreCajaController::class, 'store'])->name('store');
+        Route::get('/{cierre}', [CierreCajaController::class, 'show'])->name('show');
     });
 
     Route::prefix('comprobantes')->name('comprobantes.')->group(function () {

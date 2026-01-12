@@ -1,72 +1,99 @@
 @extends('layout.app')
 
+@section('title', 'Detalle Compra')
+
 @section('content')
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h4 mb-0">Ticket #{{ $compra->id }}</h1>
+            <small class="text-muted">Detalle y resumen de la compra</small>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ route('compras.index') }}" class="btn btn-outline-secondary">Volver</a>
+            <a href="{{ route('compras.receive', $compra->id) }}" class="btn btn-primary">Recibir Ticket</a>
+        </div>
+    </div>
 
-    <div class="container py-4">
-        <h3>Ticket #{{ $compra->id }}</h3>
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-md-6">
+                            <strong>Proveedor</strong>
+                            <div>{{ $compra->proveedor_nombre ?? $compra->proveedor_id ?? '—' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Fecha Emisión</strong>
+                            <div>{{ $compra->fecha_emision ? \Carbon\Carbon::parse($compra->fecha_emision)->format('d/m/Y') : '—' }}</div>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Tipo</strong>
+                            <div>{{ $compra->tipo ?? '—' }}</div>
+                        </div>
+                    </div>
 
-        <div class="row">
-            <div class="col-md-8">
-                <p><strong>Proveedor:</strong> {{ $compra->proveedor_id ?? '—' }}</p>
-                <p><strong>Fecha Emisión:</strong> {{ $compra->fecha_emision ?? '—' }}</p>
-                <p><strong>Tipo:</strong> {{ $compra->tipo ?? '—' }}</p>
-
-                <h5 class="mt-4">Detalle</h5>
-                <table class="table table-sm">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Descripción</th>
-                            <th>Cantidad</th>
-                            <th>Costo</th>
-                            <th>Importe</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($compra->lineas as $i => $ln)
-                            <tr>
-                                <td>{{ $i + 1 }}</td>
-                                <td>{{ $ln->descripcion }}</td>
-                                <td class="text-end">{{ $ln->cantidad }}</td>
-                                <td class="text-end">{{ number_format($ln->costo, 2) }}</td>
-                                <td class="text-end">{{ number_format(($ln->costo ?? 0) * ($ln->cantidad ?? 0), 2) }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-header">Resumen</div>
-                    <div class="card-body">
-                        <p><strong>Total Bruto:</strong> S/ {{ number_format($compra->total_bruto, 2) }}</p>
-                        <p><strong>Total Descuento:</strong> S/ {{ number_format($compra->total_descuento, 2) }}</p>
-                        <p><strong>Total Impuesto:</strong> S/ {{ number_format($compra->total_impuesto, 2) }}</p>
-                        <p><strong>Total a Pagar:</strong> S/ {{ number_format($compra->total_pagar, 2) }}</p>
-                        @php
-                            use Illuminate\Support\Carbon;
-                            $received = null;
-                            if (!empty($compra->received_at)) {
-                                // Si ya es Carbon lo deja, si es string lo parsea
-                                $received =
-                                    $compra->received_at instanceof \DateTime
-                                        ? $compra->received_at
-                                        : Carbon::parse($compra->received_at);
-                            }
-                        @endphp
-                        <p><strong>Recepción:</strong>
-                            {{ $received ? $received->format('Y-m-d H:i') : 'No recibido' }}
-                        </p>
+                    <h5 class="mt-3">Detalle</h5>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Descripción</th>
+                                    <th class="text-end">Cantidad</th>
+                                    <th class="text-end">Costo</th>
+                                    <th class="text-end">Importe</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($compra->lineas as $i => $ln)
+                                    <tr>
+                                        <td>{{ $i + 1 }}</td>
+                                        <td>{{ $ln->descripcion }}</td>
+                                        <td class="text-end">{{ $ln->cantidad }}</td>
+                                        <td class="text-end">{{ number_format($ln->costo, 2) }}</td>
+                                        <td class="text-end">{{ number_format(($ln->costo ?? 0) * ($ln->cantidad ?? 0), 2) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="mt-3">
-            <a href="{{ route('compras.create') }}" class="btn btn-outline-secondary">Volver</a>
-            <a href="{{ route('compras.receive', $compra->id) }}" class="btn btn-primary">Recibir Ticket</a>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">Resumen</div>
+                <div class="card-body">
+                    <p class="mb-1"><strong>Total Bruto:</strong></p>
+                    <div class="mb-2 h5">S/ {{ number_format($compra->total_bruto ?? 0, 2) }}</div>
+
+                    <p class="mb-1"><strong>Total Descuento:</strong></p>
+                    <div class="mb-2">S/ {{ number_format($compra->total_descuento ?? 0, 2) }}</div>
+
+                    <p class="mb-1"><strong>Total Impuesto:</strong></p>
+                    <div class="mb-2">S/ {{ number_format($compra->total_impuesto ?? 0, 2) }}</div>
+
+                    <hr>
+                    <p class="mb-1"><strong>Total a Pagar</strong></p>
+                    <div class="h4">S/ {{ number_format($compra->total_pagar ?? 0, 2) }}</div>
+
+                    @php
+                        $received = null;
+                        if (!empty($compra->received_at)) {
+                            $received = $compra->received_at instanceof \DateTime ? $compra->received_at : \Carbon\Carbon::parse($compra->received_at);
+                        }
+                    @endphp
+
+                    <div class="mt-3">
+                        <small class="text-muted">Recepción:</small>
+                        <div>{{ $received ? $received->format('d/m/Y H:i') : 'No recibido' }}</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+</div>
 @endsection

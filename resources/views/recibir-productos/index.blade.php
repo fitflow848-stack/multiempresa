@@ -2,12 +2,10 @@
 
 @section('content')
     {{-- ===================== STYLES ===================== --}}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.1.1/dist/select2-bootstrap-5-theme.min.css"
         rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="{{ asset('css/principal.css') }}">
 
     <div class="almacen-container">
         <!-- Breadcrumb -->
@@ -26,142 +24,170 @@
         </div>
 
         <!-- Sección de búsqueda -->
-        <div class="search-section">
-            <form id="search-form">
-                <div class="search-row">
-                    <div class="form-group">
-                        <label>Local:</label>
-                        <select class="form-control" name="local">
-                            <option value="PURINA">PURINA</option>
-                        </select>
-                    </div>
+        <div class="search-section card mb-3">
+            <div class="card-body">
+                <form id="search-form">
+                    <div class="search-row row g-2">
+                        <div class="form-group col-md-2">
+                            <label>Local:</label>
+                            <select class="form-control" name="local">
+                                <option value="PURINA">PURINA</option>
+                            </select>
+                        </div>
 
-                    <div class="form-group">
-                        <label>Desde:</label>
-                        <input type="date" class="form-control" name="desde" value="">
-                    </div>
+                        <div class="form-group col-md-2">
+                            <label>Desde:</label>
+                            <input type="date" class="form-control" name="desde" value="">
+                        </div>
 
-                    <div class="form-group">
-                        <label>Hasta:</label>
-                        <input type="date" class="form-control" name="hasta" value="">
-                    </div>
+                        <div class="form-group col-md-2">
+                            <label>Hasta:</label>
+                            <input type="date" class="form-control" name="hasta" value="">
+                        </div>
 
-                    <div class="form-group">
-                        <label>Documento:</label>
-                        <select class="form-control" name="documento">
-                            <option value="Todos">Todos</option>
-                            <option value="Con Stock">Con Stock</option>
-                            <option value="Sin Stock">Sin Stock</option>
-                        </select>
-                    </div>
+                        <div class="form-group col-md-2">
+                            <label>Documento:</label>
+                            <select class="form-control" name="documento">
+                                <option value="Todos">Todos</option>
+                                <option value="Con Stock">Con Stock</option>
+                                <option value="Sin Stock">Sin Stock</option>
+                            </select>
+                        </div>
 
-                    <div class="form-group">
-                        <label>Proveedor:</label>
-                        <input type="text" class="form-control" name="proveedor" placeholder="">
-                    </div>
+                        <div class="form-group col-md-2">
+                            <label>Proveedor:</label>
+                            <input type="text" class="form-control" name="proveedor" placeholder="">
+                        </div>
 
-                    <div class="form-group">
-                        <label>Serie-Número:</label>
-                        <input type="text" class="form-control" name="serie_numero" placeholder="F001-00001234">
-                    </div>
+                        <div class="form-group col-md-2">
+                            <label>Serie-Número:</label>
+                            <input type="text" class="form-control" name="serie_numero" placeholder="F001-00001234">
+                        </div>
 
-                    <div style="display: flex; gap: 5px;">
-                        <button type="submit" class="btn-search">Buscar</button>
+                        <div class="col-12 d-flex justify-content-end mt-2">
+                            <button type="submit" class="btn btn-outline-primary">Buscar</button>
+                        </div>
                     </div>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
 
         <!-- Tabla de inventario -->
-        <div class="inventory-table">
-            <div class="table-header">
-                Documentos por recibir
+        <div class="inventory-table card mb-3">
+            <div class="card-header">Documentos por recibir</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 30px;">#</th>
+                                <th style="width: 80px;">Almacén</th>
+                                <th style="width: 100px;">Serie-Número</th>
+                                <th style="width: 100px;">Documento</th>
+                                <th style="width: 300px;">Proveedor</th>
+                                <th style="width: 80px;">Total Neto</th>
+                                <th style="width: 60px;">Fecha de Registro</th>
+                                <th style="width: 60px;">Usuario</th>
+                                <th style="width: 60px;">Obs.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($compras as $compra)
+                                <tr data-compra-id="{{ $compra->id }}">
+                                    <th scope="row">{{ $compra->id }}</th>
+                                    <td>{{ $compra->local_destino }}</td>
+                                    <td>Z-{{ $compra->id }}</td>
+                                    <td>{{ $compra->moneda }}</td>
+                                    <td>{{ $compra->total_bruto }}</td>
+                                    <td>{{ $compra->proveedor->nombre_comercial }}</td>
+                                    <td>{{ $compra->created_at }}</td>
+                                    <td>{{ $compra->usuario->name }}</td>
+                                    <td></td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
             </div>
-
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th style="width: 30px;">#</th>
-                        <th style="width: 80px;">Almacén</th>
-                        <th style="width: 100px;">Serie-Número</th>
-                        <th style="width: 100px;">Documento</th>
-                        <th style="width: 300px;">Proveedor</th>
-                        <th style="width: 80px;">Total Neto</th>
-                        <th style="width: 60px;">Fecha de Registro</th>
-                        <th style="width: 60px;">Usuario</th>
-                        <th style="width: 60px;">Obs.</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($compras as $compra)
-                        <tr data-compra-id="{{ $compra->id }}">
-                            <th scope="row">{{ $compra->id }}</th>
-                            <td>{{ $compra->local_destino }}</td>
-                            <td>Z-{{ $compra->id }}</td>
-                            <td>{{ $compra->moneda }}</td>
-                            <td>{{ $compra->total_bruto }}</td>
-                            <td>{{ $compra->proveedor->nombre_comercial }}</td>
-                            <td>{{ $compra->created_at }}</td>
-                            <td>{{ $compra->usuario->name }}</td>
-                            <td></td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
         </div>
 
-        <div class="inventory-table">
-            <div class="table-header">
-                Detalle
+        <div class="inventory-table card mb-3">
+            <div class="card-header">Detalle</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 30px;">#</th>
+                                <th style="width: 80px;">Producto</th>
+                                <th style="width: 100px;">Cantidad</th>
+                                <th style="width: 100px;">Detalle</th>
+                                <th style="width: 300px;">Costo</th>
+                                <th style="width: 80px;">COP</th>
+                                <th style="width: 60px;">MU%</th>
+                                <th style="width: 60px;">MU/D%</th>
+                                <th style="width: 60px;">MUP</th>
+                                <th style="width: 60px;">PVP</th>
+                                <th style="width: 60px; color:red">PA</th>
+                                <th style="width: 60px;">PVP/D</th>
+                                <th style="width: 60px; color:red">PA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                        </tbody>
+                    </table>
+                </div>
             </div>
-
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th style="width: 30px;">#</th>
-                        <th style="width: 80px;">Producto</th>
-                        <th style="width: 100px;">Cantidad</th>
-                        <th style="width: 100px;">Detalle</th>
-                        <th style="width: 300px;">Costo</th>
-                        <th style="width: 80px;">COP</th>
-                        <th style="width: 60px;">MU%</th>
-                        <th style="width: 60px;">MU/D%</th>
-                        <th style="width: 60px;">MUP</th>
-                        <th style="width: 60px;">PVP</th>
-                        <th style="width: 60px; color:red">PA</th>
-                        <th style="width: 60px;">PVP/D</th>
-                        <th style="width: 60px; color:red">PA</th>
-                    </tr>
-                </thead>
-                <tbody>
-
-                </tbody>
-            </table>
         </div>
 
         <!-- Resumen -->
-        <div class="summary-section">
-            <div class="summary-title">Resumen</div>
-            <div style="display: flex; justify-content: space-between">
-                <div class="summary-stats">
-                    <div class="stat-item">
-                        Total MUP: <span class="stat-value" id="total-mup">0.00</span>
+        <div class="summary-section card"
+            style="position: fixed; bottom: 20px; width: 73%; padding: 12px; border: 1px solid #ddd; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.08); z-index:1050;">
+            <div class="card-body p-2">
+                <div class="summary-title">Resumen</div>
+                <div style="display: flex; justify-content: space-between; align-items:center; gap:12px">
+                    <div class="summary-stats">
+                        <div class="stat-item">
+                            Total MUP: <span class="stat-value" id="total-mup">0.00</span>
+                        </div>
+                        <div class="stat-item">
+                            Total PA: <span class="stat-value" id="total-pa">0.00</span>
+                        </div>
+                        <div class="stat-item">
+                            Total PA/D: <span class="stat-value" id="total-pa-d">0.00</span>
+                        </div>
                     </div>
-                    <div class="stat-item">
-                        Total PA: <span class="stat-value" id="total-pa">0.00</span>
+                    <div>
+                        <button class="btn btn-primary" id="btn-recibir">
+                            Recibir
+                        </button>
                     </div>
-                    <div class="stat-item">
-                        Total PA/D: <span class="stat-value" id="total-pa-d">0.00</span>
-                    </div>
-                </div>
-                <div>
-                    <button class="btn btn-primary" id="btn-recibir">
-                        Recibir
-                    </button>
-
                 </div>
             </div>
         </div>
+
+        <style>
+            /* Presentational only - does not change inputs or JS selectors */
+            .card-header {
+                background: linear-gradient(90deg, #f8fafc, #ffffff);
+                font-weight: 600;
+                color: #343a40;
+            }
+
+            .table-hover tbody tr:hover { background: #f6f9fb; }
+
+            .table-responsive { max-height: 62vh; overflow: auto; }
+
+            thead th { position: sticky; top: 0; z-index: 3; background: #f8f9fa; }
+
+            .search-row .form-group label { font-size: 0.85rem; font-weight: 600; }
+
+            @media (max-width: 768px) {
+                .summary-section.card { position: static; width: 100%; margin-top: 12px; }
+                .table-responsive { max-height: 45vh; }
+            }
+        </style>
 
     </div>
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>

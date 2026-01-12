@@ -2,12 +2,10 @@
 
 @section('content')
     {{-- ===================== STYLES ===================== --}}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.1.1/dist/select2-bootstrap-5-theme.min.css"
         rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
-    <link rel="stylesheet" href="{{ asset('css/principal.css') }}">
 
     <div class="almacen-container">
         <!-- Breadcrumb -->
@@ -27,13 +25,14 @@
 
 
         <!-- Tabla de inventario -->
-        <div class="inventory-table">
-            <div class="table-header">
+        <div class="card mb-3">
+            <div class="card-header">
                 Documentos por recibir
             </div>
-
-            <table class="table table-sm table-bordered align-middle text-center">
-                <thead class="table-light">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover table-bordered align-middle text-center mb-0">
+                        <thead class="table-light">
                     <tr>
                         <th>#</th>
                         <th>Producto</th>
@@ -74,14 +73,14 @@
                             <td>{{ $p['cantidad'] }} NIU</td>
                             <td>{{ $p['detalle'] ?? '-' }}</td>
                             <td>
-                                <input type="number" class="form-control form-control-sm" value="{{ $p['costo'] }}">
+                                <input type="number" class="form-control form-control-sm" value="{{ $p['costo'] ?? 0 }}">
                             </td>
                             <td>
-                                <input type="number" class="form-control form-control-sm cop" value="{{ $p['cop'] }}">
+                                <input type="number" class="form-control form-control-sm cop" value="{{ $p['cop'] ?? 0 }}">
                             </td>
 
                             <td>
-                                <input type="number" class="form-control form-control-sm mu" value="{{ $p['mu'] }}">
+                                <input type="number" class="form-control form-control-sm mu" value="{{ $p['mu'] ?? 0 }}">
                             </td>
 
                             <td>
@@ -91,14 +90,14 @@
                             <td class="mup">0.00</td>
 
                             <td>
-                                <input type="number" class="form-control form-control-sm pvp" value="{{ $p['pvp'] }}">
+                                <input type="number" class="form-control form-control-sm pvp" value="{{ $p['pvp'] ?? 0 }}">
                             </td>
 
                             <td class="pa-pvp text-danger">0.00</td>
 
                             <td>
                                 <input type="number" class="form-control form-control-sm pvpd"
-                                    value="{{ $p['pvp'] }}">
+                                    value="{{ $p['pvp'] ?? 0 }}">
                             </td>
 
                             <td class="pa-pvpd text-danger">0.00</td>
@@ -106,7 +105,7 @@
                             <td class="muc">0.00</td>
 
                             <td>
-                                <input type="number" class="form-control form-control-sm pvc" value="{{ $p['pvp'] }}">
+                                <input type="number" class="form-control form-control-sm pvc" value="{{ $p['pvp'] ?? 0 }}">
                             </td>
 
                             <td class="pa-pvc text-danger">0.00</td>
@@ -136,13 +135,14 @@
                             </td>
                         </tr>
                     @endforeach
-                </tbody>
-            </table>
-
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
-        <div class="summary-section"
-            style="position: absolute; bottom: 20px;  right: 20px; width: auto; padding: 15px; border: 1px solid #ddd; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+        <div class="summary-section card"
+            style="position: fixed; bottom: 20px; right: 20px; width: auto; padding: 12px; border: 1px solid #ddd; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); z-index: 1050;">
             <div style="display: flex; justify-content: flex-end;">
                 <div class="summary-stats">
                     <div class="stat-item">
@@ -219,6 +219,48 @@
         .is-valid {
             border-color: #28a745 !important;
             background-color: #d4edda !important;
+        }
+
+        /* Mejoras visuales generales (solo presentación) */
+        .card-header {
+            background: linear-gradient(90deg, #f8fafc, #ffffff);
+            font-weight: 600;
+            color: #343a40;
+        }
+
+        .table-responsive {
+            max-height: 62vh;
+            overflow: auto;
+        }
+
+        thead th {
+            position: sticky;
+            top: 0;
+            z-index: 3;
+            background: #f8f9fa;
+        }
+
+        .help-icon {
+            color: #6c757d;
+            cursor: help;
+            margin-left: 6px;
+            font-size: 0.95em;
+        }
+
+        .summary-section.card {
+            border-radius: 8px;
+            padding: 10px 12px !important;
+        }
+
+        .summary-stats .btn {
+            min-width: 130px;
+        }
+
+        .stat-item { display: inline-block; margin-left: 8px; }
+
+        @media (max-width: 768px) {
+            .summary-section.card { position: static; width: 100%; margin-top: 12px; }
+            .table-responsive { max-height: 45vh; }
         }
     </style>
 

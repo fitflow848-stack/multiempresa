@@ -11,72 +11,55 @@
 
 @section('content')
 
-    <div class="module-container">
-        <!-- Sección de filtros de búsqueda -->
-        <div class="search-section">
-            <h6 class="mb-3">
-                <i class="fas fa-filter me-2"></i>
-                Filtros de Búsqueda
-            </h6>
-            <div class="search-row">
-                <div class="form-group">
-                    <label>
-                        <i class="fas fa-calendar me-1"></i>
-                        Desde:
-                    </label>
-                    <input type="date" class="form-control" id="fecha-desde">
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Compras</h1>
+            <small class="text-muted">Gestión y seguimiento de compras</small>
+        </div>
+        <a href="{{ route('compras.create') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Nueva Compra
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ route('compras.index') }}" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Desde</label>
+                    <input type="date" name="fecha_desde" id="fecha-desde" class="form-control" value="{{ request('fecha_desde') }}">
                 </div>
-                <div class="form-group">
-                    <label>
-                        <i class="fas fa-calendar me-1"></i>
-                        Hasta:
-                    </label>
-                    <input type="date" class="form-control" id="fecha-hasta">
+                <div class="col-md-3">
+                    <label class="form-label">Hasta</label>
+                    <input type="date" name="fecha_hasta" id="fecha-hasta" class="form-control" value="{{ request('fecha_hasta') }}">
                 </div>
-                <div class="form-group">
-                    <label>
-                        <i class="fas fa-truck me-1"></i>
-                        Proveedor:
-                    </label>
-                    <input type="text" class="form-control" id="proveedor-filter" placeholder="Buscar proveedor...">
+                <div class="col-md-3">
+                    <label class="form-label">Proveedor</label>
+                    <input type="text" name="proveedor" id="proveedor-filter" class="form-control" placeholder="Buscar proveedor..." value="{{ request('proveedor') }}">
                 </div>
-                <div class="form-group">
-                    <label>
-                        <i class="fas fa-info-circle me-1"></i>
-                        Estado:
-                    </label>
-                    <select class="form-control" id="estado-filter">
+                <div class="col-md-2">
+                    <label class="form-label">Estado</label>
+                    <select name="estado" id="estado-filter" class="form-select">
                         <option value="">Todos</option>
-                        <option value="pendiente">Pendiente</option>
-                        <option value="completado">Completado</option>
-                        <option value="cancelado">Cancelado</option>
+                        <option value="pendiente" {{ request('estado') == 'pendiente' ? 'selected' : '' }}>Pendiente</option>
+                        <option value="completado" {{ request('estado') == 'completado' ? 'selected' : '' }}>Completado</option>
+                        <option value="cancelado" {{ request('estado') == 'cancelado' ? 'selected' : '' }}>Cancelado</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>&nbsp;</label>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-outline-secondary" id="limpiar-filtros"
-                            title="Limpiar filtros">
-                            <i class="fas fa-eraser"></i>
-                        </button>
-                        <button type="button" class="btn-search" id="aplicar-filtros">
-                            <i class="fas fa-search me-1"></i>
-                            Buscar
-                        </button>
-                    </div>
+                <div class="col-md-1 d-grid">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-outline-primary">Filtrar</button>
                 </div>
-            </div>
+            </form>
         </div>
+    </div>
 
-        <!-- Tabla de compras mejorada -->
-        <div class="inventory-section">
-            <div class="section-header">
-                <i class="fas fa-list me-2"></i>
-                Listado de Compras
-            </div>
+    <div class="card">
+        <div class="card-body">
             <div class="table-responsive">
                 <table id="compras-table" class="table table-hover" style="width:100%">
-                    <thead>
+                    <thead class="table-light">
                         <tr>
                             <th class="text-center">N°</th>
                             <th class="text-center">Fecha</th>
@@ -87,52 +70,45 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {{-- Los datos se cargan por AJAX desde DataTables --}}
+                        {{-- DataTable carga por AJAX --}}
                     </tbody>
                 </table>
             </div>
         </div>
+    </div>
 
-        <!-- Resumen de compras -->
-        <div class="summary-section">
-            <h6 class="mb-3">
-                <i class="fas fa-chart-bar me-2"></i>
-                Resumen de Compras
-            </h6>
-            <div class="summary-stats">
-                <div class="stat-item">
-                    <i class="fas fa-shopping-cart text-success"></i>
-                    <small class="d-block text-muted">Total Compras</small>
-                    <span class="stat-value text-success" id="total-compras">0</span>
-                </div>
-                <div class="stat-item">
-                    <i class="fas fa-clock text-warning"></i>
-                    <small class="d-block text-muted">Pendientes</small>
-                    <span class="stat-value text-warning" id="compras-pendientes">0</span>
-                </div>
-                <div class="stat-item">
-                    <i class="fas fa-check-circle text-primary"></i>
-                    <small class="d-block text-muted">Completadas</small>
-                    <span class="stat-value text-primary" id="compras-completadas">0</span>
-                </div>
-                <div class="stat-item">
-                    <i class="fas fa-dollar-sign text-info"></i>
-                    <small class="d-block text-muted">Valor Total</small>
-                    <span class="stat-value text-info" id="valor-total">S/. 0.00</span>
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <small class="text-muted">Total Compras</small>
+                    <div class="h5" id="total-compras">0</div>
                 </div>
             </div>
         </div>
-
-        <!-- Botones de acción flotantes -->
-        <div class="action-buttons">
-            <a href="{{ route('compras.create') }}" class="btn-action" title="Crear nueva compra">
-                <i class="fas fa-plus me-2"></i>
-                Nueva Compra
-            </a>
-            <a href="#" class="btn-action alta-rapida" title="Ver reportes">
-                <i class="fas fa-chart-line me-2"></i>
-                Ver Reportes
-            </a>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <small class="text-muted">Pendientes</small>
+                    <div class="h5" id="compras-pendientes">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <small class="text-muted">Completadas</small>
+                    <div class="h5" id="compras-completadas">0</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <small class="text-muted">Valor Total</small>
+                    <div class="h5" id="valor-total">S/. 0.00</div>
+                </div>
+            </div>
         </div>
     </div>
 

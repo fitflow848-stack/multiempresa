@@ -32,7 +32,7 @@ class AlmacenController extends Controller
                 DB::raw('AVG(d.pvc) as pvc')
             )
             ->groupBy('d.producto_id', 'p.nombre', 'p.codigo_barras')
-            ->get();
+            ->paginate(20);
 
         $productos = $stocks;
 

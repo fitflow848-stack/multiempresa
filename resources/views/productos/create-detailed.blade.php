@@ -85,7 +85,7 @@
             <div>
                 <h1 class="h5 mb-1">
                     <i class="fas fa-cube text-primary me-2"></i>
-                    Registrar Producto — Detalle
+                    Registrar Producto — Detalle - {{ $producto_data['nombre'] }}
                 </h1>
                 <p class="text-muted mb-0 small">Configure las especificaciones detalladas y precios del producto</p>
             </div>

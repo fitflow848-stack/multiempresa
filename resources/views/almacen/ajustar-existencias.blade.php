@@ -1,258 +1,103 @@
 @extends('layout.app')
 
+@section('title', 'Ajustar Existencias')
+
 @section('content')
-@push('styles')
-<style>
-    .ajuste-container {
-        padding: 20px;
-        background: #f8f9fa;
-        min-height: calc(100vh - 60px);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-
-    .ajuste-form {
-        background: white;
-        padding: 30px;
-        border-radius: 10px;
-        box-shadow: 0 2px 20px rgba(0,0,0,0.1);
-        max-width: 500px;
-        width: 100%;
-    }
-
-    .form-title {
-        color: #d32f2f;
-        text-align: center;
-        margin-bottom: 10px;
-        font-size: 16px;
-        font-weight: bold;
-    }
-
-    .form-subtitle {
-        color: #d32f2f;
-        text-align: center;
-        margin-bottom: 20px;
-        font-size: 14px;
-    }
-
-    .product-name {
-        background: #f8f9fa;
-        padding: 15px;
-        border-radius: 5px;
-        margin-bottom: 20px;
-        text-align: center;
-        font-weight: bold;
-        color: #333;
-        font-size: 12px;
-    }
-
-    .form-row {
-        display: flex;
-        gap: 20px;
-        margin-bottom: 15px;
-        align-items: center;
-    }
-
-    .form-label {
-        min-width: 140px;
-        text-align: right;
-        font-size: 12px;
-        color: #555;
-        font-weight: 500;
-    }
-
-    .form-input {
-        flex: 1;
-        padding: 8px 10px;
-        border: 2px solid #ddd;
-        border-radius: 5px;
-        font-size: 12px;
-        text-align: center;
-    }
-
-    .form-input:focus {
-        outline: none;
-        border-color: #17a2b8;
-    }
-
-    .form-input.highlight {
-        border-color: #17a2b8;
-        background: #f0f9ff;
-    }
-
-    .stock-info {
-        background: #e3f2fd;
-        padding: 8px 10px;
-        border-radius: 5px;
-        font-size: 12px;
-        text-align: center;
-        font-weight: bold;
-        color: #1976d2;
-        min-width: 80px;
-    }
-
-    .section-title {
-        margin: 25px 0 15px 0;
-        font-size: 13px;
-        font-weight: bold;
-        color: #333;
-    }
-
-    .action-buttons {
-        display: flex;
-        gap: 10px;
-        justify-content: center;
-        margin-top: 30px;
-    }
-
-    .btn {
-        padding: 10px 25px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: bold;
-        min-width: 120px;
-    }
-
-    .btn-primary {
-        background: #17a2b8;
-        color: white;
-    }
-
-    .btn-secondary {
-        background: #6c757d;
-        color: white;
-    }
-
-    .btn:hover {
-        opacity: 0.9;
-        transform: translateY(-1px);
-    }
-
-    .back-link {
-        color: #17a2b8;
-        text-decoration: none;
-        font-size: 11px;
-        margin-bottom: 20px;
-        display: inline-block;
-    }
-
-    .back-link:hover {
-        text-decoration: underline;
-    }
-</style>
-@endpush
-
-<div class="ajuste-container">
-    <div class="ajuste-form">
-        <a href="{{ route('almacen.index') }}" class="back-link">← Volver al inventario</a>
-        
-        <div class="form-title">Inventario Inicial mayo 2022 - Pendiente > Stock Almacén</div>
-        <div class="form-subtitle">Ajustar Existencias</div>
-        
-        <div class="product-name">
-            {{ $producto['nombre'] }}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h4 mb-0">Ajuste de Existencias</h1>
+            <small class="text-muted">Ajusta cantidades y precios del producto</small>
         </div>
-
-        <form action="{{ route('almacen.guardar-ajuste', $producto['id']) }}" method="POST">
-            @csrf
-            
-            <div class="form-row">
-                <label class="form-label">Existencias kardex</label>
-                <div class="stock-info">{{ $producto['existencias_kardex'] }}</div>
-            </div>
-
-            <div class="form-row">
-                <label class="form-label">Ajuste Existencias</label>
-                <div class="stock-info">{{ $producto['ajuste_existencias'] }}</div>
-            </div>
-
-            <div class="form-row">
-                <label class="form-label">Existencias Físico</label>
-                <input type="number" class="form-input highlight" name="existencias_fisico" 
-                       value="{{ $producto['existencias_fisico'] }}" step="0.01" required>
-            </div>
-
-            <div class="form-row">
-                <label class="form-label">Precio Compra</label>
-                <input type="number" class="form-input highlight" name="precio_compra" 
-                       value="{{ $producto['precio_compra'] }}" step="0.01" required>
-            </div>
-
-            <div class="form-row">
-                <label class="form-label">Costo Operativo</label>
-                <input type="number" class="form-input highlight" name="costo_operativo" 
-                       value="{{ $producto['costo_operativo'] }}" step="0.01">
-            </div>
-
-            <div class="form-row">
-                <label class="form-label">Peso (KGM)</label>
-                <input type="number" class="form-input" name="peso" 
-                       value="{{ $producto['peso'] }}" step="0.01">
-            </div>
-
-            <div class="section-title">Precios de Venta</div>
-
-            <div class="form-row">
-                <label class="form-label">PVP</label>
-                <input type="number" class="form-input highlight" name="pvp" 
-                       value="{{ $producto['pvp'] }}" step="0.01" required>
-            </div>
-
-            <div class="form-row">
-                <label class="form-label">PVP/Dcto.</label>
-                <input type="number" class="form-input highlight" name="pvp_dcto" 
-                       value="{{ $producto['pvp_dcto'] }}" step="0.01">
-            </div>
-
-            <div class="form-row">
-                <label class="form-label">PVC</label>
-                <input type="number" class="form-input highlight" name="pvc" 
-                       value="{{ $producto['pvc'] }}" step="0.01">
-            </div>
-
-            <div class="form-row">
-                <label class="form-label">PVC/Dcto.</label>
-                <input type="number" class="form-input highlight" name="pvc_dcto" 
-                       value="{{ $producto['pvc_dcto'] }}" step="0.01">
-            </div>
-
-            <div class="form-row">
-                <label class="form-label">PV/Docena</label>
-                <input type="number" class="form-input highlight" name="pv_docena" 
-                       value="{{ $producto['pv_docena'] }}" step="0.01">
-            </div>
-
-            <div class="action-buttons">
-                <button type="button" class="btn btn-primary" onclick="modificar()">
-                    ✏️ Modificar...
-                </button>
-                <button type="submit" class="btn btn-secondary">
-                    📦 Volver Stock
-                </button>
-            </div>
-        </form>
+        <div>
+            <a href="{{ route('almacen.index') }}" class="btn btn-outline-secondary">← Volver al inventario</a>
+        </div>
     </div>
-</div>
 
-@push('scripts')
-<script>
-function modificar() {
-    if (confirm('¿Estás seguro que deseas guardar los cambios?')) {
-        document.querySelector('form').submit();
-    }
-}
+    <div class="card">
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-8">
+                    <h5 class="mb-1">{{ $producto['nombre'] ?? ($producto['nombre'] ?? '-') }}</h5>
+                    <small class="text-muted">Código: {{ $producto['codigo'] ?? '-' }}</small>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <div class="badge bg-info text-dark">Existencias Kardex: {{ $producto['existencias_kardex'] ?? '-' }}</div>
+                </div>
+            </div>
 
-// Auto-focus en el primer campo destacado
-document.addEventListener('DOMContentLoaded', function() {
-    const firstHighlight = document.querySelector('.form-input.highlight');
-    if (firstHighlight) {
-        firstHighlight.focus();
-        firstHighlight.select();
-    }
-});
-</script>
-@endpush
+            <form action="{{ route('almacen.guardar-ajuste', $producto['id'] ?? $producto['id'] ) }}" method="POST" class="row g-3">
+                @csrf
+
+                <div class="col-md-4">
+                    <label class="form-label">Existencias Físico</label>
+                    <input type="number" step="0.01" name="existencias_fisico" class="form-control" value="{{ old('existencias_fisico', $producto['existencias_fisico'] ?? '') }}" required>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Ajuste Existencias</label>
+                    <input type="text" class="form-control" value="{{ $producto['ajuste_existencias'] ?? '-' }}" disabled>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Peso (KGM)</label>
+                    <input type="number" step="0.01" name="peso" class="form-control" value="{{ old('peso', $producto['peso'] ?? '') }}">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Precio Compra</label>
+                    <input type="number" step="0.01" name="precio_compra" class="form-control" value="{{ old('precio_compra', $producto['precio_compra'] ?? '') }}" required>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Costo Operativo</label>
+                    <input type="number" step="0.01" name="costo_operativo" class="form-control" value="{{ old('costo_operativo', $producto['costo_operativo'] ?? '') }}">
+                </div>
+
+                <div class="col-12 mt-2">
+                    <h6 class="mb-2">Precios de Venta</h6>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">PVP</label>
+                    <input type="number" step="0.01" name="pvp" class="form-control" value="{{ old('pvp', $producto['pvp'] ?? '') }}" required>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">PVP/Dcto.</label>
+                    <input type="number" step="0.01" name="pvp_dcto" class="form-control" value="{{ old('pvp_dcto', $producto['pvp_dcto'] ?? '') }}">
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">PVC</label>
+                    <input type="number" step="0.01" name="pvc" class="form-control" value="{{ old('pvc', $producto['pvc'] ?? '') }}">
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">PVC/Dcto.</label>
+                    <input type="number" step="0.01" name="pvc_dcto" class="form-control" value="{{ old('pvc_dcto', $producto['pvc_dcto'] ?? '') }}">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">PV/Docena</label>
+                    <input type="number" step="0.01" name="pv_docena" class="form-control" value="{{ old('pv_docena', $producto['pv_docena'] ?? '') }}">
+                </div>
+
+                <div class="col-12 d-flex gap-2 mt-3">
+                    <button type="submit" class="btn btn-primary">Guardar Ajuste</button>
+                    <a href="{{ route('almacen.index') }}" class="btn btn-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @push('scripts')
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const first = document.querySelector('input[name="existencias_fisico"]');
+        if (first) { first.focus(); first.select(); }
+    });
+    </script>
+    @endpush
+
 @endsection

@@ -162,7 +162,7 @@
                 <div class="company-options">
                     <div style="cursor: pointer;" onclick="navegarAClientes()"><i class="fa-solid fa-user-group"></i> Clientes</div>
                     <div><i class="fa-solid fa-book-open"></i> <a href="{{ route("comprobantes.index") }}">Comprobantes</a></div>
-                    <div><i class="fa-solid fa-money-bill-wave"></i> Caja</div>
+                    <div><a href="{{ route("cierre-caja.index") }}"><i class="fa-solid fa-money-bill-wave"></i> Caja</a></div>
                     <div><i class="fa-solid fa-user"></i> {{ Auth::user()->name }}</div>
                     <div><i class="fa-solid fa-shop"></i> TPV VD</div>
                 </div>
