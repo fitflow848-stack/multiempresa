@@ -92,6 +92,7 @@
                                         <th>Fecha Emisión</th>
                                         <th class="text-end">Total Importe</th>
                                         <th class="text-end">Importe Pendiente</th>
+                                        <th>Estado Venta</th>
                                         <th>Estado Pago</th>
                                         <th>Sunat</th>
                                         <th class="text-center">Acciones</th>
@@ -136,6 +137,11 @@
                                                 S/ {{ $venta->pagado ? '0.00' : number_format($venta->total, 2) }}
                                             </td>
                                             <td>
+                                                <span class="badge bg-{{ $venta->estado == 1 ? 'success' : ($venta->estado == 3 ? 'warning' : 'secondary') }}">
+                                                   {{ $venta->estado == 1 ? 'Activo' : ($venta->estado == 3 ? 'Devuelto' : 'Anulado') }}
+                                                </span>
+                                            </td>
+                                            <td>
                                                 <span class="badge bg-{{ $venta->pagado ? 'success' : 'warning' }}">
                                                     {{ $venta->pagado ? 'PAGADA' : 'PENDIENTE PAGO' }}
                                                 </span>
@@ -159,7 +165,7 @@
                                                 <div class="btn-group btn-group-sm">
                                                     <button class="btn btn-outline-info btn-sm btn-detalle"
                                                         data-venta-id="{{ $venta->id_venta }}" title="Ver detalle">
-                                                        <i class="fas fa-eye"></i>
+                                                        <i class="bx bx-show"></i>
                                                     </button>
                                                     @if (isset($venta->ventaSunat->nombre_xml) &&$venta->ventaSunat->nombre_xml)
                                                         <a href="{{ env('APP_URL') }}/storage/xml_sunat/{{ $venta->ventaSunat->nombre_xml }}.xml"
@@ -176,7 +182,7 @@
 
                                                     <button class="btn btn-outline-secondary btn-sm btn-imprimir"
                                                         data-venta-id="{{ $venta->id_venta }}" title="Imprimir">
-                                                        <i class="fas fa-print"></i>
+                                                        <i class="bx bx-printer"></i>
                                                     </button>
                                                 </div>
                                             </td>

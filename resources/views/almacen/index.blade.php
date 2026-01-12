@@ -2,10 +2,6 @@
 
 @section('title', 'Inventario Stock Almacén')
 @section('page-title', 'Inventario Stock Almacén')
-@section('breadcrumb')
-    <li class="breadcrumb-item">Área Almacén</li>
-    <li class="breadcrumb-item active">Inventarios</li>
-@endsection
 
 <link rel="stylesheet" href="{{ asset('css/modules-common.css') }}">
 

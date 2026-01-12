@@ -1,6 +1,7 @@
 @extends('layout.app')
 
 @section('content')
+    @section('title', 'Punto de Venta (POS)')
     <link rel="stylesheet" href="{{ asset('css/pos.css') }}">
     <style>
         .productos-grid {

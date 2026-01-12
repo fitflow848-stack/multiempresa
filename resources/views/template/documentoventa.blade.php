@@ -127,7 +127,7 @@
             </div>
             <div
                 style="position: absolute;top: 0;right: 0;padding: 5px; text-align: center; width: 200px; border: 2px solid black; border-radius: 10px;">
-                <p>RUC: 20489629551</p>
+                <p>RUC: {{ $empresa->ruc }}</p>
                 <h1>{{ $tipoDocumento }} ELECTRÓNICA</h1>
                 <p>NRO: {{ $venta->serie }}-{{ agregarCerosIzquierda($venta->numero) }}</p>
             </div>
@@ -221,10 +221,10 @@
                 <tbody>
                     @foreach ($servicios as $i => $servicio)
                         <tr class="{{ $i % 2 !== 0 ? 'bg-gray' : '' }}">
-                            <td>{{ $servicio->id_servici ?? ($servicio->servicio_id ?? '') }}</td>
+                            <td>{{ $servicio->id_servici ?? ($servicio->servicio_id ?? $servicio->producto_id ?? '') }}</td>
                             <td>1</td>
                             <td>001</td>
-                            <td>{{ $servicio->nombre ?? ($servicio->nombre_servicio ?? '') }}</td>
+                            <td>{{ $servicio->nombre ?? ($servicio->nombre_servicio ?? $servicio->descripcion ?? '') }}</td>
                             <td class="text-right">
                                 {{ number_format($servicio->costo ?? ($servicio->precio_unitario ?? 0), 2) }}</td>
                             <td class="text-right">{{ number_format($servicio->costo ?? ($servicio->importe ?? 0), 2) }}
@@ -405,7 +405,6 @@
             </table>
         </div>
         <!-- Debug QR -->
-        <!-- QR Debug: {{ $qr_image ? 'QR Encontrado (length: ' . strlen($qr_image) . ')' : 'QR NO encontrado' }} -->
 
         @if (!empty($qr_image))
             <!-- Footer QR: posición fija para PDF -->
@@ -415,16 +414,7 @@
                     <div class="hash"><strong>Código Hash:</strong> {{ $qr_hash }}</div>
                 @endif
             </div>
-        @else
-            <!-- QR no disponible - Debug -->
-            <div class="footer-qr">
-                <div style="border: 1px solid red; padding: 10px; text-align: center;">
-                    <small>QR no disponible</small><br>
-                    <small>QR_Image: {{ $qr_image ?? 'NULL' }}</small>
-                </div>
-            </div>
         @endif
-
     </div>
 </body>
 

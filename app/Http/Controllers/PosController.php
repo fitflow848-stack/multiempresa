@@ -792,8 +792,19 @@ class PosController extends Controller
 
         // Usar detalles de venta en lugar de servicios originales
         $servicios = VentaDetalle::where('id_venta', $id)->ordenado()->get();
-
-        $cliente = Cliente::where('id', $venta->id_cliente)->first();
+        if($venta->id_cliente == 999999){
+            $cliente = (object) [
+                'tipo_documento' => 'DNI',
+                'numero_documento' => '99999999',
+                'nombre' => 'CLIENTE VARIOS',
+                'direccion' => 'SIN DIRECCION',
+                'telefono' => '',
+                'email' => ''
+            ];
+        }else{
+            $cliente = Cliente::where('id', $venta->id_cliente)->first();
+        }
+        
         $empresa = Company::where('id', $venta->id_empresa)->first();
 
         // Obtener logo de la empresa o usar logo por defecto

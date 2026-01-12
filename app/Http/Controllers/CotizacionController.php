@@ -8,6 +8,7 @@ use App\Models\Cliente;
 use App\Models\Company;
 use App\Models\TipoPago;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -556,5 +557,77 @@ class CotizacionController extends Controller
                 })
             ]
         ]);
+    }
+
+    public function pdfCotizacion($id, $saveOnly = false)
+    {
+        $venta = Cotizacion::where('id', $id)->first();
+
+        // Usar detalles de venta en lugar de servicios originales
+        $servicios = CotizacionDetalle::where('cotizacion_id', $id)->get();
+        if($venta->cliente_id == 999999){
+            $cliente = (object) [
+                'tipo_documento' => 'DNI',
+                'numero_documento' => '99999999',
+                'nombre' => 'CLIENTE VARIOS',
+                'direccion' => 'SIN DIRECCION',
+                'telefono' => '',
+                'email' => ''
+            ];
+        }else{
+            $cliente = Cliente::where('id', $venta->cliente_id)->first();
+        }
+
+        $empresa = Company::where('id', $venta->company_id)->first();
+
+        // Obtener logo de la empresa o usar logo por defecto
+        $logoPath = null;
+        if ($empresa && $empresa->logo) {
+            // Intentar usar el logo de la empresa
+            $logoFilePath = $empresa->logo_path;
+            if ($logoFilePath && file_exists($logoFilePath)) {
+                $logoPath = base64_encode(file_get_contents($logoFilePath));
+            }
+        }
+        
+        // Si no hay logo de empresa o no existe el archivo, usar logo por defecto
+        if (!$logoPath) {
+            $defaultLogoPath = public_path('images/scorpion.png');
+            if (file_exists($defaultLogoPath)) {
+                $logoPath = base64_encode(file_get_contents($defaultLogoPath));
+            }
+        }
+
+        $tipoDocumento = match ($venta->id_tido) {
+            1 => 'boleta',
+            2 => 'factura',
+            3 => 'nota-venta',
+            4 => 'ticket',
+            default => 'boleta',
+        };
+
+        $data = [
+            'title' => 'Boleta de Pago',
+            'date' => date('m/d/Y'),
+            'logo' => 'data:image/png;base64,' . $logoPath,
+            'cliente' => $cliente,
+            'servicios' => $servicios,
+            'venta' => $venta,
+            'tipoDocumento' => $tipoDocumento,
+            'empresa' => $empresa,
+        ];
+
+        $pdf = Pdf::loadView('template.documentoventa', $data);
+
+        if ($saveOnly) {
+            if (!file_exists(public_path('ventas/pdf'))) {
+                mkdir(public_path('ventas/pdf'), 0777, true);
+            }
+            $pdfPath = public_path("ventas/pdf/venta_{$id}.pdf");
+            $pdf->save($pdfPath);
+            return $pdfPath;
+        }
+
+        return $pdf->stream('boleta-pago.pdf');
     }
 }

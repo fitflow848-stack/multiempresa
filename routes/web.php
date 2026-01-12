@@ -64,6 +64,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/emitir', [CotizacionController::class, 'emitir'])->name('emitir');
         Route::post('/emitir', [CotizacionController::class, 'emitir'])->name('emitir.post');
         Route::post('/save-cotizacion', [CotizacionController::class, 'saveCotizacion'])->name('save-cotizacion');
+        Route::get('/pdf/{id}', [CotizacionController::class, 'pdfCotizacion'])->name('pdfCotizacion');
     });
 
     // Rutas del módulo de cierre de caja

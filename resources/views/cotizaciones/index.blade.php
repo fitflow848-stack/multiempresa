@@ -71,7 +71,7 @@
                             @foreach($cotizaciones as $cotizacion)
                                 <tr>
                                     <td>
-                                        <a href="{{ route('cotizaciones.show', $cotizacion->id) }}" 
+                                        <a href="{{ route('cotizaciones.pdfCotizacion', $cotizacion->id) }}" 
                                            class="text-decoration-none fw-bold">
                                             {{ $cotizacion->numero }}
                                         </a>
@@ -93,7 +93,7 @@
                                         <div class="btn-group btn-group-sm">
                                             <a href="{{ route('cotizaciones.show', $cotizacion->id) }}" 
                                                class="btn btn-outline-primary" title="Ver">
-                                                <i class='bx bx-edit'></i> 
+                                                <i class='bx bx-show'></i> 
                                             </a>
                                             @if($cotizacion->estado === 'pendiente')
                                                 <a href="{{ route('cotizaciones.edit', $cotizacion->id) }}" 

@@ -149,7 +149,7 @@ class ComprobantesController extends Controller
         
         $count = Venta::where('id_empresa', $user->company_id)
             ->whereIn('id_venta', $ventasIds)
-            ->update(['estado' => 'CANCELADO']);
+            ->update(['estado' => 0]);
 
         return response()->json([
             'success' => true,
@@ -168,7 +168,7 @@ class ComprobantesController extends Controller
         // Por ahora solo marcamos como devuelto
         $count = Venta::where('id_empresa', $user->company_id)
             ->whereIn('id_venta', $ventasIds)
-            ->update(['estado' => 'DEVUELTO']);
+            ->update(['estado' => 3]);
 
         return response()->json([
             'success' => true,

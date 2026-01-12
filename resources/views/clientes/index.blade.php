@@ -1,6 +1,7 @@
 @extends('layout.app')
 
 @section('content')
+@section('title', 'Gestión de Clientes')
     <style>
         .clientes-header {
             background: #17a2b8;
