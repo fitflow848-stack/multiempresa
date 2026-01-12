@@ -208,15 +208,15 @@ function accept(){
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert(`¡Venta guardada exitosamente!\nNúmero: ${data.data.numero_completo}\nTotal: S/ ${data.data.total}`);
-            
+            alert(`¡Cotización guardada exitosamente!\nNúmero: ${data.data.numero_completo}\nTotal: S/ ${data.data.total}`);
+            console.log(data);
             // Abrir PDF en nueva pestaña
             const ventaId = data.data.venta_id;
-            window.open('{{ route("pos.pdfVenta", ":id") }}'.replace(':id', ventaId), '_blank');
+            window.open('{{ route("cotizaciones.pdfCotizacion", ":id") }}'.replace(':id', ventaId), '_blank');
             
             // Limpiar ticket del localStorage/sessionStorage si existe
             localStorage.removeItem('ticketCotizacion');
-            sessionStorage.removeItem('ticketCotizacion');
+            sessionStorage.removeItem('ticketGuardadoCotizacion');
             
             // Redirigir al POS
             window.location.href = '{{ route("cotizaciones.index") }}';

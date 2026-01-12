@@ -205,7 +205,7 @@ class CotizacionController extends Controller
                 'success' => true,
                 'message' => 'Venta guardada exitosamente',
                 'data' => [
-                    'venta_id' => $venta->cotizacion_id,
+                    'venta_id' => $venta->id,
                     'numero_completo' => $venta->numero,
                     'total' => $venta->total
                 ]
