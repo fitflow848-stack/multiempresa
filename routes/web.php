@@ -18,6 +18,7 @@ use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\RecibirProductoController;
 use App\Http\Controllers\SubFamiliaController;
 use App\Http\Controllers\UnidadMedidaController;
+use App\Http\Controllers\CotizacionController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -44,6 +45,24 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/sale', [PosController::class, 'createSale'])->name('sale.create');
         Route::get('/pdf/{id}', [PosController::class, 'pdfVenta'])->name('pdfVenta');
         Route::post('/sendDocumentoSunat/{id}', [PosController::class, 'sendDocumentoSunat'])->name('sendDocumentoSunat');
+    });
+
+    // Rutas del módulo de cotizaciones
+    Route::prefix('cotizaciones')->name('cotizaciones.')->group(function () {
+        Route::get('/', [CotizacionController::class, 'index'])->name('index');
+        Route::get('/create', [CotizacionController::class, 'create'])->name('create');
+        Route::post('/', [CotizacionController::class, 'store'])->name('store');
+        Route::get('/{cotizacion}', [CotizacionController::class, 'show'])->name('show');
+        Route::get('/{cotizacion}/edit', [CotizacionController::class, 'edit'])->name('edit');
+        Route::put('/{cotizacion}', [CotizacionController::class, 'update'])->name('update');
+        Route::delete('/{cotizacion}', [CotizacionController::class, 'destroy'])->name('destroy');
+        Route::post('/{cotizacion}/cambiar-estado', [CotizacionController::class, 'cambiarEstado'])->name('cambiar-estado');
+        Route::post('/{cotizacion}/convertir-venta', [CotizacionController::class, 'convertirAVenta'])->name('convertir-venta');
+        Route::get('/api/{cotizacion}/datos', [CotizacionController::class, 'getDatos'])->name('api.datos');
+
+        Route::get('/emitir', [CotizacionController::class, 'emitir'])->name('emitir');
+        Route::post('/emitir', [CotizacionController::class, 'emitir'])->name('emitir.post');
+        Route::post('/save-cotizacion', [CotizacionController::class, 'saveCotizacion'])->name('save-cotizacion');
     });
 
     Route::prefix('comprobantes')->name('comprobantes.')->group(function () {
@@ -103,6 +122,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/store/producto', [ProductoController::class, 'store'])->name('store');
         Route::get('/api/productos', [ProductoController::class, 'search'])->name('search');
     });
+
+    // API para productos y clientes
+    Route::get('/api/productos/search', [ProductoController::class, 'search'])->name('api.productos.search');
+    Route::get('/api/clientes', [ClienteController::class, 'index'])->name('api.clientes.index');
+    Route::get('/api/clientes/search', [ClienteController::class, 'search'])->name('api.clientes.search');
 
     Route::prefix('recibir-productos')->name('recibir-productos.')->group(function () {
         Route::get('/', [RecibirProductoController::class, 'index'])->name('index');

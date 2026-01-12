@@ -8,6 +8,7 @@ use App\Models\TipoPago;
 use App\Models\Venta;
 use App\Models\VentaDetalle;
 use App\Models\VentaSunat;
+use App\Models\Cotizacion;
 use App\Services\Sunat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,7 +27,7 @@ class PosController extends Controller
         $this->sunatService = $sunatService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
         $company = $user->company;
@@ -35,7 +36,36 @@ class PosController extends Controller
             ->where('company_id', $company->id)
             ->get();
 
-        return view('pos.index', compact('user', 'company', 'sucursales'));
+        $cotizacionData = null;
+        
+        // Si se pasa una cotización, cargar sus datos
+        if ($request->has('cotizacion_id')) {
+            $cotizacion = Cotizacion::with(['cliente', 'detalles'])
+                ->where('id', $request->cotizacion_id)
+                ->where('company_id', $user->company_id)
+                ->first();
+            
+            if ($cotizacion && $cotizacion->estado === 'aprobada') {
+                $cotizacionData = [
+                    'cotizacion' => $cotizacion,
+                    'cliente' => $cotizacion->cliente,
+                    'productos' => $cotizacion->detalles->map(function($detalle) {
+                        return [
+                            'producto_id' => $detalle->producto_id,
+                            'descripcion' => $detalle->descripcion,
+                            'cantidad' => $detalle->cantidad,
+                            'precio' => $detalle->precio_unitario,
+                            'descuento' => $detalle->descuento,
+                            'importe' => $detalle->subtotal,
+                            'lote' => $detalle->lote,
+                            'fecha_vencimiento' => $detalle->fecha_vencimiento
+                        ];
+                    })
+                ];
+            }
+        }
+
+        return view('pos.index', compact('user', 'company', 'sucursales', 'cotizacionData'));
     }
 
     public function getProducts(Request $request)
@@ -294,28 +324,9 @@ class PosController extends Controller
         }
 
         // Determinar la serie según el tipo de documento
-        $serieDocumento = $this->obtenerSerieDocumento($company, $tipoDocumento);
+        $serieDocumento = obtenerSerieDocumento($company, $tipoDocumento);
         $metodos = TipoPago::where('activo', true)->orderBy('orden')->get();
         return view('pos.emitir', compact('user', 'company', 'ticketData', 'total', 'clienteData', 'tipoDocumento', 'serieDocumento', 'metodos'));
-    }
-
-    /**
-     * Obtener la serie correspondiente según el tipo de documento
-     */
-    private function obtenerSerieDocumento($company, $tipoDocumento)
-    {
-        switch ($tipoDocumento) {
-            case 'boleta':
-                return $company->serie_boleta ?? 'B001';
-            case 'factura':
-                return $company->serie_factura ?? 'F001';
-            case 'nota-venta':
-                return $company->serie_nota_venta ?? 'NV01';
-            case 'ticket':
-                return 'T001'; // Los tickets normalmente tienen serie fija
-            default:
-                return 'B001';
-        }
     }
 
     public function saveVenta(Request $request)

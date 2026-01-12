@@ -111,7 +111,7 @@ class ClienteController extends Controller
             return back()->withErrors(['numero_documento' => 'Ya existe un cliente con este número de documento.']);
         }
 
-        Cliente::create([
+        $cliente = Cliente::create([
             'company_id' => $user->company_id,
             'tipo_cliente' => $request->tipo_cliente,
             'tipo_documento' => $request->tipo_documento,
@@ -126,6 +126,32 @@ class ClienteController extends Controller
             'credito_limite' => $request->credito_limite ?? 0,
             'observaciones' => $request->observaciones
         ]);
+
+        // Verificar si viene desde cotizaciones
+        if ($request->session()->has('navegandoDesdeCotizacion') || $request->has('from_cotizacion')) {
+            // Si es una petición AJAX (desde modal), devolver JSON con datos del cliente
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Cliente registrado exitosamente',
+                    'cliente' => [
+                        'id' => $cliente->id,
+                        'nombre' => $cliente->nombre,
+                        'tipo_doc' => $cliente->tipo_documento,
+                        'documento' => $cliente->numero_documento,
+                        'direccion' => $cliente->direccion,
+                        'telefono' => $cliente->telefono,
+                        'email' => $cliente->email
+                    ],
+                    'redirect' => route('cotizaciones.create')
+                ]);
+            }
+            
+            // Para peticiones normales, redirigir a cotizaciones con datos del cliente
+            return redirect()->route('cotizaciones.create')
+                ->with('success', 'Cliente registrado exitosamente.')
+                ->with('cliente_seleccionado', $cliente);
+        }
 
         return redirect()->route('clientes.index')
             ->with('success', 'Cliente registrado exitosamente.');
@@ -370,6 +396,39 @@ class ClienteController extends Controller
                     'telefono' => $cliente->telefono,
                     'email' => $cliente->email,
                     'debe' => $cliente->debe
+                ];
+            });
+
+        return response()->json($clientes);
+    }
+
+    /**
+     * API: Buscar clientes para cotizaciones
+     */
+    public function search(Request $request)
+    {
+        $user = Auth::user();
+        $query = $request->get('q', '');
+        
+        $clientes = Cliente::where('company_id', $user->company_id)
+            ->where('activo', 1)
+            ->where(function ($q) use ($query) {
+                $q->where('nombre', 'like', "%{$query}%")
+                  ->orWhere('numero_documento', 'like', "%{$query}%")
+                  ->orWhere('telefono', 'like', "%{$query}%");
+            })
+            ->orderBy('nombre')
+            ->limit(50)
+            ->get()
+            ->map(function ($cliente) {
+                return [
+                    'id' => $cliente->id,
+                    'nombre' => $cliente->nombre,
+                    'tipo_doc' => $cliente->tipo_documento,
+                    'documento' => $cliente->numero_documento,
+                    'direccion' => $cliente->direccion,
+                    'telefono' => $cliente->telefono,
+                    'email' => $cliente->email
                 ];
             });
 

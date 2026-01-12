@@ -168,6 +168,9 @@
                 <div id="modo-pos-indicator" style="background: #28a745; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px; margin-top: 5px; display: none;">
                     🛒 Seleccionando cliente para POS
                 </div>
+                <div id="modo-cotizacion-indicator" style="background: #17a2b8; color: white; padding: 4px 8px; border-radius: 12px; font-size: 11px; margin-top: 5px; display: none;">
+                    📋 Seleccionando cliente para COTIZACIÓN
+                </div>
             </div>
             <div style="display: flex; gap: 10px;">
                 <span style="background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 20px; font-size: 12px;">
@@ -269,6 +272,14 @@
                 indicator.innerHTML = '🛒 Seleccionando cliente para POS - <small>Doble click en cualquier fila para selección rápida</small>';
                 sessionStorage.setItem('navegandoDesdePOS', 'true');
             }
+            
+            // Verificar si viene desde COTIZACIONES
+            if (document.referrer.includes('cotizaciones') || sessionStorage.getItem('navegandoDesdeCotizacion')) {
+                const indicator = document.getElementById('modo-cotizacion-indicator');
+                indicator.style.display = 'block';
+                indicator.innerHTML = '📋 Seleccionando cliente para COTIZACIÓN - <small>Doble click en cualquier fila para selección rápida</small>';
+                sessionStorage.setItem('navegandoDesdeCotizacion', 'true');
+            }
         });
 
         function cargarClientes() {
@@ -334,8 +345,14 @@
                     if (sessionStorage.getItem('navegandoDesdePOS')) {
                         // Seleccionar cliente directamente al POS con doble click
                         seleccionarClienteDirectoPOS(cliente.id, cliente.nombre);
-                    } else {
-                        // Si no viene del POS, mostrar opción
+                    } 
+                    // Verificar si viene desde COTIZACIONES
+                    else if (sessionStorage.getItem('navegandoDesdeCotizacion')) {
+                        // Seleccionar cliente directamente para cotización con doble click
+                        seleccionarClienteDirectoCotizacion(cliente.id, cliente.nombre);
+                    } 
+                    else {
+                        // Si no viene del POS ni cotizaciones, mostrar opción
                         if (confirm(`¿Seleccionar "${cliente.nombre}" para ir al POS?`)) {
                             seleccionarParaPOS(cliente.id, cliente.nombre);
                         }
@@ -584,6 +601,61 @@
             // Redirigir al POS automáticamente después de un pequeño delay
             setTimeout(() => {
                 window.location.href = '{{ route("pos.index") }}';
+            }, 1000);
+        }
+
+        // Función específica para doble click cuando viene desde COTIZACIONES
+        function seleccionarClienteDirectoCotizacion(clienteId, clienteNombre) {
+            const cliente = clientes.find(c => c.id == clienteId);
+            if (!cliente) {
+                alert('Cliente no encontrado');
+                return;
+            }
+            
+            // Guardar cliente seleccionado en sessionStorage para que la cotización lo detecte
+            const clienteParaCotizacion = {
+                id: cliente.id,
+                tipo_doc: cliente.tipo_documento,
+                documento: cliente.numero_documento,
+                nombre: cliente.nombre,
+                direccion: cliente.direccion || '',
+                email: cliente.email || '',
+                telefono: cliente.telefono || '',
+                debe: parseFloat(cliente.debe) || 0
+            };
+            
+            sessionStorage.setItem('clienteSeleccionadoCotizacion', JSON.stringify(clienteParaCotizacion));
+            
+            // Limpiar indicador de navegación desde cotizaciones
+            sessionStorage.removeItem('navegandoDesdeCotizacion');
+            
+            // Feedback visual inmediato
+            const Toast = {
+                fire: function(config) {
+                    const toast = document.createElement('div');
+                    toast.innerHTML = `
+                        <div style="position: fixed; top: 20px; right: 20px; background: #17a2b8; color: white; 
+                                    padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                                    z-index: 9999; font-weight: 600; font-size: 14px;">
+                            📋 ${config.title}: ${config.text}
+                        </div>
+                    `;
+                    document.body.appendChild(toast);
+                    
+                    setTimeout(() => {
+                        toast.remove();
+                    }, 3000);
+                }
+            };
+            
+            Toast.fire({
+                title: 'Cliente seleccionado para cotización',
+                text: clienteNombre
+            });
+            
+            // Redirigir a cotizaciones automáticamente después de un pequeño delay
+            setTimeout(() => {
+                window.location.href = '{{ route("cotizaciones.create") }}';
             }, 1000);
         }
     </script>

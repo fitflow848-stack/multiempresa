@@ -371,3 +371,24 @@ if (! function_exists('get_fecha_formateada')) {
         return [$fechaInicio ?? null, $fechaFin ?? null];
     }
 }
+
+if(! function_exists('obtenerSerieDocumento')) {
+    /**
+     * Obtener la serie correspondiente según el tipo de documento
+     */
+    function obtenerSerieDocumento($company, $tipoDocumento)
+    {
+        switch ($tipoDocumento) {
+            case 'boleta':
+                return $company->serie_boleta ?? 'B001';
+            case 'factura':
+                return $company->serie_factura ?? 'F001';
+            case 'nota-venta':
+                return $company->serie_nota_venta ?? 'NV01';
+            case 'ticket':
+                return 'T001'; // Los tickets normalmente tienen serie fija
+            default:
+                return 'B001';
+        }
+    }
+}

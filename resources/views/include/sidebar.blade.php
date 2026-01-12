@@ -86,6 +86,13 @@
             </a>
         </li>
 
+        <li class="menu-item {{ request()->is('cotizaciones*') ? 'active' : '' }}">
+            <a href="{{ route('cotizaciones.index') }}" class="menu-link">
+                <i class="menu-icon tf-icons bx bx-file"></i>
+                <div data-i18n="Basic">Cotizaciones</div>
+            </a>
+        </li>
+
         <li class="menu-item {{ request()->is('comprobantes*') ? 'active' : '' }}">
             <a href="{{ route('comprobantes.index') }}" class="menu-link">
                 <i class="menu-icon tf-icons bx bx-collection"></i>
