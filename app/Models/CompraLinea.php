@@ -12,7 +12,22 @@ class CompraLinea extends Model
     protected $table = 'compra_lineas';
 
     protected $fillable = [
-        'compra_id','product_id','cb','descripcion','cantidad','costo','descuento','vcpc'
+        'compra_id',
+        'product_id',
+        'cb',
+        'descripcion',
+        'cantidad',
+        'costo',
+        'descuento',
+        'vcpc',
+        'precio_compra',
+        'stock_min',
+        'stock_max',
+        'lote',
+        'fecha_vencimiento',
+        'pvp',
+        'pvp_dto',
+        'pvc'
     ];
 
     protected $casts = [

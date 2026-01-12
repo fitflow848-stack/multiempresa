@@ -410,6 +410,11 @@ class ProductoController extends Controller
                 // precios tomados desde la línea
                 'precio_compra' => $linea->precio_compra !== null ? (float)$linea->precio_compra : null,
                 'pvp' => $linea->pvp !== null ? (float)$linea->pvp : null,
+                // Campos de stock, lote y fecha de vencimiento
+                'stock_min' => $linea->stock_min ?? $producto->stock_min ?? 0,
+                'stock_max' => $linea->stock_max ?? $producto->stock_max ?? 0,
+                'lote' => $linea->lote ?? '',
+                'fecha_vencimiento' => $linea->fecha_venc ? \Carbon\Carbon::parse($linea->fecha_venc)->format('Y-m-d') : null,
                 // Información completa de la línea
                 'precio_linea' => [
                     'id' => $linea->id,
@@ -443,6 +448,8 @@ class ProductoController extends Controller
                 'nombre' => $producto->nombre,
                 'codigo_barras' => $producto->codigo_barras ?? null,
                 'imagen_principal' => $producto->imagen_principal,
+                'stock_min' => $producto->stock_min ?? 0,
+                'stock_max' => $producto->stock_max ?? 0,
                 'lineas' => $producto->lineas->map(function ($linea) {
                     return [
                         'id' => $linea->id,
@@ -454,6 +461,10 @@ class ProductoController extends Controller
                         'precio_compra' => $linea->precio_compra,
                         'pvp' => $linea->pvp,
                         'pvp_dto' => $linea->pvp_dto,
+                        'stock_min' => $linea->stock_min ?? 0,
+                        'stock_max' => $linea->stock_max ?? 0,
+                        'lote' => $linea->lote ?? '',
+                        'fecha_vencimiento' => $linea->fecha_venc ? \Carbon\Carbon::parse($linea->fecha_venc)->format('Y-m-d') : null,
                     ];
                 })
             ];

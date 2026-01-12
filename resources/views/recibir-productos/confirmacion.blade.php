@@ -51,6 +51,18 @@
                         <th>MUC</th>
                         <th>PVC</th>
                         <th>PA</th>
+                        <th style="background: #e8f5e8;" title="Stock mínimo recomendado para el producto">
+                            Stock Min <span class="help-icon">ℹ️</span>
+                        </th>
+                        <th style="background: #e8f5e8;" title="Stock máximo recomendado para el producto">
+                            Stock Max <span class="help-icon">ℹ️</span>
+                        </th>
+                        <th style="background: #fff3e0;" title="Número de lote del producto">
+                            Lote <span class="help-icon">📦</span>
+                        </th>
+                        <th style="background: #fff3e0;" title="Fecha de vencimiento del lote">
+                            F. Vencimiento <span class="help-icon">📅</span>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -98,6 +110,30 @@
                             </td>
 
                             <td class="pa-pvc text-danger">0.00</td>
+                            
+                            <!-- Nuevos campos editables -->
+                            <td style="background: #f8f9fa;">
+                                <input type="number" class="form-control form-control-sm stock-min" 
+                                       value="{{ $p['stock_min'] ?? 0 }}" 
+                                       placeholder="0" min="0">
+                            </td>
+                            
+                            <td style="background: #f8f9fa;">
+                                <input type="number" class="form-control form-control-sm stock-max" 
+                                       value="{{ $p['stock_max'] ?? 0 }}" 
+                                       placeholder="0" min="0">
+                            </td>
+                            
+                            <td style="background: #fffbf0;">
+                                <input type="text" class="form-control form-control-sm lote" 
+                                       value="{{ $p['lote'] ?? '' }}" 
+                                       placeholder="Lote..." maxlength="50">
+                            </td>
+                            
+                            <td style="background: #fffbf0;">
+                                <input type="date" class="form-control form-control-sm fecha-vencimiento" 
+                                       value="{{ $p['fecha_vencimiento'] ?? '' }}">
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -130,6 +166,61 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <style>
+        /* Estilos para los nuevos campos editables */
+        .stock-min, .stock-max {
+            background-color: #f0f8f0 !important;
+            border: 1px solid #28a745 !important;
+        }
+        
+        .lote, .fecha-vencimiento {
+            background-color: #fef9e7 !important;
+            border: 1px solid #ffc107 !important;
+        }
+        
+        .stock-min:focus, .stock-max:focus {
+            box-shadow: 0 0 5px rgba(40, 167, 69, 0.5) !important;
+        }
+        
+        .lote:focus, .fecha-vencimiento:focus {
+            box-shadow: 0 0 5px rgba(255, 193, 7, 0.5) !important;
+        }
+        
+        /* Indicadores visuales */
+        .field-indicator {
+            position: relative;
+        }
+        
+        .field-indicator::after {
+            content: "*";
+            color: #dc3545;
+            font-weight: bold;
+            margin-left: 2px;
+        }
+        
+        /* Tooltip para ayuda */
+        .help-icon {
+            color: #6c757d;
+            cursor: help;
+            margin-left: 5px;
+        }
+        
+        .help-icon:hover {
+            color: #495057;
+        }
+        
+        /* Validación visual */
+        .is-invalid {
+            border-color: #dc3545 !important;
+            background-color: #f8d7da !important;
+        }
+        
+        .is-valid {
+            border-color: #28a745 !important;
+            background-color: #d4edda !important;
+        }
+    </style>
 
     <script>
         function recalcularFila($row) {
@@ -171,8 +262,120 @@
             recalcularFila($(this));
         });
 
-        $('#btn-recibir').click(function() {
+        // Validaciones para nuevos campos
+        $(document).on('input', '.stock-min, .stock-max', function() {
+            const $input = $(this);
+            const value = parseInt($input.val()) || 0;
+            
+            if (value < 0) {
+                $input.addClass('is-invalid').removeClass('is-valid');
+                $input.val(0);
+            } else {
+                $input.addClass('is-valid').removeClass('is-invalid');
+            }
+            
+            // Validar que stock_max >= stock_min
+            const $row = $input.closest('tr');
+            const stockMin = parseInt($row.find('.stock-min').val()) || 0;
+            const stockMax = parseInt($row.find('.stock-max').val()) || 0;
+            
+            if (stockMax > 0 && stockMax < stockMin) {
+                $row.find('.stock-max').addClass('is-invalid');
+                $row.find('.stock-min').addClass('is-invalid');
+            } else {
+                $row.find('.stock-max').removeClass('is-invalid').addClass('is-valid');
+                $row.find('.stock-min').removeClass('is-invalid').addClass('is-valid');
+            }
+        });
 
+        // Validación de lote (caracteres especiales)
+        $(document).on('input', '.lote', function() {
+            const $input = $(this);
+            let value = $input.val();
+            
+            // Remover caracteres especiales excepto guiones y puntos
+            value = value.replace(/[^a-zA-Z0-9\-\.]/g, '');
+            $input.val(value);
+            
+            if (value.length > 0) {
+                $input.addClass('is-valid').removeClass('is-invalid');
+            } else {
+                $input.removeClass('is-valid is-invalid');
+            }
+        });
+
+        // Validación de fecha de vencimiento
+        $(document).on('change', '.fecha-vencimiento', function() {
+            const $input = $(this);
+            const fechaIngresada = new Date($input.val());
+            const hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+            
+            if ($input.val()) {
+                if (fechaIngresada < hoy) {
+                    $input.addClass('is-invalid').removeClass('is-valid');
+                    alert('⚠️ Advertencia: La fecha de vencimiento es anterior a la fecha actual');
+                } else {
+                    $input.addClass('is-valid').removeClass('is-invalid');
+                }
+            } else {
+                $input.removeClass('is-valid is-invalid');
+            }
+        });
+
+        // Mejorar función de guardado con validación
+        function validarFormulario() {
+            let esValido = true;
+            let errores = [];
+
+            $('tbody tr').each(function(index) {
+                const $row = $(this);
+                const stockMin = parseInt($row.find('.stock-min').val()) || 0;
+                const stockMax = parseInt($row.find('.stock-max').val()) || 0;
+                const producto = $row.find('td:eq(1)').text();
+
+                if (stockMax > 0 && stockMax < stockMin) {
+                    errores.push(`Producto "${producto}": Stock máximo debe ser mayor o igual al stock mínimo`);
+                    esValido = false;
+                }
+            });
+
+            if (!esValido) {
+                Swal.fire({
+                    title: 'Errores de validación',
+                    html: errores.join('<br>'),
+                    icon: 'error',
+                    confirmButtonText: 'Corregir'
+                });
+            }
+
+            return esValido;
+        }
+
+        $('#btn-recibir').click(function() {
+            // Validar formulario antes de procesar
+            if (!validarFormulario()) {
+                return;
+            }
+
+            // Confirmar acción
+            Swal.fire({
+                title: '¿Confirmar recepción?',
+                text: 'Se procesarán todos los productos con la información ingresada',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, recibir productos',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    procesarRecepcion();
+                }
+            });
+        });
+
+        function procesarRecepcion() {
             let items = [];
 
             $('tbody tr').each(function() {
@@ -189,8 +392,24 @@
                     mup: parseFloat($tr.find('.mup').text()),
                     pvp: parseFloat($tr.find('.pvp').val()),
                     pvpd: parseFloat($tr.find('.pvpd').val()),
-                    pvc: parseFloat($tr.find('.pvc').val())
+                    pvc: parseFloat($tr.find('.pvc').val()),
+                    // Nuevos campos
+                    stock_min: parseFloat($tr.find('.stock-min').val()) || 0,
+                    stock_max: parseFloat($tr.find('.stock-max').val()) || 0,
+                    lote: $tr.find('.lote').val() || '',
+                    fecha_vencimiento: $tr.find('.fecha-vencimiento').val() || null
                 });
+            });
+
+            // Mostrar loading
+            Swal.fire({
+                title: 'Procesando recepción...',
+                text: 'Por favor espere mientras se actualizan los productos',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
             });
 
             $.ajax({
@@ -198,16 +417,29 @@
                 type: "POST",
                 data: {
                     _token: "{{ csrf_token() }}",
-                    items: items
+                    items: items,
+                    compraId: {{ $compraId }}
                 },
                 success: function(resp) {
-                    Swal.fire('OK', resp.message, 'success')
-                        .then(() => location.href = "{{ route('recibir-productos.index') }}");
+                    Swal.fire({
+                        title: '¡Éxito!',
+                        text: resp.message + '. Productos actualizados correctamente.',
+                        icon: 'success',
+                        confirmButtonText: 'Continuar'
+                    }).then(() => {
+                        location.href = "{{ route('recibir-productos.index') }}";
+                    });
                 },
                 error: function(err) {
-                    Swal.fire('Error', 'No se pudo guardar', 'error');
+                    const errorMsg = err.responseJSON?.message || 'No se pudo guardar la recepción';
+                    Swal.fire({
+                        title: 'Error',
+                        text: errorMsg,
+                        icon: 'error',
+                        confirmButtonText: 'Reintentar'
+                    });
                 }
             });
-        });
+        }
     </script>
 @endsection

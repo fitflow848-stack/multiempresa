@@ -221,8 +221,8 @@
         <div class="main-content">
             <!-- Área Central -->
             <div class="center-area">
-                <div class="genack-watermark">genack</div>
-                <div style="color: #ccc; font-size: 11px;">core business</div>
+                {{-- <div class="genack-watermark">genack</div> --}}
+                {{-- <div style="color: #ccc; font-size: 11px;">core business</div> --}}
                 <!-- Reemplaza el grid por una tabla; ponlo donde quieras mostrar resultados -->
                 <div id="productos-listado" style="width:100%">
                     <table class="productos-table" style="width:100%; border-collapse:collapse;">
@@ -252,13 +252,13 @@
                     <div class="controls-left">
                         <button class="control-btn">X</button>
                         <button class="control-btn primary">Ctrl.</button>
-                        <button class="control-btn">Prec.</button>
-                        <button class="control-btn">🗑️</button>
+                        <button class="control-btn" onclick="aplicarDescuentoGlobal()" title="Aplicar descuento global">💸</button>
+                        <button class="control-btn" onclick="typeof Swal !== 'undefined' ? limpiarTicketRapidoConSweetAlert() : limpiarTicketRapido()" title="Limpiar ticket">🗑️</button>
                     </div>
 
                     <div class="controls-right">
-                        <button class="control-btn danger">❌ Cancelar</button>
-                        <button class="control-btn primary">💾 Guardar</button>
+                        <button class="control-btn danger" onclick="typeof Swal !== 'undefined' ? cancelarVentaConSweetAlert() : cancelarVenta()">❌ Cancelar</button>
+                        <button class="control-btn primary" onclick="guardarTicket()">💾 Guardar</button>
                         <button class="control-btn success" type="button" onclick="mostrarSeleccionTipoDocumento()">📤
                             Emitir</button>
                     </div>
@@ -320,7 +320,7 @@
                     </div>
                 </div>
                 <div class="footer-cliente" onclick="mostrarBuscadorClientes()" style="cursor: pointer;">
-                    <span id="footer-cliente" style="font-weight:bold;">Cliente Contado</span>
+                    <span id="footer-cliente" style="font-weight:bold;">CLIENTE CONTABLE</span>
                 </div>
                 <div class="footer-actions">
                     <button class="footer-btn">&#8644;</button>
@@ -343,6 +343,11 @@
             style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px;">
             <span style="color: #2196F3;">🛒</span>
             <span>Vender a Precio Corp</span>
+        </div>
+        <div class="context-menu-item" onclick="venderPrecioPublico()"
+            style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px;">
+            <span style="color: #28a745;">🛒</span>
+            <span>Vender a Precio Público</span>
         </div>
         <div class="context-menu-item" onclick="mostrarFichaTecnica()"
             style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px;">
@@ -370,7 +375,7 @@
             <span style="color: #4CAF50;">✏️</span>
             <span>Anotar Nuevo Producto</span>
         </div>
-        <div class="context-menu-item" onclick="cancelarVenta()"
+        <div class="context-menu-item" onclick="typeof Swal !== 'undefined' ? cancelarVentaConSweetAlert() : cancelarVenta()"
             style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px;">
             <span style="color: #F44336;">❌</span>
             <span>Cancelar Venta</span>
@@ -394,7 +399,7 @@
             <!-- Botones de acción -->
             <div style="padding: 15px 20px; border-bottom: 1px solid #dee2e6; display: flex; gap: 10px;">
                 <button onclick="mostrarFormularioNuevoCliente()" style="padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">✚ Nuevo cliente</button>
-                <button onclick="mostrarFormularioDNI()" style="padding: 8px 15px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">🔍 Cliente Contado</button>
+                <button onclick="usarClienteContado()" style="padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;" title="Usar cliente contable para ventas rápidas">💳 Cliente Contable</button>
                 <button onclick="seleccionarClienteSeleccionado()" style="padding: 8px 15px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">👤 Usar seleccionado</button>
             </div>
             
@@ -558,27 +563,228 @@
     <script>
         let ticket = [];
         let currentProduct = null;
+        let autoSaveInterval = null;
+        const AUTOSAVE_KEY = 'ventaPersistentePOS';
+        const CLIENTE_KEY = 'clientePersistentePOS';
+
+        // ========== SISTEMA DE PERSISTENCIA DE VENTAS ==========
+        
+        // Función para iniciar auto-guardado
+        function iniciarAutoGuardado() {
+            if (autoSaveInterval) {
+                clearInterval(autoSaveInterval);
+            }
+            
+            autoSaveInterval = setInterval(() => {
+                if (ticket.length > 0 || (clienteActual && clienteActual.id)) {
+                    guardarVentaPersistente();
+                }
+            }, 5000); // Guardar cada 5 segundos
+        }
+        
+        // Función para guardar venta de forma persistente
+        function guardarVentaPersistente() {
+            try {
+                const ventaData = {
+                    ticket: ticket,
+                    cliente: clienteActual,
+                    timestamp: Date.now(),
+                    fecha: new Date().toISOString()
+                };
+                
+                localStorage.setItem(AUTOSAVE_KEY, JSON.stringify(ventaData));
+                
+                // También en sessionStorage como backup
+                sessionStorage.setItem('ticketGuardadoPOS', JSON.stringify(ticket));
+                if (clienteActual && clienteActual.id) {
+                    sessionStorage.setItem('clienteGuardadoPOS', JSON.stringify(clienteActual));
+                }
+                
+                console.log('Venta guardada automáticamente:', ventaData);
+            } catch (error) {
+                console.error('Error guardando venta persistente:', error);
+            }
+        }
+        
+        // Función para restaurar venta persistente
+        function restaurarVentaPersistente() {
+            try {
+                const ventaGuardada = localStorage.getItem(AUTOSAVE_KEY);
+                
+                if (ventaGuardada) {
+                    const ventaData = JSON.parse(ventaGuardada);
+                    
+                    // Verificar que la venta no sea muy antigua (más de 24 horas)
+                    const tiempoTranscurrido = Date.now() - ventaData.timestamp;
+                    const unDia = 24 * 60 * 60 * 1000;
+                    
+                    if (tiempoTranscurrido < unDia && ventaData.ticket && ventaData.ticket.length > 0) {
+                        // Restaurar ticket
+                        ticket = ventaData.ticket || [];
+                        
+                        // Restaurar cliente
+                        if (ventaData.cliente && ventaData.cliente.id) {
+                            clienteActual = ventaData.cliente;
+                            
+                            // Actualizar UI del cliente
+                            setTimeout(() => {
+                                const clienteNombre = document.getElementById('cliente-info-nombre');
+                                const clienteDoc = document.getElementById('cliente-info-documento');
+                                if (clienteNombre) clienteNombre.textContent = clienteActual.nombre;
+                                if (clienteDoc) clienteDoc.textContent = clienteActual.documento || '';
+                            }, 100);
+                        }
+                        
+                        // Renderizar ticket restaurado
+                        setTimeout(() => {
+                            renderTicket();
+                            const fechaFormateada = new Date(ventaData.fecha).toLocaleString('es-PE');
+                            mostrarNotificacion(`💾 Venta restaurada: ${ticket.length} productos (guardado: ${fechaFormateada})`);
+                        }, 200);
+                        
+                        console.log('Venta persistente restaurada:', ventaData);
+                    } else if (tiempoTranscurrido >= unDia) {
+                        // Limpiar venta muy antigua
+                        localStorage.removeItem(AUTOSAVE_KEY);
+                        console.log('Venta antigua eliminada (más de 24 horas)');
+                    }
+                }
+            } catch (error) {
+                console.error('Error restaurando venta persistente:', error);
+                // Limpiar datos corruptos
+                localStorage.removeItem(AUTOSAVE_KEY);
+            }
+        }
+        
+        // Sistema de venta persistente
+        function inicializarSistemaVentaPersistente() {
+            // Restaurar venta persistente si existe
+            restaurarVentaPersistente();
+            
+            // Configurar auto-guardado cada 5 segundos
+            iniciarAutoGuardado();
+            
+            // Guardar antes de cerrar/cambiar ventana
+            window.addEventListener('beforeunload', function(e) {
+                if (ticket.length > 0) {
+                    guardarVentaPersistente();
+                }
+            });
+            
+            // Guardar al cambiar de pestaña/ventana
+            document.addEventListener('visibilitychange', function() {
+                if (document.visibilityState === 'hidden' && ticket.length > 0) {
+                    guardarVentaPersistente();
+                }
+            });
+        }
+
+        // ========== FIN SISTEMA DE PERSISTENCIA ==========
+
+        // Función para limpiar venta persistente al completar venta exitosamente
+        function limpiarVentaCompletada() {
+            try {
+                // Limpiar venta persistente
+                localStorage.removeItem(AUTOSAVE_KEY);
+                
+                // Detener auto-guardado
+                if (autoSaveInterval) {
+                    clearInterval(autoSaveInterval);
+                    autoSaveInterval = null;
+                }
+                
+                // Limpiar también storage temporal
+                sessionStorage.removeItem('ticketGuardadoPOS');
+                sessionStorage.removeItem('clienteGuardadoPOS');
+                localStorage.removeItem('ticketPOS');
+                
+                console.log('Venta completada - persistencia limpiada');
+                
+                // Reiniciar auto-guardado para próxima venta
+                setTimeout(() => {
+                    iniciarAutoGuardado();
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Error limpiando venta completada:', error);
+            }
+        }
+
+        // Función para mostrar estado de la venta persistente (para debugging)
+        function mostrarEstadoVentaPersistente() {
+            const ventaGuardada = localStorage.getItem(AUTOSAVE_KEY);
+            if (ventaGuardada) {
+                try {
+                    const ventaData = JSON.parse(ventaGuardada);
+                    const fechaFormateada = new Date(ventaData.fecha).toLocaleString('es-PE');
+                    const total = ventaData.ticket.reduce((sum, item) => sum + (item.importe || 0), 0);
+                    console.log('Estado venta persistente:', {
+                        productos: ventaData.ticket.length,
+                        cliente: ventaData.cliente?.nombre || 'Sin cliente',
+                        fecha: fechaFormateada,
+                        total: total.toFixed(2)
+                    });
+                    return ventaData;
+                } catch (error) {
+                    console.error('Error leyendo estado venta persistente:', error);
+                    return null;
+                }
+            } else {
+                console.log('No hay venta persistente guardada');
+                return null;
+            }
+        }
 
         // Verificar si hay lotes seleccionados pendientes de agregar al ticket
         document.addEventListener('DOMContentLoaded', function() {
+            inicializarSistemaVentaPersistente();
             verificarLotesPendientes();
             verificarClienteSeleccionado();
         });
 
         function verificarClienteSeleccionado() {
-            // Primero restaurar el ticket guardado si existe
-            const ticketGuardado = sessionStorage.getItem('ticketGuardadoPOS');
-            if (ticketGuardado) {
-                try {
-                    ticket = JSON.parse(ticketGuardado);
-                    renderTicket();
-                    mostrarNotificacion(`Se restauraron ${ticket.length} productos al ticket`);
-                    
-                    // Limpiar ticket guardado
-                    sessionStorage.removeItem('ticketGuardadoPOS');
-                } catch (error) {
-                    console.error('Error al restaurar ticket:', error);
-                    sessionStorage.removeItem('ticketGuardadoPOS');
+            // El cliente ya se restauró en restaurarVentaPersistente si era necesario
+            // Solo procesar sessionStorage si no hay venta persistente
+            if (!clienteActual || !clienteActual.id) {
+                // Restaurar cliente guardado si existe (compatibilidad con versión anterior)
+                const clienteGuardado = sessionStorage.getItem('clienteGuardadoPOS');
+                if (clienteGuardado) {
+                    try {
+                        clienteActual = JSON.parse(clienteGuardado);
+                        
+                        // Actualizar UI del cliente
+                        document.getElementById('cliente-info-nombre').textContent = clienteActual.nombre;
+                        document.getElementById('cliente-info-documento').textContent = clienteActual.documento || '';
+                        
+                        // Limpiar cliente guardado
+                        sessionStorage.removeItem('clienteGuardadoPOS');
+                        
+                        console.log('Cliente restaurado desde sessionStorage:', clienteActual);
+                    } catch (error) {
+                        console.error('Error al restaurar cliente desde sessionStorage:', error);
+                        sessionStorage.removeItem('clienteGuardadoPOS');
+                    }
+                }
+            }
+            
+            // Procesar tickets de sessionStorage solo si no hay venta persistente
+            if (ticket.length === 0) {
+                const ticketGuardado = sessionStorage.getItem('ticketGuardadoPOS');
+                if (ticketGuardado) {
+                    try {
+                        const ticketSession = JSON.parse(ticketGuardado);
+                        if (ticketSession.length > 0) {
+                            ticket = ticketSession;
+                            renderTicket();
+                            mostrarNotificacion(`Se restauraron ${ticket.length} productos del ticket temporal`);
+                        }
+                        
+                        // Limpiar ticket guardado
+                        sessionStorage.removeItem('ticketGuardadoPOS');
+                    } catch (error) {
+                        console.error('Error al restaurar ticket desde sessionStorage:', error);
+                        sessionStorage.removeItem('ticketGuardadoPOS');
+                    }
                 }
             }
             
@@ -588,11 +794,28 @@
                 try {
                     const cliente = JSON.parse(clienteData);
                     clienteActual = cliente;
+                    
+                    // Actualizar UI del cliente en el footer
                     document.getElementById('footer-cliente').innerText = cliente.nombre;
-                    mostrarNotificacion(`Cliente seleccionado: ${cliente.nombre}`);
+                    
+                    // Actualizar también en el área de cliente si existe
+                    const clienteNombre = document.getElementById('cliente-info-nombre');
+                    const clienteDoc = document.getElementById('cliente-info-documento');
+                    if (clienteNombre) clienteNombre.textContent = cliente.nombre;
+                    if (clienteDoc) clienteDoc.textContent = cliente.numero_documento || '';
+                    
+                    // Mostrar notificación especial para clientes desde gestión
+                    mostrarNotificacion(`🛒 Cliente seleccionado desde gestión: ${cliente.nombre}`);
+                    
+                    // Auto-guardar con el nuevo cliente
+                    setTimeout(() => {
+                        guardarVentaPersistente();
+                    }, 500);
                     
                     // Limpiar sessionStorage después de usar
                     sessionStorage.removeItem('clienteSeleccionadoPOS');
+                    
+                    console.log('Cliente cargado desde gestión de clientes:', cliente);
                 } catch (error) {
                     console.error('Error al cargar cliente seleccionado:', error);
                     sessionStorage.removeItem('clienteSeleccionadePOS');
@@ -636,7 +859,10 @@
                                 pvp: lote.pvp,
                                 pvc: lote.pvc,
                                 fecha_vencimiento: lote.fecha_vencimiento,
-                                es_lote_especifico: true
+                                es_lote_especifico: true,
+                                descuento: 0, // Inicializar descuento porcentual
+                                descuentoFijo: 0, // Inicializar descuento fijo
+                                descuentoTexto: '0%' // Texto mostrado en UI
                             };
                             ticket.push(productoParaTicket);
                         });
@@ -725,11 +951,9 @@
                 return;
             }
             
-            // Validar que haya un cliente seleccionado (diferente del cliente por defecto)
-            if (!clienteActual || !clienteActual.id || clienteActual.nombre === 'Cliente Contado') {
-                alert('Debe seleccionar un cliente antes de emitir el comprobante. Haga clic en el área del cliente para seleccionar uno.');
-                mostrarBuscadorClientes();
-                return;
+            // Si es "Cliente Contable", crear cliente contable automáticamente
+            if (!clienteActual || !clienteActual.id || clienteActual.nombre === 'CLIENTE CONTABLE' || clienteActual.nombre === 'Cliente Contado') {
+                crearClienteContable();
             }
             
             document.getElementById('modal-tipo-documento').style.display = 'flex';
@@ -754,10 +978,9 @@
                 return;
             }
             
-            if (!clienteActual || !clienteActual.id || clienteActual.nombre === 'Cliente Contado') {
-                alert('Error: No se ha seleccionado un cliente válido');
-                mostrarBuscadorClientes();
-                return;
+            // Asegurar que siempre hay un cliente (crear cliente contable si es necesario)
+            if (!clienteActual || !clienteActual.id) {
+                crearClienteContable();
             }
             
             // Calcular totales - Los precios ya incluyen IGV
@@ -909,7 +1132,10 @@
                 importe: cantidad * parseFloat(currentProduct.pvc),
                 pvp: currentProduct.pvp,
                 pvc: currentProduct.pvc,
-                es_precio_corporativo: true
+                es_precio_corporativo: true,
+                descuento: 0, // Inicializar descuento porcentual
+                descuentoFijo: 0, // Inicializar descuento fijo
+                descuentoTexto: '0%' // Texto mostrado en UI
             };
 
             ticket.push(productoConPrecioCorp);
@@ -921,6 +1147,101 @@
 
         function cerrarModalPrecioCorp() {
             const modal = document.getElementById('modal-precio-corp');
+            if (modal) {
+                modal.remove();
+            }
+        }
+
+        function venderPrecioPublico() {
+            if (!currentProduct) return;
+
+            const precioPublico = parseFloat(currentProduct.pvp || 0);
+            if (precioPublico <= 0) {
+                alert('Este producto no tiene precio público definido');
+                cerrarContextMenu();
+                return;
+            }
+
+            // Crear modal para precio público
+            const modalHtml = `
+                <div id="modal-precio-publico" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; justify-content: center; align-items: center;" onclick="cerrarModalPrecioPublico()">
+                    <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); min-width: 350px; font-family: Arial, sans-serif;" onclick="event.stopPropagation()">
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <div style="font-weight: 600; font-size: 14px; color: #333; margin-bottom: 10px;">
+                                ¿Cuántas unidades a precio público ( PVP: S/ ${precioPublico.toFixed(2)} )?
+                            </div>
+                        </div>
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <input type="number" id="cantidad-precio-publico" value="1" min="1" max="${currentProduct.cantidad_total || 999}" 
+                                   style="width: 100px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center; font-size: 16px;"
+                                   onkeypress="if(event.key==='Enter') aceptarPrecioPublico()">
+                        </div>
+                        <div style="display: flex; justify-content: center; gap: 10px;">
+                            <button onclick="aceptarPrecioPublico()" style="padding: 8px 20px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">Aceptar</button>
+                            <button onclick="cerrarModalPrecioPublico()" style="padding: 8px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            
+            // Enfocar el input y seleccionar el texto
+            setTimeout(() => {
+                const input = document.getElementById('cantidad-precio-publico');
+                input.focus();
+                input.select();
+            }, 100);
+            
+            cerrarContextMenu();
+        }
+
+        function aceptarPrecioPublico() {
+            const cantidadInput = document.getElementById('cantidad-precio-publico');
+            const cantidad = parseInt(cantidadInput.value);
+            
+            if (!cantidad || cantidad <= 0) {
+                alert('Ingrese una cantidad válida');
+                return;
+            }
+
+            if (!currentProduct) {
+                cerrarModalPrecioPublico();
+                return;
+            }
+
+            // Verificar stock disponible
+            if (cantidad > (currentProduct.cantidad_total || 0)) {
+                alert(`Stock insuficiente. Disponible: ${currentProduct.cantidad_total || 0} unidades`);
+                return;
+            }
+
+            // Crear producto para el ticket con precio público
+            const productoConPrecioPublico = {
+                id: `pub_${currentProduct.producto_id}_${Date.now()}`,
+                producto_id: currentProduct.producto_id,
+                nombre: currentProduct.nombre,
+                cantidad: cantidad,
+                cantidad_disponible: currentProduct.cantidad_total || 0,
+                precio: parseFloat(currentProduct.pvp),
+                importe: cantidad * parseFloat(currentProduct.pvp),
+                pvp: currentProduct.pvp,
+                pvc: currentProduct.pvc,
+                es_precio_publico: true,
+                descuento: 0, // Inicializar descuento porcentual
+                descuentoFijo: 0, // Inicializar descuento fijo
+                descuentoTexto: '0%' // Texto mostrado en UI
+            };
+
+            ticket.push(productoConPrecioPublico);
+            renderTicket();
+            
+            mostrarNotificacion(`Se agregó ${cantidad} unidad(es) a precio público: S/ ${parseFloat(currentProduct.pvp).toFixed(2)}`);
+            cerrarModalPrecioPublico();
+        }
+
+        function cerrarModalPrecioPublico() {
+            const modal = document.getElementById('modal-precio-publico');
             if (modal) {
                 modal.remove();
             }
@@ -1102,6 +1423,13 @@
                 const tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
                 tr.onclick = () => seleccionarCliente(cliente);
+                
+                // Agregar funcionalidad de doble click para confirmar selección
+                tr.ondblclick = () => {
+                    seleccionarCliente(cliente);
+                    confirmarSeleccionCliente(); // Confirmar automáticamente
+                };
+                
                 tr.onmouseover = () => tr.style.backgroundColor = '#f8f9fa';
                 tr.onmouseout = () => tr.style.backgroundColor = clienteSeleccionado && clienteSeleccionado.id === cliente.id ? '#e3f2fd' : 'white';
                 
@@ -1119,6 +1447,9 @@
                     <td style="padding: 8px; border-bottom: 1px solid #eee;">${cliente.nombre}</td>
                     <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; color: ${cliente.debe > 0 ? '#dc3545' : '#28a745'};">S/ ${cliente.debe.toFixed(2)}</td>
                 `;
+                
+                // Agregar tooltip para indicar la funcionalidad
+                tr.title = 'Click para seleccionar, doble click para confirmar';
                 
                 tbody.appendChild(tr);
             });
@@ -1139,6 +1470,37 @@
             document.getElementById('footer-cliente').innerText = clienteActual.nombre;
             mostrarNotificacion(`Cliente seleccionado: ${clienteActual.nombre}`);
             cerrarBuscadorClientes();
+            
+            // Auto-guardar después de seleccionar cliente
+            guardarVentaPersistente();
+        }
+
+        // Función para confirmar selección con doble click
+        function confirmarSeleccionCliente() {
+            if (!clienteSeleccionado) {
+                return;
+            }
+            
+            // Usar la misma lógica que seleccionarClienteSeleccionado
+            clienteActual = clienteSeleccionado;
+            
+            // Actualizar UI del cliente en ambos lugares
+            document.getElementById('footer-cliente').innerText = clienteActual.nombre;
+            
+            // Actualizar también en el área de cliente si existe
+            const clienteNombre = document.getElementById('cliente-info-nombre');
+            const clienteDoc = document.getElementById('cliente-info-documento');
+            if (clienteNombre) clienteNombre.textContent = clienteActual.nombre;
+            if (clienteDoc) clienteDoc.textContent = clienteActual.numero_documento || '';
+            
+            // Notificación especial para doble click
+            mostrarNotificacion(`✅ Cliente confirmado (doble click): ${clienteActual.nombre}`);
+            
+            // Cerrar modal
+            cerrarBuscadorClientes();
+            
+            // Auto-guardar después de seleccionar cliente
+            guardarVentaPersistente();
         }
 
         function buscarClientes() {
@@ -1293,6 +1655,182 @@
             });
         }
 
+        // Función para crear/obtener cliente contable en base de datos
+        function crearClienteContable() {
+            // Intentar obtener cliente contable existente primero
+            obtenerClienteContableExistente();
+        }
+
+        // Función para obtener cliente contable existente
+        function obtenerClienteContableExistente() {
+            fetch(`{{ route('pos.buscar-clientes') }}?term=CLIENTE CONTABLE`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.length > 0) {
+                    // Cliente contable ya existe
+                    const cliente = data[0];
+                    clienteActual = {
+                        id: cliente.id,
+                        documento: cliente.numero_documento,
+                        nombre: cliente.nombre,
+                        direccion: cliente.direccion || '',
+                        telefono: cliente.telefono || '',
+                        email: cliente.email || ''
+                    };
+
+                    // Actualizar UI
+                    document.getElementById('cliente-info-nombre').textContent = cliente.nombre;
+                    document.getElementById('cliente-info-documento').textContent = cliente.numero_documento;
+                    
+                    console.log('Cliente contable encontrado:', clienteActual);
+                } else {
+                    // No existe, crear cliente contable nuevo
+                    crearNuevoClienteContable();
+                }
+            })
+            .catch(error => {
+                console.error('Error buscando cliente contable:', error);
+                // Si hay error, crear uno nuevo
+                crearNuevoClienteContable();
+            });
+        }
+
+        // Función para crear nuevo cliente contable en base de datos
+        function crearNuevoClienteContable() {
+            const datosClienteContable = {
+                tipo_documento: 'dni',
+                numero_documento: '00000000',
+                nombre: 'CLIENTE CONTABLE',
+                direccion: 'SIN DIRECCION',
+                telefono: '',
+                email: ''
+            };
+
+            fetch('{{ route("pos.crear-cliente") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify(datosClienteContable)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Cliente contable creado exitosamente
+                    clienteActual = {
+                        id: data.cliente ? data.cliente.id : data.data.id,
+                        documento: '00000000',
+                        nombre: 'CLIENTE CONTABLE',
+                        direccion: 'SIN DIRECCION',
+                        telefono: '',
+                        email: ''
+                    };
+
+                    // Actualizar UI
+                    document.getElementById('cliente-info-nombre').textContent = 'CLIENTE CONTABLE';
+                    document.getElementById('cliente-info-documento').textContent = '00000000';
+                    
+                    console.log('Cliente contable creado exitosamente:', clienteActual);
+                    mostrarNotificacion('✅ Cliente contable creado y configurado');
+                } else {
+                    // Error al crear, usar cliente temporal para continuar
+                    console.error('Error creando cliente contable:', data.message || 'Error desconocido');
+                    clienteTemporalContable();
+                }
+            })
+            .catch(error => {
+                console.error('Error de conexión creando cliente contable:', error);
+                clienteTemporalContable();
+            });
+        }
+
+        // Función para crear cliente contable temporal (fallback)
+        function clienteTemporalContable() {
+            clienteActual = {
+                id: 999999, // ID temporal alto para evitar conflictos
+                documento: '00000000',
+                nombre: 'CLIENTE CONTABLE',
+                direccion: 'SIN DIRECCION',
+                telefono: '',
+                email: ''
+            };
+            
+            // Actualizar UI
+            document.getElementById('cliente-info-nombre').textContent = 'CLIENTE CONTABLE';
+            document.getElementById('cliente-info-documento').textContent = '00000000';
+            
+            console.log('Cliente contable temporal configurado');
+            mostrarNotificacion('⚠️ Cliente contable temporal configurado');
+        }
+
+        // Función para limpiar venta persistente al completar venta exitosamente
+        function limpiarVentaCompletada() {
+            try {
+                // Limpiar venta persistente
+                localStorage.removeItem(AUTOSAVE_KEY);
+                
+                // Detener auto-guardado
+                if (autoSaveInterval) {
+                    clearInterval(autoSaveInterval);
+                    autoSaveInterval = null;
+                }
+                
+                // Limpiar también storage temporal
+                sessionStorage.removeItem('ticketGuardadoPOS');
+                sessionStorage.removeItem('clienteGuardadoPOS');
+                localStorage.removeItem('ticketPOS');
+                
+                console.log('Venta completada - persistencia limpiada');
+                
+                // Reiniciar auto-guardado para próxima venta
+                setTimeout(() => {
+                    iniciarAutoGuardado();
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Error limpiando venta completada:', error);
+            }
+        }
+
+        // Función para mostrar estado de la venta persistente (para debugging)
+        function mostrarEstadoVentaPersistente() {
+            const ventaGuardada = localStorage.getItem(AUTOSAVE_KEY);
+            if (ventaGuardada) {
+                const ventaData = JSON.parse(ventaGuardada);
+                const fechaFormateada = new Date(ventaData.fecha).toLocaleString('es-PE');
+                console.log('Estado venta persistente:', {
+                    productos: ventaData.ticket.length,
+                    cliente: ventaData.cliente?.nombre || 'Sin cliente',
+                    fecha: fechaFormateada,
+                    total: ventaData.ticket.reduce((sum, item) => sum + (item.importe || 0), 0).toFixed(2)
+                });
+                return ventaData;
+            } else {
+                console.log('No hay venta persistente guardada');
+                return null;
+            }
+        }
+
+        // Función para usar cliente contable directamente
+        function usarClienteContado() {
+            // Crear/obtener cliente contable de la base de datos
+            crearClienteContable();
+            
+            // Cerrar modal si está abierto
+            const modal = document.getElementById('modal-buscar-clientes');
+            if (modal) modal.style.display = 'none';
+            
+            mostrarNotificacion('🔄 Configurando cliente contable...');
+            
+            console.log('Configurando cliente contable...');
+        }
+
         function mostrarFichaExistencias() {
             if (!currentProduct) return;
 
@@ -1320,11 +1858,122 @@
         }
 
         function cancelarVenta() {
-            if (confirm('¿Está seguro que desea cancelar la venta?')) {
-                ticket = [];
-                renderTicket();
+            if (ticket.length === 0) {
+                mostrarNotificacion('No hay productos en el ticket para cancelar');
+                if (typeof cerrarContextMenu === 'function') cerrarContextMenu();
+                return;
             }
-            cerrarContextMenu();
+            
+            if (confirm('¿Está seguro que desea cancelar la venta? Se perderán todos los productos del ticket.')) {
+                // Resetear ticket
+                ticket = [];
+                
+                // Limpiar storage y venta persistente
+                sessionStorage.removeItem('ticketGuardadoPOS');
+                localStorage.removeItem('ticketPOS');
+                sessionStorage.removeItem('clienteGuardadoPOS');
+                
+                // LIMPIAR VENTA PERSISTENTE
+                localStorage.removeItem(AUTOSAVE_KEY);
+                
+                // Detener auto-guardado
+                if (autoSaveInterval) {
+                    clearInterval(autoSaveInterval);
+                    autoSaveInterval = null;
+                }
+                
+                // Resetear cliente a "Cliente Contable"
+                window.clienteActual = {
+                    id: null,
+                    documento: '',
+                    nombre: 'CLIENTE CONTABLE',
+                    direccion: '',
+                    telefono: '',
+                    email: ''
+                };
+                
+                // Actualizar UI del cliente
+                const clienteNombre = document.getElementById('cliente-info-nombre');
+                const clienteDoc = document.getElementById('cliente-info-documento');
+                if (clienteNombre) clienteNombre.textContent = 'CLIENTE CONTABLE';
+                if (clienteDoc) clienteDoc.textContent = '';
+                
+                // Limpiar búsqueda de productos
+                const searchInput = document.querySelector('input[placeholder="Buscar productos..."]');
+                if (searchInput) {
+                    searchInput.value = '';
+                }
+                
+                // Limpiar tabla de productos
+                const productosTable = document.getElementById('productos-tbody');
+                if (productosTable) {
+                    productosTable.innerHTML = '';
+                }
+                
+                // Renderizar ticket vacío
+                renderTicket();
+                
+                // Notificación de éxito
+                console.log('Venta cancelada y sistema reseteado');
+                
+                // Mostrar mensaje de confirmación
+                setTimeout(() => {
+                    mostrarNotificacion('✅ Venta cancelada correctamente. Sistema reseteado.');
+                }, 100);
+            }
+            if (typeof cerrarContextMenu === 'function') cerrarContextMenu();
+        }
+
+        function guardarTicket() {
+            if (ticket.length === 0) {
+                mostrarNotificacion('No hay productos en el ticket para guardar');
+                return;
+            }
+            
+            try {
+                // Guardar en sistema persistente
+                guardarVentaPersistente();
+                
+                // También en sessionStorage para compatibilidad
+                sessionStorage.setItem('ticketGuardadoPOS', JSON.stringify(ticket));
+                
+                // Guardar información del cliente actual también
+                if (clienteActual && clienteActual.nombre !== 'CLIENTE CONTABLE' && clienteActual.nombre !== 'Cliente Contado') {
+                    sessionStorage.setItem('clienteGuardadoPOS', JSON.stringify(clienteActual));
+                }
+                
+                // Notificación de éxito
+                const total = ticket.reduce((sum, item) => sum + (item.importe || 0), 0);
+                const fechaGuardado = new Date().toLocaleString('es-PE');
+                mostrarNotificacion(`💾 Venta guardada permanentemente: ${ticket.length} productos - Total: S/ ${total.toFixed(2)} (${fechaGuardado})`);
+                
+                console.log('Ticket guardado manualmente:', {ticket, cliente: clienteActual, fecha: fechaGuardado});
+            } catch (error) {
+                console.error('Error al guardar ticket:', error);
+                mostrarNotificacion('❌ Error al guardar el ticket. Intente nuevamente.');
+            }
+        }
+
+        function limpiarTicketRapido() {
+            if (ticket.length === 0) {
+                mostrarNotificacion('El ticket ya está vacío');
+                return;
+            }
+            
+            if (confirm('¿Está seguro que desea limpiar el ticket? Solo se eliminarán los productos, el cliente seleccionado se mantendrá.')) {
+                // Solo limpiar ticket, mantener cliente
+                ticket = [];
+                
+                // Limpiar storage del ticket
+                sessionStorage.removeItem('ticketGuardadoPOS');
+                localStorage.removeItem('ticketPOS');
+                
+                // Renderizar ticket vacío
+                renderTicket();
+                
+                mostrarNotificacion('🗑️ Ticket limpiado correctamente');
+                console.log('Ticket limpiado, cliente mantenido');
+            }
         }
 
         function limpiarLista() {
@@ -1544,13 +2193,18 @@
                     pvc: producto.pvc,
                     lote: producto.lote || null,
                     fecha_vencimiento: producto.fecha_vencimiento || null,
-                    es_lote_especifico: producto.es_lote_especifico || false
+                    es_lote_especifico: producto.es_lote_especifico || false,
+                    descuento: 0, // Inicializar descuento porcentual
+                    descuentoFijo: 0, // Inicializar descuento fijo
+                    descuentoTexto: '0%' // Texto mostrado en UI
                 };
 
                 ticket.push(nuevoProducto);
             }
 
             renderTicket();
+            // Auto-guardar después de agregar producto
+            guardarVentaPersistente();
         }
 
         function renderTicket() {
@@ -1600,7 +2254,14 @@
                            onclick="event.stopPropagation()">
                     NIU
                 </td>
-                <td>0.00</td>
+                <td>
+                    <input type="text" value="${p.descuentoTexto || (p.descuento || 0) + '%'}" 
+                           style="width: 80px; border: none; background: transparent; text-align: center; color: #d63384; font-size: 11px;"
+                           onchange="actualizarDescuento(${idx}, this.value)"
+                           onclick="event.stopPropagation()"
+                           placeholder="0% o S/0"
+                           title="Ingrese porcentaje (ej: 12%) o monto fijo (ej: S/12)">
+                </td>
                 <td>0.915</td>
                 <td>${p.precio.toFixed(2)}</td>
                 <td>${p.importe.toFixed(2)}</td>
@@ -1609,6 +2270,14 @@
             });
 
             actualizarFooter(total);
+            
+            // Auto-guardar después de renderizar (con throttle para evitar muchas llamadas)
+            if (ticket.length > 0) {
+                clearTimeout(window.renderTicketSaveTimeout);
+                window.renderTicketSaveTimeout = setTimeout(() => {
+                    guardarVentaPersistente();
+                }, 1000); // Esperar 1 segundo después del último cambio
+            }
         }
 
         // Función para actualizar cantidad directamente
@@ -1632,7 +2301,10 @@
             }
 
             producto.cantidad = cantidad;
-            producto.importe = producto.cantidad * producto.precio;
+            // Recalcular importe considerando descuento
+            const subtotalSinDescuento = producto.cantidad * producto.precio;
+            const montoDescuento = subtotalSinDescuento * (producto.descuento || 0) / 100;
+            producto.importe = subtotalSinDescuento - montoDescuento;
             renderTicket();
         }
 
@@ -1642,21 +2314,429 @@
             console.log('Editando línea:', index, ticket[index]);
         }
 
+        // Función para actualizar descuento (porcentaje o monto fijo)
+        function actualizarDescuento(index, valorDescuento) {
+            const producto = ticket[index];
+            const valor = valorDescuento.toString().trim();
+            
+            if (!valor || valor === '0' || valor === '0%' || valor === 'S/0') {
+                // Sin descuento
+                producto.descuento = 0;
+                producto.descuentoFijo = 0;
+                producto.descuentoTexto = '0%';
+                producto.importe = producto.cantidad * producto.precio;
+                renderTicket();
+                return;
+            }
+            
+            const subtotalSinDescuento = producto.cantidad * producto.precio;
+            let montoDescuento = 0;
+            let textoDescuento = '';
+            
+            if (valor.includes('S/') || valor.includes('s/')) {
+                // Descuento fijo en soles
+                const montoFijo = parseFloat(valor.replace(/[S\/s\/\s]/g, ''));
+                
+                if (isNaN(montoFijo) || montoFijo < 0) {
+                    alert('Ingrese un monto válido (ej: S/12)');
+                    renderTicket();
+                    return;
+                }
+                
+                if (montoFijo >= subtotalSinDescuento) {
+                    alert('El descuento no puede ser mayor o igual al subtotal del producto');
+                    renderTicket();
+                    return;
+                }
+                
+                montoDescuento = montoFijo;
+                producto.descuento = 0;
+                producto.descuentoFijo = montoFijo;
+                producto.descuentoTexto = `S/${montoFijo.toFixed(2)}`;
+                textoDescuento = `Descuento fijo de S/ ${montoFijo.toFixed(2)}`;
+                
+            } else {
+                // Descuento porcentual
+                const porcentaje = parseFloat(valor.replace('%', ''));
+                
+                if (isNaN(porcentaje) || porcentaje < 0 || porcentaje > 100) {
+                    alert('El descuento debe estar entre 0% y 100%');
+                    renderTicket();
+                    return;
+                }
+                
+                montoDescuento = subtotalSinDescuento * porcentaje / 100;
+                producto.descuento = porcentaje;
+                producto.descuentoFijo = 0;
+                producto.descuentoTexto = `${porcentaje}%`;
+                textoDescuento = `Descuento del ${porcentaje}%`;
+            }
+            
+            // Aplicar descuento
+            producto.importe = subtotalSinDescuento - montoDescuento;
+            
+            renderTicket();
+            
+            // Mostrar notificación si se aplicó descuento
+            if (montoDescuento > 0) {
+                mostrarNotificacion(`${textoDescuento} aplicado: -S/ ${montoDescuento.toFixed(2)}`);
+            }
+        }
+
+        // Función para aplicar descuento global a todo el ticket
+        function aplicarDescuentoGlobal() {
+            if (ticket.length === 0) {
+                alert('No hay productos en el ticket');
+                return;
+            }
+
+            const descuentoGlobal = prompt('Ingrese el descuento global que desea aplicar:\\n\\n• Para porcentaje: 15%\\n• Para monto fijo: S/12\\n• Para quitar descuentos: 0', '0%');
+            
+            if (descuentoGlobal === null) return; // Cancelado
+            
+            const valor = descuentoGlobal.toString().trim();
+            
+            if (!valor || valor === '0' || valor === '0%' || valor === 'S/0') {
+                // Remover todos los descuentos
+                ticket.forEach(producto => {
+                    producto.descuento = 0;
+                    producto.descuentoFijo = 0;
+                    producto.descuentoTexto = '0%';
+                    producto.importe = producto.cantidad * producto.precio;
+                });
+                mostrarNotificacion('Descuentos removidos de todos los productos');
+                renderTicket();
+                return;
+            }
+            
+            let totalDescuentoAplicado = 0;
+            let tipoDescuento = '';
+            
+            if (valor.includes('S/') || valor.includes('s/')) {
+                // Descuento fijo en soles
+                const montoFijo = parseFloat(valor.replace(/[S\\/s\\/\\s]/g, ''));
+                
+                if (isNaN(montoFijo) || montoFijo < 0) {
+                    alert('Ingrese un monto válido (ej: S/12)');
+                    return;
+                }
+                
+                ticket.forEach(producto => {
+                    const subtotalSinDescuento = producto.cantidad * producto.precio;
+                    
+                    if (montoFijo >= subtotalSinDescuento) {
+                        // Si el descuento es mayor al subtotal, aplicar máximo posible
+                        const descuentoMaximo = subtotalSinDescuento - 0.01; // Dejar al menos 1 centavo
+                        producto.descuentoFijo = descuentoMaximo;
+                        producto.descuento = 0;
+                        producto.descuentoTexto = `S/${descuentoMaximo.toFixed(2)}`;
+                        producto.importe = 0.01;
+                        totalDescuentoAplicado += descuentoMaximo;
+                    } else {
+                        producto.descuentoFijo = montoFijo;
+                        producto.descuento = 0;
+                        producto.descuentoTexto = `S/${montoFijo.toFixed(2)}`;
+                        producto.importe = subtotalSinDescuento - montoFijo;
+                        totalDescuentoAplicado += montoFijo;
+                    }
+                });
+                
+                tipoDescuento = `Descuento fijo de S/ ${montoFijo.toFixed(2)}`;
+                
+            } else {
+                // Descuento porcentual
+                const porcentaje = parseFloat(valor.replace('%', ''));
+                
+                if (isNaN(porcentaje) || porcentaje < 0 || porcentaje > 100) {
+                    alert('El descuento debe estar entre 0% y 100%');
+                    return;
+                }
+                
+                ticket.forEach(producto => {
+                    const subtotalSinDescuento = producto.cantidad * producto.precio;
+                    const montoDescuento = subtotalSinDescuento * porcentaje / 100;
+                    
+                    producto.descuento = porcentaje;
+                    producto.descuentoFijo = 0;
+                    producto.descuentoTexto = `${porcentaje}%`;
+                    producto.importe = subtotalSinDescuento - montoDescuento;
+                    totalDescuentoAplicado += montoDescuento;
+                });
+                
+                tipoDescuento = `Descuento del ${porcentaje}%`;
+            }
+            
+            mostrarNotificacion(`${tipoDescuento} aplicado a ${ticket.length} productos. Total descontado: S/ ${totalDescuentoAplicado.toFixed(2)}`);
+            renderTicket();
+        }
+
         function actualizarFooter(total) {
             let gravada = total / 1.18;
             let igv = total - gravada;
             let icbper = 0.00; // Si tienes cálculo real ponlo aquí
-            let dscto = 0.00; // Si tienes descuentos individuales, súmalos aquí
+            
+            // Calcular descuentos totales
+            let totalDescuentos = 0;
+            ticket.forEach(item => {
+                if (item.descuentoFijo && item.descuentoFijo > 0) {
+                    // Descuento fijo
+                    totalDescuentos += item.descuentoFijo;
+                } else if (item.descuento && item.descuento > 0) {
+                    // Descuento porcentual
+                    const subtotalSinDescuento = item.cantidad * item.precio;
+                    const montoDescuento = subtotalSinDescuento * item.descuento / 100;
+                    totalDescuentos += montoDescuento;
+                }
+            });
+            
             let cantListado = ticket.length;
 
             document.getElementById('footer-gravada').innerText = gravada.toFixed(2);
             document.getElementById('footer-igv').innerText = igv.toFixed(2);
             document.getElementById('footer-icbper').innerText = icbper.toFixed(2);
-            document.getElementById('footer-dscto').innerText = dscto.toFixed(2);
+            document.getElementById('footer-dscto').innerText = totalDescuentos.toFixed(2);
             document.getElementById('footer-total').innerText = total.toFixed(2);
             document.getElementById('footer-productos-listados').innerText = cantListado;
             // Si cambias tipo de cliente, actualiza así
             //document.getElementById('footer-cliente').innerText = tipoCliente;
         }
+    </script>
+
+    <!-- SweetAlert2 para confirmaciones elegantes -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        // Función mejorada para cancelar venta con SweetAlert
+        function cancelarVentaConSweetAlert() {
+            if (ticket.length === 0) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Ticket vacío',
+                    text: 'No hay productos en el ticket para cancelar',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                return;
+            }
+            
+            Swal.fire({
+                title: '¿Cancelar venta?',
+                text: 'Se perderán todos los productos del ticket y se reseteará el sistema',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, cancelar',
+                cancelButtonText: 'No, mantener'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Resetear ticket
+                    ticket = [];
+                    
+                    // Limpiar storage y venta persistente
+                    sessionStorage.removeItem('ticketGuardadoPOS');
+                    localStorage.removeItem('ticketPOS');
+                    sessionStorage.removeItem('clienteGuardadoPOS');
+                    
+                    // LIMPIAR VENTA PERSISTENTE
+                    localStorage.removeItem(AUTOSAVE_KEY);
+                    
+                    // Detener auto-guardado
+                    if (autoSaveInterval) {
+                        clearInterval(autoSaveInterval);
+                        autoSaveInterval = null;
+                    }
+                    
+                    // Resetear cliente a "Cliente Contable"
+                    window.clienteActual = {
+                        id: null,
+                        documento: '',
+                        nombre: 'CLIENTE CONTABLE',
+                        direccion: '',
+                        telefono: '',
+                        email: ''
+                    };
+                    
+                    // Actualizar UI del cliente
+                    const clienteNombre = document.getElementById('cliente-info-nombre');
+                    const clienteDoc = document.getElementById('cliente-info-documento');
+                    if (clienteNombre) clienteNombre.textContent = 'CLIENTE CONTABLE';
+                    if (clienteDoc) clienteDoc.textContent = '';
+                    
+                    // Limpiar búsqueda de productos
+                    const searchInput = document.querySelector('input[placeholder="Buscar productos..."]');
+                    if (searchInput) {
+                        searchInput.value = '';
+                    }
+                    
+                    // Limpiar tabla de productos
+                    const productosTable = document.getElementById('productos-tbody');
+                    if (productosTable) {
+                        productosTable.innerHTML = '';
+                    }
+                    
+                    // Renderizar ticket vacío
+                    renderTicket();
+                    
+                    // Notificación de éxito
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Venta cancelada!',
+                        text: 'Sistema reseteado correctamente',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    console.log('Venta cancelada y sistema reseteado');
+                }
+            });
+        }
+
+        // Función mejorada para limpiar ticket rápido con SweetAlert
+        function limpiarTicketRapidoConSweetAlert() {
+            if (ticket.length === 0) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Ticket vacío',
+                    text: 'El ticket ya está vacío',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                return;
+            }
+            
+            Swal.fire({
+                title: '¿Limpiar ticket?',
+                text: 'Solo se eliminarán los productos, el cliente seleccionado se mantendrá',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, limpiar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Solo limpiar ticket, mantener cliente
+                    ticket = [];
+                    
+                    // Limpiar storage del ticket
+                    sessionStorage.removeItem('ticketGuardadoPOS');
+                    localStorage.removeItem('ticketPOS');
+                    
+                    // Renderizar ticket vacío
+                    renderTicket();
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Ticket limpiado!',
+                        text: 'Productos eliminados correctamente',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    
+                    console.log('Ticket limpiado, cliente mantenido');
+                }
+            });
+        }
+
+        // Función para resetear completamente sin confirmación (para debugging o casos especiales)
+        function resetearSistemaCompleto() {
+            // Resetear ticket
+            ticket = [];
+            
+            // Limpiar todo el storage y venta persistente
+            sessionStorage.clear();
+            localStorage.removeItem('ticketPOS');
+            localStorage.removeItem('ticketGuardadoPOS');
+            localStorage.removeItem('clienteGuardadoPOS');
+            
+            // LIMPIAR VENTA PERSISTENTE COMPLETAMENTE
+            localStorage.removeItem(AUTOSAVE_KEY);
+            
+            // Reiniciar auto-guardado
+            if (autoSaveInterval) {
+                clearInterval(autoSaveInterval);
+            }
+            iniciarAutoGuardado();
+            
+            // Resetear cliente a "Cliente Contable"
+            window.clienteActual = {
+                id: null,
+                documento: '',
+                nombre: 'CLIENTE CONTABLE',
+                direccion: '',
+                telefono: '',
+                email: ''
+            };
+            
+            // Actualizar UI del cliente
+            const clienteNombre = document.getElementById('cliente-info-nombre');
+            const clienteDoc = document.getElementById('cliente-info-documento');
+            if (clienteNombre) clienteNombre.textContent = 'CLIENTE CONTABLE';
+            if (clienteDoc) clienteDoc.textContent = '';
+            
+            // Limpiar búsqueda de productos
+            const searchInputs = document.querySelectorAll('input[type="text"]');
+            searchInputs.forEach(input => {
+                if (input.placeholder && input.placeholder.includes('Buscar')) {
+                    input.value = '';
+                }
+            });
+            
+            // Limpiar tabla de productos
+            const productosTable = document.getElementById('productos-tbody');
+            if (productosTable) {
+                productosTable.innerHTML = '';
+            }
+            
+            // Renderizar ticket vacío
+            renderTicket();
+            
+            console.log('Sistema completamente reseteado');
+            mostrarNotificacion('🔄 Sistema completamente reseteado');
+        }
+
+        // Atajo de teclado para reseteo de emergencia: Ctrl + Shift + R
+        document.addEventListener('keydown', function(event) {
+            if (event.ctrlKey && event.shiftKey && event.key === 'R') {
+                event.preventDefault();
+                if (confirm('¿RESETEO DE EMERGENCIA? Esto borrará TODO sin posibilidad de recuperación, incluyendo la venta persistente.')) {
+                    resetearSistemaCompleto();
+                }
+            }
+        });
+
+        // Función que se debe llamar al completar exitosamente una venta
+        // Esta función puede ser llamada desde el controlador o al confirmar la venta
+        window.ventaCompletadaExitosamente = function() {
+            console.log('🎉 Venta completada exitosamente - limpiando persistencia...');
+            limpiarVentaCompletada();
+            mostrarNotificacion('✅ Venta procesada exitosamente. Sistema listo para nueva venta.');
+        };
+
+        // Exponer funciones útiles globalmente para debugging
+        window.posDebug = {
+            mostrarEstado: mostrarEstadoVentaPersistente,
+            limpiarVenta: limpiarVentaCompletada,
+            guardarManual: guardarVentaPersistente
+        };
+
+        // ========== INICIALIZACIÓN DEL SISTEMA ==========
+        
+        // Inicializar sistema de persistencia cuando se carga la página
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Inicializando sistema POS con persistencia...');
+            
+            // Inicializar cliente contable automático
+            setTimeout(() => {
+                crearClienteContadoAutomatico();
+            }, 1000);
+            
+            // Inicializar sistema de persistencia
+            setTimeout(() => {
+                inicializarSistemaVentaPersistente();
+            }, 1500);
+            
+            console.log('✅ Sistema POS inicializado completamente');
+        });
     </script>
 @endsection

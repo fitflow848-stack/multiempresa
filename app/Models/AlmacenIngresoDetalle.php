@@ -19,7 +19,11 @@ class AlmacenIngresoDetalle extends Model
         'mup',
         'pvp',
         'pvpd',
-        'pvc'
+        'pvc',
+        'stock_min',
+        'stock_max',
+        'lote',
+        'fecha_vencimiento'
     ];
 
     public function ingreso()

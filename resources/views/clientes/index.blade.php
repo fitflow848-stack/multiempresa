@@ -107,6 +107,56 @@
         .text-danger {
             color: #dc3545 !important;
         }
+
+        /* Estilos para filas clickeables */
+        .clientes-table tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .clientes-table tbody tr:hover {
+            background-color: #f8f9fa !important;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* Indicador visual para modo POS */
+        .pos-mode-row {
+            position: relative;
+        }
+
+        .pos-mode-row::before {
+            content: '🛒';
+            position: absolute;
+            left: -20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 12px;
+            opacity: 0.6;
+        }
+
+        /* Tooltip personalizado */
+        .clientes-table tbody tr[title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            background: #333;
+            color: white;
+            padding: 5px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            z-index: 1000;
+            white-space: nowrap;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            animation: fadeInTooltip 0.3s ease forwards;
+        }
+
+        @keyframes fadeInTooltip {
+            to {
+                opacity: 1;
+            }
+        }
     </style>
 
     <div class="cliente-card">
@@ -214,7 +264,9 @@
             
             // Verificar si viene desde el POS
             if (document.referrer.includes('pos') || sessionStorage.getItem('navegandoDesdePOS')) {
-                document.getElementById('modo-pos-indicator').style.display = 'block';
+                const indicator = document.getElementById('modo-pos-indicator');
+                indicator.style.display = 'block';
+                indicator.innerHTML = '🛒 Seleccionando cliente para POS - <small>Doble click en cualquier fila para selección rápida</small>';
                 sessionStorage.setItem('navegandoDesdePOS', 'true');
             }
         });
@@ -253,6 +305,42 @@
             tbody.innerHTML = '';
             clientesData.forEach((cliente, index) => {
                 const tr = document.createElement('tr');
+                
+                // Agregar estilos y eventos para interacción
+                tr.style.cursor = 'pointer';
+                
+                // Tooltip dinámico dependiendo del contexto
+                const esModoPos = sessionStorage.getItem('navegandoDesdePOS');
+                if (esModoPos) {
+                    tr.title = '🛒 Doble click para seleccionar y regresar al POS';
+                    tr.classList.add('pos-mode-row');
+                } else {
+                    tr.title = 'Doble click para seleccionar cliente e ir al POS';
+                }
+                
+                // Eventos de hover para feedback visual
+                tr.onmouseover = function() {
+                    this.style.backgroundColor = '#f8f9fa';
+                };
+                tr.onmouseout = function() {
+                    this.style.backgroundColor = 'white';
+                };
+                
+                // Función de doble click para seleccionar cliente directamente
+                tr.ondblclick = function(e) {
+                    e.preventDefault();
+                    
+                    // Verificar si viene desde el POS
+                    if (sessionStorage.getItem('navegandoDesdePOS')) {
+                        // Seleccionar cliente directamente al POS con doble click
+                        seleccionarClienteDirectoPOS(cliente.id, cliente.nombre);
+                    } else {
+                        // Si no viene del POS, mostrar opción
+                        if (confirm(`¿Seleccionar "${cliente.nombre}" para ir al POS?`)) {
+                            seleccionarParaPOS(cliente.id, cliente.nombre);
+                        }
+                    }
+                };
                 
                 // Icono según tipo de documento
                 const icono = cliente.tipo_documento === 'RUC' ? '🏢' : 
@@ -442,6 +530,61 @@
             if (confirm(`¿Seleccionar "${clienteNombre}" para la venta en el POS?`)) {
                 window.location.href = '{{ route("pos.index") }}';
             }
+        }
+
+        // Función específica para doble click cuando viene desde POS
+        function seleccionarClienteDirectoPOS(clienteId, clienteNombre) {
+            const cliente = clientes.find(c => c.id == clienteId);
+            if (!cliente) {
+                alert('Cliente no encontrado');
+                return;
+            }
+            
+            // Guardar cliente seleccionado en sessionStorage para que el POS lo detecte
+            const clienteParaPOS = {
+                id: cliente.id,
+                tipo_documento: cliente.tipo_documento,
+                numero_documento: cliente.numero_documento,
+                nombre: cliente.nombre,
+                direccion: cliente.direccion || '',
+                email: cliente.email || '',
+                telefono: cliente.telefono || '',
+                debe: parseFloat(cliente.debe) || 0
+            };
+            
+            sessionStorage.setItem('clienteSeleccionadoPOS', JSON.stringify(clienteParaPOS));
+            
+            // Limpiar indicador de navegación POS
+            sessionStorage.removeItem('navegandoDesdePOS');
+            
+            // Feedback visual inmediato
+            const Toast = {
+                fire: function(config) {
+                    const toast = document.createElement('div');
+                    toast.innerHTML = `
+                        <div style="position: fixed; top: 20px; right: 20px; background: #28a745; color: white; 
+                                    padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                                    z-index: 9999; font-weight: 600; font-size: 14px;">
+                            ✅ ${config.title}: ${config.text}
+                        </div>
+                    `;
+                    document.body.appendChild(toast);
+                    
+                    setTimeout(() => {
+                        toast.remove();
+                    }, 3000);
+                }
+            };
+            
+            Toast.fire({
+                title: 'Cliente seleccionado',
+                text: clienteNombre
+            });
+            
+            // Redirigir al POS automáticamente después de un pequeño delay
+            setTimeout(() => {
+                window.location.href = '{{ route("pos.index") }}';
+            }, 1000);
         }
     </script>
 @endsection

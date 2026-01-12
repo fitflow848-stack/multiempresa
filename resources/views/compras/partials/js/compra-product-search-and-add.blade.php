@@ -135,6 +135,13 @@
             // add product button in results
             $results.on('click', '.btn-add-product', function() {
                 const p = $(this).closest('.list-group-item').data('product');
+                console.log('=== PRODUCTO DESDE BACKEND ===');
+                console.log('Datos completos recibidos:', p);
+                console.log('stock_min:', p.stock_min);
+                console.log('stock_max:', p.stock_max);
+                console.log('lote:', p.lote);
+                console.log('fecha_vencimiento:', p.fecha_vencimiento);
+                console.log('===============================');
                 addProductToCompra(p);
             });
 
@@ -146,13 +153,19 @@
                         .precio_linea.precio_compra) : 0);
 
                 const descuento = 0;
+                const stockMin = product.stock_min || 0;
+                const stockMax = product.stock_max || 0;
+                const lote = product.lote || '';
+                const fechaVencimiento = product.fecha_vencimiento || '';
                 const idx = lineIndex++;
 
                 // Hide no-products message
                 $('#no-products').hide();
 
-                const row = $(`
-            <tr data-idx="${idx}">
+                const totalCalculado = (cantidad * costo - descuento).toFixed(2);
+
+                const row = `
+            <tr data-idx="${idx}" data-producto-id="${product.id || ''}">
                 <td class="text-center">${idx}
                     <input type="hidden" name="product_id[]" value="${escapeHtml(product.id)}">
                 </td>
@@ -176,14 +189,34 @@
                     <input name="descuento[]" type="number" step="0.01" min="0" 
                            class="form-control form-control-sm text-end descuento-input" value="${Number(descuento).toFixed(2)}">
                 </td>
-                <td class="text-end total-line">S/ ${(cantidad * costo - descuento).toFixed(2)}</td>
+                <td>
+                    <input name="stock_min[]" type="number" step="1" min="0" 
+                           class="form-control form-control-sm text-center stock-min-input" 
+                           value="${stockMin}" placeholder="0">
+                </td>
+                <td>
+                    <input name="stock_max[]" type="number" step="1" min="0" 
+                           class="form-control form-control-sm text-center stock-max-input" 
+                           value="${stockMax}" placeholder="0">
+                </td>
+                <td>
+                    <input name="lote[]" type="text" maxlength="50" 
+                           class="form-control form-control-sm text-center lote-input" 
+                           value="${escapeHtml(lote)}" placeholder="Lote...">
+                </td>
+                <td>
+                    <input name="fecha_vencimiento[]" type="date" 
+                           class="form-control form-control-sm fecha-vencimiento-input" 
+                           value="${fechaVencimiento}">
+                </td>
+                <td class="text-end total-line">S/ ${totalCalculado}</td>
                 <td class="text-center">
                     <button type="button" class="btn btn-sm btn-outline-danger btn-remove-line" title="Eliminar">
                         <i class='bx  bx-x-circle'></i> 
                     </button>
                 </td>
             </tr>
-        `);
+        `;
 
                 $productosTbody.append(row);
 
@@ -197,6 +230,8 @@
                     setTimeout(window.autoSaveCompraData, 500);
                     console.log('Auto-guardado ejecutado después de agregar producto desde modal');
                 }
+                
+                console.log('Producto agregado desde modal con todos los campos:', product);
             }
 
             // remove

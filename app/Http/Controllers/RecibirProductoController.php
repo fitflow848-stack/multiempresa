@@ -88,11 +88,34 @@ class RecibirProductoController extends Controller
                     'pvp' => $item['pvp'],
                     'pvpd' => $item['pvpd'],
                     'pvc' => $item['pvc'],
+                    // Nuevos campos
+                    'stock_min' => $item['stock_min'] ?? 0,
+                    'stock_max' => $item['stock_max'] ?? 0,
+                    'lote' => $item['lote'] ?? null,
+                    'fecha_vencimiento' => $item['fecha_vencimiento'] ?? null,
                 ]);
 
-                // 👉 ACTUALIZAR STOCK (ejemplo)
+                // 👉 ACTUALIZAR STOCK Y DATOS ADICIONALES EN PRODUCTO
                 Producto::where('id', $item['producto_id'])
                     ->increment('cantidad', $item['cantidad']);
+                
+                // Actualizar datos adicionales en la línea de compra
+                $compraLinea = CompraLinea::where('compra_id', $item['compra_id'])
+                                        ->where('product_id', $item['producto_id'])
+                                        ->first();
+                
+                if ($compraLinea) {
+                    $compraLinea->update([
+                        'precio_compra' => $item['cop'],
+                        'stock_min' => $item['stock_min'] ?? 0,
+                        'stock_max' => $item['stock_max'] ?? 0,
+                        'lote' => $item['lote'] ?? null,
+                        'fecha_vencimiento' => $item['fecha_vencimiento'] ?? null,
+                        'pvp' => $item['pvp'],
+                        'pvp_dto' => $item['pvpd'],
+                        'pvc' => $item['pvc'],
+                    ]);
+                }
             }
 
             Compra::where('id', $request->compraId)->update(['recibido' => 1]);

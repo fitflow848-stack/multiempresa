@@ -177,13 +177,17 @@
                                         <th style="width: 100px" class="text-center">Cantidad</th>
                                         <th style="width: 100px" class="text-right">Costo</th>
                                         <th style="width: 100px" class="text-right">Descuento</th>
+                                        <th style="width: 80px" class="text-center">Stock Min</th>
+                                        <th style="width: 80px" class="text-center">Stock Max</th>
+                                        <th style="width: 100px" class="text-center">Lote</th>
+                                        <th style="width: 120px" class="text-center">F. Vencimiento</th>
                                         <th style="width: 100px" class="text-right">Total</th>
                                         <th style="width: 60px" class="text-center">Acción</th>
                                     </tr>
                                 </thead>
                                 <tbody id="productos-tbody">
                                     <tr id="no-products" class="text-center text-muted">
-                                        <td colspan="8" class="py-4">
+                                        <td colspan="12" class="py-4">
                                             <i class="fas fa-box-open fa-2x mb-2 d-block"></i>
                                             No hay productos agregados.
                                             <a href="#" class="text-success" data-bs-toggle="modal"
@@ -297,6 +301,61 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        /* Estilos para los nuevos campos editables */
+        .stock-min-input, .stock-max-input {
+            background-color: #f0f8f0 !important;
+        }
+        
+        .lote-input, .fecha-vencimiento-input {
+            background-color: #fef9e7 !important;
+        }
+        
+        .stock-min-input:focus, .stock-max-input:focus {
+            box-shadow: 0 0 5px rgba(40, 167, 69, 0.3) !important;
+        }
+        
+        .lote-input:focus, .fecha-vencimiento-input:focus {
+            box-shadow: 0 0 5px rgba(255, 193, 7, 0.3) !important;
+        }
+        
+        /* Validación visual para errores */
+        .is-invalid {
+            border-color: #dc3545 !important;
+            background-color: #f8d7da !important;
+        }
+        
+        .is-valid {
+            border-color: #28a745 !important;
+        }
+        
+        /* Responsividad para tabla más ancha */
+        .table-responsive {
+            min-height: 200px;
+        }
+        
+        .product-table th, .product-table td {
+            white-space: nowrap;
+            vertical-align: middle;
+        }
+        
+        .product-table input[type="text"], 
+        .product-table input[type="number"], 
+        .product-table input[type="date"] {
+            min-width: 70px;
+            font-size: 12px;
+        }
+        
+        /* Tooltips para campos nuevos */
+        .stock-min-input, .stock-max-input {
+            position: relative;
+        }
+        
+        .lote-input[title]:hover, .fecha-vencimiento-input[title]:hover {
+            cursor: help;
+        }
+    </style>
 
     <script>
         $(document).ready(function() {
@@ -516,9 +575,59 @@
                 $('input[name="moneda"], #credito, #percepcion, #inc_impuesto')
                     .on('change', debounce(autoSaveCompraData, 500));
                 
-                // Auto-guardar cuando cambien los productos
-                $(document).on('input change', '.cantidad-input, .costo-input, .descuento-input', 
+                // Auto-guardar cuando cambien los productos (incluyendo nuevos campos)
+                $(document).on('input change', '.cantidad-input, .costo-input, .descuento-input, .stock-min-input, .stock-max-input, .lote-input, .fecha-vencimiento-input', 
                     debounce(autoSaveCompraData, 1000));
+
+                // Validaciones para stock mínimo y máximo
+                $(document).on('input', '.stock-min-input, .stock-max-input', function() {
+                    const $input = $(this);
+                    const value = parseInt($input.val()) || 0;
+                    
+                    if (value < 0) {
+                        $input.val(0);
+                    }
+                    
+                    // Validar que stock_max >= stock_min en la misma fila
+                    const $row = $input.closest('tr');
+                    const stockMin = parseInt($row.find('.stock-min-input').val()) || 0;
+                    const stockMax = parseInt($row.find('.stock-max-input').val()) || 0;
+                    
+                    if (stockMax > 0 && stockMax < stockMin) {
+                        $row.find('.stock-max-input').css('border-color', '#dc3545');
+                        $row.find('.stock-min-input').css('border-color', '#dc3545');
+                    } else {
+                        $row.find('.stock-max-input').css('border-color', '#28a745');
+                        $row.find('.stock-min-input').css('border-color', '#28a745');
+                    }
+                });
+
+                // Validación para lote (solo caracteres alfanuméricos, guiones y puntos)
+                $(document).on('input', '.lote-input', function() {
+                    const $input = $(this);
+                    let value = $input.val();
+                    
+                    // Remover caracteres especiales excepto guiones y puntos
+                    value = value.replace(/[^a-zA-Z0-9\-\.]/g, '');
+                    $input.val(value);
+                });
+
+                // Validación para fecha de vencimiento
+                $(document).on('change', '.fecha-vencimiento-input', function() {
+                    const $input = $(this);
+                    const fechaIngresada = new Date($input.val());
+                    const hoy = new Date();
+                    hoy.setHours(0, 0, 0, 0);
+                    
+                    if ($input.val() && fechaIngresada < hoy) {
+                        $input.css('border-color', '#ffc107');
+                        // Mostrar advertencia
+                        $input.attr('title', 'Advertencia: La fecha de vencimiento es anterior a hoy');
+                    } else {
+                        $input.css('border-color', '');
+                        $input.removeAttr('title');
+                    }
+                });
             }
 
             // Función debounce para evitar guardado excesivo
@@ -566,6 +675,10 @@
                         cantidad: $row.find('input[name="cantidad[]"]').val() || '1',
                         costo: $row.find('input[name="costo[]"]').val() || '0.00',
                         descuento: $row.find('input[name="descuento[]"]').val() || '0.00',
+                        stock_min: $row.find('input[name="stock_min[]"]').val() || '0',
+                        stock_max: $row.find('input[name="stock_max[]"]').val() || '0',
+                        lote: $row.find('input[name="lote[]"]').val() || '',
+                        fecha_vencimiento: $row.find('input[name="fecha_vencimiento[]"]').val() || '',
                         total: $row.find('.total-line').text().trim() || 'S/ 0.00'
                     });
                 });
@@ -580,37 +693,69 @@
             function restoreCompraData() {
                 const tempData = localStorage.getItem('temp_compra_data');
                 if (tempData) {
-                    const data = JSON.parse(tempData);
-                    console.log('Restaurando datos:', data);
-                    
-                    // Restaurar campos del formulario
-                    if (data.proveedor_id && data.proveedor_text) {
-                        const option = new Option(data.proveedor_text, data.proveedor_id, true, true);
-                        $('#proveedor_select').append(option).trigger('change');
+                    try {
+                        const data = JSON.parse(tempData);
+                        console.log('Restaurando datos:', data);
+                        
+                        // Restaurar campos del formulario
+                        if (data.proveedor_id && data.proveedor_text) {
+                            const option = new Option(data.proveedor_text, data.proveedor_id, true, true);
+                            $('#proveedor_select').append(option).trigger('change');
+                        }
+                        
+                        $('select[name="presupuesto"]').val(data.presupuesto);
+                        $('select[name="tipo"]').val(data.tipo);
+                        $('input[name="fecha_emision"]').val(data.fecha_emision);
+                        $('input[name="fecha_pago"]').val(data.fecha_pago);
+                        $('input[name="moneda"][value="' + data.moneda + '"]').prop('checked', true);
+                        $('#credito').prop('checked', data.credito);
+                        $('#percepcion').prop('checked', data.percepcion);
+                        $('#inc_impuesto').prop('checked', data.inc_impuesto);
+                        
+                        // Restaurar productos con validación mejorada
+                        console.log('Productos a restaurar:', data.productos);
+                        if (data.productos && Array.isArray(data.productos) && data.productos.length > 0) {
+                            data.productos.forEach(function(producto, index) {
+                                console.log(`Restaurando producto ${index + 1}:`, producto);
+                                
+                                // Asegurar que todos los campos tengan valores por defecto
+                                const productoCompleto = {
+                                    linea_id: producto.linea_id || '',
+                                    producto_id: producto.producto_id || '',
+                                    codigo: producto.codigo || '',
+                                    descripcion: producto.descripcion || '',
+                                    cantidad: producto.cantidad || '1',
+                                    costo: producto.costo || '0.00',
+                                    descuento: producto.descuento || '0.00',
+                                    stock_min: producto.stock_min || '0',
+                                    stock_max: producto.stock_max || '0',
+                                    lote: producto.lote || '',
+                                    fecha_vencimiento: producto.fecha_vencimiento || '',
+                                    total: producto.total || 'S/ 0.00'
+                                };
+                                
+                                // Llamar función de debug antes de agregar
+                                if (window.debugProductData) {
+                                    window.debugProductData(productoCompleto);
+                                }
+                                
+                                addProductToTable(productoCompleto);
+                            });
+                            console.log(`Se restauraron ${data.productos.length} productos exitosamente`);
+                        } else {
+                            console.log('No hay productos para restaurar');
+                        }
+                        
+                        console.log('Datos restaurados exitosamente');
+                        return true;
+                    } catch (error) {
+                        console.error('Error al restaurar datos:', error);
+                        // Si hay error, limpiar datos corruptos
+                        localStorage.removeItem('temp_compra_data');
+                        return false;
                     }
-                    
-                    $('select[name="presupuesto"]').val(data.presupuesto);
-                    $('select[name="tipo"]').val(data.tipo);
-                    $('input[name="fecha_emision"]').val(data.fecha_emision);
-                    $('input[name="fecha_pago"]').val(data.fecha_pago);
-                    $('input[name="moneda"][value="' + data.moneda + '"]').prop('checked', true);
-                    $('#credito').prop('checked', data.credito);
-                    $('#percepcion').prop('checked', data.percepcion);
-                    $('#inc_impuesto').prop('checked', data.inc_impuesto);
-                    
-                    // Restaurar productos
-                    console.log('Productos a restaurar:', data.productos);
-                    if (data.productos && data.productos.length > 0) {
-                        data.productos.forEach(function(producto) {
-                            console.log('Restaurando producto:', producto);
-                            addProductToTable(producto);
-                        });
-                    }
-                    
-                    // NO eliminar datos temporales aquí - se mantienen hasta completar compra
-                    console.log('Datos restaurados exitosamente');
-                    return true;
                 }
+                console.log('No hay datos temporales para restaurar');
                 return false;
             }
 
@@ -623,7 +768,9 @@
                 // Ocultar mensaje "No hay productos"
                 $('#no-products').hide();
                 
-                const row = $(`
+                const totalCalculado = (Number(producto.cantidad || 1) * Number(producto.costo || 0) - Number(producto.descuento || 0)).toFixed(2);
+                
+                const row = `
                     <tr data-idx="${idx}" data-linea-id="${producto.linea_id || ''}" data-producto-id="${producto.producto_id || ''}">
                         <td class="text-center">${idx}
                             <input type="hidden" name="product_id[]" value="${producto.producto_id || ''}">
@@ -638,30 +785,55 @@
                         </td>
                         <td>
                             <input name="cantidad[]" type="number" step="1" min="1" 
-                                   class="form-control form-control-sm text-center cantidad-input" value="${producto.cantidad || 1}">
+                                   class="form-control form-control-sm text-center cantidad-input" 
+                                   value="${producto.cantidad || 1}">
                         </td>
                         <td>
                             <input name="costo[]" type="number" step="0.01" min="0" 
-                                   class="form-control form-control-sm text-end costo-input" value="${Number(producto.costo || 0).toFixed(2)}">
+                                   class="form-control form-control-sm text-end costo-input" 
+                                   value="${Number(producto.costo || 0).toFixed(2)}">
                         </td>
                         <td>
                             <input name="descuento[]" type="number" step="0.01" min="0" 
-                                   class="form-control form-control-sm text-end descuento-input" value="${Number(producto.descuento || 0).toFixed(2)}">
+                                   class="form-control form-control-sm text-end descuento-input" 
+                                   value="${Number(producto.descuento || 0).toFixed(2)}">
                         </td>
-                        <td class="text-end total-line">S/ ${(Number(producto.cantidad || 1) * Number(producto.costo || 0) - Number(producto.descuento || 0)).toFixed(2)}</td>
+                        <td>
+                            <input name="stock_min[]" type="number" step="1" min="0" 
+                                   class="form-control form-control-sm text-center stock-min-input" 
+                                   value="${producto.stock_min || 0}" placeholder="0">
+                        </td>
+                        <td>
+                            <input name="stock_max[]" type="number" step="1" min="0" 
+                                   class="form-control form-control-sm text-center stock-max-input" 
+                                   value="${producto.stock_max || 0}" placeholder="0">
+                        </td>
+                        <td>
+                            <input name="lote[]" type="text" maxlength="50" 
+                                   class="form-control form-control-sm text-center lote-input" 
+                                   value="${producto.lote || ''}" placeholder="Lote...">
+                        </td>
+                        <td>
+                            <input name="fecha_vencimiento[]" type="date" 
+                                   class="form-control form-control-sm fecha-vencimiento-input" 
+                                   value="${producto.fecha_vencimiento || ''}">
+                        </td>
+                        <td class="text-end total-line">S/ ${totalCalculado}</td>
                         <td class="text-center">
                             <button type="button" class="btn btn-sm btn-outline-danger btn-remove-line" title="Eliminar">
                                 <i class='bx bx-x-circle'></i> 
                             </button>
                         </td>
                     </tr>
-                `);
+                `;
 
                 $('#productos-tbody').append(row);
                 calculateTotals();
                 
                 // Auto-guardar después de agregar producto
                 setTimeout(autoSaveCompraData, 500);
+                
+                console.log('Producto agregado exitosamente a la tabla');
             }
 
             // Función para actualizar numeración de filas
@@ -766,6 +938,34 @@
                 // Auto-save ya configurado en setupAutoSave()
             });
 
+            // Event listeners específicos para validar nuevos campos en tiempo real
+            $(document).on('input', '.stock-min-input, .stock-max-input, .lote-input', function() {
+                // Las validaciones ya están en setupAutoSave(), solo ejecutar auto-save
+                // El debounce evitará llamadas excesivas
+            });
+
+            $(document).on('change', '.fecha-vencimiento-input', function() {
+                // Las validaciones ya están en setupAutoSave()
+            });
+
+            // Función de debugging para ver datos del producto
+            window.debugProductData = function(producto) {
+                console.log('=== DEBUG PRODUCTO ===');
+                console.log('Datos recibidos:', producto);
+                console.log('Campos individuales:');
+                console.log('- ID:', producto.producto_id);
+                console.log('- Código:', producto.codigo);
+                console.log('- Descripción:', producto.descripcion);
+                console.log('- Cantidad:', producto.cantidad);
+                console.log('- Costo:', producto.costo);
+                console.log('- Stock Min:', producto.stock_min);
+                console.log('- Stock Max:', producto.stock_max);
+                console.log('- Lote:', producto.lote);
+                console.log('- Fecha Venc:', producto.fecha_vencimiento);
+                console.log('======================');
+                return true;
+            };
+
             // Handler para limpiar datos temporales
             $('#clear-temp-data').on('click', function() {
                 const tempData = localStorage.getItem('temp_compra_data');
@@ -832,6 +1032,10 @@
                             cantidad: primeraLinea ? primeraLinea.cantidad : 1,
                             costo: primeraLinea ? primeraLinea.precio_compra : 0,
                             descuento: 0,
+                            stock_min: producto.stock_min || 0,
+                            stock_max: producto.stock_max || 0,
+                            lote: primeraLinea ? primeraLinea.lote : '',
+                            fecha_vencimiento: primeraLinea ? primeraLinea.fecha_vencimiento : '',
                             total: 'S/ 0.00'
                         };
                         
