@@ -25,7 +25,7 @@ class ProductoController extends Controller
         $laboratorios = Laboratorio::all();
         $presentaciones = Presentacion::activo()->orderBy('nombre')->get();
         $concentraciones = Concentracion::activo()->orderBy('nombre')->get();
-        
+
         return view('productos.create', compact('marcas', 'unidades', 'laboratorios', 'presentaciones', 'concentraciones'));
     }
 
@@ -69,15 +69,15 @@ class ProductoController extends Controller
 
         // Manejar imágenes subidas en step1
         $uploadedImages = [];
-        
+
         // Imagen principal
         if ($request->hasFile('imagen_principal')) {
             $file = $request->file('imagen_principal');
             $filename = time() . '_principal_' . $file->getClientOriginalName();
-            
+
             // Guardar en storage/app/public/productos/temp
             $path = $file->storeAs('productos/temp', $filename, 'public');
-            
+
             $data['imagen_principal_temp'] = $filename;
             $uploadedImages['principal'] = [
                 'name' => $filename,
@@ -91,10 +91,10 @@ class ProductoController extends Controller
             $imagenesAdicionales = [];
             foreach ($request->file('imagenes_adicionales') as $index => $file) {
                 $filename = time() . '_adicional_' . $index . '_' . $file->getClientOriginalName();
-                
+
                 // Guardar en storage/app/public/productos/temp
                 $path = $file->storeAs('productos/temp', $filename, 'public');
-                
+
                 $imagenesAdicionales[] = $filename;
                 $uploadedImages['adicional_' . $index] = [
                     'name' => $filename,
@@ -144,28 +144,28 @@ class ProductoController extends Controller
                 // Imagen nueva subida directamente en step2
                 $file = $request->file('imagen_principal');
                 $filename = time() . '_' . $file->getClientOriginalName();
-                
+
                 // Guardar en storage/app/public/productos
                 $path = $file->storeAs('productos', $filename, 'public');
                 $imagenPrincipal = $path;
             } elseif ($request->input('imagen_principal_temp')) {
                 // Imagen que viene desde step1 (archivo temporal)
                 $tempFilename = $request->input('imagen_principal_temp');
-                
+
                 // Verificar si existe el archivo temporal
                 if (Storage::disk('public')->exists('productos/temp/' . $tempFilename)) {
                     // Mover del directorio temporal al final
                     $finalFilename = $tempFilename;
-                    
+
                     // Copiar archivo del temp al directorio final
                     Storage::disk('public')->copy(
                         'productos/temp/' . $tempFilename,
                         'productos/' . $finalFilename
                     );
-                    
+
                     // Eliminar archivo temporal
                     Storage::disk('public')->delete('productos/temp/' . $tempFilename);
-                    
+
                     $imagenPrincipal = 'productos/' . $finalFilename;
                 }
             }
@@ -177,7 +177,7 @@ class ProductoController extends Controller
                 foreach ($request->file('imagenes_adicionales') as $file) {
                     if ($file) {
                         $filename = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
-                        
+
                         // Guardar en storage/app/public/productos
                         $path = $file->storeAs('productos', $filename, 'public');
                         $imagenesAdicionales[] = $path;
@@ -191,16 +191,16 @@ class ProductoController extends Controller
                         // Verificar si existe el archivo temporal
                         if (Storage::disk('public')->exists('productos/temp/' . $tempFilename)) {
                             $finalFilename = $tempFilename;
-                            
+
                             // Copiar archivo del temp al directorio final
                             Storage::disk('public')->copy(
                                 'productos/temp/' . $tempFilename,
                                 'productos/' . $finalFilename
                             );
-                            
+
                             // Eliminar archivo temporal
                             Storage::disk('public')->delete('productos/temp/' . $tempFilename);
-                            
+
                             $imagenesAdicionales[] = 'productos/' . $finalFilename;
                         }
                     }
@@ -210,28 +210,28 @@ class ProductoController extends Controller
             // Preparar datos de características como JSON
             $propiedades = [];
             if ($request->has('propiedades')) {
-                $propiedades = array_filter($request->input('propiedades', []), function($value) {
+                $propiedades = array_filter($request->input('propiedades', []), function ($value) {
                     return !is_null($value) && $value !== '';
                 });
             }
 
             $almacenamiento = [];
             if ($request->has('almacenamiento')) {
-                $almacenamiento = array_filter($request->input('almacenamiento', []), function($value) {
+                $almacenamiento = array_filter($request->input('almacenamiento', []), function ($value) {
                     return !is_null($value) && $value !== '';
                 });
             }
 
             $seguridad = [];
             if ($request->has('seguridad')) {
-                $seguridad = array_filter($request->input('seguridad', []), function($value) {
+                $seguridad = array_filter($request->input('seguridad', []), function ($value) {
                     return !is_null($value) && $value !== '';
                 });
             }
 
             $fichatecnica = [];
             if ($request->has('ficha_tecnica')) {
-                $fichatecnica = array_filter($request->input('ficha_tecnica', []), function($value) {
+                $fichatecnica = array_filter($request->input('ficha_tecnica', []), function ($value) {
                     return !is_null($value) && $value !== '';
                 });
             }
@@ -275,7 +275,7 @@ class ProductoController extends Controller
             // Si el formulario viene desde step2 (detailed), crear líneas
             $linesJson = $request->input('product_lines', '[]');
             $lines = json_decode($linesJson, true);
-            
+
             if (is_array($lines) && count($lines) > 0) {
                 // Crear líneas
                 foreach ($lines as $ln) {
@@ -294,6 +294,12 @@ class ProductoController extends Controller
                         'pa2' => $ln['pa2'] ?? null,
                         'lote' => $ln['lote'] ?? null,
                         'fecha_venc' => !empty($ln['fecha_venc']) ? $ln['fecha_venc'] : null,
+                        'stock_maximo' => isset($ln['stock_maximo']) ? (int)$ln['stock_maximo'] : null,
+                        'stock_minimo' => isset($ln['stock_minimo']) ? (int)$ln['stock_minimo'] : null,
+                        'pv_docena' => isset($ln['pv_docena']) && $ln['pv_docena'] !== '' ? $ln['pv_docena'] : null,
+                        'pvc' => isset($ln['pvc']) && $ln['pvc'] !== '' ? $ln['pvc'] : null,
+                        'pvc_dto' => isset($ln['pvc_dto']) && $ln['pvc_dto'] !== '' ? $ln['pvc_dto'] : null,
+                        'pvp2' => isset($ln['pvp2']) && $ln['pvp2'] !== '' ? $ln['pvp2'] : null,
                     ];
 
                     ProductoLinea::create($lineData);
@@ -309,7 +315,7 @@ class ProductoController extends Controller
             if (session('return_to_compras')) {
                 Log::info('ProductoController store - Detectado return_to_compras, preparando redirección especial');
                 session()->forget('return_to_compras');
-                
+
                 if (request()->ajax()) {
                     // Para peticiones AJAX, devolver JSON con URL de redirección y parámetros
                     $redirectUrl = route('compras.create') . '?restore_compra_data=true&new_product_id=' . $producto->id;
@@ -397,7 +403,6 @@ class ProductoController extends Controller
 
         $result = $lineas->map(function ($linea) {
             $producto = $linea->producto;
-
             return [
                 'id' => $producto->id,
                 'linea_id' => $linea->id,
@@ -411,8 +416,8 @@ class ProductoController extends Controller
                 'precio_compra' => $linea->precio_compra !== null ? (float)$linea->precio_compra : null,
                 'pvp' => $linea->pvp !== null ? (float)$linea->pvp : null,
                 // Campos de stock, lote y fecha de vencimiento
-                'stock_min' => $linea->stock_min ?? $producto->stock_min ?? 0,
-                'stock_max' => $linea->stock_max ?? $producto->stock_max ?? 0,
+                'stock_min' => $linea->stock_minimo ?? $producto->stock_min ?? 0,
+                'stock_max' => $linea->stock_maximo ?? $producto->stock_max ?? 0,
                 'lote' => $linea->lote ?? '',
                 'fecha_vencimiento' => $linea->fecha_venc ? \Carbon\Carbon::parse($linea->fecha_venc)->format('Y-m-d') : null,
                 // Información completa de la línea
@@ -438,37 +443,33 @@ class ProductoController extends Controller
     {
         try {
             $producto = Producto::with(['lineas'])->find($id);
-            
+
             if (!$producto) {
                 return response()->json(['error' => 'Producto no encontrado'], 404);
             }
-
-            $result = [
+            $result =  [
                 'id' => $producto->id,
                 'nombre' => $producto->nombre,
-                'codigo_barras' => $producto->codigo_barras ?? null,
-                'imagen_principal' => $producto->imagen_principal,
-                'stock_min' => $producto->stock_min ?? 0,
-                'stock_max' => $producto->stock_max ?? 0,
+                'unidad_medida_id' => $producto->unidad_medida_id ?? null,
+                'cb' => $linea->cb ?? $producto->codigo_barras,
+                'familia' => $producto->familia ? $producto->familia->nombre : null,
                 'lineas' => $producto->lineas->map(function ($linea) {
                     return [
-                        'id' => $linea->id,
-                        'cb' => $linea->cb,
-                        'codigo_ref' => $linea->codigo_ref,
+                        'linea_id' => $linea->id,
+                        'codigo_ref' => $linea->codigo_ref ?? '',
                         'presentacion' => $linea->presentacion,
                         'concentracion' => $linea->concentracion,
-                        'cantidad' => $linea->cantidad,
-                        'precio_compra' => $linea->precio_compra,
-                        'pvp' => $linea->pvp,
-                        'pvp_dto' => $linea->pvp_dto,
-                        'stock_min' => $linea->stock_min ?? 0,
-                        'stock_max' => $linea->stock_max ?? 0,
+                        // precios tomados desde la línea
+                        'precio_compra' => $linea->precio_compra !== null ? (float)$linea->precio_compra : null,
+                        'pvp' => $linea->pvp !== null ? (float)$linea->pvp : null,
+                        // Campos de stock, lote y fecha de vencimiento
+                        'stock_min' => $linea->stock_minimo ?? $producto->stock_min ?? 0,
+                        'stock_max' => $linea->stock_maximo ?? $producto->stock_max ?? 0,
                         'lote' => $linea->lote ?? '',
                         'fecha_vencimiento' => $linea->fecha_venc ? \Carbon\Carbon::parse($linea->fecha_venc)->format('Y-m-d') : null,
                     ];
                 })
             ];
-
             return response()->json($result);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Error interno del servidor'], 500);

@@ -191,7 +191,7 @@
                             let badgeClass = 'status-pendiente';
                             let text = 'Pendiente';
 
-                            if (data === 'completado') {
+                            if (data === 'Recibida') {
                                 badgeClass = 'status-completado';
                                 text = 'Completado';
                             } else if (data === 'cancelado') {

@@ -15,13 +15,18 @@ class CierreCaja extends Model
     protected $fillable = [
         'user_id',
         'fecha_cierre',
-        'monto_apertura',
-        'monto_cierre',
+        'monto_apertura', // Saldo Inicial
+        'monto_cierre',   // Cierre Caja (Efectivo Real)
         'ingresos',
-        'egresos',
+        'egresos',        // Gastos
+        'aportaciones',   // Nuevo: Dinero extra ingresado
+        'sustracciones',  // Nuevo: Retiros de caja
         'observaciones',
     ];
 
+    /**
+     * Relación con el usuario que realiza el cierre
+     */
     public function user()
     {
         return $this->belongsTo(User::class);

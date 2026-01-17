@@ -20,6 +20,8 @@ use App\Http\Controllers\SubFamiliaController;
 use App\Http\Controllers\UnidadMedidaController;
 use App\Http\Controllers\CotizacionController;
 use App\Http\Controllers\CierreCajaController;
+use App\Http\Controllers\OperacionCajaController;
+use App\Http\Controllers\PartidaController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -45,6 +47,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/products', [PosController::class, 'getProducts'])->name('products');
         Route::post('/sale', [PosController::class, 'createSale'])->name('sale.create');
         Route::get('/pdf/{id}', [PosController::class, 'pdfVenta'])->name('pdfVenta');
+        Route::get('/pdf8cm/{id}', [PosController::class, 'pdfVenta8cm'])->name('pdfVenta8cm');
+        Route::get('/caja/open', [PosController::class, 'getOpenCaja'])->name('caja.open');
+        Route::post('/caja/open', [PosController::class, 'abrirCaja'])->name('caja.abrir');
         Route::post('/sendDocumentoSunat/{id}', [PosController::class, 'sendDocumentoSunat'])->name('sendDocumentoSunat');
     });
 
@@ -65,6 +70,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/emitir', [CotizacionController::class, 'emitir'])->name('emitir.post');
         Route::post('/save-cotizacion', [CotizacionController::class, 'saveCotizacion'])->name('save-cotizacion');
         Route::get('/pdf/{id}', [CotizacionController::class, 'pdfCotizacion'])->name('pdfCotizacion');
+        Route::get('/pdf8cm/{id}', [CotizacionController::class, 'pdfCotizacion8cm'])->name('pdfCotizacion8cm');
     });
 
     // Rutas del módulo de cierre de caja
@@ -73,7 +79,15 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/create', [CierreCajaController::class, 'create'])->name('create');
         Route::post('/', [CierreCajaController::class, 'store'])->name('store');
         Route::get('/{cierre}', [CierreCajaController::class, 'show'])->name('show');
+        Route::post('/{cierre}/close', [CierreCajaController::class, 'close'])->name('close');
     });
+
+    // Operaciones de caja (aportes/ingresos/gastos/sustracciones)
+    Route::post('/operaciones-caja', [OperacionCajaController::class, 'store'])->name('operaciones-caja.store');
+
+    // Partidas (API para listar y crear partidas usadas en operaciones)
+    Route::get('/partidas', [PartidaController::class, 'index'])->name('partidas.index');
+    Route::post('/partidas', [PartidaController::class, 'store'])->name('partidas.store');
 
     Route::prefix('comprobantes')->name('comprobantes.')->group(function () {
         Route::get('/', [ComprobantesController::class, 'index'])->name('index');

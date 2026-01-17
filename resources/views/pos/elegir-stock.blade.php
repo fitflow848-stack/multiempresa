@@ -323,7 +323,8 @@
             const producto = {
                 id: {{ $producto->id }},
                 nombre: '{{ $producto->nombre }}',
-                codigo: '{{ $producto->codigo_ref ?? "COD-PROD" }}'
+                codigo: '{{ $producto->codigo_ref ?? "COD-PROD" }}',
+                producto_linea_id: {{ $lotes[0]->producto_linea_id ?? 'null' }}
             };
 
             // Recopilar todas las cantidades seleccionadas
@@ -344,7 +345,8 @@
                                 pvp: {{ $lote->pvp }},
                                 pvc: {{ $lote->pvc }},
                                 fecha_vencimiento: null,
-                                importe: cantidad * precio
+                                importe: cantidad * precio,
+                                producto_linea_id: {{ $lote->producto_linea_id ?? 'null' }}
                             });
                         }
                     @endforeach

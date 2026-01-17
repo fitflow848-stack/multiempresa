@@ -11,6 +11,7 @@ class AlmacenIngresoDetalle extends Model
     protected $fillable = [
         'ingreso_id',
         'producto_id',
+        'producto_linea_id',
         'cantidad',
         'costo',
         'cop',

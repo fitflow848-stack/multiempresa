@@ -9,6 +9,7 @@ use App\Models\CompraLinea;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Producto;
+use App\Models\ProductoLinea;
 
 class ComprasController extends Controller
 {
@@ -49,9 +50,9 @@ class ComprasController extends Controller
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('compras.id', 'like', "%{$search}%")
-                  ->orWhere('compras.fecha_emision', 'like', "%{$search}%")
-                  ->orWhere('proveedores.nombre_comercial', 'like', "%{$search}%")
-                  ->orWhere('compras.total_neto', 'like', "%{$search}%");
+                    ->orWhere('compras.fecha_emision', 'like', "%{$search}%")
+                    ->orWhere('proveedores.nombre_comercial', 'like', "%{$search}%")
+                    ->orWhere('compras.total_neto', 'like', "%{$search}%");
             });
         }
 
@@ -102,35 +103,35 @@ class ComprasController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'proveedor_id' => ['nullable','integer'],
-            'fecha_emision' => ['nullable','date'],
-            'fecha_pago' => ['nullable','date'],
-            'moneda' => ['nullable','string'],
+            'proveedor_id' => ['nullable', 'integer'],
+            'fecha_emision' => ['nullable', 'date'],
+            'fecha_pago' => ['nullable', 'date'],
+            'moneda' => ['nullable', 'string'],
             'credito' => ['nullable'],
             'percepcion' => ['nullable'],
             'inc_impuesto' => ['nullable'],
-            'tipo' => ['nullable','string'],
-            'presupuesto' => ['nullable','string'],
-            'local_destino' => ['nullable','string'],
+            'tipo' => ['nullable', 'string'],
+            'presupuesto' => ['nullable', 'string'],
+            'local_destino' => ['nullable', 'string'],
 
-            'total_bruto' => ['nullable','numeric'],
-            'total_descuento' => ['nullable','numeric'],
-            'bruto_neto' => ['nullable','numeric'],
-            'total_impuesto' => ['nullable','numeric'],
-            'total_neto' => ['nullable','numeric'],
-            'flete' => ['nullable','numeric'],
-            'total_pagar' => ['nullable','numeric'],
+            'total_bruto' => ['nullable', 'numeric'],
+            'total_descuento' => ['nullable', 'numeric'],
+            'bruto_neto' => ['nullable', 'numeric'],
+            'total_impuesto' => ['nullable', 'numeric'],
+            'total_neto' => ['nullable', 'numeric'],
+            'flete' => ['nullable', 'numeric'],
+            'total_pagar' => ['nullable', 'numeric'],
 
             // arrays for lines
-            'product_id' => ['nullable','array'],
-            'product_id.*' => ['nullable','integer'],
-            'cb' => ['nullable','array'],
-            'descripcion' => ['nullable','array'],
-            'cantidad' => ['nullable','array'],
-            'cantidad.*' => ['nullable','numeric'],
-            'costo' => ['nullable','array'],
-            'descuento' => ['nullable','array'],
-            'vcpc' => ['nullable','array'],
+            'product_id' => ['nullable', 'array'],
+            'product_id.*' => ['nullable', 'integer'],
+            'cb' => ['nullable', 'array'],
+            'descripcion' => ['nullable', 'array'],
+            'cantidad' => ['nullable', 'array'],
+            'cantidad.*' => ['nullable', 'numeric'],
+            'costo' => ['nullable', 'array'],
+            'descuento' => ['nullable', 'array'],
+            'vcpc' => ['nullable', 'array'],
         ]);
 
         // Guardar en transacción
@@ -159,6 +160,7 @@ class ComprasController extends Controller
 
             // guardar lineas
             $productIds = $request->input('product_id', []);
+            $productLinesIds = $request->input('linea_id', []);
             $cbs = $request->input('cb', []);
             $descrs = $request->input('descripcion', []);
             $cants = $request->input('cantidad', []);
@@ -181,16 +183,25 @@ class ComprasController extends Controller
                 $cantidad = isset($cants[$i]) ? (float)$cants[$i] : 0;
                 $descripcion = $descrs[$i] ?? null;
                 if ($cantidad <= 0 && !$descripcion) continue;
-
+                $productLines = ProductoLinea::where('id', $productLinesIds[$i] ?? 0)->first();
                 CompraLinea::create([
                     'compra_id' => $compra->id,
                     'product_id' => $productIds[$i] ?? null,
+                    'product_linea_id' => $productLinesIds[$i] ?? null,
                     'cb' => $cbs[$i] ?? null,
                     'descripcion' => $descripcion,
                     'cantidad' => (int)$cantidad,
                     'costo' => isset($costos[$i]) && $costos[$i] !== '' ? $costos[$i] : null,
                     'descuento' => isset($descs[$i]) && $descs[$i] !== '' ? $descs[$i] : 0,
                     'vcpc' => $vcpcs[$i] ?? null,
+                    'pvp' => $productLines->pvp,
+                    'pvp_dto' => $productLines->pvp_dto,
+                    'pvc' => $productLines->pvc,
+                    'pvc_dto' => $productLines->pvc_dto,
+                    'stock_min' => $productLines->stock_minimo,
+                    'stock_max' => $productLines->stock_maximo,
+                    'lote' => $productLines->lote,
+                    'fecha_vencimiento' => $productLines->fecha_venc,
                 ]);
             }
 
@@ -200,7 +211,7 @@ class ComprasController extends Controller
             return redirect()->route('compras.success', $compra->id);
         } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('Error guardando compra: '.$e->getMessage());
+            Log::error('Error guardando compra: ' . $e->getMessage());
             return redirect()->back()->withInput()->withErrors(['general' => 'Ocurrió un error guardando la compra.']);
         }
     }
@@ -237,7 +248,7 @@ class ComprasController extends Controller
     public function storeReception(Request $request, Compra $compra)
     {
         $data = $request->validate([
-            'received_at' => ['nullable','date'],
+            'received_at' => ['nullable', 'date'],
         ]);
 
         $compra->received_at = $data['received_at'] ?? now();
@@ -278,7 +289,7 @@ class ComprasController extends Controller
             return redirect()->route('compras.show', $compra->id)->with('success', 'Productos recibidos en almacén correctamente.');
         } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('Error al recibir productos en almacén: '.$e->getMessage());
+            Log::error('Error al recibir productos en almacén: ' . $e->getMessage());
             return redirect()->route('compras.receive.process', $compra->id)->with('error', 'Ocurrió un error procesando la recepción.');
         }
     }
@@ -307,7 +318,7 @@ class ComprasController extends Controller
         $index = session('compras_receive_index', 0);
 
         if (empty($ids) || !isset($ids[$index])) {
-            session()->forget(['compras_receive_ids','compras_receive_index']);
+            session()->forget(['compras_receive_ids', 'compras_receive_index']);
             return redirect()->route('compras.index')->with('success', 'Recepción por lotes completada.');
         }
 
@@ -318,7 +329,7 @@ class ComprasController extends Controller
             return redirect()->route('compras.receive.batch');
         }
 
-        return view('compras.process_batch', compact('compra','index'));
+        return view('compras.process_batch', compact('compra', 'index'));
     }
 
     /**
@@ -330,7 +341,7 @@ class ComprasController extends Controller
         $index = session('compras_receive_index', 0);
 
         if (empty($ids) || !isset($ids[$index])) {
-            session()->forget(['compras_receive_ids','compras_receive_index']);
+            session()->forget(['compras_receive_ids', 'compras_receive_index']);
             return redirect()->route('compras.index')->with('success', 'No hay compras para procesar.');
         }
 
@@ -359,15 +370,15 @@ class ComprasController extends Controller
                 DB::commit();
             } catch (\Throwable $e) {
                 DB::rollBack();
-                Log::error('Error en recepción por lotes: '.$e->getMessage());
-                return redirect()->route('compras.receive.batch')->with('error', 'Error procesando compra '.$compraId);
+                Log::error('Error en recepción por lotes: ' . $e->getMessage());
+                return redirect()->route('compras.receive.batch')->with('error', 'Error procesando compra ' . $compraId);
             }
         }
 
         // advance index
         $index++;
         if ($index >= count($ids)) {
-            session()->forget(['compras_receive_ids','compras_receive_index']);
+            session()->forget(['compras_receive_ids', 'compras_receive_index']);
             return redirect()->route('compras.index')->with('success', 'Recepción por lotes completada.');
         }
 

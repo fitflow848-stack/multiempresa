@@ -294,6 +294,7 @@
     <!-- Modals -->
     @include('compras.partials.modal-proveedor')
     @include('compras.partials.modal-producto-search')
+    @include('compras.partials.modal-product-detail')
 
 
     {{-- ===================== SCRIPTS ===================== --}}
@@ -398,7 +399,33 @@
                         },
                         cache: true
                     },
-                    minimumInputLength: 1
+                    minimumInputLength: 0,
+                    // allow clearing the initial selection
+                    templateResult: function (data) { return data.text; }
+                });
+
+                // Load an initial page of providers when opening the select so user sees a list immediately
+                $('#proveedor_select').on('select2:open', function() {
+                    const $this = $(this);
+                    if ($this.data('providersLoaded')) return;
+
+                    $.get(proveedoresSelectUrl, { q: '' })
+                        .done(function(items) {
+                            if (!Array.isArray(items)) return;
+                            items.forEach(function(p) {
+                                const text = p.nombre_comercial || p.nombre_legal || p.ruc;
+                                // avoid duplicating options
+                                if ($this.find('option[value="' + p.id + '"]').length === 0) {
+                                    const newOption = new Option(text, p.id, false, false);
+                                    $this.append(newOption);
+                                }
+                            });
+                            $this.data('providersLoaded', true);
+                            // reopen dropdown content is already open
+                        })
+                        .fail(function() {
+                            console.warn('No se pudo cargar listado inicial de proveedores');
+                        });
                 });
                 console.log('Select2 initialized successfully');
             } else {
@@ -452,21 +479,37 @@
                             const newOption = new Option(text, resp.id, true, true);
                             $('#proveedor_select').append(newOption).trigger('change');
 
-                            // Bootstrap 5 modal hide
+                            // Bootstrap 5 modal hide using getOrCreateInstance and cleanup after hidden
                             const modalEl = document.getElementById('proveedorModal');
-                            const modal = bootstrap.Modal.getInstance(modalEl);
-                            if (modal) {
-                                modal.hide();
-                            }
-                            $form[0].reset();
+                            const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
 
-                            Swal.fire({
-                                icon: 'success',
-                                title: '¡Proveedor registrado!',
-                                text: 'El proveedor se ha añadido correctamente',
-                                timer: 2000,
-                                showConfirmButton: false
-                            });
+                            const onHidden = function() {
+                                modalEl.removeEventListener('hidden.bs.modal', onHidden);
+                                // reset form after fully hidden
+                                $form[0].reset();
+
+                                // cleanup any leftover backdrops or classes
+                                (function cleanup() {
+                                    const anyShown = document.querySelectorAll('.modal.show').length > 0;
+                                    if (anyShown) return;
+                                    document.querySelectorAll('.modal-backdrop').forEach(function(el) {
+                                        el.parentNode && el.parentNode.removeChild(el);
+                                    });
+                                    document.body.classList.remove('modal-open');
+                                    document.body.style.paddingRight = '';
+                                })();
+
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '¡Proveedor registrado!',
+                                    text: 'El proveedor se ha añadido correctamente',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                });
+                            };
+
+                            modalEl.addEventListener('hidden.bs.modal', onHidden);
+                            modalInstance.hide();
                         }
                     })
                     .fail(function(xhr) {
@@ -715,33 +758,56 @@
                         // Restaurar productos con validación mejorada
                         console.log('Productos a restaurar:', data.productos);
                         if (data.productos && Array.isArray(data.productos) && data.productos.length > 0) {
-                            data.productos.forEach(function(producto, index) {
-                                console.log(`Restaurando producto ${index + 1}:`, producto);
-                                
-                                // Asegurar que todos los campos tengan valores por defecto
-                                const productoCompleto = {
-                                    linea_id: producto.linea_id || '',
-                                    producto_id: producto.producto_id || '',
-                                    codigo: producto.codigo || '',
-                                    descripcion: producto.descripcion || '',
-                                    cantidad: producto.cantidad || '1',
-                                    costo: producto.costo || '0.00',
-                                    descuento: producto.descuento || '0.00',
-                                    stock_min: producto.stock_min || '0',
-                                    stock_max: producto.stock_max || '0',
-                                    lote: producto.lote || '',
-                                    fecha_vencimiento: producto.fecha_vencimiento || '',
-                                    total: producto.total || 'S/ 0.00'
-                                };
-                                
-                                // Llamar función de debug antes de agregar
-                                if (window.debugProductData) {
-                                    window.debugProductData(productoCompleto);
+                            // Procesar productos secuencialmente y, si falta linea_id, intentar obtenerla por API
+                            (async function() {
+                                for (let index = 0; index < data.productos.length; index++) {
+                                    const producto = data.productos[index];
+                                    console.log(`Restaurando producto ${index + 1}:`, producto);
+
+                                    const productoCompleto = {
+                                        linea_id: producto.linea_id || '',
+                                        producto_id: producto.producto_id || '',
+                                        codigo: producto.codigo || '',
+                                        descripcion: producto.descripcion || '',
+                                        cantidad: producto.cantidad || '1',
+                                        costo: producto.costo || '0.00',
+                                        descuento: producto.descuento || '0.00',
+                                        stock_min: producto.stock_min || '0',
+                                        stock_max: producto.stock_max || '0',
+                                        lote: producto.lote || '',
+                                        fecha_vencimiento: producto.fecha_vencimiento || '',
+                                        total: producto.total || 'S/ 0.00'
+                                    };
+
+                                    // Si no tenemos linea_id pero sí producto_id, intentar obtener la primera linea por API
+                                    if ((!productoCompleto.linea_id || productoCompleto.linea_id === '') && productoCompleto.producto_id) {
+                                        try {
+                                            const apiUrl = '{{ route("productos.api.get", ":id") }}'.replace(':id', productoCompleto.producto_id);
+                                            const resp = await fetch(apiUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(r => r.json());
+                                            const primeraLinea = resp.lineas && resp.lineas.length > 0 ? resp.lineas[0] : null;
+                                            productoCompleto.linea_id = primeraLinea ? primeraLinea.id : productoCompleto.linea_id || '';
+
+                                            // rellenar valores faltantes desde la API si es necesario
+                                            if ((!productoCompleto.codigo || productoCompleto.codigo === '') && primeraLinea) {
+                                                productoCompleto.codigo = primeraLinea.cb || productoCompleto.codigo || '';
+                                            }
+                                            if ((!productoCompleto.costo || Number(productoCompleto.costo) === 0) && primeraLinea) {
+                                                productoCompleto.costo = primeraLinea.precio_compra || productoCompleto.costo || 0;
+                                            }
+                                        } catch (err) {
+                                            console.error('Error al obtener producto desde API para restauración', err);
+                                        }
+                                    }
+
+                                    // Llamar función de debug antes de agregar
+                                    if (window.debugProductData) {
+                                        window.debugProductData(productoCompleto);
+                                    }
+
+                                    addProductToTable(productoCompleto);
                                 }
-                                
-                                addProductToTable(productoCompleto);
-                            });
-                            console.log(`Se restauraron ${data.productos.length} productos exitosamente`);
+                                console.log(`Se restauraron ${data.productos.length} productos exitosamente`);
+                            })();
                         } else {
                             console.log('No hay productos para restaurar');
                         }
@@ -774,6 +840,7 @@
                     <tr data-idx="${idx}" data-linea-id="${producto.linea_id || ''}" data-producto-id="${producto.producto_id || ''}">
                         <td class="text-center">${idx}
                             <input type="hidden" name="product_id[]" value="${producto.producto_id || ''}">
+                            <input type="hidden" name="linea_id[]" value="${producto.linea_id || ''}">
                         </td>
                         <td>
                             <input name="codigo[]" type="text" class="form-control form-control-sm" 
@@ -1032,8 +1099,8 @@
                             cantidad: primeraLinea ? primeraLinea.cantidad : 1,
                             costo: primeraLinea ? primeraLinea.precio_compra : 0,
                             descuento: 0,
-                            stock_min: producto.stock_min || 0,
-                            stock_max: producto.stock_max || 0,
+                            stock_min: primeraLinea.stock_min ||  0,
+                            stock_max: primeraLinea.stock_max || 0,
                             lote: primeraLinea ? primeraLinea.lote : '',
                             fecha_vencimiento: primeraLinea ? primeraLinea.fecha_vencimiento : '',
                             total: 'S/ 0.00'

@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\CierreCaja;
 
 class PosController extends Controller
 {
@@ -37,19 +38,19 @@ class PosController extends Controller
             ->get();
 
         $cotizacionData = null;
-        
+
         // Si se pasa una cotización, cargar sus datos
         if ($request->has('cotizacion_id')) {
             $cotizacion = Cotizacion::with(['cliente', 'detalles'])
                 ->where('id', $request->cotizacion_id)
                 ->where('company_id', $user->company_id)
                 ->first();
-            
+
             if ($cotizacion && $cotizacion->estado === 'aprobada') {
                 $cotizacionData = [
                     'cotizacion' => $cotizacion,
                     'cliente' => $cotizacion->cliente,
-                    'productos' => $cotizacion->detalles->map(function($detalle) {
+                    'productos' => $cotizacion->detalles->map(function ($detalle) {
                         return [
                             'producto_id' => $detalle->producto_id,
                             'descripcion' => $detalle->descripcion,
@@ -87,6 +88,7 @@ class PosController extends Controller
         $productos = DB::select("
                 SELECT
                     p.id AS producto_id,
+                        ad.producto_linea_id AS product_linea_id,
                     CONCAT_WS(
                         ' / ',
                         p.nombre,
@@ -108,12 +110,13 @@ class PosController extends Controller
                     COUNT(ad.id) AS total_lotes
                 FROM almacen_ingreso_detalle ad
                 INNER JOIN productos p ON p.id = ad.producto_id
-                INNER JOIN producto_lineas pl ON pl.producto_id = p.id
+                INNER JOIN producto_lineas pl ON pl.producto_id = ad.producto_linea_id
                 WHERE
                     (p.nombre LIKE ? OR p.codigo_barras LIKE ?)
                     AND ad.cantidad > 0
                 GROUP BY
                     p.id,
+                    ad.producto_linea_id,
                     p.nombre,
                     pl.presentacion,
                     pl.concentracion,
@@ -161,6 +164,7 @@ class PosController extends Controller
         // Obtener lotes disponibles del producto
         $lotes = DB::select("SELECT
                     ad.id,
+                    ad.producto_linea_id,
                     CONCAT('LOTE-', ad.id) as lote,
                     NULL as fecha_vencimiento,
                     ad.cantidad,
@@ -306,17 +310,17 @@ class PosController extends Controller
     {
         $user = Auth::user();
         $company = $user->company;
-
         // Obtener datos del ticket si vienen por POST
         $ticketData = null;
         $total = 0;
         $tipoDocumento = 'boleta'; // Por defecto
-
+        $isProforma = 0;
         if ($request->isMethod('post')) {
             $ticketData = $request->input('ticket');
             $total = $request->input('total', 0);
             $clienteData = $request->input('cliente');
             $tipoDocumento = $request->input('tipo_documento', 'boleta');
+            $isProforma = $request->input('proforma', 0);
         } else {
             // Si viene por GET, intentar obtener de session o query params
             $total = $request->query('total', 0);
@@ -326,19 +330,11 @@ class PosController extends Controller
         // Determinar la serie según el tipo de documento
         $serieDocumento = obtenerSerieDocumento($company, $tipoDocumento);
         $metodos = TipoPago::where('activo', true)->orderBy('orden')->get();
-        return view('pos.emitir', compact('user', 'company', 'ticketData', 'total', 'clienteData', 'tipoDocumento', 'serieDocumento', 'metodos'));
+        return view('pos.emitir', compact('user', 'company', 'ticketData', 'total', 'clienteData', 'tipoDocumento', 'serieDocumento', 'metodos', 'isProforma'));
     }
 
     public function saveVenta(Request $request)
     {
-        // Log de entrada para debugging
-        Log::info('Iniciando saveVenta', [
-            'ticket_raw' => $request->ticket,
-            'cliente_raw' => $request->cliente,
-            'tipo_documento' => $request->tipo_documento,
-            'total' => $request->total
-        ]);
-
         try {
             DB::beginTransaction();
 
@@ -397,6 +393,13 @@ class PosController extends Controller
                 $clienteId = $clienteData['id'];
             }
 
+            // Obtener caja abierta para asociar la venta
+            $openCaja = CierreCaja::where('user_id', $user->id)->whereNull('fecha_cierre')->first();
+            if (!$openCaja) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'No hay una caja abierta. Abra una caja antes de emitir ventas.'], 400);
+            }
+
             // Calcular totales - Los precios PVP ya incluyen IGV
             $total_con_igv = 0;
             if (is_array($ticket)) {
@@ -440,7 +443,9 @@ class PosController extends Controller
             $venta->apli_igv = true;
             $venta->sucursal = 1; // Por defecto
             $venta->direccion = $clienteData['direccion'] ?? '-';
-
+            // Asociar venta a la caja abierta
+            $venta->cierre_caja_id = $openCaja->id;
+            $venta->id_usuario = $user->id;
             $venta->save();
 
             // Crear detalles de la venta
@@ -449,11 +454,11 @@ class PosController extends Controller
                     $precio_unitario = floatval($item['precio'] ?? 0);
                     $cantidad = intval($item['cantidad'] ?? 1);
                     $precio_total = $precio_unitario * $cantidad;
-                    
+
                     // Calcular IGV del detalle (precio ya incluye IGV)
                     $precio_unitario_sin_igv = round($precio_unitario / 1.18, 4);
                     $igv_detalle = round($precio_total - ($precio_unitario_sin_igv * $cantidad), 2);
-                    
+
                     $detalle = new VentaDetalle();
                     $detalle->id_venta = $venta->id_venta;
                     $detalle->servicio_id = $item['producto_id'] ?? null;
@@ -463,7 +468,7 @@ class PosController extends Controller
                     $detalle->importe = $precio_total;
                     $detalle->orden = $index + 1;
                     $detalle->save();
-                    
+
                     // Actualizar stock si es necesario
                     if (isset($item['almacen_detalle_id'])) {
                         $this->actualizarStock($item['almacen_detalle_id'], $cantidad);
@@ -471,8 +476,20 @@ class PosController extends Controller
                 }
             }
 
-            // Generar XML SUNAT
-            $this->procesarXmlSunat($venta);
+            // Generar XML SUNAT sólo si no es un comprobante interno (ticket)
+            if (isset($request->tipo_documento) && $request->tipo_documento !== 'ticket') {
+                $this->procesarXmlSunat($venta);
+            }
+
+            // Actualizar totales de la caja abierta (registrar ingreso de la venta)
+            try {
+                if (isset($openCaja) && $openCaja) {
+                    $openCaja->ingresos = floatval($openCaja->ingresos ?? 0) + floatval($venta->total ?? 0);
+                    $openCaja->save();
+                }
+            } catch (\Throwable $e) {
+                Log::error('Error actualizando totales de caja: ' . $e->getMessage());
+            }
 
             DB::commit();
 
@@ -636,6 +653,40 @@ class PosController extends Controller
         return $response;
     }
 
+    /**
+     * Endpoint para que el POS consulte si el usuario tiene una caja abierta
+     */
+    public function getOpenCaja(Request $request)
+    {
+        $user = Auth::user();
+        $openCaja = CierreCaja::where('user_id', $user->id)->whereNull('fecha_cierre')->first();
+
+        if ($openCaja) {
+            // Obtener ventas asociadas a esta caja (si la columna existe)
+            $ventas = [];
+            try {
+                $ventas = Venta::where('cierre_caja_id', $openCaja->id)
+                    ->select('id_venta', 'serie', 'numero', 'total', 'fecha_emision')
+                    ->orderBy('fecha_emision', 'asc')
+                    ->get();
+            } catch (\Throwable $e) {
+                // Si la columna no existe o hay error, simplemente ignorar
+                $ventas = [];
+            }
+
+            return response()->json(['open' => true, 'caja' => [
+                'id' => $openCaja->id,
+                'ingresos' => $openCaja->ingresos ?? 0,
+                'egresos' => $openCaja->egresos ?? 0,
+                'observaciones' => $openCaja->observaciones ?? '',
+                'ventas' => $ventas
+            ]]);
+        }
+
+        return response()->json(['open' => false, 'caja' => null]);
+    }
+
+
     public function sendDocumentoSunat(Request $request, $id = null)
     {
         // Resultado resumen
@@ -648,13 +699,17 @@ class PosController extends Controller
         if (!empty($id)) {
             $ventas = collect();
             $venta = Venta::where('id_venta', $id)->first();
+            // No enviar tickets a SUNAT
+            if ($venta && $venta->id_tido == 4) {
+                return response()->json(['error' => 'Los comprobantes tipo TICKET no se envían a SUNAT.'], 400);
+            }
             if (!$venta) {
                 return response()->json(['error' => "Venta id {$id} no encontrada."], 404);
             }
             $ventas->push($venta);
         } else {
-            // Ejecución por cron: procesar todas las ventas pendientes
-            $ventas = Venta::where('enviado_sunat', 0)->get();
+            // Ejecución por cron: procesar todas las ventas pendientes EXCLUYENDO TICKETS (id_tido = 4)
+            $ventas = Venta::where('enviado_sunat', 0)->where('id_tido', '<>', 4)->get();
         }
 
         // Carpeta dentro del disco 'public' (storage/app/public/cdrs)
@@ -792,7 +847,7 @@ class PosController extends Controller
 
         // Usar detalles de venta en lugar de servicios originales
         $servicios = VentaDetalle::where('id_venta', $id)->ordenado()->get();
-        if($venta->id_cliente == 999999){
+        if ($venta->id_cliente == 999999) {
             $cliente = (object) [
                 'tipo_documento' => 'DNI',
                 'numero_documento' => '99999999',
@@ -801,10 +856,10 @@ class PosController extends Controller
                 'telefono' => '',
                 'email' => ''
             ];
-        }else{
+        } else {
             $cliente = Cliente::where('id', $venta->id_cliente)->first();
         }
-        
+
         $empresa = Company::where('id', $venta->id_empresa)->first();
 
         // Obtener logo de la empresa o usar logo por defecto
@@ -816,7 +871,7 @@ class PosController extends Controller
                 $logoPath = base64_encode(file_get_contents($logoFilePath));
             }
         }
-        
+
         // Si no hay logo de empresa o no existe el archivo, usar logo por defecto
         if (!$logoPath) {
             $defaultLogoPath = public_path('images/scorpion.png');
@@ -908,4 +963,83 @@ class PosController extends Controller
         return $pdf->stream('boleta-pago.pdf');
     }
 
+    /**
+     * Generar versión tamaño ticket (8cm) del comprobante
+     */
+    public function pdfVenta8cm($id)
+    {
+        $venta = Venta::where('id_venta', $id)->first();
+        if (!$venta) {
+            abort(404, 'Venta no encontrada');
+        }
+
+        $servicios = VentaDetalle::where('id_venta', $id)->ordenado()->get();
+        if ($venta->id_cliente == 999999) {
+            $cliente = (object) [
+                'tipo_documento' => 'DNI',
+                'numero_documento' => '99999999',
+                'nombre' => 'CLIENTE VARIOS',
+                'direccion' => 'SIN DIRECCION',
+                'telefono' => '',
+                'email' => ''
+            ];
+        } else {
+            $cliente = Cliente::where('id', $venta->id_cliente)->first();
+        }
+
+        $empresa = Company::where('id', $venta->id_empresa)->first();
+
+        // Logo (base64) - reusar la lógica existente en pdfVenta
+        $logoPath = null;
+        if ($empresa && $empresa->logo) {
+            $logoFilePath = $empresa->logo_path;
+            if ($logoFilePath && file_exists($logoFilePath)) {
+                $logoPath = base64_encode(file_get_contents($logoFilePath));
+            }
+        }
+        if (!$logoPath) {
+            $defaultLogoPath = public_path('images/scorpion.png');
+            if (file_exists($defaultLogoPath)) {
+                $logoPath = base64_encode(file_get_contents($defaultLogoPath));
+            }
+        }
+
+        // QR
+        $qr_image = null;
+        $qr_hash = null;
+        $ventaSunat = VentaSunat::where('id_venta', $venta->id_venta)->first();
+        $serie_numero = ($venta->serie ?? 'F001') . '-' . agregarCerosIzquierda($venta->numero ?? 1, 4);
+        $qr_text = "20489629551|01|{$serie_numero}|{$venta->total}|{$venta->total}|{$venta->fecha_emision}|6|" . ($cliente->numero_documento ?? '');
+        try {
+            $svg = QrCode::format('svg')->size(150)->generate($qr_text);
+            $qr_image = 'data:image/svg+xml;base64,' . base64_encode($svg);
+            if ($ventaSunat) {
+                $qr_hash = hash('sha1', $qr_text);
+                $ventaSunat->qr_data = $qr_image;
+                $ventaSunat->hash = $qr_hash;
+                $ventaSunat->save();
+            }
+        } catch (\Exception $e) {
+            Log::error('Error generando QR para pdf8cm: ' . $e->getMessage());
+        }
+
+        $data = [
+            'empresa' => $empresa,
+            'venta' => $venta,
+            'servicios' => $servicios,
+            'cliente' => $cliente,
+            'logo' => $logoPath ? 'data:image/png;base64,' . $logoPath : null,
+            'qr_image' => $qr_image,
+        ];
+
+        $cantidadItems = count($servicios);
+        $altoCalculado = 550 + ($cantidadItems * 30);
+
+        $customPaper = [0, 0, 226.77, $altoCalculado];
+
+        $pdf = Pdf::loadView('pos.pdf_8cm', $data)
+            ->setPaper($customPaper, 'portrait');
+
+        return $pdf->stream('ticket-' . $serie_numero . '.pdf');
+    }
 }

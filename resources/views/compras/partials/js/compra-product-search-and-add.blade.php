@@ -132,20 +132,112 @@
                 $count.text('Resultado: 0 productos');
             });
 
-            // add product button in results
+            // add product button in results: open detail modal to allow edits before adding
             $results.on('click', '.btn-add-product', function() {
                 const p = $(this).closest('.list-group-item').data('product');
-                console.log('=== PRODUCTO DESDE BACKEND ===');
-                console.log('Datos completos recibidos:', p);
-                console.log('stock_min:', p.stock_min);
-                console.log('stock_max:', p.stock_max);
-                console.log('lote:', p.lote);
-                console.log('fecha_vencimiento:', p.fecha_vencimiento);
-                console.log('===============================');
-                addProductToCompra(p);
+                openProductDetailModal(p);
             });
 
+            // Open and populate product detail modal
+            function openProductDetailModal(product) {
+                // populate fields
+                $('#detail-product-id').val(product.id || '');
+                $('#detail-codigo').text(product.cb || product.codigo_ref || '');
+                $('#detail-nombre').text(product.nombre || '');
+
+                const costo = (product.precio_compra !== null && product.precio_compra !== undefined) ?
+                    Number(product.precio_compra) : (product.precio_linea && product.precio_linea.precio_compra ? Number(product.precio_linea.precio_compra) : 0);
+
+                $('#detail-cantidad').val(1);
+                $('#detail-costo').val(Number(costo).toFixed(2));
+                $('#detail-descuento').val(0.00);
+                $('#detail-stock-min').val(product.stock_min || 0);
+                $('#detail-stock-max').val(product.stock_max || 0);
+                $('#detail-lote').val(product.lote || '');
+                $('#detail-fecha-vencimiento').val(product.fecha_vencimiento || '');
+
+                const detailEl = document.getElementById('productDetailModal');
+                const searchEl = document.getElementById('productSearchModal');
+
+                // ensure we reuse modal instances
+                const detailModal = bootstrap.Modal.getOrCreateInstance(detailEl);
+
+                // if search modal is open, hide it first then show detail to avoid stacking issues
+                const searchModalInstance = bootstrap.Modal.getInstance(searchEl);
+                if (searchModalInstance) {
+                    // wait until hidden, then show detail
+                    const onHidden = function() {
+                        searchEl.removeEventListener('hidden.bs.modal', onHidden);
+                        detailModal.show();
+                    };
+                    searchEl.addEventListener('hidden.bs.modal', onHidden);
+                    searchModalInstance.hide();
+                } else {
+                    detailModal.show();
+                }
+
+                // temporarily attach the current product data to confirm button (store raw object)
+                $('#btn-confirm-add-product').data('product', product);
+            }
+
+            // Confirm adding product from modal (namespaced event to prevent duplicate handlers)
+            $(document).off('click.productDetailConfirm', '#btn-confirm-add-product')
+                .on('click.productDetailConfirm', '#btn-confirm-add-product', function() {
+                    const original = $(this).data('product') || {};
+
+                    const producto = {
+                        id: original.id || '',
+                        linea_id: original.linea_id || (original.precio_linea && original.precio_linea.id) || '',
+                        cb: $('#detail-codigo').text().trim(),
+                        nombre: $('#detail-nombre').text().trim(),
+                        cantidad: Number($('#detail-cantidad').val()) || 1,
+                        precio_compra: Number($('#detail-costo').val()) || 0,
+                        descuento: Number($('#detail-descuento').val()) || 0,
+                        stock_min: Number($('#detail-stock-min').val()) || 0,
+                        stock_max: Number($('#detail-stock-max').val()) || 0,
+                        lote: $('#detail-lote').val() || '',
+                        fecha_vencimiento: $('#detail-fecha-vencimiento').val() || ''
+                    };
+
+                    // Add to table using existing helper. The helper expects product.precio_compra, so provide that.
+                    addProductToCompra(producto);
+
+                    // Hide detail modal after adding
+                    const detailEl = document.getElementById('productDetailModal');
+                    const detailModalInstance = bootstrap.Modal.getInstance(detailEl);
+                    if (detailModalInstance) {
+                        detailModalInstance.hide();
+
+                        // small delay then cleanup backdrops in case Bootstrap left one behind
+                        setTimeout(function() {
+                            cleanupModalBackdrops();
+                        }, 150);
+                    } else {
+                        // ensure cleanup regardless
+                        setTimeout(cleanupModalBackdrops, 150);
+                    }
+                });
+
+            // Remove leftover modal-backdrop elements and modal-open class when no modal is visible
+            function cleanupModalBackdrops() {
+                // If any modal is still shown, skip cleanup
+                const anyShown = document.querySelectorAll('.modal.show').length > 0;
+                if (anyShown) return;
+
+                // remove backdrop elements
+                document.querySelectorAll('.modal-backdrop').forEach(function(el) {
+                    el.parentNode && el.parentNode.removeChild(el);
+                });
+
+                // remove modal-open class from body
+                document.body.classList.remove('modal-open');
+
+                // remove inline padding-right added by bootstrap
+                document.body.style.paddingRight = '';
+            }
+
             function addProductToCompra(product) {
+                console.log('pruebaba' + product);
                 const cantidad = 1;
                 const costo = (product.precio_compra !== null && product.precio_compra !== undefined) ?
                     Number(product.precio_compra) :
@@ -164,11 +256,13 @@
 
                 const totalCalculado = (cantidad * costo - descuento).toFixed(2);
 
+                const lineaId = product.linea_id || (product.precio_linea && product.precio_linea.id) || '';
                 const row = `
-            <tr data-idx="${idx}" data-producto-id="${product.id || ''}">
-                <td class="text-center">${idx}
-                    <input type="hidden" name="product_id[]" value="${escapeHtml(product.id)}">
-                </td>
+                <tr data-idx="${idx}" data-linea-id="${lineaId}" data-producto-id="${product.id || ''}">
+                    <td class="text-center">${idx}
+                        <input type="hidden" name="product_id[]" value="${escapeHtml(product.id)}">
+                        <input type="hidden" name="linea_id[]" value="${escapeHtml(lineaId)}">
+                    </td>
                 <td>
                     <input name="codigo[]" type="text" class="form-control form-control-sm" 
                            value="${escapeHtml(product.cb || product.codigo_ref || '')}" readonly>

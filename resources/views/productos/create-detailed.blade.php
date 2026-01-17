@@ -296,6 +296,20 @@
                                     </label>
                                     <input type="number" step="0.01" id="peso" class="form-control" value="0" placeholder="0.00">
                                 </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">
+                                        <i class="fas fa-calculator text-info me-1"></i>
+                                        Stock Maximo
+                                    </label>
+                                    <input type="number" id="stock_maximo" class="form-control" value="0">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">
+                                        <i class="fas fa-calculator text-info me-1"></i>
+                                        Stock Minimo
+                                    </label>
+                                    <input type="number" id="stock_minimo" class="form-control" value="0">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -645,7 +659,9 @@
                     pv_docena: parseFloat($('#pv_docena').val()) || 0,
                     pvc: parseFloat($('#pvc').val()) || 0,
                     pvc_dto: parseFloat($('#pvc_dto').val()) || 0,
-                    pvp2: parseFloat($('#pvp2').val()) || 0
+                    pvp2: parseFloat($('#pvp2').val()) || 0,
+                    stock_maximo: parseInt($('#stock_maximo').val()) || 0,
+                    stock_minimo: parseInt($('#stock_minimo').val()) || 0,
                 };
 
                 // Validación mejorada

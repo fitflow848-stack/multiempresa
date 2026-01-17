@@ -14,6 +14,7 @@ class CompraLinea extends Model
     protected $fillable = [
         'compra_id',
         'product_id',
+        'product_linea_id',
         'cb',
         'descripcion',
         'cantidad',

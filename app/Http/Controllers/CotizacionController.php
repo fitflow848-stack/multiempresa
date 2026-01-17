@@ -565,7 +565,7 @@ class CotizacionController extends Controller
 
         // Usar detalles de venta en lugar de servicios originales
         $servicios = CotizacionDetalle::where('cotizacion_id', $id)->get();
-        if($venta->cliente_id == 999999){
+        if ($venta->cliente_id == 999999) {
             $cliente = (object) [
                 'tipo_documento' => 'DNI',
                 'numero_documento' => '99999999',
@@ -574,7 +574,7 @@ class CotizacionController extends Controller
                 'telefono' => '',
                 'email' => ''
             ];
-        }else{
+        } else {
             $cliente = Cliente::where('id', $venta->cliente_id)->first();
         }
 
@@ -589,7 +589,7 @@ class CotizacionController extends Controller
                 $logoPath = base64_encode(file_get_contents($logoFilePath));
             }
         }
-        
+
         // Si no hay logo de empresa o no existe el archivo, usar logo por defecto
         if (!$logoPath) {
             $defaultLogoPath = public_path('images/scorpion.png');
@@ -629,5 +629,68 @@ class CotizacionController extends Controller
         }
 
         return $pdf->stream('boleta-pago.pdf');
+    }
+
+    public function pdfCotizacion8cm($id)
+    {
+        $venta = Cotizacion::where('id', $id)->first();
+        if (!$venta) {
+            abort(404, 'Venta no encontrada');
+        }
+
+        $servicios = CotizacionDetalle::where('cotizacion_id', $id)->get();
+        if ($venta->cliente_id == 999999) {
+            $cliente = (object) [
+                'tipo_documento' => 'DNI',
+                'numero_documento' => '99999999',
+                'nombre' => 'CLIENTE VARIOS',
+                'direccion' => 'SIN DIRECCION',
+                'telefono' => '',
+                'email' => ''
+            ];
+        } else {
+            $cliente = Cliente::where('id', $venta->cliente_id)->first();
+        }
+
+        $empresa = Company::where('id', $venta->company_id)->first();
+
+        // Logo (base64) - reusar la lógica existente en pdfVenta
+        $logoPath = null;
+        if ($empresa && $empresa->logo) {
+            $logoFilePath = $empresa->logo_path;
+            if ($logoFilePath && file_exists($logoFilePath)) {
+                $logoPath = base64_encode(file_get_contents($logoFilePath));
+            }
+        }
+        if (!$logoPath) {
+            $defaultLogoPath = public_path('images/scorpion.png');
+            if (file_exists($defaultLogoPath)) {
+                $logoPath = base64_encode(file_get_contents($defaultLogoPath));
+            }
+        }
+
+        // QR
+        $qr_image = null;
+        $qr_hash = null;
+
+        $serie_numero = $venta->serie . '-' . str_pad($venta->numero, 8, '0', STR_PAD_LEFT);
+        $data = [
+            'empresa' => $empresa,
+            'venta' => $venta,
+            'servicios' => $servicios,
+            'cliente' => $cliente,
+            'logo' => $logoPath ? 'data:image/png;base64,' . $logoPath : null,
+            'qr_image' => $qr_image,
+        ];
+
+        $cantidadItems = count($servicios);
+        $altoCalculado = 550 + ($cantidadItems * 30);
+
+        $customPaper = [0, 0, 226.77, $altoCalculado];
+
+        $pdf = Pdf::loadView('pos.pdf_8cm', $data)
+            ->setPaper($customPaper, 'portrait');
+
+        return $pdf->stream('ticket-' . $serie_numero . '.pdf');
     }
 }

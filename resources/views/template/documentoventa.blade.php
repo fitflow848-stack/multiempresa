@@ -1,420 +1,218 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Factura Electrónica</title>
     <style>
-        /* Basic */
+        @page {
+            margin: 0.8cm;
+        }
+
         body {
             font-family: Arial, sans-serif;
-            font-size: 10px;
-            margin: 0;
-            padding: 0;
+            font-size: 9px;
+            /* Tamaño similar al de la imagen original */
+            color: #1a1a1a;
+            line-height: 1.2;
         }
 
         .container {
             width: 100%;
-            margin: 0 auto;
-            padding: 10px;
         }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 10px;
-        }
-
-        .header img {
-            height: 40px;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-
-        .section {}
-
-        .info-table,
-        .items-table,
-        .summary-table {
+        /* Tablas base */
+        table {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 4px;
+        }
+
+        /* Estilo para los recuadros con bordes redondeados (evita el error de row width) */
+        .rounded-box {
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 8px;
+            margin-bottom: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            /* Crucial para Dompdf */
+        }
+
+        /* Encabezado */
+        .header-box {
+            border: none;
+            margin-bottom: 15px;
+        }
+
+        .ruc-container {
+            border: 1.5px solid #006BB6;
+            border-radius: 10px;
+            text-align: center;
+            overflow: hidden;
+            width: 220px;
+        }
+
+        .ruc-header {
+            background-color: #006BB6;
+            color: white;
+            padding: 5px;
+            font-weight: bold;
+            font-size: 11px;
+        }
+
+        .ruc-body {
+            padding: 5px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* Tabla de Productos - Estilo exacto Mio Cane */
+        .items-table th {
+            background-color: #006BB6;
+            color: white;
+            padding: 5px;
+            border: 0.5px solid #006BB6;
+            font-size: 8px;
+        }
+
+        .items-table td {
+            padding: 4px;
+            border: 0.5px solid #ccc;
+            text-align: center;
+        }
+
+        /* Sección de Totales */
+        .bottom-section {
+            width: 100%;
             margin-top: 10px;
         }
 
-        .info-table td,
-        .items-table th,
-        .items-table td,
-        .summary-table th,
-        .summary-table td {
-            border: 1px solid #000;
-            padding: 5px;
+        .total-box {
+            float: right;
+            width: 180px;
+            border: 1px solid #ccc;
         }
 
-        .info-table td {
-            border: none;
-            padding: 5px;
+        .total-box td {
+            padding: 4px;
+            border: 0.5px solid #ccc;
         }
 
-        .text-right {
-            text-align: right;
+        .bg-total {
+            background-color: #f2f2f2;
+            font-weight: bold;
         }
 
-        .bg-gray {
-            background-color: #F4F4F4;
-        }
-
-        /* Reserve a comfortable footer area (not too large to avoid blank extra page) */
-        .page-space-bottom {
-            padding-bottom: 120px;
-        }
-
-        /* Footer QR: fixed so its position is predictable in PDF */
-        .footer-qr {
-            position: fixed;
-            bottom: 18px;
-            /* distancia desde el borde inferior de la página */
-            right: 18px;
-            /* distancia desde el borde derecho */
-            width: 110px;
-            text-align: center;
-            font-size: 9px;
-            line-height: 1.1;
-        }
-
-        .footer-qr img {
-            width: 100px;
-            height: 100px;
-            display: block;
-            margin: 0 auto;
-        }
-
-        .footer-qr .hash {
-            margin-top: 6px;
-            word-break: break-all;
-            font-size: 8px;
-            color: #222;
-        }
-
-        /* Small: make sure long tables don't break awkwardly */
-        table {
-            page-break-inside: auto;
-        }
-
-        tr {
-            page-break-inside: avoid;
-            page-break-after: auto;
+        .clear {
+            clear: both;
         }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <!-- Header Section -->
-        <div class="header">
-            <div>
-                <img src="{{ $logo }}">
-                <div style="position: absolute;top: 40;left: 0;">
-                    <span style="font-size: 12px;">
-                        {{ $empresa->direccion_fiscal }} <br>
-                        {{ $empresa->department }} - {{ $empresa->province }} - {{ $empresa->district }}<br>
-                        Cel.: {{ $empresa->phone }}<br>
-                        Correo : {{ $empresa->email }}<br>
-                        Web : {{ $empresa->website }}</span>
-                </div>
-            </div>
-            <div
-                style="position: absolute;top: 0;right: 0;padding: 5px; text-align: center; width: 200px; border: 2px solid black; border-radius: 10px;">
-                <p>RUC: {{ $empresa->ruc }}</p>
-                <h1>{{ $tipoDocumento }} ELECTRÓNICA</h1>
-                <p>NRO: {{ $venta->serie }}-{{ agregarCerosIzquierda($venta->numero) }}</p>
-            </div>
-        </div>
+        <table class="header-box">
+            <tr>
+                <td style="width: 20%;"><img src="{{ $logo }}" style="width: 120px;"></td>
+                <td style="width: 45%; text-align: center; padding-top: 10px;">
+                    <strong style="font-size: 11px;">{{ $empresa->nombre_comercial }}</strong><br>
+                    {{ $empresa->direccion_fiscal }}<br>
+                    {{ $empresa->email }}
+                </td>
+                <td style="width: 35%;" align="right">
+                    <div class="ruc-container">
+                        <div class="ruc-body">R.U.C.: {{ $empresa->ruc }}</div>
+                        <div class="ruc-header">{{ $tipoDocumento }}</div>
+                        <div class="ruc-body">Nro. {{ $venta->serie }}-{{ $venta->numero }}</div>
+                    </div>
+                </td>
+            </tr>
+        </table>
 
-        @php
-            // Cálculos
-            $subtotal = 0.0;
-            foreach ($servicios as $s) {
-                $subtotal += floatval($s->costo ?? ($s->precio_unitario ?? 0));
-            }
-            // si por alguna razón no hay servicios, fallback a propuesta
-            if ($subtotal <= 0) {
-                $subtotal = floatval($propuesta->costo_unitario ?? 0);
-            }
-
-            $descuentoMonto = floatval($venta->descuento_monto ?? 0);
-            $dto_total = $descuentoMonto;
-            $op_exonerada = 0.0;
-            $op_inafecta = 0.0;
-            $op_gravada = max(0, $subtotal - $descuentoMonto);
-            $op_gratuita = 0.0;
-            $isc = floatval($venta->isc ?? 0.0);
-            // IGV: en tu lógica anterior guardas el monto en venta->igv
-            $igv = floatval($venta->igv ?? 0.0);
-
-            // Si por seguridad no existe igv guardado y propuesta tiene porcentaje, recalculamos
-            if (empty($igv) && !empty($propuesta->igv)) {
-                $igv = round($op_gravada * floatval($propuesta->igv), 2);
-            }
-
-            $total_calculado = round($op_gravada + $igv + $isc, 2);
-            $total_mostrar = floatval($venta->total ?? ($propuesta->costo_total ?? $total_calculado));
-
-            $detraccion_aplica = boolval($venta->aplica_detraccion);
-            $detraccion_pct = floatval($venta->detraccion_porcentaje ?? 0);
-            $detraccion_monto = floatval($venta->detraccion_monto ?? 0);
-
-            $total_neto_pendiente = floatval($venta->total_neto_pendiente ?? $total_mostrar - $detraccion_monto);
-            $cuotas = [];
-            if (!empty($venta->cuotas)) {
-                $cuotas = json_decode($venta->cuotas, true);
-            }
-            $mostrar_cuotas = intval($venta->total_cuotas ?? 1) > 1 && !empty($cuotas);
-        @endphp
-
-        <!-- Información General -->
-        <div class="section" style="margin-top: 120px;">
-            <div style="width: 100%; text-align: center; padding: 1px; background-color: #EBEEF1">
-                <h2>INFORMACIÓN GENERAL</h2>
-            </div>
-            <table class="info-table">
+        <div class="rounded-box">
+            <table style="border:none; margin:0;">
                 <tr>
-                    <td>Señor(es):</td>
-                    <td>{{ $cliente->nombre }}</td>
-                    <td>Moneda:</td>
-                    <td>{{ $venta->moneda == 1 ? 'Soles' : 'Dólares' }}</td>
+                    <td style="font-weight:bold; width: 100px;">Nombre / Razón Social</td>
+                    <td>: {{ $cliente->nombre }}</td>
+                    <td style="font-weight:bold; width: 80px;">Fecha de Emisión</td>
+                    <td>: {{ $venta->fecha_emision ?? $venta->fecha }}</td>
                 </tr>
                 <tr>
-                    <td>RUC:</td>
-                    <td>{{ $cliente->numero_documento }}</td>
-                    <td>Condición de Pago:</td>
-                    <td>{{ $venta->id_tipo_pago == 1 ? 'Contado' : 'Credito' }}</td>
+                    <td style="font-weight:bold;">Dirección</td>
+                    <td>: {{ $cliente->direccion }}</td>
+                    <td style="font-weight:bold;">Guía de Remisión</td>
+                    <td>: {{ $venta->guia ?? '-' }}</td>
                 </tr>
                 <tr>
-                    <td>Dirección:</td>
-                    <td>{{ $cliente->direccion ?? '-' }}</td>
-                </tr>
-                <tr>
-                    <td>Fecha de Vencimiento:</td>
-                    <td>{{ \Carbon\Carbon::parse($venta->fecha_vencimiento)->format('d/m/Y') }}</td>
-                    <td>Fecha de Emisión:</td>
-                    <td>{{ \Carbon\Carbon::parse($venta->fecha_emision)->format('d/m/Y') }}</td>
+                    <td style="font-weight:bold;">RUC / DNI</td>
+                    <td>: {{ $cliente->numero_documento }}</td>
+                    <td style="font-weight:bold;">Cond. de Pago</td>
+                    <td>: {{ $venta->condicion_pago }}</td>
                 </tr>
             </table>
         </div>
 
-        <!-- Detalle de Productos -->
-        <div class="section">
-            <table class="items-table">
-                <thead>
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>ITEM</th>
+                    <th>CÓDIGO</th>
+                    <th style="width: 40%;">DESCRIPCIÓN</th>
+                    <th>UNID.</th>
+                    <th>CANTIDAD</th>
+                    <th>P. UNITARIO</th>
+                    <th>TOTAL</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($servicios as $i => $item)
                     <tr>
-                        <th style="background-color: #EBEEF1; border: none;">CÓDIGO</th>
-                        <th style="background-color: #EBEEF1; border: none;">CANT.</th>
-                        <th style="background-color: #EBEEF1; border: none;">UNIDAD</th>
-                        <th style="background-color: #EBEEF1; border: none;">DESCRIPCIÓN</th>
-                        <th style="background-color: #EBEEF1; border: none;">PRECIO</th>
-                        <th style="background-color: #EBEEF1; border: none;">IMPORTE</th>
+                        <td>{{ $i + 1 }}</td>
+                        <td>{{ $item->servicio_id ?? $item->producto_id }}</td>
+                        <td style="text-align: left;">{{ $item->nombre_servicio ?? $item->descripcion }}</td>
+                        <td>UNIDAD</td>
+                        <td>{{ $item->cantidad }}</td>
+                        <td style="text-align: right;">{{ number_format($item->precio_unitario, 2) }}</td>
+                        <td style="text-align: right;">{{ number_format($item->total, 2) }}</td>
                     </tr>
-                </thead>
-                <tbody>
-                    @foreach ($servicios as $i => $servicio)
-                        <tr class="{{ $i % 2 !== 0 ? 'bg-gray' : '' }}">
-                            <td>{{ $servicio->id_servici ?? ($servicio->servicio_id ?? $servicio->producto_id ?? '') }}</td>
-                            <td>1</td>
-                            <td>001</td>
-                            <td>{{ $servicio->nombre ?? ($servicio->nombre_servicio ?? $servicio->descripcion ?? '') }}</td>
-                            <td class="text-right">
-                                {{ number_format($servicio->costo ?? ($servicio->precio_unitario ?? 0), 2) }}</td>
-                            <td class="text-right">{{ number_format($servicio->costo ?? ($servicio->importe ?? 0), 2) }}
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
+                @endforeach
+            </tbody>
+        </table>
 
-        <!-- Resumen -->
-        <div class="section">
-            <table class="summary-table">
-                <thead>
-                    <tr>
-                        <th style="border: none; border-top: 1px solid black;">Sub Total:</th>
-                        <th style="border: none; border-top: 1px solid black;">Dto. Total:</th>
-                        <th style="border: none; border-top: 1px solid black;">Op. Exonerada:</th>
-                        <th style="border: none; border-top: 1px solid black;">Op. Inafecta:</th>
-                        <th style="border: none; border-top: 1px solid black;">Op. Gravada:</th>
-                        <th style="border: none; border-top: 1px solid black;">Op. Gratuita:</th>
-                        <th style="border: none; border-top: 1px solid black;">ISC:</th>
-                        <th style="border: none; border-top: 1px solid black;">IGV
-                            ({{ isset($propuesta->igv) ? $propuesta->igv * 100 : 18 }}%):</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td style="border: none; border-bottom: 1px solid black;">{{ number_format($subtotal, 2) }}
-                        </td>
-                        <td style="border: none; border-bottom: 1px solid black;">{{ number_format($dto_total, 2) }}
-                        </td>
-                        <td style="border: none; border-bottom: 1px solid black;">{{ number_format($op_exonerada, 2) }}
-                        </td>
-                        <td style="border: none; border-bottom: 1px solid black;">{{ number_format($op_inafecta, 2) }}
-                        </td>
-                        <td style="border: none; border-bottom: 1px solid black;">{{ number_format($op_gravada, 2) }}
-                        </td>
-                        <td style="border: none; border-bottom: 1px solid black;">{{ number_format($op_gratuita, 2) }}
-                        </td>
-                        <td style="border: none; border-bottom: 1px solid black;">{{ number_format($isc, 2) }}</td>
-                        <td style="border: none; border-bottom: 1px solid black;">{{ number_format($igv, 2) }}</td>
-                    </tr>
-                    <tr>
-                        <td colspan="7" style="border: none; border-bottom: 1px solid black;"></td>
-                        <td style="border: none; border-bottom: 1px solid black;">
-                            <span style="font-weight: bold; font-size: 12px;">TOTAL:
-                                S/{{ number_format($total_mostrar, 2) }}</span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="border: none; border-bottom: 1px solid black;"> SON :
-                            {{ numeroALetras($total_mostrar) }} Soles.</td>
-                        <td colspan="6" style="border: none; border-bottom: 1px solid black;"></td>
-                        <td style="border: none; border-bottom: 1px solid black;">NRO. DE ITEMS :
-                            {{ count($servicios) }}</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <!-- Créditos / Cuotas / Detracción -->
-            <table class="summary-table" style="margin-top: -1px;">
-                <tbody>
-                    <tr>
-                        <td style="border: none;">INFORMACIÓN DEL CREDITO</td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;">INFORMACIÓN DE DETRACCIÓN</td>
-                        <td style="border: none;"></td>
-                    </tr>
-                    <tr>
-                        <td style="border: none;">
-                            @if ($venta->id_tipo_pago == 2)
-                                MONTO NETO PENDIENTE DE PAGO: S/{{ number_format($total_neto_pendiente, 2) }}
-                            @else
-                                MONTO PAGADO: S/{{ number_format($total_mostrar, 2) }}
-                            @endif
-                        </td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;">DETRACCIÓN APLICADA: {{ $detraccion_aplica ? 'SI' : 'NO' }}</td>
-                        <td style="border: none;">
-                            @if ($detraccion_aplica)
-                                {{ $detraccion_pct }}% - S/{{ number_format($detraccion_monto, 2) }}
-                            @else
-                                {{ number_format(0, 2) }}
-                            @endif
-                        </td>
-                    </tr>
-
-                    @if ($venta->id_tipo_pago == 2)
-                        {{-- Solo mostrar información de cuotas si es crédito --}}
-                        <tr>
-                            <td style="border: none;">TOTAL DE CUOTAS: {{ intval($venta->total_cuotas ?? 1) }}</td>
-                            <td colspan="6" style="border: none;"></td>
-                            <td style="border: none;"></td>
-                        </tr>
-
-                        @if ($mostrar_cuotas)
-                            <tr>
-                                <td style="border: none; background-color: #EBEEF1;">NRO. CUOTA</td>
-                                <td style="border: none; background-color: #EBEEF1;">FECHA DE VENCIMIENTO</td>
-                                <td style="border: none; background-color: #EBEEF1;">MONTO</td>
-                                <td style="border: none;"></td>
-                                <td style="border: none;"></td>
-                                <td style="border: none;"></td>
-                                <td style="border: none;"></td>
-                                <td style="border: none;"></td>
-                            </tr>
-
-                            @foreach ($cuotas as $c)
-                                <tr>
-                                    <td style="border: none; border-bottom: 1px solid black;">CUOTA {{ $c['nro'] }}
-                                    </td>
-                                    <td style="border: none; border-bottom: 1px solid black;">
-                                        {{ \Carbon\Carbon::parse($c['fecha_vencimiento'])->format('d/m/Y') }}</td>
-                                    <td style="border: none; border-bottom: 1px solid black;">
-                                        S/{{ number_format($c['monto'], 2) }}</td>
-                                    <td colspan="5" style="border: none; border-bottom: 1px solid black;"></td>
-                                </tr>
-                            @endforeach
-                        @else
-                            {{-- Si es crédito pero solo una cuota --}}
-                            <tr>
-                                <td style="border: none; border-bottom: 1px solid black;">CUOTA 1</td>
-                                <td style="border: none; border-bottom: 1px solid black;">
-                                    {{ \Carbon\Carbon::parse($venta->fecha_vencimiento)->format('d/m/Y') }}</td>
-                                <td style="border: none; border-bottom: 1px solid black;">
-                                    S/{{ number_format($total_neto_pendiente, 2) }}</td>
-                                <td colspan="5" style="border: none; border-bottom: 1px solid black;"></td>
-                            </tr>
-                        @endif
-                    @endif
-
-                </tbody>
-            </table>
-
-            <!-- Cuentas bancarias / detraccion info -->
-            <table class="summary-table" style="margin-top: -1px;">
-                <tbody>
-                    <tr>
-                        <td style="border: none;">CUENTAS BANCARIAS</td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;">N</td>
-                        <td style="border: none;"></td>
-                    </tr>
-                    <tr>
-                        <td style="border: none;"><b>{{ $empresa->bank }} {{ $empresa->account_type }}</b></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"><b>{{ $empresa->account_number }}</b></td>
-                        <td style="border: none;"></td>
-                    </tr>
-                    <tr>
-                        <td style="border: none;">CTA. CTE.: {{ $empresa->cci }}</td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                        <td style="border: none;"></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <!-- Debug QR -->
-
-        @if (!empty($qr_image))
-            <!-- Footer QR: posición fija para PDF -->
-            <div class="footer-qr">
-                <img src="{{ $qr_image }}" alt="QR SUNAT">
-                @if (!empty($qr_hash))
-                    <div class="hash"><strong>Código Hash:</strong> {{ $qr_hash }}</div>
-                @endif
+        <div class="bottom-section">
+            <div style="float: left; width: 60%;">
+                <strong>SON:</strong> {{ numeroALetras($venta->total) }}<br><br>
+                <strong>Información Adicional:</strong><br>
+                {{ $observaciones ?? 'Sin observaciones' }}
             </div>
-        @endif
+
+            <table class="total-box">
+                <tr>
+                    <td>Sub Total</td>
+                    <td align="right">S/</td>
+                    <td align="right">{{ number_format($venta->subtotal ?? $venta->total, 2) }}</td>
+                </tr>
+                <tr>
+                    <td>IGV 18%</td>
+                    <td align="right">S/</td>
+                    <td align="right">{{ number_format($venta->igv, 2) }}</td>
+                </tr>
+                <tr class="bg-total">
+                    <td>Total</td>
+                    <td align="right">S/</td>
+                    <td align="right">{{ number_format($venta->total, 2) }}</td>
+                </tr>
+            </table>
+            <div class="clear"></div>
+        </div>
+
+        <div style="text-align: center; margin-top: 20px;">
+            @if (isset($qr_image))
+                <img src="{{ $qr_image }}" style="width: 80px;">
+            @endif
+            <br>
+            <span style="font-size: 7px;">Representación impresa de la Factura Electrónica</span>
+        </div>
     </div>
 </body>
 

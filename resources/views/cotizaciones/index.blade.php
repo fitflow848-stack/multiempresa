@@ -9,9 +9,6 @@
             <h1 class="h3 mb-0">Cotizaciones</h1>
             <small class="text-muted">Gestión de cotizaciones de ventas</small>
         </div>
-        <a href="{{ route('cotizaciones.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>Nueva Cotización
-        </a>
     </div>
 
     <!-- Filtros -->

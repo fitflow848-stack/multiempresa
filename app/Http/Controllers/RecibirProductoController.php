@@ -29,15 +29,13 @@ class RecibirProductoController extends Controller
             p.nombre,
             pl.cantidad,
             CONCAT(
-            'lt. ', pl.lote,
-            ' Fv. ',
-            LPAD(DAY(pl.fecha_venc), 2, '0'), ' ',
-            LOWER(LEFT(MONTHNAME(pl.fecha_venc), 3)), ' ',
-            RIGHT(YEAR(pl.fecha_venc), 2)
-        ) AS detalle,
-            pl.precio_compra,
-            pl.pvp,
-            pl.pvp_dto
+                'lt. ', pl.lote,
+                ' Fv. ',
+                LPAD(DAY(pl.fecha_venc), 2, '0'), ' ',
+                LOWER(LEFT(MONTHNAME(pl.fecha_venc), 3)), ' ',
+                RIGHT(YEAR(pl.fecha_venc), 2)
+            ) AS detalle,
+            cl.*
         FROM
             compras c
         INNER JOIN compra_lineas cl on cl.compra_id = c.id
@@ -53,7 +51,6 @@ class RecibirProductoController extends Controller
         $company = Company::find($user->company_id);
         $compraId = $request->compra_id;
         $productos = json_decode($request->productos, true);
-
         return view('recibir-productos.confirmacion', [
             'compraId' => $compraId,
             'productos' => $productos,
@@ -66,7 +63,6 @@ class RecibirProductoController extends Controller
     public function guardar(Request $request)
     {
         DB::beginTransaction();
-        // dd($request->all());
         try {
             $ingreso = AlmacenIngreso::create([
                 'empresa_id' => Auth::user()->company_id,
@@ -79,6 +75,7 @@ class RecibirProductoController extends Controller
                 AlmacenIngresoDetalle::create([
                     'ingreso_id' => $ingreso->id,
                     'producto_id' => $item['producto_id'],
+                    'producto_linea_id' => $item['producto_id_linea'] ?? null,
                     'cantidad' => $item['cantidad'],
                     'costo' => $item['costo'],
                     'cop' => $item['cop'],
@@ -118,7 +115,7 @@ class RecibirProductoController extends Controller
                 }
             }
 
-            Compra::where('id', $request->compraId)->update(['recibido' => 1]);
+            Compra::where('id', $request->compraId)->update(['recibido' => 1, 'received_at' => now()]);
 
             DB::commit();
 

@@ -3,154 +3,6 @@
 @section('content')
     @section('title', 'Punto de Venta (POS)')
     <link rel="stylesheet" href="{{ asset('css/pos.css') }}">
-    <style>
-        .productos-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-            gap: 10px;
-        }
-
-        .producto-card {
-            border: 1px solid #ddd;
-            padding: 10px;
-            cursor: pointer;
-            background: #fff;
-            text-align: center;
-        }
-
-        .producto-card:hover {
-            background: #f5f5f5;
-        }
-
-        .productos-table th,
-        .productos-table td {
-            border-bottom: 1px solid #eee;
-            padding: 6px 8px;
-            text-align: left;
-            font-size: 12px;
-        }
-
-        .productos-table th {
-            background: #f5f5f5;
-            font-weight: 600;
-            color: #333;
-            text-align: center;
-        }
-
-        .productos-table td:first-child {
-            text-align: left;
-        }
-
-        .productos-table td:not(:first-child) {
-            text-align: center;
-        }
-
-        .productos-table td:last-child,
-        .productos-table td:nth-last-child(2) {
-            text-align: right;
-        }
-
-        .productos-table tr:hover {
-            background: #E7F3FF !important;
-        }
-
-        .pos-footer-led {
-            background: #000;
-            color: #25ff07;
-            font-family: 'Consolas', 'Courier New', monospace;
-            padding: 8px 10px 2px 15px;
-            display: flex;
-            align-items: flex-start;
-            flex-wrap: wrap;
-            gap: 16px;
-            font-size: 17px;
-            position: relative;
-        }
-
-        .footer-totals-led {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            min-width: 160px;
-        }
-
-        .footer-totals-led .label,
-        .footer-dsctos .label {
-            font-weight: bold;
-        }
-
-        .footer-dsctos {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            min-width: 340px;
-        }
-
-        .footer-dsctos .productos-listados {
-            color: #25ff07;
-            font-size: 14px;
-            margin-left: 7px;
-        }
-
-        .footer-cliente {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            font-size: 19px;
-            font-weight: bold;
-            transition: all 0.2s ease;
-        }
-
-        .footer-cliente:hover {
-            background: #333;
-            color: #00ff00;
-            border-radius: 4px;
-            padding: 4px 8px;
-        }
-
-        .tipo-documento-option:hover {
-            background: #e3f2fd !important;
-            border-color: #2196f3 !important;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .footer-actions {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-        }
-
-        .footer-btn {
-            background: #222;
-            color: #25ff07;
-            border: 1px solid #333;
-            font-size: 18px;
-            padding: 0 7px;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-
-        .footer-btn:active {
-            background: #444;
-        }
-
-        @media (max-width:800px) {
-            .pos-footer-led {
-                flex-direction: column;
-                font-size: 14px;
-            }
-
-            .footer-cliente {
-                justify-content: flex-start;
-            }
-
-            .footer-actions {
-                flex-direction: row;
-            }
-        }
-    </style>
 
     <div class="pos-container">
         <div class="left-sidebar">
@@ -163,7 +15,9 @@
                 <div class="company-options">
                     <div style="cursor: pointer;" onclick="navegarAClientes()"><i class="fa-solid fa-user-group"></i> Clientes</div>
                     <div><i class="fa-solid fa-book-open"></i> <a href="{{ route("comprobantes.index") }}">Comprobantes</a></div>
-                    <div><a href="{{ route("cierre-caja.index") }}"><i class="fa-solid fa-money-bill-wave"></i> Caja</a></div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <a href="{{ route("cierre-caja.index") }}"><i class="fa-solid fa-money-bill-wave"></i> Caja</a>
+                    </div>
                     <div><i class="fa-solid fa-user"></i> {{ Auth::user()->name }}</div>
                     <div><i class="fa-solid fa-shop"></i> TPV VD</div>
                 </div>
@@ -205,7 +59,7 @@
                             <span>Crédito</span>
                         </div>
                         <div style="display: flex; gap: 5px; align-items: center;">
-                            <input type="checkbox" name="Proforma">
+                            <input type="checkbox" id="proforma-checkbox" name="Proforma">
                             <span>Proforma</span>
                         </div>
                     </div>
@@ -288,6 +142,11 @@
                         style="position:absolute; left:10%; top:10%; opacity:0.07; font-size:80px; z-index:0; pointer-events:none;">
                         <img src="tu_logo.png" alt="Marca de agua" style="max-width:40vw;">
                     </div> --}}
+                </div>
+
+                <!-- Ventas asignadas a la caja abierta -->
+                <div id="caja-ventas-list" style="margin-top:8px; padding:8px; background:#fafafa; border:1px solid #eee; border-radius:6px; min-height:42px;">
+                    <div style="color:#666; font-size:12px;">Estado de caja desconocido.</div>
                 </div>
             </div>
 
@@ -385,6 +244,28 @@
             style="padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
             <span style="color: #FF5722;">🗑️</span>
             <span>Limpiar Lista</span>
+        </div>
+    </div>
+
+    <!-- Modal Abrir Caja (POS) -->
+    <div id="modal-abrir-caja" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; display: none; justify-content: center; align-items: center;">
+        <div style="background: white; padding: 20px; border-radius: 8px; width: 420px; box-shadow: 0 8px 24px rgba(0,0,0,0.2);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h3 style="margin:0; font-size:16px;">Apertura de Caja</h3>
+                <button onclick="cerrarModalAbrirCaja()" style="background:none; border:none; font-size:18px; cursor:pointer;">×</button>
+            </div>
+            <div style="display:grid; gap:8px;">
+                <label style="font-size:13px;">Monto de apertura</label>
+                <input id="apertura-monto" type="number" step="0.01" min="0" style="padding:8px; border:1px solid #ddd; border-radius:4px;">
+
+                <label style="font-size:13px;">Observaciones (opcional)</label>
+                <textarea id="apertura-observaciones" rows="3" style="padding:8px; border:1px solid #ddd; border-radius:4px;"></textarea>
+
+                <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:6px;">
+                    <button onclick="cerrarModalAbrirCaja()" style="padding:8px 12px; background:#6c757d; color:white; border:none; border-radius:4px;">Cancelar</button>
+                    <button id="btn-abrir-caja-submit" style="padding:8px 12px; background:#28a745; color:white; border:none; border-radius:4px;">Abrir caja</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -741,7 +622,77 @@
             inicializarSistemaVentaPersistente();
             verificarLotesPendientes();
             verificarClienteSeleccionado();
+            // Consultar estado de caja al iniciar
+            if (typeof checkCajaStatus === 'function') {
+                checkCajaStatus();
+            }
         });
+
+        // --- Caja: funciones para abrir y listar ventas asignadas ---
+        function getCsrfToken() {
+            const m = document.querySelector('meta[name="csrf-token"]');
+            return m ? m.getAttribute('content') : '';
+        }
+
+        async function checkCajaStatus() {
+            try {
+                const res = await fetch('{{ route("pos.caja.open") }}');
+                if (!res.ok) throw new Error('Network response was not ok');
+                const data = await res.json();
+                const el = document.getElementById('caja-status');
+                if (!el) return;
+                if (data.open && data.caja) {
+                    const ingresos = parseFloat(data.caja.ingresos || 0).toFixed(2);
+                    const egresos = parseFloat(data.caja.egresos || 0).toFixed(2);
+                    el.innerText = `Abierta • In: S/ ${ingresos} / Eg: S/ ${egresos}`;
+                    el.style.color = '#117a37';
+                    renderVentasCaja(data.caja.ventas || []);
+                } else {
+                    el.innerText = 'Cerrada';
+                    el.style.color = '#666';
+                    renderVentasCaja([]);
+                }
+            } catch (err) {
+                console.error('Error al consultar caja:', err);
+                const el = document.getElementById('caja-status');
+                if (el) { el.innerText = '(error)'; el.style.color = '#d9534f'; }
+            }
+        }
+
+        function renderVentasCaja(ventas) {
+            const container = document.getElementById('caja-ventas-list');
+            if (!container) return;
+            if (!ventas || ventas.length === 0) {
+                container.innerHTML = '<div style="color:#666; font-size:12px;">No hay ventas asignadas a la caja.</div>';
+                return;
+            }
+
+            let html = '<table style="width:100%; border-collapse:collapse; font-size:13px;">';
+            html += '<thead><tr><th style="text-align:left; padding:4px;">#</th><th style="text-align:left; padding:4px;">N°</th><th style="text-align:right; padding:4px;">Total</th><th style="text-align:left; padding:4px;">Fecha</th></tr></thead>';
+            html += '<tbody>';
+            ventas.forEach(v => {
+                const numero = `${v.serie}-${String(v.numero).padStart(8, '0')}`;
+                const total = parseFloat(v.total || 0).toFixed(2);
+                const fecha = v.fecha_emision ? new Date(v.fecha_emision).toLocaleString() : '';
+                html += `<tr><td style="padding:4px;">${v.id_venta}</td><td style="padding:4px;">${numero}</td><td style="padding:4px; text-align:right;">S/ ${total}</td><td style="padding:4px;">${fecha}</td></tr>`;
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        // Abrir modal de apertura
+        const btnAbrirCaja = document.getElementById('btn-abrir-caja');
+        if (btnAbrirCaja) btnAbrirCaja.addEventListener('click', () => {
+            const modal = document.getElementById('modal-abrir-caja');
+            if (modal) modal.style.display = 'flex';
+        });
+
+        function cerrarModalAbrirCaja() {
+            const modal = document.getElementById('modal-abrir-caja');
+            if (modal) modal.style.display = 'none';
+        }
+
+        
 
         function verificarClienteSeleccionado() {
             // El cliente ya se restauró en restaurarVentaPersistente si era necesario
@@ -850,6 +801,7 @@
                             const productoParaTicket = {
                                 id: `lote_${lote.lote_id}`,
                                 producto_id: datos.producto.id,
+                                producto_linea_id: datos.producto.product_linea_id || datos.producto.producto_linea_id || null,
                                 almacen_detalle_id: lote.lote_id, // ID del detalle del almacén para actualizar stock
                                 nombre: datos.producto.nombre,
                                 lote: lote.lote,
@@ -896,7 +848,7 @@
                 padding: 15px 20px;
                 border-radius: 5px;
                 box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                z-index: 1000;
+                z-index: 10000000;
                 font-size: 14px;
                 opacity: 0;
                 transition: opacity 0.3s ease;
@@ -946,17 +898,32 @@
         }
 
         // Función para mostrar la modal de selección de tipo de documento
-        function mostrarSeleccionTipoDocumento() {
+        async function mostrarSeleccionTipoDocumento() {
             if (ticket.length === 0) {
                 alert('No hay productos en el ticket para emitir');
                 return;
             }
-            
+
+            // Verificar que la caja esté abierta
+            try {
+                const res = await fetch('{{ route("pos.caja.open") }}');
+                if (!res.ok) throw new Error('Error de red');
+                const data = await res.json();
+                if (!data.open) {
+                    alert('No hay una caja abierta. Abra una caja antes de emitir ventas.');
+                    return;
+                }
+            } catch (err) {
+                console.error('No se pudo verificar caja abierta:', err);
+                alert('No se pudo verificar el estado de la caja. Intente nuevamente.');
+                return;
+            }
+
             // Si es "Cliente Contable", crear cliente contable automáticamente
             if (!clienteActual || !clienteActual.id || clienteActual.nombre === 'CLIENTE CONTABLE' || clienteActual.nombre === 'Cliente Contado') {
                 crearClienteContable();
             }
-            
+
             document.getElementById('modal-tipo-documento').style.display = 'flex';
         }
 
@@ -1008,6 +975,7 @@
                 igv: igv.toFixed(2),
                 total: total.toFixed(2),
                 tipo_documento: tipoDocumento,
+                proforma: (document.getElementById('proforma-checkbox') && document.getElementById('proforma-checkbox').checked) ? '1' : '0',
                 _token: '{{ csrf_token() }}'
             };
             
@@ -1126,6 +1094,7 @@
             const productoConPrecioCorp = {
                 id: `corp_${currentProduct.producto_id}_${Date.now()}`,
                 producto_id: currentProduct.producto_id,
+                producto_linea_id: currentProduct.product_linea_id || currentProduct.producto_linea_id || null,
                 nombre: currentProduct.nombre + ' (Precio Corp.)',
                 cantidad: cantidad,
                 cantidad_disponible: currentProduct.cantidad_total || 999,
@@ -1221,6 +1190,7 @@
             const productoConPrecioPublico = {
                 id: `pub_${currentProduct.producto_id}_${Date.now()}`,
                 producto_id: currentProduct.producto_id,
+                producto_linea_id: currentProduct.product_linea_id || currentProduct.producto_linea_id || null,
                 nombre: currentProduct.nombre,
                 cantidad: cantidad,
                 cantidad_disponible: currentProduct.cantidad_total || 0,
@@ -2120,9 +2090,61 @@
             productos.forEach(p => {
                 const tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
-                tr.onclick = () => mostrarMenuLotes(event, p);
 
-                // Agregar evento de clic derecho
+                // Clic izquierdo: agregar directamente 1 unidad a precio público
+                tr.addEventListener('click', async (ev) => {
+                    ev.preventDefault();
+
+                    const precioPublico = parseFloat(p.pvp || 0);
+                    if (precioPublico <= 0) {
+                        alert('Este producto no tiene precio público definido');
+                        return;
+                    }
+
+                    // Si hay un solo lote disponible, intentar obtener su id para decrementar stock en el backend
+                    let almacenDetalleId = null;
+                    try {
+                        if (p.total_lotes && parseInt(p.total_lotes) === 1) {
+                            const resp = await fetch(`/pos/obtener-lotes?producto_id=${encodeURIComponent(p.producto_id)}`);
+                            if (resp.ok) {
+                                const lotes = await resp.json();
+                                if (Array.isArray(lotes) && lotes.length > 0) {
+                                    almacenDetalleId = lotes[0].id || lotes[0].ad_id || lotes[0].almacen_detalle_id || null;
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('No fue posible obtener lotes:', e);
+                    }
+
+                    const productoParaTicket = {
+                        id: `pub_${p.producto_id}_${Date.now()}`,
+                        producto_id: p.producto_id,
+                        producto_linea_id: p.product_linea_id || p.producto_linea_id || null,
+                        nombre: p.nombre,
+                        cantidad: 1,
+                        cantidad_disponible: p.cantidad_total || 0,
+                        precio: precioPublico,
+                        importe: precioPublico * 1,
+                        pvp: p.pvp,
+                        pvc: p.pvc,
+                        es_precio_publico: true,
+                        es_lote_especifico: false,
+                        descuento: 0,
+                        descuentoFijo: 0,
+                        descuentoTexto: '0%'
+                    };
+
+                    if (almacenDetalleId) {
+                        productoParaTicket.almacen_detalle_id = almacenDetalleId;
+                        // Mark as lote specific so ticket matching uses unique id when needed
+                        productoParaTicket.es_lote_especifico = true;
+                    }
+                    console.log(productoParaTicket);
+                    agregarProductoAlTicket(productoParaTicket);
+                });
+
+                // Clic derecho: mostrar menú contextual/listado
                 tr.oncontextmenu = (event) => {
                     event.preventDefault();
                     mostrarMenuLotes(event, p);
@@ -2161,15 +2183,16 @@
         }
 
         function agregarProductoAlTicket(producto) {
-            // Verificar si ya existe en el ticket
+            // Buscar existente por prioridad:
+            // 1) Si ambos tienen almacen_detalle_id, comparar por ese id (mismo lote)
+            // 2) Si alguno no tiene almacen_detalle_id, agrupar por producto_id
             const existente = ticket.find(p => {
-                if (producto.es_lote_especifico) {
-                    // Para lotes específicos, comparar por ID único
-                    return p.id === producto.id;
-                } else {
-                    // Para productos agrupados, buscar por producto_id
-                    return p.producto_id === producto.producto_id && !p.es_lote_especifico;
+                if (producto.almacen_detalle_id && p.almacen_detalle_id) {
+                    return String(p.almacen_detalle_id) === String(producto.almacen_detalle_id);
                 }
+
+                // Fallback: agrupar por producto_id cuando no hay info de lote
+                return p.producto_id === producto.producto_id;
             });
 
             if (existente) {
@@ -2185,6 +2208,7 @@
                 const nuevoProducto = {
                     id: producto.id,
                     producto_id: producto.producto_id,
+                    producto_linea_id: producto.producto_linea_id,
                     nombre: producto.nombre,
                     cantidad: 1,
                     cantidad_disponible: producto.cantidad_disponible || producto.cantidad_total || 999,
@@ -2194,6 +2218,7 @@
                     pvc: producto.pvc,
                     lote: producto.lote || null,
                     fecha_vencimiento: producto.fecha_vencimiento || null,
+                    almacen_detalle_id: producto.almacen_detalle_id || null,
                     es_lote_especifico: producto.es_lote_especifico || false,
                     descuento: 0, // Inicializar descuento porcentual
                     descuentoFijo: 0, // Inicializar descuento fijo

@@ -8,22 +8,26 @@
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center">
                     <h2 class="mb-0">
-                        <i class="fas fa-receipt me-2"></i>
+                        <i class="bx bx-receipt me-2"></i>
                         Comprobantes
                     </h2>
                     <div class="d-flex gap-2">
                         <button class="btn btn-outline-primary" id="btn-seleccionar-todo">
-                            <i class="fas fa-check-square me-1"></i>
+                            <i class="bx bx-check-square me-1"></i>
                             Seleccionar Todo
                         </button>
                         <button class="btn btn-outline-warning" id="btn-cancelar">
-                            <i class="fas fa-times me-1"></i>
+                            <i class="bx bx-times me-1"></i>
                             Cancelar
                         </button>
                         <button class="btn btn-outline-info" id="btn-devolver">
-                            <i class="fas fa-undo me-1"></i>
+                            <i class="bx bx-undo me-1"></i>
                             Devolver
                         </button>
+                        <a class="btn btn-secondary" href="{{ route('pos.index') }}">
+                            <i class="bx bx-undo me-1"></i>
+                            Regresar
+                        </a>
                     </div>
                 </div>
             </div>
@@ -150,15 +154,20 @@
                                                 @if ($venta->enviado_sunat)
                                                     <span class=" badge bg-success">Enviado</span>
                                                 @else
-                                                    <span class="badge bg-warning">Pendiente</span>
-                                                    <i data-venta="{{ $venta->id_venta }}"
-                                                        class="btn-send-sunat btn-sm btn btn-info bi bi-send-arrow-up-fill"
-                                                        title="Enviar a SUNAT"><svg xmlns="http://www.w3.org/2000/svg"
-                                                            width="16" height="16" fill="currentColor"
-                                                            class="bi bi-send" viewBox="0 0 16 16">
-                                                            <path
-                                                                d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L1.591 6.602l4.339 2.76z" />
-                                                        </svg></i>
+                                                    @php $tipo = strtolower($venta->tipo_documento ?? 'ticket'); @endphp
+                                                    @if($tipo !== 'ticket')
+                                                        <span class="badge bg-warning">Pendiente</span>
+                                                        <i data-venta="{{ $venta->id_venta }}"
+                                                            class="btn-send-sunat btn-sm btn btn-info bi bi-send-arrow-up-fill"
+                                                            title="Enviar a SUNAT"><svg xmlns="http://www.w3.org/2000/svg"
+                                                                width="16" height="16" fill="currentColor"
+                                                                class="bi bi-send" viewBox="0 0 16 16">
+                                                                <path
+                                                                    d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576zm6.787-8.201L1.591 6.602l4.339 2.76z" />
+                                                                </svg></i>
+                                                    @else
+                                                        <span class="badge bg-info">Ticket</span>
+                                                    @endif
                                                 @endif
                                             </td>
                                             <td class="text-center">
@@ -181,7 +190,7 @@
                                                     @endif
 
                                                     <button class="btn btn-outline-secondary btn-sm btn-imprimir"
-                                                        data-venta-id="{{ $venta->id_venta }}" title="Imprimir">
+                                                        data-venta-id="{{ $venta->id_venta }}" data-tipo="{{ strtolower($venta->tipo_documento ?? 'ticket') }}" title="Imprimir">
                                                         <i class="bx bx-printer"></i>
                                                     </button>
                                                 </div>
@@ -425,11 +434,16 @@
                     '#form-filtros').serialize();
             });
 
-            // Imprimir
+            // Imprimir (A4 o 8cm para tickets)
             $('.btn-imprimir').click(function(e) {
                 e.stopPropagation();
-                const ventaId = $(this).data('venta-id');
-                window.open('{{ route('pos.pdfVenta', ':id') }}'.replace(':id', ventaId), '_blank');
+                const $btn = $(this);
+                const ventaId = $btn.data('venta-id');
+                const tipo = ($btn.data('tipo') || '').toString().toLowerCase();
+                const urlA4 = '{{ route('pos.pdfVenta', ':id') }}'.replace(':id', ventaId);
+                const url8cm = '{{ route('pos.pdfVenta8cm', ':id') }}'.replace(':id', ventaId);
+                const openUrl = (tipo === 'ticket') ? url8cm : urlA4;
+                window.open(openUrl, '_blank');
             });
 
             // Seleccionar todo

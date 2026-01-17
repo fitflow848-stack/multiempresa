@@ -1,487 +1,445 @@
 @extends('layout.app')
 
 @section('content')
-    {{-- ===================== STYLES ===================== --}}
+    {{-- Dependencias --}}
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.1.1/dist/select2-bootstrap-5-theme.min.css"
-        rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
 
+    <style>
+        :root {
+            --primary-bg: #f4f7f6;
+            --accent-color: #4361ee;
+            --border-color: #edf2f7;
+        }
+
+        body {
+            background-color: var(--primary-bg);
+            font-family: 'Inter', sans-serif;
+            color: #2d3748;
+        }
+
+        .almacen-container {
+            padding: 1.5rem;
+            padding-bottom: 100px;
+        }
+
+        /* Cabecera y Breadcrumb */
+        .breadcrumb-custom {
+            font-size: 0.85rem;
+            color: #718096;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            background: #fff;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        }
+
+        .page-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #1a202c;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Estructura de Tabla Compacta */
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .card-header {
+            background: #fff;
+            font-weight: 700;
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem;
+        }
+
+        .table-responsive {
+            max-height: 60vh;
+            overflow: both;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .table-custom {
+            font-size: 0.75rem;
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+        }
+
+        /* Sticky Headers */
+        .table-custom thead tr:nth-child(1) th {
+            top: 0;
+            z-index: 11;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .table-custom thead tr:nth-child(2) th {
+            top: 32px;
+            z-index: 10;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .table-custom thead th {
+            position: sticky;
+            padding: 8px 4px;
+            text-transform: uppercase;
+            font-weight: 700;
+            border-right: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        /* Columna de Producto Fija */
+        .sticky-col {
+            position: sticky;
+            left: 0;
+            background: #fff !important;
+            z-index: 5;
+            min-width: 200px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+            padding-left: 10px !important;
+        }
+
+        /* Agrupadores de diseño */
+        .bg-precios {
+            background-color: #eef2ff !important;
+            color: #4338ca;
+        }
+
+        .bg-stock {
+            background-color: #ecfdf5 !important;
+            color: #065f46;
+        }
+
+        .bg-lote {
+            background-color: #fffbeb !important;
+            color: #92400e;
+        }
+
+        /* Estilo de Inputs tipo Excel */
+        .table-input {
+            width: 100%;
+            height: 26px;
+            padding: 2px 5px;
+            font-size: 0.8rem;
+            border: 1px solid transparent;
+            background: transparent;
+            text-align: right;
+            border-radius: 4px;
+            transition: 0.2s;
+        }
+
+        .table-input:hover {
+            border-color: #cbd5e0;
+            background: #fff;
+        }
+
+        .table-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            background: #fff;
+            box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1);
+        }
+
+        .val-calc {
+            font-weight: 600;
+            text-align: right;
+            display: block;
+        }
+
+        .text-pa {
+            color: #e53e3e;
+            font-weight: 700;
+        }
+
+        /* Footer Flotante */
+        .summary-footer {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            width: 50%;
+            transform: translateX(-50%);
+            background: #fff;
+            padding: 15px 30px;
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 25px;
+            z-index: 1050;
+            border: 1px solid #e2e8f0;
+        }
+
+        .stat-group {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: #718096;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .stat-val {
+            font-size: 1.1rem;
+            font-weight: 800;
+        }
+    </style>
+
     <div class="almacen-container">
-        <!-- Breadcrumb -->
-        <div class="breadcrumb">
-            <div>
-                Almacén &gt; Recibir Productos
-            </div>
-            <div style="float: right;">
-                Local: <strong>{{ $company->nombre_comercial }}</strong> | Operador: <strong>{{ $user->name }}</strong>
+        <div class="breadcrumb-custom">
+            <div>Almacén &gt; <strong>Recibir Productos</strong></div>
+            <div>Local: <strong>{{ $company->nombre_comercial }}</strong> | Operador: <strong>{{ $user->name }}</strong>
             </div>
         </div>
 
-        <!-- Título -->
-        <div class="page-title">
-            Recibir Productos
-        </div>
+        <h1 class="page-title">Recepción de Documento: Z-{{ $compraId }}</h1>
 
-
-        <!-- Tabla de inventario -->
-        <div class="card mb-3">
-            <div class="card-header">
-                Documentos por recibir
+        <div class="card">
+            <div class="card-header d-flex justify-content-between">
+                <span>Listado de Productos por Recibir</span>
+                <span class="badge bg-soft-primary text-primary">{{ count($productos) }} Items</span>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-sm table-hover table-bordered align-middle text-center mb-0">
-                        <thead class="table-light">
-                    <tr>
-                        <th>#</th>
-                        <th>Producto</th>
-                        <th>Cantidad</th>
-                        <th>Detalle</th>
-                        <th>Costo</th>
-                        <th>COP</th>
-                        <th>MU%</th>
-                        <th>MU/D%</th>
-                        <th>MUP</th>
-                        <th>PVP</th>
-                        <th>PA</th>
-                        <th>PVP/D</th>
-                        <th>PA</th>
-                        <th>MUC</th>
-                        <th>PVC</th>
-                        <th>PA</th>
-                        <th style="background: #e8f5e8;" title="Stock mínimo recomendado para el producto">
-                            Stock Min <span class="help-icon">ℹ️</span>
-                        </th>
-                        <th style="background: #e8f5e8;" title="Stock máximo recomendado para el producto">
-                            Stock Max <span class="help-icon">ℹ️</span>
-                        </th>
-                        <th style="background: #fff3e0;" title="Número de lote del producto">
-                            Lote <span class="help-icon">📦</span>
-                        </th>
-                        <th style="background: #fff3e0;" title="Fecha de vencimiento del lote">
-                            F. Vencimiento <span class="help-icon">📅</span>
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{-- @dd($productos) --}}
-                    @foreach ($productos as $i => $p)
-                        <tr data-producto-id="{{ $p['producto_id'] }}">
-                            <td>{{ $i + 1 }}</td>
-                            <td class="text-start">{{ $p['nombre'] }}</td>
-                            <td>{{ $p['cantidad'] }} NIU</td>
-                            <td>{{ $p['detalle'] ?? '-' }}</td>
-                            <td>
-                                <input type="number" class="form-control form-control-sm" value="{{ $p['costo'] ?? 0 }}">
-                            </td>
-                            <td>
-                                <input type="number" class="form-control form-control-sm cop" value="{{ $p['cop'] ?? 0 }}">
-                            </td>
+                    <table class="table-custom" id="tabla-recepcion">
+                        <thead>
+                            {{-- Fila 1: Grupos --}}
+                            <tr>
+                                <th colspan="4" class="text-center">Información del Producto</th>
+                                <th colspan="4" class="text-center bg-precios">Costos y Margen</th>
+                                <th colspan="3" class="text-center bg-precios">PVP Sugerido</th>
+                                <th colspan="3" class="text-center bg-precios">Venta con Desc.</th>
+                                <th colspan="2" class="text-center bg-stock">Inventario</th>
+                                <th colspan="2" class="text-center bg-lote">Trazabilidad</th>
+                            </tr>
+                            {{-- Fila 2: Columnas --}}
+                            <tr>
+                                <th width="30">#</th>
+                                <th class="sticky-col">Nombre Producto</th>
+                                <th width="60">Cant.</th>
+                                <th width="100">Detalle</th>
 
-                            <td>
-                                <input type="number" class="form-control form-control-sm mu" value="{{ $p['mu'] ?? 0 }}">
-                            </td>
+                                <th width="80" class="bg-precios">Costo</th>
+                                <th width="80" class="bg-precios">COP</th>
+                                <th width="50" class="bg-precios">MU%</th>
+                                <th width="70" class="bg-precios">MUP</th>
 
-                            <td>
-                                <input type="number" class="form-control form-control-sm mud" value="0">
-                            </td>
+                                <th width="80" class="bg-precios">PVP</th>
+                                <th width="80" class="bg-precios">PA</th>
+                                <th width="50" class="bg-precios">MU/D%</th>
 
-                            <td class="mup">0.00</td>
+                                <th width="80" class="bg-precios">PVP/D</th>
+                                <th width="80" class="bg-precios">PA</th>
+                                <th width="70" class="bg-precios">PVC</th>
 
-                            <td>
-                                <input type="number" class="form-control form-control-sm pvp" value="{{ $p['pvp'] ?? 0 }}">
-                            </td>
+                                <th width="70" class="bg-stock">Min</th>
+                                <th width="70" class="bg-stock">Max</th>
+                                <th width="100" class="bg-lote">Lote</th>
+                                <th width="120" class="bg-lote">Vencimiento</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($productos as $i => $p)
+                                <tr data-producto-id="{{ $p['producto_id'] }}" data-producto-id-linea="{{ $p['producto_id_linea'] ?? '' }}">
+                                    <td class="text-center text-muted">{{ $i + 1 }}</td>
+                                    <td class="sticky-col fw-bold">{{ $p['nombre'] }}</td>
+                                    <td class="text-center fw-bold">{{ $p['cantidad'] }}</td>
+                                    <td><span class="text-muted"
+                                            style="font-size: 0.7rem;">{{ $p['detalle'] ?? '-' }}</span></td>
 
-                            <td class="pa-pvp text-danger">0.00</td>
+                                    {{-- Costos y Margen --}}
+                                    <td class="bg-precios"><input type="number" class="table-input costo"
+                                            value="{{ $p['costo'] ?? 0 }}"></td>
+                                    <td class="bg-precios"><input type="number" class="table-input cop"
+                                            value="{{ $p['cop'] ?? 0 }}"></td>
+                                    <td class="bg-precios"><input type="number" class="table-input mu"
+                                            value="{{ $p['mu'] ?? 0 }}"></td>
+                                    <td class="bg-precios"><span class="val-calc mup">0.00</span></td>
 
-                            <td>
-                                <input type="number" class="form-control form-control-sm pvpd"
-                                    value="{{ $p['pvp'] ?? 0 }}">
-                            </td>
+                                    {{-- PVP --}}
+                                    <td class="bg-precios"><input type="number" class="table-input pvp"
+                                            value="{{ $p['pvp'] ?? 0 }}"></td>
+                                    <td class="bg-precios"><span class="val-calc pa-pvp text-pa">0.00</span></td>
+                                    <td class="bg-precios"><input type="number" class="table-input mud" value="0">
+                                    </td>
 
-                            <td class="pa-pvpd text-danger">0.00</td>
+                                    {{-- Venta Desc --}}
+                                    <td class="bg-precios"><input type="number" class="table-input pvpd"
+                                            value="{{ $p['pvp'] ?? 0 }}"></td>
+                                    <td class="bg-precios"><span class="val-calc pa-pvpd text-pa">0.00</span></td>
+                                    <td class="bg-precios"><input type="number" class="table-input pvc"
+                                            value="{{ $p['pvp'] ?? 0 }}"></td>
 
-                            <td class="muc">0.00</td>
+                                    {{-- Stock --}}
+                                    <td class="bg-stock"><input type="number" class="table-input stock-min"
+                                            value="{{ $p['stock_min'] ?? 0 }}"></td>
+                                    <td class="bg-stock"><input type="number" class="table-input stock-max"
+                                            value="{{ $p['stock_max'] ?? 0 }}"></td>
 
-                            <td>
-                                <input type="number" class="form-control form-control-sm pvc" value="{{ $p['pvp'] ?? 0 }}">
-                            </td>
-
-                            <td class="pa-pvc text-danger">0.00</td>
-                            
-                            <!-- Nuevos campos editables -->
-                            <td style="background: #f8f9fa;">
-                                <input type="number" class="form-control form-control-sm stock-min" 
-                                       value="{{ $p['stock_min'] ?? 0 }}" 
-                                       placeholder="0" min="0">
-                            </td>
-                            
-                            <td style="background: #f8f9fa;">
-                                <input type="number" class="form-control form-control-sm stock-max" 
-                                       value="{{ $p['stock_max'] ?? 0 }}" 
-                                       placeholder="0" min="0">
-                            </td>
-                            
-                            <td style="background: #fffbf0;">
-                                <input type="text" class="form-control form-control-sm lote" 
-                                       value="{{ $p['lote'] ?? '' }}" 
-                                       placeholder="Lote..." maxlength="50">
-                            </td>
-                            
-                            <td style="background: #fffbf0;">
-                                <input type="date" class="form-control form-control-sm fecha-vencimiento" 
-                                       value="{{ $p['fecha_vencimiento'] ?? '' }}">
-                            </td>
-                        </tr>
-                    @endforeach
+                                    {{-- Lote --}}
+                                    <td class="bg-lote"><input type="text" class="table-input lote"
+                                            value="{{ $p['lote'] ?? '' }}" placeholder="Lote..."></td>
+                                    <td class="bg-lote"><input type="date" class="table-input fecha-vencimiento"
+                                            value="{{ $p['fecha_vencimiento'] ?? '' }}"></td>
+                                </tr>
+                            @endforeach
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
-
-        <div class="summary-section card"
-            style="position: fixed; bottom: 20px; right: 20px; width: auto; padding: 12px; border: 1px solid #ddd; background: #fff; box-shadow: 0 0 10px rgba(0,0,0,0.1); z-index: 1050;">
-            <div style="display: flex; justify-content: flex-end;">
-                <div class="summary-stats">
-                    <div class="stat-item">
-                        <a class="btn btn-primary" href="{{ route('recibir-productos.index') }}">
-                            Volver
-                        </a>
-                    </div>
-                    <div class="stat-item">
-                        <button class="btn btn-success" id="btn-recibir">
-                            Recibir productos
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </div>
+
+    {{-- Resumen Flotante --}}
+    <div class="summary-footer">
+        <div class="stat-group">
+            <span class="stat-label">Total Margen (MUP)</span>
+            <span class="stat-val text-dark" id="res-mup">S/ 0.00</span>
+        </div>
+        <div class="stat-group border-start ps-3">
+            <span class="stat-label">Venta Total (PA)</span>
+            <span class="stat-val text-primary" id="res-pa">S/ 0.00</span>
+        </div>
+        <div class="stat-group border-start ps-3 me-3">
+            <span class="stat-label">Venta con Desc.</span>
+            <span class="stat-val text-pa" id="res-pad">S/ 0.00</span>
+        </div>
+        <a href="{{ route('recibir-productos.index') }}" class="btn btn-light btn-sm rounded-pill px-3">Cancelar</a>
+        <button class="btn btn-primary btn-sm rounded-pill px-4 fw-bold shadow-sm" id="btn-recibir">RECIBIR
+            PRODUCTOS</button>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-
-    <style>
-        /* Estilos para los nuevos campos editables */
-        .stock-min, .stock-max {
-            background-color: #f0f8f0 !important;
-            border: 1px solid #28a745 !important;
-        }
-        
-        .lote, .fecha-vencimiento {
-            background-color: #fef9e7 !important;
-            border: 1px solid #ffc107 !important;
-        }
-        
-        .stock-min:focus, .stock-max:focus {
-            box-shadow: 0 0 5px rgba(40, 167, 69, 0.5) !important;
-        }
-        
-        .lote:focus, .fecha-vencimiento:focus {
-            box-shadow: 0 0 5px rgba(255, 193, 7, 0.5) !important;
-        }
-        
-        /* Indicadores visuales */
-        .field-indicator {
-            position: relative;
-        }
-        
-        .field-indicator::after {
-            content: "*";
-            color: #dc3545;
-            font-weight: bold;
-            margin-left: 2px;
-        }
-        
-        /* Tooltip para ayuda */
-        .help-icon {
-            color: #6c757d;
-            cursor: help;
-            margin-left: 5px;
-        }
-        
-        .help-icon:hover {
-            color: #495057;
-        }
-        
-        /* Validación visual */
-        .is-invalid {
-            border-color: #dc3545 !important;
-            background-color: #f8d7da !important;
-        }
-        
-        .is-valid {
-            border-color: #28a745 !important;
-            background-color: #d4edda !important;
-        }
-
-        /* Mejoras visuales generales (solo presentación) */
-        .card-header {
-            background: linear-gradient(90deg, #f8fafc, #ffffff);
-            font-weight: 600;
-            color: #343a40;
-        }
-
-        .table-responsive {
-            max-height: 62vh;
-            overflow: auto;
-        }
-
-        thead th {
-            position: sticky;
-            top: 0;
-            z-index: 3;
-            background: #f8f9fa;
-        }
-
-        .help-icon {
-            color: #6c757d;
-            cursor: help;
-            margin-left: 6px;
-            font-size: 0.95em;
-        }
-
-        .summary-section.card {
-            border-radius: 8px;
-            padding: 10px 12px !important;
-        }
-
-        .summary-stats .btn {
-            min-width: 130px;
-        }
-
-        .stat-item { display: inline-block; margin-left: 8px; }
-
-        @media (max-width: 768px) {
-            .summary-section.card { position: static; width: 100%; margin-top: 12px; }
-            .table-responsive { max-height: 45vh; }
-        }
-    </style>
 
     <script>
-        function recalcularFila($row) {
-            let cop = parseFloat($row.find('.cop').val()) || 0;
-            let mu = parseFloat($row.find('.mu').val()) || 0;
-            let mud = parseFloat($row.find('.mud').val()) || 0;
-            let pvp = parseFloat($row.find('.pvp').val()) || 0;
-            let pvpd = parseFloat($row.find('.pvpd').val()) || 0;
-            let pvc = parseFloat($row.find('.pvc').val()) || 0;
+        $(document).ready(function() {
 
-            // MUP
-            let mup = cop * (mu / 100);
-            $row.find('.mup').text(mup.toFixed(2));
+            function recalcularFila($row) {
+                const cant = parseFloat($row.find('td:eq(2)').text()) || 0;
+                const cop = parseFloat($row.find('.cop').val()) || 0;
+                const mu = parseFloat($row.find('.mu').val()) || 0;
+                const pvp = parseFloat($row.find('.pvp').val()) || 0;
+                const pvpd = parseFloat($row.find('.pvpd').val()) || 0;
 
-            // PA PVP
-            let paPvp = pvp - cop;
-            $row.find('.pa-pvp').text(paPvp.toFixed(2));
+                // 1. MUP: Costo * Margen %
+                const mup = cop * (mu / 100);
+                $row.find('.mup').text(mup.toFixed(2));
 
-            // PA PVP/D
-            let paPvpd = pvpd - cop;
-            $row.find('.pa-pvpd').text(paPvpd.toFixed(2));
+                // 2. PA PVP: Precio Venta * Cantidad
+                const paPvp = pvp * cant;
+                $row.find('.pa-pvp').text(paPvp.toFixed(2));
 
-            // MUC
-            let muc = cop * (mud / 100);
-            $row.find('.muc').text(muc.toFixed(2));
+                // 3. PA PVPD: Precio Venta Desc * Cantidad
+                const paPvpd = pvpd * cant;
+                $row.find('.pa-pvpd').text(paPvpd.toFixed(2));
 
-            // PA PVC
-            let paPvc = pvc - cop;
-            $row.find('.pa-pvc').text(paPvc.toFixed(2));
-        }
-
-        $(document).on('input', '.cop, .mu, .mud, .pvp, .pvpd, .pvc', function() {
-            let $row = $(this).closest('tr');
-            recalcularFila($row);
-        });
-
-        // recalcular todo al cargar
-        $('tbody tr').each(function() {
-            recalcularFila($(this));
-        });
-
-        // Validaciones para nuevos campos
-        $(document).on('input', '.stock-min, .stock-max', function() {
-            const $input = $(this);
-            const value = parseInt($input.val()) || 0;
-            
-            if (value < 0) {
-                $input.addClass('is-invalid').removeClass('is-valid');
-                $input.val(0);
-            } else {
-                $input.addClass('is-valid').removeClass('is-invalid');
+                actualizarTotales();
             }
-            
-            // Validar que stock_max >= stock_min
-            const $row = $input.closest('tr');
-            const stockMin = parseInt($row.find('.stock-min').val()) || 0;
-            const stockMax = parseInt($row.find('.stock-max').val()) || 0;
-            
-            if (stockMax > 0 && stockMax < stockMin) {
-                $row.find('.stock-max').addClass('is-invalid');
-                $row.find('.stock-min').addClass('is-invalid');
-            } else {
-                $row.find('.stock-max').removeClass('is-invalid').addClass('is-valid');
-                $row.find('.stock-min').removeClass('is-invalid').addClass('is-valid');
-            }
-        });
 
-        // Validación de lote (caracteres especiales)
-        $(document).on('input', '.lote', function() {
-            const $input = $(this);
-            let value = $input.val();
-            
-            // Remover caracteres especiales excepto guiones y puntos
-            value = value.replace(/[^a-zA-Z0-9\-\.]/g, '');
-            $input.val(value);
-            
-            if (value.length > 0) {
-                $input.addClass('is-valid').removeClass('is-invalid');
-            } else {
-                $input.removeClass('is-valid is-invalid');
-            }
-        });
+            function actualizarTotales() {
+                let tMup = 0,
+                    tPa = 0,
+                    tPad = 0;
 
-        // Validación de fecha de vencimiento
-        $(document).on('change', '.fecha-vencimiento', function() {
-            const $input = $(this);
-            const fechaIngresada = new Date($input.val());
-            const hoy = new Date();
-            hoy.setHours(0, 0, 0, 0);
-            
-            if ($input.val()) {
-                if (fechaIngresada < hoy) {
-                    $input.addClass('is-invalid').removeClass('is-valid');
-                    alert('⚠️ Advertencia: La fecha de vencimiento es anterior a la fecha actual');
-                } else {
-                    $input.addClass('is-valid').removeClass('is-invalid');
-                }
-            } else {
-                $input.removeClass('is-valid is-invalid');
-            }
-        });
-
-        // Mejorar función de guardado con validación
-        function validarFormulario() {
-            let esValido = true;
-            let errores = [];
-
-            $('tbody tr').each(function(index) {
-                const $row = $(this);
-                const stockMin = parseInt($row.find('.stock-min').val()) || 0;
-                const stockMax = parseInt($row.find('.stock-max').val()) || 0;
-                const producto = $row.find('td:eq(1)').text();
-
-                if (stockMax > 0 && stockMax < stockMin) {
-                    errores.push(`Producto "${producto}": Stock máximo debe ser mayor o igual al stock mínimo`);
-                    esValido = false;
-                }
-            });
-
-            if (!esValido) {
-                Swal.fire({
-                    title: 'Errores de validación',
-                    html: errores.join('<br>'),
-                    icon: 'error',
-                    confirmButtonText: 'Corregir'
+                $('tbody tr').each(function() {
+                    const $tr = $(this);
+                    const cant = parseFloat($tr.find('td:eq(2)').text()) || 0;
+                    tMup += (parseFloat($tr.find('.mup').text()) || 0) * cant;
+                    tPa += parseFloat($tr.find('.pa-pvp').text()) || 0;
+                    tPad += parseFloat($tr.find('.pa-pvpd').text()) || 0;
                 });
+
+                $('#res-mup').text('S/ ' + tMup.toFixed(2));
+                $('#res-pa').text('S/ ' + tPa.toFixed(2));
+                $('#res-pad').text('S/ ' + tPad.toFixed(2));
             }
 
-            return esValido;
-        }
-
-        $('#btn-recibir').click(function() {
-            // Validar formulario antes de procesar
-            if (!validarFormulario()) {
-                return;
-            }
-
-            // Confirmar acción
-            Swal.fire({
-                title: '¿Confirmar recepción?',
-                text: 'Se procesarán todos los productos con la información ingresada',
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#28a745',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Sí, recibir productos',
-                cancelButtonText: 'Cancelar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    procesarRecepcion();
-                }
+            // Eventos de cálculo
+            $(document).on('input', '.cop, .mu, .pvp, .pvpd', function() {
+                recalcularFila($(this).closest('tr'));
             });
-        });
 
-        function procesarRecepcion() {
-            let items = [];
-
+            // Inicializar cálculos
             $('tbody tr').each(function() {
-                let $tr = $(this);
+                recalcularFila($(this));
+            });
 
-                items.push({
-                    compra_id: {{ $compraId }},
-                    producto_id: $tr.data('producto-id'),
-                    cantidad: parseFloat($tr.find('td:eq(2)').text()),
-                    costo: parseFloat($tr.find('input:eq(0)').val()),
-                    cop: parseFloat($tr.find('.cop').val()),
-                    mu: parseFloat($tr.find('.mu').val()),
-                    mud: parseFloat($tr.find('.mud').val()),
-                    mup: parseFloat($tr.find('.mup').text()),
-                    pvp: parseFloat($tr.find('.pvp').val()),
-                    pvpd: parseFloat($tr.find('.pvpd').val()),
-                    pvc: parseFloat($tr.find('.pvc').val()),
-                    // Nuevos campos
-                    stock_min: parseFloat($tr.find('.stock-min').val()) || 0,
-                    stock_max: parseFloat($tr.find('.stock-max').val()) || 0,
-                    lote: $tr.find('.lote').val() || '',
-                    fecha_vencimiento: $tr.find('.fecha-vencimiento').val() || null
+            // Enviar Datos
+            $('#btn-recibir').click(function() {
+                let items = [];
+                let valid = true;
+
+                $('tbody tr').each(function() {
+                    const $tr = $(this);
+                    const sMin = parseFloat($tr.find('.stock-min').val());
+                    const sMax = parseFloat($tr.find('.stock-max').val());
+
+                    if (sMax > 0 && sMax < sMin) {
+                        Swal.fire('Error', 'El Stock Max no puede ser menor al Min', 'error');
+                        valid = false;
+                        return false;
+                    }
+
+                    items.push({
+                        compra_id: {{ $compraId }},
+                        producto_id: $tr.data('producto-id'),
+                        producto_id_linea: $tr.data('producto-id-linea'),
+                        cantidad: parseFloat($tr.find('td:eq(2)').text()),
+                        costo: parseFloat($tr.find('input:eq(0)').val()),
+                        cop: parseFloat($tr.find('.cop').val()),
+                        mu: parseFloat($tr.find('.mu').val()),
+                        mud: parseFloat($tr.find('.mud').val()),
+                        mup: parseFloat($tr.find('.mup').text()),
+                        pvp: parseFloat($tr.find('.pvp').val()),
+                        pvpd: parseFloat($tr.find('.pvpd').val()),
+                        pvc: parseFloat($tr.find('.pvc').val()),
+                        // Nuevos campos
+                        stock_min: parseFloat($tr.find('.stock-min').val()) || 0,
+                        stock_max: parseFloat($tr.find('.stock-max').val()) || 0,
+                        lote: $tr.find('.lote').val() || '',
+                        fecha_vencimiento: $tr.find('.fecha-vencimiento').val() || null
+                    });
+                });
+
+                if (!valid) return;
+
+                Swal.fire({
+                    title: '¿Confirmar Recepción?',
+                    text: "Se registrará el ingreso de mercadería.",
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, procesar',
+                    showLoaderOnConfirm: true,
+                    preConfirm: () => {
+                        return $.ajax({
+                            url: "{{ route('recibir-productos.guardar') }}",
+                            type: "POST",
+                            data: {
+                                _token: "{{ csrf_token() }}",
+                                items: items,
+                                compraId: "{{ $compraId }}"
+                            }
+                        }).catch(err => {
+                            Swal.showValidationMessage(
+                                `Error: ${err.responseJSON.message}`);
+                        });
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        Swal.fire('¡Éxito!', 'Productos recibidos correctamente', 'success')
+                            .then(() => location.href = "{{ route('recibir-productos.index') }}");
+                    }
                 });
             });
-
-            // Mostrar loading
-            Swal.fire({
-                title: 'Procesando recepción...',
-                text: 'Por favor espere mientras se actualizan los productos',
-                allowOutsideClick: false,
-                showConfirmButton: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            $.ajax({
-                url: "{{ route('recibir-productos.guardar') }}",
-                type: "POST",
-                data: {
-                    _token: "{{ csrf_token() }}",
-                    items: items,
-                    compraId: {{ $compraId }}
-                },
-                success: function(resp) {
-                    Swal.fire({
-                        title: '¡Éxito!',
-                        text: resp.message + '. Productos actualizados correctamente.',
-                        icon: 'success',
-                        confirmButtonText: 'Continuar'
-                    }).then(() => {
-                        location.href = "{{ route('recibir-productos.index') }}";
-                    });
-                },
-                error: function(err) {
-                    const errorMsg = err.responseJSON?.message || 'No se pudo guardar la recepción';
-                    Swal.fire({
-                        title: 'Error',
-                        text: errorMsg,
-                        icon: 'error',
-                        confirmButtonText: 'Reintentar'
-                    });
-                }
-            });
-        }
+        });
     </script>
 @endsection

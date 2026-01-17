@@ -46,6 +46,8 @@ class Venta extends Model
         'moneda',
         'cm_tc',
         'id_coti',
+        'cierre_caja_id',
+        'id_usuario',
     ];
 
     /**

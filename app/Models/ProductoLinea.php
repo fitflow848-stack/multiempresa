@@ -26,6 +26,12 @@ class ProductoLinea extends Model
         'pa2',
         'lote',
         'fecha_venc',
+        'stock_maximo',
+        'stock_minimo',
+        'pv_docena',
+        'pvc',
+        'pvc_dto',
+        'pvp2',
     ];
 
     protected $casts = [
