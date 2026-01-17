@@ -13,7 +13,8 @@ class CierreCajaController extends Controller
     {
         $cierres = CierreCaja::latest()->paginate(20);
 
-        $openCaja = CierreCaja::where('user_id', auth()->id())->whereNull('fecha_cierre')->first();
+        // Prefer explicit estado to detect open caja
+        $openCaja = CierreCaja::where('user_id', auth()->id())->where('estado', 'abierta')->first();
 
         return view('cierres.index', compact('cierres', 'openCaja'));
     }
