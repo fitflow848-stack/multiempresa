@@ -94,12 +94,7 @@ class CotizacionController extends Controller
             $request->validate([
                 'ticket' => 'required|string',
                 'cliente' => 'nullable|string',
-                'tipo_documento' => 'required|string',
-                'tipo_pago_id' => 'required|exists:tipos_pagos,id',
                 'total' => 'required|numeric|min:0',
-                'entrega' => 'required|numeric|min:0',
-                'serie' => 'required|string',
-                'numero' => 'required|string'
             ]);
 
             // Decodificar datos - manejar string JSON doblemente escapado

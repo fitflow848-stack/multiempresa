@@ -2,294 +2,198 @@
 
 @section('title', 'Nueva Compra')
 @section('page-title', 'Registrar Compra')
-@section('breadcrumb')
-    <li class="breadcrumb-item"><a href="{{ route('compras.index') }}">Compras</a></li>
-    <li class="breadcrumb-item active">Nueva Compra</li>
-@endsection
 
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.1.1/dist/select2-bootstrap-5-theme.min.css"
-    rel="stylesheet">
+@push('styles')
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
 
-
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.1.1/dist/select2-bootstrap-5-theme.min.css"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/compras.css') }}">
+@endpush
 
 @section('content')
-    <!-- Step Indicator -->
-    <form method="POST" action="{{ route('compras.store') }}" id="compra-form">
-        @csrf
-        <div class="row">
-            <!-- Main Form -->
-            <div class="col-lg-8">
-                <!-- Datos del Comprobante -->
-                <div class="card card-primary card-outline">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-file-invoice mr-2"></i>
-                            Datos del Comprobante
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label for="proveedor_select">
-                                        <i class="fas fa-truck mr-1"></i>
-                                        Proveedor <span class="text-danger">*</span>
-                                    </label>
+    <div class="container-fluid py-3">
+        <form method="POST" action="{{ route('compras.store') }}" id="compra-form">
+            @csrf
+            <div class="row g-4">
+                <div class="col-lg-9">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label-custom">Proveedor</label>
                                     <div class="input-group">
-                                        <select id="proveedor_select" name="proveedor_id" class="form-control col-8"
+                                        <select id="proveedor_select" name="proveedor_id" class="form-select select2"
                                             required></select>
-                                        <div class="input-group-append">
-                                            <button type="button" class="btn btn-success" data-bs-toggle="modal"
-                                                data-bs-target="#proveedorModal" title="Nuevo Proveedor">
-                                                <i class='bx  bx-plus'></i> 
-                                            </button>
-                                        </div>
+                                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal"
+                                            data-bs-target="#proveedorModal">
+                                            <i class='bx bx-plus'></i>
+                                        </button>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>
-                                        <i class="fas fa-list mr-1"></i>
-                                        Presupuesto
-                                    </label>
-                                    <select name="presupuesto" class="form-control">
-                                        <option value="Compra">Compra</option>
-                                        <option value="Servicio">Servicio</option>
+                                <div class="col-md-2">
+                                    <label class="form-label-custom">Presupuesto</label>
+                                    <select name="presupuesto" class="form-select">
+                                        <option value="Compra">📦 Compra</option>
+                                        <option value="Servicio">🛠️ Servicio</option>
                                     </select>
                                 </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="form-group">
-                                    <label>
-                                        <i class="fas fa-receipt mr-1"></i>
-                                        Tipo de Documento
-                                    </label>
-                                    <select name="tipo" class="form-control">
+                                <div class="col-md-2">
+                                    <label class="form-label-custom">Tipo Doc.</label>
+                                    <select name="tipo" class="form-select">
                                         <option value="Ticket">Ticket</option>
                                         <option value="Factura">Factura</option>
                                         <option value="Boleta">Boleta</option>
                                     </select>
                                 </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>
-                                        <i class="fas fa-calendar mr-1"></i>
-                                        Fecha de Emisión <span class="text-danger">*</span>
-                                    </label>
+                                <div class="col-md-2">
+                                    <label class="form-label-custom">Emisión</label>
                                     <input type="date" name="fecha_emision" class="form-control"
                                         value="{{ date('Y-m-d') }}" required>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>
-                                        <i class="fas fa-calendar-check mr-1"></i>
-                                        Fecha de Pago
-                                    </label>
+                                <div class="col-md-2">
+                                    <label class="form-label-custom">Pago</label>
                                     <input type="date" name="fecha_pago" class="form-control">
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Opciones -->
-                        <div class="options-card p-3 rounded">
-                            <h6 class="mb-3">
-                                <i class="fas fa-cog mr-2"></i>
-                                Opciones de Compra
-                            </h6>
-
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <label class="form-label mb-2">Moneda</label>
-                                    <div class="currency-toggle">
+                            <div class="d-flex gap-4 mt-4 pt-3 border-top">
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="form-label-custom mb-0">Moneda:</span>
+                                    <div class="btn-group btn-group-sm">
                                         <input type="radio" class="btn-check" name="moneda" value="sol" id="sol"
                                             checked>
-                                        <label class="btn btn-outline-primary" for="sol">
-                                            <i class="fas fa-coins mr-1"></i> Soles
-                                        </label>
-
+                                        <label class="btn btn-outline-secondary px-3" for="sol">Soles</label>
                                         <input type="radio" class="btn-check" name="moneda" value="usd"
                                             id="usd">
-                                        <label class="btn btn-outline-primary" for="usd">
-                                            <i class="fas fa-dollar-sign mr-1"></i> Dólares
-                                        </label>
+                                        <label class="btn btn-outline-secondary px-3" for="usd">Dólares</label>
                                     </div>
                                 </div>
+                                <div class="form-check form-switch pt-1">
+                                    <input class="form-check-input" type="checkbox" id="credito" name="credito">
+                                    <label class="form-check-label small fw-bold" for="credito">CRÉDITO</label>
+                                </div>
+                                <div class="form-check form-switch pt-1">
+                                    <input class="form-check-input" type="checkbox" id="inc_impuesto" name="inc_impuesto">
+                                    <label class="form-check-label small fw-bold" for="inc_impuesto">INC. IGV</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
-                                <div class="col-md-6">
-                                    <label class="form-label mb-2">Condiciones</label>
-                                    <div class="d-flex flex-wrap gap-3">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="credito" id="credito">
-                                            <label class="form-check-label" for="credito">
-                                                <i class="fas fa-credit-card mr-1"></i> Crédito
-                                            </label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="percepcion"
-                                                id="percepcion">
-                                            <label class="form-check-label" for="percepcion">
-                                                <i class="fas fa-percentage mr-1"></i> Percepción
-                                            </label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="inc_impuesto"
-                                                id="inc_impuesto">
-                                            <label class="form-check-label" for="inc_impuesto">
-                                                <i class="fas fa-calculator mr-1"></i> Inc. Impuesto
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                            <h6 class="fw-bold mb-0 text-dark">Detalle de Productos</h6>
+                            <button type="button" class="btn btn-primary btn-sm btn-floating-add" data-bs-toggle="modal"
+                                data-bs-target="#productSearchModal">
+                                <i class="bx bx-plus-circle me-1"></i> Agregar Producto
+                            </button>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover product-table mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 50px">#</th>
+                                            <th style="width: 100px">Código</th>
+                                            <th>Descripción</th>
+                                            <th style="width: 100px" class="text-center">Cantidad</th>
+                                            <th style="width: 100px" class="text-right">Costo</th>
+                                            <th style="width: 100px" class="text-right">Descuento</th>
+                                            <th style="width: 80px" class="text-center">Stock Min</th>
+                                            <th style="width: 80px" class="text-center">Stock Max</th>
+                                            <th style="width: 100px" class="text-center">Lote</th>
+                                            <th style="width: 120px" class="text-center">F. Vencimiento</th>
+                                            <th style="width: 100px" class="text-right">Total</th>
+                                            <th style="width: 60px" class="text-center">Acción</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="productos-tbody">
+                                        {{-- Aquí se cargan dinámicamente --}}
+                                        <tr id="no-products">
+                                            <td colspan="7" class="text-center py-5 text-muted">
+                                                <i class="bx bx-cart-add fs-1 d-block mb-2"></i>
+                                                Aún no has agregado productos a esta compra.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Productos -->
-                <div class="card card-success card-outline">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-boxes mr-2"></i>
-                            Productos
-                        </h3>
-                        <div class="card-tools">
-                            <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
-                                data-bs-target="#productSearchModal">
-                                <i class="fas fa-plus mr-1"></i> Agregar Producto
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-striped product-table mb-0">
-                                <thead>
-                                    <tr>
-                                        <th style="width: 50px">#</th>
-                                        <th style="width: 100px">Código</th>
-                                        <th>Descripción</th>
-                                        <th style="width: 100px" class="text-center">Cantidad</th>
-                                        <th style="width: 100px" class="text-right">Costo</th>
-                                        <th style="width: 100px" class="text-right">Descuento</th>
-                                        <th style="width: 80px" class="text-center">Stock Min</th>
-                                        <th style="width: 80px" class="text-center">Stock Max</th>
-                                        <th style="width: 100px" class="text-center">Lote</th>
-                                        <th style="width: 120px" class="text-center">F. Vencimiento</th>
-                                        <th style="width: 100px" class="text-right">Total</th>
-                                        <th style="width: 60px" class="text-center">Acción</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="productos-tbody">
-                                    <tr id="no-products" class="text-center text-muted">
-                                        <td colspan="12" class="py-4">
-                                            <i class="fas fa-box-open fa-2x mb-2 d-block"></i>
-                                            No hay productos agregados.
-                                            <a href="#" class="text-success" data-bs-toggle="modal"
-                                                data-bs-target="#productSearchModal">Agregar el primero</a>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
+                <div class="col-lg-3">
+                    <div class="sticky-top" style="top: 20px;">
+                        <div class="summary-box shadow-lg mb-4">
+                            <h6 class="fw-bold mb-4 text-uppercase" style="letter-spacing: 1px;">Resumen Económico</h6>
 
-            <!-- Sidebar -->
-            <div class="col-lg-4">
-                <!-- Resumen -->
-                <div class="card card-warning card-outline sticky-top" style="top: 20px;">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-calculator mr-2"></i>
-                            Resumen de Compra
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="summary-card p-3 mb-3">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span>Subtotal:</span>
+                            <div class="summary-item">
+                                <span>Subtotal</span>
                                 <span id="subtotal-display">S/ 0.00</span>
                             </div>
-                            <div class="d-flex justify-content-between mb-2">
-                                <span>Descuento:</span>
-                                <span id="descuento-display">S/ 0.00</span>
+                            <div class="summary-item">
+                                <span>Descuentos</span>
+                                <span class="text-danger">- S/ 0.00</span>
                             </div>
-                            <div class="d-flex justify-content-between mb-2">
-                                <span>Impuestos:</span>
+                            <div class="summary-item">
+                                <span>Impuestos (IGV)</span>
                                 <span id="impuestos-display">S/ 0.00</span>
                             </div>
-                            <hr>
-                            <div class="d-flex justify-content-between total-amount p-2 rounded">
-                                <span>TOTAL:</span>
+
+                            <div class="total-highlight d-flex justify-content-between align-items-center pt-3">
+                                <span class="fs-6 fw-normal text-white-50">TOTAL</span>
                                 <span id="total-display">S/ 0.00</span>
                             </div>
-                        </div>
 
-                        <!-- Hidden inputs for form -->
-                        <input type="hidden" name="total_bruto" id="total_bruto" value="0.00">
-                        <input type="hidden" name="total_descuento" id="total_descuento" value="0.00">
-                        <input type="hidden" name="bruto_neto" id="bruto_neto" value="0.00">
-                        <input type="hidden" name="total_impuesto" id="total_impuesto" value="0.00">
-                        <input type="hidden" name="total_neto" id="total_neto" value="0.00">
-
-                        <!-- Action Buttons -->
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-save mr-2"></i>
-                                Guardar Compra
-                            </button>
-                            <a href="{{ route('compras.index') }}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left mr-2"></i>
-                                Volver al Listado
-                            </a>
-                            <button type="button" class="btn btn-outline-warning btn-sm" id="clear-temp-data">
-                                <i class="fas fa-eraser mr-1"></i>
-                                Limpiar Datos Temporales
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Quick Stats -->
-                <div class="card card-info card-outline">
-                    <div class="card-header">
-                        <h3 class="card-title">
-                            <i class="fas fa-chart-bar mr-2"></i>
-                            Estadísticas Rápidas
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="info-box mb-3">
-                            <span class="info-box-icon bg-success">
-                                <i class="fas fa-shopping-cart"></i>
-                            </span>
-                            <div class="info-box-content">
-                                <span class="info-box-text">Compras este Mes</span>
-                                <span class="info-box-number">24</span>
+                            <div class="d-grid gap-2 mt-4">
+                                <button type="submit" class="btn btn-primary btn-lg fw-bold py-3 shadow-sm">
+                                    <i class="bx bx-save me-2"></i> FINALIZAR COMPRA
+                                </button>
+                                <button type="button" id="clear-temp-data"
+                                    class="btn btn-link btn-sm text-white-50 text-decoration-none">
+                                    <i class="bx bx-trash me-1"></i> Limpiar borrador
+                                </button>
                             </div>
+                            <!-- Hidden totals inputs required by controller -->
+                            <input type="hidden" name="total_bruto" id="total_bruto" value="0">
+                            <input type="hidden" name="total_descuento" id="total_descuento" value="0">
+                            <input type="hidden" name="bruto_neto" id="bruto_neto" value="0">
+                            <input type="hidden" name="total_impuesto" id="total_impuesto" value="0">
+                            <input type="hidden" name="total_neto" id="total_neto" value="0">
+                            <input type="hidden" name="flete" id="flete" value="0">
+                            <input type="hidden" name="total_pagar" id="total_pagar" value="0">
                         </div>
 
-                        <div class="info-box">
-                            <span class="info-box-icon bg-warning">
-                                <i class="fas fa-boxes"></i>
-                            </span>
-                            <div class="info-box-content">
-                                <span class="info-box-text">Productos en esta Compra</span>
-                                <span class="info-box-number" id="productos-count">0</span>
+                        <div class="card bg-light">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="bg-white p-2 rounded-3 me-3">
+                                        <i class="bx bx-trending-up text-success fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted d-block text-uppercase fw-bold"
+                                            style="font-size: 0.6rem;">Compras Mes</small>
+                                        <span class="fw-bold fs-5">24</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-white p-2 rounded-3 me-3">
+                                        <i class="bx bx-package text-warning fs-4"></i>
+                                    </div>
+                                    <div>
+                                        <small class="text-muted d-block text-uppercase fw-bold"
+                                            style="font-size: 0.6rem;">Items en Compra</small>
+                                        <span class="fw-bold fs-5" id="productos-count">0</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </form>
+        </form>
+    </div>
 
     <!-- Modals -->
     @include('compras.partials.modal-proveedor')
@@ -303,60 +207,7 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <style>
-        /* Estilos para los nuevos campos editables */
-        .stock-min-input, .stock-max-input {
-            background-color: #f0f8f0 !important;
-        }
-        
-        .lote-input, .fecha-vencimiento-input {
-            background-color: #fef9e7 !important;
-        }
-        
-        .stock-min-input:focus, .stock-max-input:focus {
-            box-shadow: 0 0 5px rgba(40, 167, 69, 0.3) !important;
-        }
-        
-        .lote-input:focus, .fecha-vencimiento-input:focus {
-            box-shadow: 0 0 5px rgba(255, 193, 7, 0.3) !important;
-        }
-        
-        /* Validación visual para errores */
-        .is-invalid {
-            border-color: #dc3545 !important;
-            background-color: #f8d7da !important;
-        }
-        
-        .is-valid {
-            border-color: #28a745 !important;
-        }
-        
-        /* Responsividad para tabla más ancha */
-        .table-responsive {
-            min-height: 200px;
-        }
-        
-        .product-table th, .product-table td {
-            white-space: nowrap;
-            vertical-align: middle;
-        }
-        
-        .product-table input[type="text"], 
-        .product-table input[type="number"], 
-        .product-table input[type="date"] {
-            min-width: 70px;
-            font-size: 12px;
-        }
-        
-        /* Tooltips para campos nuevos */
-        .stock-min-input, .stock-max-input {
-            position: relative;
-        }
-        
-        .lote-input[title]:hover, .fecha-vencimiento-input[title]:hover {
-            cursor: help;
-        }
-    </style>
+
 
     <script>
         $(document).ready(function() {
@@ -401,7 +252,9 @@
                     },
                     minimumInputLength: 0,
                     // allow clearing the initial selection
-                    templateResult: function (data) { return data.text; }
+                    templateResult: function(data) {
+                        return data.text;
+                    }
                 });
 
                 // Load an initial page of providers when opening the select so user sees a list immediately
@@ -409,7 +262,9 @@
                     const $this = $(this);
                     if ($this.data('providersLoaded')) return;
 
-                    $.get(proveedoresSelectUrl, { q: '' })
+                    $.get(proveedoresSelectUrl, {
+                            q: ''
+                        })
                         .done(function(items) {
                             if (!Array.isArray(items)) return;
                             items.forEach(function(p) {
@@ -490,11 +345,13 @@
 
                                 // cleanup any leftover backdrops or classes
                                 (function cleanup() {
-                                    const anyShown = document.querySelectorAll('.modal.show').length > 0;
+                                    const anyShown = document.querySelectorAll('.modal.show')
+                                        .length > 0;
                                     if (anyShown) return;
-                                    document.querySelectorAll('.modal-backdrop').forEach(function(el) {
-                                        el.parentNode && el.parentNode.removeChild(el);
-                                    });
+                                    document.querySelectorAll('.modal-backdrop').forEach(
+                                        function(el) {
+                                            el.parentNode && el.parentNode.removeChild(el);
+                                        });
                                     document.body.classList.remove('modal-open');
                                     document.body.style.paddingRight = '';
                                 })();
@@ -548,6 +405,11 @@
                 $('#total_descuento').val(descuento.toFixed(2));
                 $('#total_impuesto').val(impuestos.toFixed(2));
                 $('#total_neto').val(subtotal.toFixed(2));
+
+                // bruto_neto and total_pagar (consider flete if present)
+                $('#bruto_neto').val(subtotal.toFixed(2));
+                const fleteVal = parseFloat($('#flete').val()) || 0;
+                $('#total_pagar').val((subtotal + fleteVal).toFixed(2));
 
                 // Show/hide no products message
                 if (productCount === 0) {
@@ -613,29 +475,30 @@
                 // Auto-guardar cuando cambien los campos del formulario
                 $('#proveedor_select, select[name="presupuesto"], select[name="tipo"], input[name="fecha_emision"], input[name="fecha_pago"]')
                     .on('change', debounce(autoSaveCompraData, 500));
-                
+
                 // Auto-guardar cuando cambien las opciones
                 $('input[name="moneda"], #credito, #percepcion, #inc_impuesto')
                     .on('change', debounce(autoSaveCompraData, 500));
-                
+
                 // Auto-guardar cuando cambien los productos (incluyendo nuevos campos)
-                $(document).on('input change', '.cantidad-input, .costo-input, .descuento-input, .stock-min-input, .stock-max-input, .lote-input, .fecha-vencimiento-input', 
+                $(document).on('input change',
+                    '.cantidad-input, .costo-input, .descuento-input, .stock-min-input, .stock-max-input, .lote-input, .fecha-vencimiento-input',
                     debounce(autoSaveCompraData, 1000));
 
                 // Validaciones para stock mínimo y máximo
                 $(document).on('input', '.stock-min-input, .stock-max-input', function() {
                     const $input = $(this);
                     const value = parseInt($input.val()) || 0;
-                    
+
                     if (value < 0) {
                         $input.val(0);
                     }
-                    
+
                     // Validar que stock_max >= stock_min en la misma fila
                     const $row = $input.closest('tr');
                     const stockMin = parseInt($row.find('.stock-min-input').val()) || 0;
                     const stockMax = parseInt($row.find('.stock-max-input').val()) || 0;
-                    
+
                     if (stockMax > 0 && stockMax < stockMin) {
                         $row.find('.stock-max-input').css('border-color', '#dc3545');
                         $row.find('.stock-min-input').css('border-color', '#dc3545');
@@ -649,7 +512,7 @@
                 $(document).on('input', '.lote-input', function() {
                     const $input = $(this);
                     let value = $input.val();
-                    
+
                     // Remover caracteres especiales excepto guiones y puntos
                     value = value.replace(/[^a-zA-Z0-9\-\.]/g, '');
                     $input.val(value);
@@ -661,7 +524,7 @@
                     const fechaIngresada = new Date($input.val());
                     const hoy = new Date();
                     hoy.setHours(0, 0, 0, 0);
-                    
+
                     if ($input.val() && fechaIngresada < hoy) {
                         $input.css('border-color', '#ffc107');
                         // Mostrar advertencia
@@ -690,7 +553,7 @@
             function saveCompraDataToSession() {
                 // Guardar en localStorage (ya se hace automáticamente)
                 autoSaveCompraData();
-                
+
                 // Marcar en sesión del servidor que debe regresar a compras
                 $.post('{{ route('session.store') }}', {
                     _token: $('meta[name="csrf-token"]').attr('content'),
@@ -721,7 +584,8 @@
                         stock_min: $row.find('input[name="stock_min[]"]').val() || '0',
                         stock_max: $row.find('input[name="stock_max[]"]').val() || '0',
                         lote: $row.find('input[name="lote[]"]').val() || '',
-                        fecha_vencimiento: $row.find('input[name="fecha_vencimiento[]"]').val() || '',
+                        fecha_vencimiento: $row.find('input[name="fecha_vencimiento[]"]').val() ||
+                            '',
                         total: $row.find('.total-line').text().trim() || 'S/ 0.00'
                     });
                 });
@@ -739,13 +603,13 @@
                     try {
                         const data = JSON.parse(tempData);
                         console.log('Restaurando datos:', data);
-                        
+
                         // Restaurar campos del formulario
                         if (data.proveedor_id && data.proveedor_text) {
                             const option = new Option(data.proveedor_text, data.proveedor_id, true, true);
                             $('#proveedor_select').append(option).trigger('change');
                         }
-                        
+
                         $('select[name="presupuesto"]').val(data.presupuesto);
                         $('select[name="tipo"]').val(data.tipo);
                         $('input[name="fecha_emision"]').val(data.fecha_emision);
@@ -754,7 +618,7 @@
                         $('#credito').prop('checked', data.credito);
                         $('#percepcion').prop('checked', data.percepcion);
                         $('#inc_impuesto').prop('checked', data.inc_impuesto);
-                        
+
                         // Restaurar productos con validación mejorada
                         console.log('Productos a restaurar:', data.productos);
                         if (data.productos && Array.isArray(data.productos) && data.productos.length > 0) {
@@ -780,22 +644,36 @@
                                     };
 
                                     // Si no tenemos linea_id pero sí producto_id, intentar obtener la primera linea por API
-                                    if ((!productoCompleto.linea_id || productoCompleto.linea_id === '') && productoCompleto.producto_id) {
+                                    if ((!productoCompleto.linea_id || productoCompleto.linea_id === '') &&
+                                        productoCompleto.producto_id) {
                                         try {
-                                            const apiUrl = '{{ route("productos.api.get", ":id") }}'.replace(':id', productoCompleto.producto_id);
-                                            const resp = await fetch(apiUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(r => r.json());
-                                            const primeraLinea = resp.lineas && resp.lineas.length > 0 ? resp.lineas[0] : null;
-                                            productoCompleto.linea_id = primeraLinea ? primeraLinea.id : productoCompleto.linea_id || '';
+                                            const apiUrl = '{{ route('productos.api.get', ':id') }}'
+                                                .replace(':id', productoCompleto.producto_id);
+                                            const resp = await fetch(apiUrl, {
+                                                headers: {
+                                                    'X-Requested-With': 'XMLHttpRequest'
+                                                }
+                                            }).then(r => r.json());
+                                            const primeraLinea = resp.lineas && resp.lineas.length > 0 ?
+                                                resp.lineas[0] : null;
+                                            productoCompleto.linea_id = primeraLinea ? primeraLinea.id :
+                                                productoCompleto.linea_id || '';
 
                                             // rellenar valores faltantes desde la API si es necesario
-                                            if ((!productoCompleto.codigo || productoCompleto.codigo === '') && primeraLinea) {
-                                                productoCompleto.codigo = primeraLinea.cb || productoCompleto.codigo || '';
+                                            if ((!productoCompleto.codigo || productoCompleto.codigo ===
+                                                    '') && primeraLinea) {
+                                                productoCompleto.codigo = primeraLinea.cb ||
+                                                    productoCompleto.codigo || '';
                                             }
-                                            if ((!productoCompleto.costo || Number(productoCompleto.costo) === 0) && primeraLinea) {
-                                                productoCompleto.costo = primeraLinea.precio_compra || productoCompleto.costo || 0;
+                                            if ((!productoCompleto.costo || Number(productoCompleto
+                                                    .costo) === 0) && primeraLinea) {
+                                                productoCompleto.costo = primeraLinea.precio_compra ||
+                                                    productoCompleto.costo || 0;
                                             }
                                         } catch (err) {
-                                            console.error('Error al obtener producto desde API para restauración', err);
+                                            console.error(
+                                                'Error al obtener producto desde API para restauración',
+                                                err);
                                         }
                                     }
 
@@ -806,12 +684,13 @@
 
                                     addProductToTable(productoCompleto);
                                 }
-                                console.log(`Se restauraron ${data.productos.length} productos exitosamente`);
+                                console.log(
+                                    `Se restauraron ${data.productos.length} productos exitosamente`);
                             })();
                         } else {
                             console.log('No hay productos para restaurar');
                         }
-                        
+
                         console.log('Datos restaurados exitosamente');
                         return true;
                     } catch (error) {
@@ -828,14 +707,15 @@
             // Función para agregar producto a la tabla
             function addProductToTable(producto) {
                 console.log('Agregando producto a tabla:', producto);
-                
+
                 const idx = $('#productos-tbody tr:not(#no-products)').length + 1;
-                
+
                 // Ocultar mensaje "No hay productos"
                 $('#no-products').hide();
-                
-                const totalCalculado = (Number(producto.cantidad || 1) * Number(producto.costo || 0) - Number(producto.descuento || 0)).toFixed(2);
-                
+
+                const totalCalculado = (Number(producto.cantidad || 1) * Number(producto.costo || 0) - Number(
+                    producto.descuento || 0)).toFixed(2);
+
                 const row = `
                     <tr data-idx="${idx}" data-linea-id="${producto.linea_id || ''}" data-producto-id="${producto.producto_id || ''}">
                         <td class="text-center">${idx}
@@ -896,10 +776,10 @@
 
                 $('#productos-tbody').append(row);
                 calculateTotals();
-                
+
                 // Auto-guardar después de agregar producto
                 setTimeout(autoSaveCompraData, 500);
-                
+
                 console.log('Producto agregado exitosamente a la tabla');
             }
 
@@ -918,30 +798,32 @@
                 const urlParams = new URLSearchParams(window.location.search);
                 const isFromSession = @json(session('restore_compra_data'));
                 const isFromURL = urlParams.get('restore_compra_data') === 'true';
-                
+
                 console.log('Verificando datos temporales al cargar:', {
                     tempData: !!tempData,
                     isFromSession: isFromSession,
                     isFromURL: isFromURL
                 });
-                
+
                 if (tempData) {
                     if (isFromSession || isFromURL) {
                         // Restauración automática (viene de productos)
                         setTimeout(function() {
                             if (restoreCompraData()) {
                                 // Si hay un nuevo producto creado, agregarlo automáticamente
-                                const newProductId = @json(session('new_product_id')) || urlParams.get('new_product_id');
+                                const newProductId = @json(session('new_product_id')) || urlParams.get(
+                                    'new_product_id');
                                 if (newProductId) {
                                     fetchAndAddNewProduct(parseInt(newProductId));
                                 }
-                                
+
                                 // Limpiar parámetros URL si existen
                                 if (isFromURL) {
-                                    const cleanUrl = window.location.origin + window.location.pathname;
+                                    const cleanUrl = window.location.origin + window.location
+                                        .pathname;
                                     window.history.replaceState({}, document.title, cleanUrl);
                                 }
-                                
+
                                 Swal.fire({
                                     icon: 'success',
                                     title: 'Datos restaurados',
@@ -960,13 +842,14 @@
                         }, 300);
                     }
                 }
-                
+
                 // Configurar auto-guardado después de la restauración
                 setTimeout(function() {
                     setupAutoSave();
-                    
+
                     // Forzar un primer auto-guardado si hay datos
-                    if ($('#productos-tbody tr:not(#no-products)').length > 0 || $('#proveedor_select').val()) {
+                    if ($('#productos-tbody tr:not(#no-products)').length > 0 || $(
+                            '#proveedor_select').val()) {
                         setTimeout(autoSaveCompraData, 1000);
                         console.log('Auto-guardado inicial forzado');
                     }
@@ -974,10 +857,10 @@
             });
 
             // Verificar si debe restaurar datos al cargar la página (casos especiales)
-            @if(session('restore_compra_data'))
+            @if (session('restore_compra_data'))
                 // Ya manejado arriba
             @endif
-            
+
             // También verificar parámetros URL para restauración (cuando viene de AJAX)
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('restore_compra_data') === 'true') {
@@ -989,12 +872,12 @@
                 $(this).closest('tr').remove();
                 updateRowNumbers();
                 calculateTotals();
-                
+
                 // Mostrar mensaje "No hay productos" si no quedan productos
                 if ($('#productos-tbody tr:not(#no-products)').length === 0) {
                     $('#no-products').show();
                 }
-                
+
                 // Auto-guardar después de eliminar producto
                 setTimeout(autoSaveCompraData, 500);
             });
@@ -1046,7 +929,7 @@
                     });
                     return;
                 }
-                
+
                 Swal.fire({
                     title: '¿Limpiar datos temporales?',
                     text: 'Se eliminarán todos los datos guardados temporalmente y se recargará la página',
@@ -1085,39 +968,49 @@
 
             // Función para obtener y agregar producto recién creado
             function fetchAndAddNewProduct(productId) {
-                const apiUrl = '{{ route("productos.api.get", ":id") }}'.replace(':id', productId);
+                const apiUrl = '{{ route('productos.api.get', ':id') }}'.replace(':id', productId);
+
                 $.get(apiUrl)
                     .done(function(producto) {
-                        // Obtener la primera línea del producto o crear una básica
-                        const primeraLinea = producto.lineas && producto.lineas.length > 0 ? producto.lineas[0] : null;
-                        
-                        const newProducto = {
-                            linea_id: primeraLinea ? primeraLinea.id : '',
-                            producto_id: producto.id,
-                            codigo: primeraLinea ? primeraLinea.cb : producto.codigo_barras || '',
-                            descripcion: producto.nombre + (primeraLinea ? ' - ' + (primeraLinea.presentacion || '') : ''),
-                            cantidad: primeraLinea ? primeraLinea.cantidad : 1,
-                            costo: primeraLinea ? primeraLinea.precio_compra : 0,
-                            descuento: 0,
-                            stock_min: primeraLinea.stock_min ||  0,
-                            stock_max: primeraLinea.stock_max || 0,
-                            lote: primeraLinea ? primeraLinea.lote : '',
-                            fecha_vencimiento: primeraLinea ? primeraLinea.fecha_vencimiento : '',
-                            total: 'S/ 0.00'
-                        };
-                        
-                        addProductToTable(newProducto);
-                        
+                        // Verificamos si hay líneas disponibles
+                        if (!producto.lineas || producto.lineas.length === 0) {
+                            Swal.fire('Atención', 'El producto no tiene detalles configurados', 'warning');
+                            return;
+                        }
+
+                        // Iteramos sobre las líneas para agregar cada una como un ítem en la tabla
+                        producto.lineas.forEach(linea => {
+                            const costo = parseFloat(linea.precio_compra) || 0;
+                            const cantidad = parseFloat(linea.cantidad) || 0;
+
+                            const newProducto = {
+                                linea_id: linea.linea_id, // Corregido: antes decía .id
+                                producto_id: producto.id,
+                                codigo: linea.cb || 'S/N',
+                                descripcion: `${producto.nombre} (${linea.presentacion} - ${linea.concentracion})`,
+                                cantidad: cantidad,
+                                costo: costo,
+                                descuento: 0,
+                                stock_min: linea.stock_min || 0,
+                                stock_max: linea.stock_max || 0,
+                                lote: linea.lote || '',
+                                fecha_vencimiento: linea.fecha_vencimiento || '',
+                                total: (costo * cantidad).toFixed(2) // Cálculo automático del total
+                            };
+
+                            addProductToTable(newProducto);
+                        });
+
                         Swal.fire({
                             icon: 'success',
-                            title: '¡Producto agregado!',
-                            text: 'El producto recién creado se ha agregado automáticamente a la compra',
-                            timer: 3000,
+                            title: '¡Agregado!',
+                            text: `${producto.nombre} se añadió a la lista correctamente`,
+                            timer: 2000,
                             showConfirmButton: false
                         });
                     })
                     .fail(function() {
-                        console.error('No se pudo cargar el producto recién creado');
+                        Swal.fire('Error', 'No se pudo cargar el producto', 'error');
                     });
             }
         });

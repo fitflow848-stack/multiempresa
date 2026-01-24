@@ -286,7 +286,7 @@
             resultDiv.style.display = 'block';
             resultDiv.innerHTML = '<div style="color: #007bff; font-weight: 600;">🔍 Consultando RENIEC...</div>';
 
-            fetch(`{{ route('clientes.buscar-dni') }}`, {
+            fetch(`{{ route('clientes.consultar-reniec') }}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

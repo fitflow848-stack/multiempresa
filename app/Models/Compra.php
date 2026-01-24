@@ -36,4 +36,9 @@ class Compra extends Model
     {
         return $this->belongsTo(User::class, 'id_usuario');
     }
+
+    public function almacen()
+    {
+        return $this->belongsTo(Sucursal::class, 'local_destino');
+    }
 }

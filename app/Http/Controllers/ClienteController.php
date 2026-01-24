@@ -4,17 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\ApiDocumentosController;
 use App\Models\Cliente;
+use App\Services\PeruConsultasService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class ClienteController extends Controller
 {
-    protected $apiDocumentos;
+    protected $peruConsultas;
 
-    public function __construct(ApiDocumentosController $apiDocumentos)
+    // Inyectamos el servicio en el constructor
+    public function __construct(PeruConsultasService $peruConsultas)
     {
-        $this->apiDocumentos = $apiDocumentos;
+        $this->peruConsultas = $peruConsultas;
     }
 
     public function index()
@@ -46,13 +49,16 @@ class ClienteController extends Controller
         }
 
         $totalData = $query->count();
-        
+
         // Paginación
         if ($request->has('start') && $request->has('length')) {
             $query->skip($request->start)->take($request->length);
         }
 
-        $clientes = $query->get()->map(function ($cliente) {
+        $clientes = $query->withSum(['deudas' => function($query) {
+            $query->whereIn('estado', ['pendiente', 'parcial']);
+        }], 'monto_deuda')->get()->map(function ($cliente) {
+            $montoDeuda = $cliente->deudas_sum_monto_deuda ?: 0;
             return [
                 'id' => $cliente->id,
                 'tipo_documento' => $cliente->tipo_documento,
@@ -60,7 +66,7 @@ class ClienteController extends Controller
                 'nombre' => $cliente->nombre,
                 'telefono' => $cliente->telefono ?? '',
                 'email' => $cliente->email ?? '',
-                'debe' => $cliente->debe,
+                'debe' => number_format($montoDeuda, 2),
                 'estado' => $cliente->estado ? 'Activo' : 'Inactivo',
                 'acciones' => view('clientes.partials.acciones', compact('cliente'))->render()
             ];
@@ -86,31 +92,38 @@ class ClienteController extends Controller
     {
         $user = Auth::user();
 
-        $request->validate([
+        // 1. Validación (Si falla en AJAX, Laravel devuelve automáticamente JSON 422)
+        $validator = Validator::make($request->all(), [
             'tipo_cliente' => 'required|in:Particular,Empresa',
             'tipo_documento' => 'required|in:DNI,RUC,CE,Pasaporte',
             'numero_documento' => 'required|string|max:20',
             'nombre' => 'required|string|max:255',
             'direccion' => 'nullable|string',
-            'distrito' => 'nullable|string|max:100',
-            'provincia' => 'nullable|string|max:100',
-            'departamento' => 'nullable|string|max:100',
-            'telefono' => 'nullable|string|max:20',
             'email' => 'nullable|email',
-            'credito_limite' => 'nullable|numeric|min:0',
-            'observaciones' => 'nullable|string'
+            'telefono' => 'nullable|string|max:20',
         ]);
 
-        // Verificar si ya existe un cliente con ese documento
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // 2. Verificar existencia (Evitar back() en AJAX)
         $existeCliente = Cliente::where('company_id', $user->company_id)
             ->where('numero_documento', $request->numero_documento)
             ->where('tipo_documento', $request->tipo_documento)
             ->first();
 
         if ($existeCliente) {
-            return back()->withErrors(['numero_documento' => 'Ya existe un cliente con este número de documento.']);
+            $msg = 'Ya existe un cliente con este número de documento.';
+            return $request->ajax() || $request->pos
+                ? response()->json(['success' => false, 'message' => $msg], 400)
+                : back()->withErrors(['numero_documento' => $msg])->withInput();
         }
 
+        // 3. Creación del Cliente
         $cliente = Cliente::create([
             'company_id' => $user->company_id,
             'tipo_cliente' => $request->tipo_cliente,
@@ -127,34 +140,30 @@ class ClienteController extends Controller
             'observaciones' => $request->observaciones
         ]);
 
-        // Verificar si viene desde cotizaciones
-        if ($request->session()->has('navegandoDesdeCotizacion') || $request->has('from_cotizacion')) {
-            // Si es una petición AJAX (desde modal), devolver JSON con datos del cliente
-            if ($request->ajax()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Cliente registrado exitosamente',
-                    'cliente' => [
-                        'id' => $cliente->id,
-                        'nombre' => $cliente->nombre,
-                        'tipo_doc' => $cliente->tipo_documento,
-                        'documento' => $cliente->numero_documento,
-                        'direccion' => $cliente->direccion,
-                        'telefono' => $cliente->telefono,
-                        'email' => $cliente->email
-                    ],
-                    'redirect' => route('cotizaciones.create')
-                ]);
-            }
-            
-            // Para peticiones normales, redirigir a cotizaciones con datos del cliente
-            return redirect()->route('cotizaciones.create')
-                ->with('success', 'Cliente registrado exitosamente.')
-                ->with('cliente_seleccionado', $cliente);
+        // 4. Respuesta condicionada
+
+        // Caso POS (Punto de Venta)
+        if ($request->pos || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Cliente registrado con éxito',
+                'data' => [
+                    'id' => $cliente->id,
+                    'nombre' => $cliente->nombre,
+                    'tipo_documento' => $cliente->tipo_documento,
+                    'numero_documento' => $cliente->numero_documento,
+                    'direccion' => $cliente->direccion,
+                    'email' => $cliente->email,
+                    'telefono' => $cliente->telefono,
+                    'debe' => $cliente->debe ?? 0.00
+                ],
+                // Si viene de cotización, incluimos la ruta de retorno
+                'redirect' => ($request->has('from_cotizacion')) ? route('cotizaciones.create') : null
+            ]);
         }
 
-        return redirect()->route('clientes.index')
-            ->with('success', 'Cliente registrado exitosamente.');
+        // Caso tradicional (Redirección de Blade)
+        return redirect()->route('clientes.index')->with('success', 'Cliente registrado exitosamente.');
     }
 
     public function show(Cliente $cliente)
@@ -227,42 +236,11 @@ class ClienteController extends Controller
     public function destroy(Cliente $cliente)
     {
         // $this->authorize('delete', $cliente);
-        
+
         // En lugar de eliminar, desactivar
         $cliente->update(['estado' => false]);
 
         return response()->json(['success' => true, 'message' => 'Cliente desactivado exitosamente.']);
-    }
-
-    public function buscarPorDni(Request $request)
-    {
-        $request->validate([
-            'documento' => 'required|string|size:8'
-        ]);
-
-        try {
-            // Usar el controlador de API existente
-            $response = $this->apiDocumentos->getDni($request);
-            $data = $response->getData(true);
-
-            if (isset($data['error'])) {
-                return response()->json(['error' => $data['error']], 400);
-            }
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'numero_documento' => $data['dni'] ?? $request->documento,
-                    'nombres' => $data['nombres'] ?? '',
-                    'apellido_paterno' => $data['apellidoPaterno'] ?? '',
-                    'apellido_materno' => $data['apellidoMaterno'] ?? '',
-                    'nombre_completo' => trim(($data['apellidoPaterno'] ?? '') . ' ' . ($data['apellidoMaterno'] ?? '') . ' ' . ($data['nombres'] ?? ''))
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Error al consultar DNI: ' . $e->getMessage()], 500);
-        }
     }
 
     public function crearDesdeReniec(Request $request)
@@ -307,17 +285,12 @@ class ClienteController extends Controller
         }
 
         try {
-            // Consultar según el tipo de documento
-            $apiRequest = new Request(['documento' => $documento]);
-            $apiController = new \App\Http\Controllers\ApiDocumentosController();
-            
             if ($tipoDocumento === 'DNI') {
-                $response = $apiController->getDni($apiRequest);
+                $data = $this->peruConsultas->consultarDni($documento);
             } else {
-                $response = $apiController->getRuc($apiRequest);
+                $data = $this->peruConsultas->consultarRuc($documento);
             }
 
-            $data = $response->getData(true);
 
             if (isset($data['error'])) {
                 return response()->json(['error' => $data['error']], 400);
@@ -367,7 +340,6 @@ class ClienteController extends Controller
                     'telefono' => $cliente->telefono
                 ]
             ]);
-
         } catch (\Exception $e) {
             return response()->json(['error' => 'Error al consultar o crear el cliente: ' . $e->getMessage()], 500);
         }
@@ -409,13 +381,13 @@ class ClienteController extends Controller
     {
         $user = Auth::user();
         $query = $request->get('q', '');
-        
+
         $clientes = Cliente::where('company_id', $user->company_id)
             ->where('activo', 1)
             ->where(function ($q) use ($query) {
                 $q->where('nombre', 'like', "%{$query}%")
-                  ->orWhere('numero_documento', 'like', "%{$query}%")
-                  ->orWhere('telefono', 'like', "%{$query}%");
+                    ->orWhere('numero_documento', 'like', "%{$query}%")
+                    ->orWhere('telefono', 'like', "%{$query}%");
             })
             ->orderBy('nombre')
             ->limit(50)
@@ -433,5 +405,45 @@ class ClienteController extends Controller
             });
 
         return response()->json($clientes);
+    }
+
+    public function consultarReniec(Request $request)
+    {
+        $dni = $request->get('dni') ?? $request->input('documento');
+
+        // Validación básica de entrada
+        if (!$dni || strlen($dni) !== 8) {
+            return response()->json(['error' => 'El DNI debe tener 8 dígitos'], 400);
+        }
+
+        try {
+            // Llamamos directamente al método del Service
+            $data = $this->peruConsultas->consultarDni($dni);
+
+            // Verificamos si el servicio retornó un error
+            if (isset($data['error'])) {
+                return response()->json(['error' => $data['error']], 400);
+            }
+
+            // Mapeamos la respuesta para que tu frontend reciba siempre el mismo formato
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'dni' => $data['dni'] ?? $dni,
+                    'nombres' => $data['nombres'] ?? '',
+                    'apellido_paterno' => $data['apellidoPaterno'] ?? '',
+                    'apellido_materno' => $data['apellidoMaterno'] ?? '',
+                    'nombre_completo' => trim(
+                        ($data['apellidoPaterno'] ?? '') . ' ' .
+                            ($data['apellidoMaterno'] ?? '') . ' ' .
+                            ($data['nombres'] ?? '')
+                    )
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Error al consultar RENIEC: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

@@ -6,6 +6,7 @@ use App\Models\CierreCaja;
 use App\Models\Venta;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class CierreCajaController extends Controller
 {
@@ -14,8 +15,7 @@ class CierreCajaController extends Controller
         $cierres = CierreCaja::latest()->paginate(20);
 
         // Prefer explicit estado to detect open caja
-        $openCaja = CierreCaja::where('user_id', auth()->id())->where('estado', 'abierta')->first();
-
+        $openCaja = CierreCaja::where('user_id', auth()->id())->where('fecha_cierre', null)->first();
         return view('cierres.index', compact('cierres', 'openCaja'));
     }
 
@@ -101,5 +101,38 @@ class CierreCajaController extends Controller
         $cierre->save();
 
         return response()->json(['success' => true, 'message' => 'Caja cerrada correctamente']);
+    }
+
+    /**
+     * Endpoint para que el POS consulte si el usuario tiene una caja abierta
+     */
+    public function getOpenCaja(Request $request)
+    {
+        $user = Auth::user();
+        $openCaja = CierreCaja::where('user_id', $user->id)->whereNull('fecha_cierre')->first();
+
+        if ($openCaja) {
+            // Obtener ventas asociadas a esta caja (si la columna existe)
+            $ventas = [];
+            try {
+                $ventas = Venta::where('cierre_caja_id', $openCaja->id)
+                    ->select('id_venta', 'serie', 'numero', 'total', 'fecha_emision')
+                    ->orderBy('fecha_emision', 'asc')
+                    ->get();
+            } catch (\Throwable $e) {
+                // Si la columna no existe o hay error, simplemente ignorar
+                $ventas = [];
+            }
+
+            return response()->json(['open' => true, 'caja' => [
+                'id' => $openCaja->id,
+                'ingresos' => $openCaja->ingresos ?? 0,
+                'egresos' => $openCaja->egresos ?? 0,
+                'observaciones' => $openCaja->observaciones ?? '',
+                'ventas' => $ventas
+            ]]);
+        }
+
+        return response()->json(['open' => false, 'caja' => null]);
     }
 }

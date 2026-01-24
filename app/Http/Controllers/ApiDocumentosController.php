@@ -2,53 +2,37 @@
 
 namespace App\Http\Controllers;
 
-use Exception;
+use App\Services\PeruConsultasService;
 use Illuminate\Http\Request;
 
 class ApiDocumentosController extends Controller
 {
-    public $token;
+    protected $consultaService;
 
-    public function __construct()
+    public function __construct(PeruConsultasService $consultaService)
     {
-        $this->token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InN5c3RlbWNyYWZ0LnBlQGdtYWlsLmNvbSJ9.yuNS5hRaC0hCwymX_PjXRoSZJWLNNBeOdlLRSUGlHGA";
+        $this->consultaService = $consultaService;
     }
 
     public function getDni(Request $request)
     {
         if (!$request->documento) {
-            return response()->json(['error' => 'Error al obtener la información.'], 500);
+            return response()->json(['error' => 'Debe proporcionar un número de DNI.'], 400);
         }
 
-        $url = "https://dniruc.apisperu.com/api/v1/dni/{$request->documento}?token={$this->token}";
-
-        try {
-            $response = file_get_contents($url);
-            if ($response === false) {
-                return response()->json(['error' => 'Error al obtener la información.'], 500);
-            }
-            return response()->json(json_decode($response, true));
-        } catch (Exception $e) {
-            return response()->json(['error' => 'Excepción capturada: ' . $e->getMessage()], 500);
-        }
+        $resultado = $this->consultaService->consultarDni($request->documento);
+        
+        return response()->json($resultado, isset($resultado['error']) ? 500 : 200);
     }
 
     public function getRuc(Request $request)
     {
         if (!$request->documento) {
-            return response()->json(['error' => 'Error al obtener la información.'], 500);
+            return response()->json(['error' => 'Debe proporcionar un número de RUC.'], 400);
         }
 
-        $url = "https://dniruc.apisperu.com/api/v1/ruc/{$request->documento}?token={$this->token}";
+        $resultado = $this->consultaService->consultarRuc($request->documento);
 
-        try {
-            $response = file_get_contents($url);
-            if ($response === false) {
-                return response()->json(['error' => 'Error al obtener la información.'], 500);
-            }
-            return response()->json(json_decode($response, true));
-        } catch (Exception $e) {
-            return response()->json(['error' => 'Excepción capturada: ' . $e->getMessage()], 500);
-        }
+        return response()->json($resultado, isset($resultado['error']) ? 500 : 200);
     }
 }

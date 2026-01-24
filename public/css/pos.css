@@ -2,19 +2,45 @@
     box-sizing: border-box;
 }
 
-.pos-container {
-    background: #f8f9fa;
-    font-family: Arial, sans-serif;
-    font-size: 12px;
-    margin: 0;
-    padding: 0;
+body,
+html {
+    overflow: hidden;
+    /* Evitamos el scroll de la página entera */
 }
 
-.left-sidebar {
-    background: white;
-    border-right: 1px solid #ddd;
+.pos-container {
     display: flex;
     flex-direction: column;
+    /* Ajusta 70px según el alto real de tu menú horizontal */
+    height: calc(100vh - 70px);
+    background: #f4f7fa;
+    /* Fondo grisáceo para resaltar las cards blancas */
+    padding: 10px;
+    gap: 10px;
+}
+
+.company-header,
+.top-bar,
+.center-area,
+.ticket-section,
+.pos-footer-led {
+    display: flex;
+    background: white !important;
+    border-radius: 8px !important;
+    border: 1px solid #e1e4e8 !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* --- Cabecera y Filtros --- */
+.left-sidebar {
+    flex-shrink: 0;
+    /* No se achica */
+}
+
+.company-header,
+.top-bar {
+    margin-bottom: 5px;
+    padding: 10px 15px;
 }
 
 .company-header {
@@ -141,15 +167,15 @@
 }
 
 .center-area {
-    flex: 1;
+    flex: 1; /* Toma todo el espacio disponible */
     display: flex;
     flex-direction: column;
-    /* justify-content: center; */
-    align-items: center;
-    background: white;
-    color: #999;
-    font-size: 13px;
-    min-height: 150px;
+    overflow: hidden; /* Importante para el scroll interno */
+    padding: 0;
+}
+#productos-listado {
+    flex: 1;
+    overflow-y: auto; /* Solo esta parte tiene scroll */
 }
 
 .genack-watermark {
@@ -160,9 +186,12 @@
     font-family: 'Courier New', monospace;
 }
 
+/* --- Sección del Ticket --- */
 .ticket-section {
-    background: white;
-    border-top: 1px solid #ddd;
+    height: 35vh; /* Ocupa el 35% de la vista */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .ticket-header {
@@ -229,9 +258,8 @@
 }
 
 .ticket-table {
-    height: 180px;
-    position: relative;
-    background: white;
+    flex: 1;
+    overflow-y: auto;
 }
 
 .table-header {
@@ -324,6 +352,13 @@
     background: #f5f5f5;
 }
 
+.productos-table thead {
+    position: sticky;
+    top: 0;
+    background: #f8f9fa;
+    z-index: 10;
+}
+
 .productos-table th,
 .productos-table td {
     border-bottom: 1px solid #eee;
@@ -333,10 +368,15 @@
 }
 
 .productos-table th {
-    background: #f5f5f5;
-    font-weight: 600;
-    color: #333;
-    text-align: center;
+    padding: 10px;
+    border-bottom: 2px solid #eee;
+    text-transform: uppercase;
+    font-size: 11px;
+}
+
+.productos-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #f0f0f0;
 }
 
 .productos-table td:first-child {
@@ -357,16 +397,11 @@
 }
 
 .pos-footer-led {
-    background: #000;
-    color: #25ff07;
-    font-family: 'Consolas', 'Courier New', monospace;
-    padding: 8px 10px 2px 15px;
-    display: flex;
-    align-items: flex-start;
-    flex-wrap: wrap;
-    gap: 16px;
-    font-size: 17px;
-    position: relative;
+    flex-shrink: 0;
+    margin-top: auto;
+    background: #000 !important; /* Estilo LED que tenías */
+    color: #0f0;
+    padding: 10px;
 }
 
 .footer-totals-led {

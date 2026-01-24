@@ -180,7 +180,7 @@
                         @foreach ($compras as $compra)
                             <tr data-compra-id="{{ $compra->id }}">
                                 <td>{{ $compra->id }}</td>
-                                <td>{{ $compra->local_destino }}</td>
+                                <td>{{ $compra->almacen ? $compra->almacen->nombre : $compra->local_destino }}</td>
                                 <td class="fw-bold">Z-{{ $compra->id }}</td>
                                 <td>{{ $compra->proveedor->nombre_comercial }}</td>
                                 <td class="text-end fw-bold">{{ number_format($compra->total_bruto, 2) }}</td>

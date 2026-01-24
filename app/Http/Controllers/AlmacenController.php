@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\AlmacenIngresoDetalle;
+use App\Models\Producto;
+use App\Models\ProductoLinea;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +24,7 @@ class AlmacenController extends Controller
         $stocks = DB::table('almacen_ingreso_detalle as d')
             ->join('productos as p', 'p.id', 'd.producto_id')
             ->select(
+                'd.id',
                 'd.producto_id',
                 'p.nombre as producto',
                 'p.codigo_barras as codigo_barras',
@@ -31,7 +34,7 @@ class AlmacenController extends Controller
                 DB::raw('AVG(d.pvpd) as pvpd'),
                 DB::raw('AVG(d.pvc) as pvc')
             )
-            ->groupBy('d.producto_id', 'p.nombre', 'p.codigo_barras')
+            ->groupBy('d.id', 'd.producto_id', 'p.nombre', 'p.codigo_barras')
             ->paginate(20);
 
         $productos = $stocks;
@@ -41,17 +44,31 @@ class AlmacenController extends Controller
 
     public function ajustarExistencias($id)
     {
-        // Validar que el ID sea válido
-        if (!$id || !is_numeric($id)) {
-            return redirect()->route('almacen.index')->with('error', 'Producto no encontrado');
-        }
-        
         $user = Auth::user();
         $company = $user->company ?? null;
-        
-        // TODO: Obtener producto específico
-        $producto = $this->getMockProduct($id);
-        
+
+        // Esto es lo que necesitas para "listarlo" en la tabla de existencias
+        $detalles = AlmacenIngresoDetalle::where('id', $id)->with('ingreso')->first();
+        $productoModel = Producto::find($detalles->producto_id);
+        $producto_lineas = ProductoLinea::where('id', $detalles->producto_linea_id)->first();
+
+        $producto = [
+            'id' => $detalles->id,
+            'codigo' => $producto_lineas->cb,
+            'nombre' => $productoModel->nombre,
+            'existencias_kardex' => $detalles->cantidad,
+            'ajuste_existencias' => 0, // Esto podrías calcularlo si tienes otra tabla de salidas
+            'existencias_fisico' => $detalles->cantidad ?? 0,
+            'precio_compra' => $detalles->costo,
+            'costo_operativo' => $detalles->costo,
+            'peso' => $detalles->peso,
+            'pvp' => $detalles->pvp,
+            'pvp_dcto' => $detalles->pvpd,
+            'pvc' => $detalles->pvc,
+            'pvc_dcto' => $detalles->pvp_dto ?? 0,
+            'pv_docena' => $detalles->pv_docena ?? 0,
+        ];
+
         return view('almacen.ajustar-existencias', compact('user', 'company', 'producto'));
     }
 
@@ -59,7 +76,7 @@ class AlmacenController extends Controller
     {
         $user = Auth::user();
         $company = $user->company ?? null;
-        
+
         return view('almacen.alta-rapida', compact('user', 'company'));
     }
 
@@ -68,30 +85,52 @@ class AlmacenController extends Controller
         $termino = $request->get('producto');
         $local = $request->get('local');
         $existencias = $request->get('existencias');
-        
+
         // TODO: Implementar búsqueda real
         $productos = $this->getMockProducts();
-        
+
         return response()->json($productos);
     }
 
     public function guardarAjuste(Request $request, $id)
     {
+        // 1. Validar los datos
         $request->validate([
-            'existencias_fisico' => 'required|numeric',
-            'precio_compra' => 'required|numeric',
-            'costo_operativo' => 'numeric',
-            'peso' => 'numeric',
-            'pvp' => 'required|numeric',
-            'pvp_dcto' => 'numeric',
-            'pvc' => 'numeric',
-            'pvc_dcto' => 'numeric',
-            'pv_docena' => 'numeric'
+            'existencias_fisico' => 'required|numeric|min:0',
+            'precio_compra'      => 'required|numeric|min:0',
+            'pvp'                => 'required|numeric|min:0',
         ]);
 
-        // TODO: Actualizar producto en base de datos
-        
-        return redirect()->route('almacen.index')->with('success', 'Existencias actualizadas correctamente');
+        try {
+            DB::beginTransaction();
+
+            // 2. Localizar el registro original de ingreso
+            $detalle = AlmacenIngresoDetalle::findOrFail($id);
+
+            // 3. Actualizar el detalle del ingreso
+            // Nota: Aquí decides si sobreescribes 'cantidad' o si manejas una columna de ajuste
+            $detalle->update([
+                'cantidad'   => $request->existencias_fisico,
+                'costo'      => $request->precio_compra,
+                'peso'       => $request->peso,
+                'pvp'        => $request->pvp,
+                'pvpd'       => $request->pvp_dcto,
+                'pvc'        => $request->pvc,
+                'pvp_dto'    => $request->pvc_dcto, // Asumiendo que este es el nombre en tu DB
+                'pv_docena'  => $request->pv_docena,
+            ]);
+
+            // 4. Sincronizar con la tabla de productos (opcional)
+            // Si tu tabla 'productos' tiene un stock global, deberías recalcularlo aquí.
+
+            DB::commit();
+
+            return redirect()->route('almacen.index')
+                ->with('success', 'El ajuste de existencias se realizó correctamente.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors('Error al procesar el ajuste: ' . $e->getMessage());
+        }
     }
 
     public function guardarProducto(Request $request)
@@ -107,7 +146,7 @@ class AlmacenController extends Controller
         ]);
 
         // TODO: Crear producto en base de datos
-        
+
         return redirect()->route('almacen.index')->with('success', 'Producto creado correctamente');
     }
 

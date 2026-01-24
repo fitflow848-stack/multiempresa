@@ -1,0 +1,66 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class GuiaRemision extends Model
+{
+    use HasFactory;
+
+    protected $table = 'guia_remision';
+
+    protected $fillable = [
+        'ruc_partida',
+        'razon_partida',
+        'direccion_partida',
+        'departamento_partida',
+        'provincia_partida',
+        'distrito_partida',
+        'direccion_llegada',
+        'departamento_llegada',
+        'provincia_llegada',
+        'distrito_llegada',
+        'motivo_traslado',
+        'observacion',
+        'peso_bruto',
+        'fecha_traslado'
+    ];
+
+    // Relación con Departamento (Partida)
+    public function departamentoPartida()
+    {
+        return $this->belongsTo(Departamento::class, 'departamento_partida', 'dep_cod');
+    }
+
+    // Relación con Provincia (Partida)
+    public function provinciaPartida()
+    {
+        return $this->belongsTo(Provincia::class, 'provincia_partida', 'pro_id');
+    }
+
+    // Relación con Distrito (Partida)
+    public function distritoPartida()
+    {
+        return $this->belongsTo(Distrito::class, 'distrito_partida', 'dis_id');
+    }
+
+    // Relación con Departamento (Llegada)
+    public function departamentoLlegada()
+    {
+        return $this->belongsTo(Departamento::class, 'departamento_llegada', 'dep_cod');
+    }
+
+    // Relación con Provincia (Llegada)
+    public function provinciaLlegada()
+    {
+        return $this->belongsTo(Provincia::class, 'provincia_llegada', 'pro_id');
+    }
+
+    // Relación con Distrito (Llegada)
+    public function distritoLlegada()
+    {
+        return $this->belongsTo(Distrito::class, 'distrito_llegada', 'dis_id');
+    }
+}

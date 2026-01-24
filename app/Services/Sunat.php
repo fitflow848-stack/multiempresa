@@ -13,7 +13,7 @@ class Sunat
     public function __construct()
     {
         $this->client = new Client();
-        $this->apiUrl = env('SUNAT_API_URL'); // Mejor usar config() en lugar de env()
+        $this->apiUrl = "https://magustechnologies.com/apisunat/api";
     }
 
     public function sendRequest($endpoint, $method = 'POST', $data = [])
@@ -92,7 +92,10 @@ class Sunat
         // preparar cliente/empresa
         $empresa_razon = isset($cliente->nombre) ? $this->formatString($cliente->nombre) : '';
         $clienteDireccion = isset($cliente->direccion) ? $cliente->direccion : '-';
-        $clienteNumDoc = isset($cliente->numero_documento) ? $cliente->numero_documento : null;
+        $clienteNumDoc = $cliente->numero_documento;
+        if (empty($clienteNumDoc) || $clienteNumDoc == '-' || $clienteNumDoc == '0') {
+            $clienteNumDoc = 1111111;
+        }
 
         $data = [
             "endpoint" => "beta",
@@ -120,7 +123,7 @@ class Sunat
             "cliente" => [
                 "num_doc" => $clienteNumDoc ? (int)$clienteNumDoc : null,
                 "rzn_social" => $empresa_razon,
-                "direccion" => $clienteDireccion,
+                "direccion" => $clienteDireccion == 'SIN DIRECCION' ? '-' : $clienteDireccion,
             ],
             "detalles" => []
         ];

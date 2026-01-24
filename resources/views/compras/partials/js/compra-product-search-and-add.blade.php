@@ -148,7 +148,7 @@
                 const costo = (product.precio_compra !== null && product.precio_compra !== undefined) ?
                     Number(product.precio_compra) : (product.precio_linea && product.precio_linea.precio_compra ? Number(product.precio_linea.precio_compra) : 0);
 
-                $('#detail-cantidad').val(1);
+                $('#detail-cantidad').val(product.precio_linea.cantidad);
                 $('#detail-costo').val(Number(costo).toFixed(2));
                 $('#detail-descuento').val(0.00);
                 $('#detail-stock-min').val(product.stock_min || 0);
@@ -237,14 +237,13 @@
             }
 
             function addProductToCompra(product) {
-                console.log('pruebaba' + product);
-                const cantidad = 1;
+                const cantidad = (product.cantidad !== undefined && product.cantidad !== null) ? Number(product.cantidad) : 1;
                 const costo = (product.precio_compra !== null && product.precio_compra !== undefined) ?
                     Number(product.precio_compra) :
                     (product.precio_linea && product.precio_linea.precio_compra ? Number(product
                         .precio_linea.precio_compra) : 0);
 
-                const descuento = 0;
+                const descuento = (product.descuento !== undefined && product.descuento !== null) ? Number(product.descuento) : 0;
                 const stockMin = product.stock_min || 0;
                 const stockMax = product.stock_max || 0;
                 const lote = product.lote || '';

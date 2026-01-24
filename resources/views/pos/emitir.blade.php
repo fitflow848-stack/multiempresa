@@ -187,14 +187,19 @@
         }
 
         function accept() {
+            const entrega = parseFloat(document.getElementById('entrega').value) || 0;
+            const deuda = Math.max(0, totalVenta - entrega);
+            
             const datosEmision = {
                 ticket: JSON.stringify(ticketData),
                 cliente: JSON.stringify(clienteData),
                 tipo_documento: tipoDocumentoSeleccionado,
                 tipo_pago_id: document.getElementById('medio-pago').value,
                 total: totalVenta,
-                entrega: parseFloat(document.getElementById('entrega').value) || 0,
+                entrega: entrega,
                 cambio: parseFloat(document.getElementById('cambio').textContent) || 0,
+                deuda: deuda,
+                genera_deuda: deuda > 0 ? 1 : 0,
                 observaciones: document.getElementById('observaciones').value,
                 guia_remision: document.getElementById('guia-remision').value,
                 guia_transporte: document.getElementById('guia-transporte').value,
@@ -223,14 +228,23 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert(
-                            `¡Venta guardada exitosamente!\nNúmero: ${data.data.numero_completo}\nTotal: S/ ${data.data.total}`);
+                        let mensaje = `¡Venta guardada exitosamente!\nNúmero: ${data.data.numero_completo}\nTotal: S/ ${data.data.total}`;
+                        
+                        // Si hay deuda, mostrarla en el mensaje
+                        if (datosEmision.deuda > 0) {
+                            mensaje += `\n\n⚠️ DEUDA GENERADA: S/ ${datosEmision.deuda.toFixed(2)}`;
+                            mensaje += `\nPago recibido: S/ ${datosEmision.entrega.toFixed(2)}`;
+                            mensaje += `\nCliente: ${clienteData ? JSON.parse(clienteData).nombre : 'Cliente Contado'}`;
+                        }
+                        
+                        alert(mensaje);
 
                         // Abrir PDF correspondiente en nueva pestaña (8cm para tickets)
                         const ventaId = data.data.venta_id;
-                        let urlA4 = '{{ route('pos.pdfVenta', ':id') }}'.replace(':id', ventaId);
-                        let url8cm = '{{ route('pos.pdfVenta8cm', ':id') }}'.replace(':id', ventaId);
-                        console.log(isProforma === '1' || isProforma === 1);
+                        const urlA4 = '{{ route('pos.pdf', ['id' => ':id', 'format' => 'default']) }}'.replace(
+                            ':id', ventaId);
+                        const url8cm = '{{ route('pos.pdf', ['id' => ':id', 'format' => '8cm']) }}'.replace(
+                            ':id', ventaId);
                         if (isProforma === '1' || isProforma === 1) {
                             urlA4 = '{{ route('cotizaciones.pdfCotizacion', ':id') }}'.replace(':id', ventaId);
                             url8cm = '{{ route('cotizaciones.pdfCotizacion8cm', ':id') }}'.replace(':id', ventaId);

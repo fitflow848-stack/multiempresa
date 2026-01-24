@@ -451,10 +451,11 @@ class ProductoController extends Controller
                 'id' => $producto->id,
                 'nombre' => $producto->nombre,
                 'unidad_medida_id' => $producto->unidad_medida_id ?? null,
-                'cb' => $linea->cb ?? $producto->codigo_barras,
                 'familia' => $producto->familia ? $producto->familia->nombre : null,
                 'lineas' => $producto->lineas->map(function ($linea) {
                     return [
+                        'cantidad' => $linea->cantidad,
+                        'cb' => $linea->cb,
                         'linea_id' => $linea->id,
                         'codigo_ref' => $linea->codigo_ref ?? '',
                         'presentacion' => $linea->presentacion,

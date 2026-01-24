@@ -344,7 +344,7 @@
                                 precio: precio,
                                 pvp: {{ $lote->pvp }},
                                 pvc: {{ $lote->pvc }},
-                                fecha_vencimiento: null,
+                                fecha_vencimiento: '{{ $lote->fecha_vencimiento }}',
                                 importe: cantidad * precio,
                                 producto_linea_id: {{ $lote->producto_linea_id ?? 'null' }}
                             });

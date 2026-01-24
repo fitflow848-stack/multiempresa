@@ -1761,7 +1761,7 @@
 
         // Función para obtener cliente contable existente
         function obtenerClienteContableExistente() {
-            fetch(`{{ route('pos.buscar-clientes') }}?term=CLIENTE CONTABLE`, {
+            fetch(`{{ route('clientes.buscar-pos') }}?term=CLIENTE CONTABLE`, {
                 method: 'GET',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')

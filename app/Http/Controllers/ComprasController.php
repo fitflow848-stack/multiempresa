@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Producto;
 use App\Models\ProductoLinea;
+use App\Models\Sucursal;
 
 class ComprasController extends Controller
 {
@@ -221,7 +222,24 @@ class ComprasController extends Controller
      */
     public function success(Compra $compra)
     {
-        return view('compras.success', compact('compra'));
+        $almacenes = Sucursal::where('company_id', Auth::user()->company_id)->get();
+
+        return view('compras.success', compact('compra', 'almacenes'));
+    }
+
+    /**
+     * Update the selected local_destino for a compra (AJAX)
+     */
+    public function updateLocalDestino(Request $request, Compra $compra)
+    {
+        $data = $request->validate([
+            'local_destino' => ['nullable', 'string']
+        ]);
+
+        $compra->local_destino = $data['local_destino'] ?? null;
+        $compra->save();
+
+        return response()->json(['success' => true]);
     }
 
     /**

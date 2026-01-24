@@ -207,7 +207,7 @@
                         <th style="width: 10%;">Documento</th>
                         <th style="width: 35%;">Cliente</th>
                         <th style="width: 15%;">Teléfono</th>
-                        <th style="width: 15%;">Crédito</th>
+                        <th style="width: 15%;">Deuda</th>
                         <th style="width: 8%;">Estado</th>
                         <th style="width: 12%;">Acciones</th>
                     </tr>
@@ -373,7 +373,12 @@
                     </td>
                     <td>${cliente.telefono || '-'}</td>
                     <td class="${cliente.debe > 0 ? 'text-danger' : 'text-success'}">
-                        S/ ${parseFloat(cliente.debe).toFixed(2)}
+                        ${cliente.debe > 0 ? 
+                            `<a href="/deudas?cliente_id=${cliente.id}" style="color: inherit; text-decoration: none;" title="Ver deudas del cliente">
+                                <i class="fa fa-credit-card"></i> S/ ${parseFloat(cliente.debe).toFixed(2)}
+                            </a>` :
+                            `S/ ${parseFloat(cliente.debe).toFixed(2)}`
+                        }
                     </td>
                     <td>
                         <span class="badge ${cliente.estado === 'Activo' ? 'badge-success' : 'badge-danger'}">

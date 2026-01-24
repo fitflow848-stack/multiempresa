@@ -43,55 +43,29 @@
     <!--? Config:  Mandatory theme config file contain global vars & default theme options, Set your preferred theme option in this file.  -->
     <script src="{{ asset('assets/js/config.js') }}"></script>
 </head>
+<style>
+    /* Ensure SweetAlert2 appears above Bootstrap modals */
+    .swal2-container {
+        z-index: 10000 !important;
+    }
 
-<body>
-    <style>
-        /* Ensure SweetAlert2 appears above Bootstrap modals */
-        .swal2-container {
-            z-index: 10000 !important;
-        }
+    .swal2-popup {
+        z-index: 10001 !important;
+    }
 
-        .swal2-popup {
-            z-index: 10001 !important;
-        }
+    /* Fix for backdrop */
+    .swal2-backdrop-show {
+        z-index: 9999 !important;
+    }
+</style>
+@stack('styles')
+<body class="bg-body"> @include('include.sidebar') 
 
-        /* Fix for backdrop */
-        .swal2-backdrop-show {
-            z-index: 9999 !important;
-        }
-    </style>
-    <!-- Layout wrapper -->
-    <div class="layout-wrapper layout-content-navbar">
-        <div class="layout-container">
-            <!-- Menu -->
-            @include('include.sidebar')
-            <!-- / Menu -->
-
-            <!-- Layout container -->
-            <div class="layout-page">
-                <!-- Header dinámico del módulo -->
-                @include('components.module-header')
-                <!-- / Navbar -->
-
-                <!-- Content wrapper -->
-                <div class="content-wrapper">
-                    <!-- Content -->
-
-                    <div class="container-xxl flex-grow-1 container-p-y">
-                        <div class="row">
-                            @yield('content')
-                        </div>
-                        <!-- / Content -->
-
-                        <div class="content-backdrop fade"></div>
-                    </div>
-                    <!-- Content wrapper -->
-                </div>
-                <!-- / Layout page -->
+    <div class="layout-wrapper">
+        <div class="content-wrapper">
+            <div class="flex-grow-1">
+                @yield('content')
             </div>
-
-            <!-- Overlay -->
-            <div class="layout-overlay layout-menu-toggle"></div>
         </div>
     </div>
     <!-- / Layout wrapper -->
@@ -113,6 +87,7 @@
 
     <!-- Page JS -->
     <script src="{{ asset('assets/js/dashboards-analytics.js') }}"></script>
+    @stack('scripts')
 </body>
 
 </html>

@@ -41,11 +41,22 @@ class Cliente extends Model
         return $this->hasMany('App\Models\Venta');
     }
 
+    public function deudas()
+    {
+        return $this->hasMany('App\Models\Deuda');
+    }
+
     public function getDebeAttribute()
     {
-        // Calcular el monto que debe el cliente
-        // Esto se puede implementar basado en las ventas pendientes
-        return 0.00;
+        // Si ya existe la relación cargada con eager loading, usarla
+        if ($this->relationLoaded('deudas')) {
+            return $this->deudas
+                ->whereIn('estado', ['pendiente', 'parcial'])
+                ->sum('monto_deuda');
+        }
+        
+        // De lo contrario, hacer la consulta directa
+        return $this->deudas()->whereIn('estado', ['pendiente', 'parcial'])->sum('monto_deuda') ?: 0;
     }
 
     public function scopeActivos($query)

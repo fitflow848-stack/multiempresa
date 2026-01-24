@@ -18,7 +18,7 @@ class RecibirProductoController extends Controller
     {
         $user = Auth::user();
         $company = Company::find($user->company_id);
-        $compras = Compra::with(['proveedor', 'usuario'])->where('recibido', 0)->get();
+        $compras = Compra::with(['proveedor', 'usuario', 'almacen'])->where('recibido', 0)->get();
         return view('recibir-productos.index', compact('user', 'company', 'compras'));
     }
 

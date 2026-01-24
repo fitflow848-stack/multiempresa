@@ -2,112 +2,137 @@
 
 @section('title', 'Gestión de Compras')
 @section('page-title', 'Gestión de Compras')
-@section('breadcrumb')
-    <li class="breadcrumb-item">Área Compras</li>
-    <li class="breadcrumb-item active">Listado</li>
-@endsection
-
-<link rel="stylesheet" href="{{ asset('css/modules-common.css') }}">
 
 @section('content')
+    <style>
+        :root {
+            --primary-soft: #eef2ff;
+            --accent-color: #4f46e5;
+        }
 
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-0">Compras</h1>
-            <small class="text-muted">Gestión y seguimiento de compras</small>
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+        }
+
+        .stat-card {
+            transition: transform 0.2s;
+            border: none;
+            border-radius: 12px;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.02);
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-completado {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-pendiente {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+
+        .status-cancelado {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .form-control,
+        .form-select {
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            padding: 0.6rem 1rem;
+        }
+
+        .form-control:focus {
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+            border-color: var(--accent-color);
+        }
+    </style>
+
+    <div class="container-fluid py-4">
+        <div class="row align-items-center mb-4">
+            <div class="col-md-6">
+                <h2 class="fw-bold text-dark mb-1">Panel de Compras</h2>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item"><a href="#" class="text-decoration-none">Área Compras</a></li>
+                        <li class="breadcrumb-item active">Listado</li>
+                    </ol>
+                </nav>
+            </div>
+            <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                <a href="{{ route('compras.create') }}"
+                    class="btn btn-primary px-4 py-2 shadow-sm bg-gradient-quote border-0">
+                    <i class="fas fa-plus-circle me-2"></i>Nueva Compra
+                </a>
+            </div>
         </div>
-        <a href="{{ route('compras.create') }}" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>Nueva Compra
-        </a>
-    </div>
 
-    <!-- Filtros -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="GET" action="{{ route('compras.index') }}" class="row g-3">
+        <div class="table-container shadow-sm">
+            <div class="row g-3 mb-4 pb-3 border-bottom">
                 <div class="col-md-3">
-                    <label class="form-label">Desde</label>
-                    <input type="date" name="fecha_desde" id="fecha-desde" class="form-control" value="{{ request('fecha_desde') }}">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Hasta</label>
-                    <input type="date" name="fecha_hasta" id="fecha-hasta" class="form-control" value="{{ request('fecha_hasta') }}">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Proveedor</label>
-                    <input type="text" name="proveedor" id="proveedor-filter" class="form-control" placeholder="Buscar proveedor..." value="{{ request('proveedor') }}">
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-end-0 text-muted"><i
+                                class="fas fa-search"></i></span>
+                        <input type="text" id="proveedor-filter" class="form-control border-start-0"
+                            placeholder="Buscar proveedor...">
+                    </div>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label">Estado</label>
-                    <select name="estado" id="estado-filter" class="form-select">
-                        <option value="">Todos</option>
-                        <option value="pendiente" {{ request('estado') == 'pendiente' ? 'selected' : '' }}>Pendiente</option>
-                        <option value="completado" {{ request('estado') == 'completado' ? 'selected' : '' }}>Completado</option>
-                        <option value="cancelado" {{ request('estado') == 'cancelado' ? 'selected' : '' }}>Cancelado</option>
+                    <input type="date" id="fecha-desde" class="form-control" title="Fecha inicial">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" id="fecha-hasta" class="form-control" title="Fecha final">
+                </div>
+                <div class="col-md-2">
+                    <select id="estado-filter" class="form-select">
+                        <option value="">Todos los estados</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="completado">Completado</option>
+                        <option value="cancelado">Cancelado</option>
                     </select>
                 </div>
-                <div class="col-md-1 d-grid">
-                    <label class="form-label">&nbsp;</label>
-                    <button type="submit" class="btn btn-outline-primary">Filtrar</button>
+                <div class="col-md-3 text-end">
+                    <button id="limpiar-filtros" class="btn btn-light px-3 me-2">
+                        <i class="fas fa-undo"></i>
+                    </button>
+                    <button id="aplicar-filtros" class="btn btn-dark px-4">
+                        Filtrar Resultados
+                    </button>
                 </div>
-            </form>
-        </div>
-    </div>
+            </div>
 
-    <div class="card">
-        <div class="card-body">
             <div class="table-responsive">
-                <table id="compras-table" class="table table-hover" style="width:100%">
-                    <thead class="table-light">
+                <table id="compras-table" class="table table-hover align-middle" style="width:100%">
+                    <thead class="bg-light">
                         <tr>
-                            <th class="text-center">N°</th>
-                            <th class="text-center">Fecha</th>
-                            <th>Proveedor</th>
-                            <th class="text-center">Total</th>
-                            <th class="text-center">Estado</th>
-                            <th class="text-center">Acciones</th>
+                            <th class="border-0">ID</th>
+                            <th class="border-0">FECHA EMISIÓN</th>
+                            <th class="border-0">PROVEEDOR</th>
+                            <th class="border-0 text-center">TOTAL</th>
+                            <th class="border-0 text-center">ESTADO</th>
+                            <th class="border-0 text-center">ACCIONES</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {{-- DataTable carga por AJAX --}}
-                    </tbody>
+                    <tbody></tbody>
                 </table>
-            </div>
-        </div>
-    </div>
-
-    <div class="row mt-4">
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <small class="text-muted">Total Compras</small>
-                    <div class="h5" id="total-compras">0</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <small class="text-muted">Pendientes</small>
-                    <div class="h5" id="compras-pendientes">0</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <small class="text-muted">Completadas</small>
-                    <div class="h5" id="compras-completadas">0</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <small class="text-muted">Valor Total</small>
-                    <div class="h5" id="valor-total">S/. 0.00</div>
-                </div>
             </div>
         </div>
     </div>
@@ -261,4 +286,5 @@
             $('#fecha-desde').val(haceUnMes.toISOString().split('T')[0]);
         });
     </script>
+
 @endsection

@@ -3,99 +3,178 @@
 @section('title', 'Inventario Stock Almacén')
 @section('page-title', 'Inventario Stock Almacén')
 
-<link rel="stylesheet" href="{{ asset('css/modules-common.css') }}">
-
 @section('content')
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-0">Inventario Stock Almacén</h1>
-            <small class="text-muted">Gestión de existencias y ajustes</small>
+    <style>
+        :root {
+            --primary-soft: #eef2ff;
+            --accent-color: #6366f1;
+        }
+
+        .bg-gradient-inventory {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        }
+
+        .stat-card {
+            border: none;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.02);
+        }
+
+        /* Estilos para Stock */
+        .badge-stock {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .stock-high {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .stock-low {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .product-cell {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .product-title {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 2px;
+        }
+
+        .product-meta {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .form-control,
+        .form-select {
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            padding: 0.65rem 1rem;
+        }
+
+        .form-control:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+    </style>
+
+    <div class="container-fluid py-4">
+        <div class="row align-items-center mb-4">
+            <div class="col-md-6">
+                <h2 class="fw-bold text-dark mb-1">Control de Inventario</h2>
+                <p class="text-muted mb-0">Monitorización de activos y existencias en tiempo real</p>
+            </div>
+            <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                <a href="{{ route('almacen.alta-rapida') }}"
+                    class="btn btn-primary px-4 py-2 shadow-sm bg-gradient-inventory border-0">
+                    <i class="fas fa-bolt me-2"></i>Alta Rápida de Stock
+                </a>
+            </div>
         </div>
-        <div>
-            <a href="{{ route('almacen.alta-rapida') }}" class="btn btn-primary">
-                <i class="fas fa-plus me-2"></i>Alta Rápida
-            </a>
-        </div>
-    </div>
-
-    <!-- Filtros -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="GET" action="{{ route('almacen.index') }}" class="row g-3">
+        <div class="table-container shadow-sm">
+            <form method="GET" action="{{ route('almacen.index') }}" class="row g-3 mb-4 border-bottom pb-4">
                 <div class="col-md-3">
-                    <label class="form-label">Local</label>
-                    <select name="sucursal" class="form-select">
-                        <option value="">Todos</option>
-                        @if (isset($sucursales))
-                            @foreach ($sucursales as $s)
-                                <option value="{{ $s->id }}" {{ request('sucursal') == $s->id ? 'selected' : '' }}>{{ $s->nombre }}</option>
-                            @endforeach
-                        @endif
-                    </select>
-                </div>
-
-                <div class="col-md-3">
-                    <label class="form-label">Producto</label>
-                    <input type="text" name="producto" class="form-control" placeholder="Nombre o código" value="{{ request('producto') }}">
-                </div>
-
-                <div class="col-md-2">
-                    <label class="form-label">Existencias</label>
-                    <select name="existencias" class="form-select">
-                        <option value="">Todos</option>
-                        <option value="con" {{ request('existencias')=='con' ? 'selected' : '' }}>Con Stock</option>
-                        <option value="sin" {{ request('existencias')=='sin' ? 'selected' : '' }}>Sin Stock</option>
-                    </select>
-                </div>
-
-                <div class="col-md-2">
-                    <label class="form-label">Código</label>
-                    <input type="text" name="codigo" class="form-control" placeholder="Código de barras" value="{{ request('codigo') }}">
-                </div>
-
-                <div class="col-md-2">
-                    <label class="form-label">&nbsp;</label>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-outline-primary">Filtrar</button>
+                    <div class="input-group">
+                        <span class="input-group-text bg-transparent border-end-0 text-muted"><i
+                                class="fas fa-search"></i></span>
+                        <input type="text" name="producto" class="form-control border-start-0"
+                            placeholder="Producto o código..." value="{{ request('producto') }}">
                     </div>
                 </div>
+                <div class="col-md-2">
+                    <select name="sucursal" class="form-select">
+                        <option value="">Todos los locales</option>
+                        @foreach ($sucursales ?? [] as $s)
+                            <option value="{{ $s->id }}" {{ request('sucursal') == $s->id ? 'selected' : '' }}>
+                                {{ $s->nombre }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="existencias" class="form-select">
+                        <option value="">Stock: Todos</option>
+                        <option value="con" {{ request('existencias') == 'con' ? 'selected' : '' }}>Con Stock</option>
+                        <option value="sin" {{ request('existencias') == 'sin' ? 'selected' : '' }}>Sin Stock</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <input type="text" name="codigo" class="form-control" placeholder="EAN / SKU"
+                        value="{{ request('codigo') }}">
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-dark w-100 fw-bold">Filtrar</button>
+                    <a href="{{ route('almacen.index') }}" class="btn btn-light border" title="Limpiar"><i
+                            class="fas fa-sync"></i></a>
+                </div>
             </form>
-        </div>
-    </div>
 
-    <div class="card">
-        <div class="card-body">
-            @if(isset($productos) && $productos->count() > 0)
+            @if (isset($productos) && $productos->count() > 0)
                 <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead class="table-light">
+                    <table class="table table-hover align-middle">
+                        <thead class="bg-light">
                             <tr>
-                                <th>#</th>
-                                <th>Almacén</th>
-                                <th>Producto</th>
-                                <th class="text-center">Stock</th>
-                                <th class="text-center">Costo</th>
-                                <th class="text-center">PVP</th>
-                                <th class="text-center">Acciones</th>
+                                <th class="border-0 text-muted py-3" style="font-size: 0.8rem;">PRODUCTO / INFO</th>
+                                <th class="border-0 text-muted py-3" style="font-size: 0.8rem;">LOCAL</th>
+                                <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">COSTO</th>
+                                <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">VENTA (PVP)</th>
+                                <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">STOCK ACTUAL
+                                </th>
+                                <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">OPERACIONES
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($productos as $i => $p)
+                            @foreach ($productos as $p)
                                 <tr>
-                                    <td class="fw-bold">{{ $i + 1 }}</td>
-                                    <td>{{ $p->almacen_nombre ?? 'Principal' }}</td>
                                     <td>
-                                        <div class="fw-semibold">{{ $p->producto ?? '-' }}</div>
-                                        @if(isset($p->codigo))
-                                            <small class="text-muted">Código: {{ $p->codigo }}</small>
-                                        @endif
+                                        <div class="product-cell">
+                                            <span class="product-title">{{ $p->producto ?? '-' }}</span>
+                                            <span class="product-meta"><i class="fas fa-barcode me-1"></i>
+                                                {{ $p->codigo ?? 'N/A' }}</span>
+                                        </div>
                                     </td>
-                                    <td class="text-center {{ ($p->existencias ?? 0) > 0 ? 'text-success' : 'text-danger' }} fw-bold">{{ number_format($p->existencias ?? 0, 2) }}</td>
-                                    <td class="text-center">{{ isset($p->costo) ? 'S/. '.number_format($p->costo,2) : '-' }}</td>
-                                    <td class="text-center text-success fw-bold">{{ isset($p->pvp) ? 'S/. '.number_format($p->pvp,2) : '-' }}</td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border"><i class="fas fa-store me-1"></i>
+                                            {{ $p->almacen_nombre ?? 'Principal' }}</span>
+                                    </td>
+                                    <td class="text-center fw-semibold text-muted">
+                                        {{ isset($p->costo) ? 'S/. ' . number_format($p->costo, 2) : '-' }}
+                                    </td>
+                                    <td class="text-center fw-bold text-success">
+                                        {{ isset($p->pvp) ? 'S/. ' . number_format($p->pvp, 2) : '-' }}
+                                    </td>
                                     <td class="text-center">
-                                        <a href="{{ route('almacen.ajustar-existencias', $p->producto_id ?? $p->id) }}" class="btn btn-sm btn-outline-secondary">Ajustar</a>
+                                        <span
+                                            class="badge-stock {{ ($p->existencias ?? 0) > 0 ? 'stock-high' : 'stock-low' }}">
+                                            {{ number_format($p->existencias ?? 0, 2) }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="{{ route('almacen.ajustar-existencias', $p->id ?? $p->id) }}"
+                                            class="btn btn-sm btn-white border shadow-sm px-3 rounded-pill text-primary fw-bold">
+                                            <i class="fas fa-sliders-h me-1"></i> Ajustar
+                                        </a>
                                     </td>
                                 </tr>
                             @endforeach
@@ -103,55 +182,24 @@
                     </table>
                 </div>
 
-                <div class="d-flex justify-content-center mt-4">
-                    {{ $productos->withQueryString()->links() }}
+                <div class="d-flex justify-content-between align-items-center mt-4">
+                    <div class="text-muted small">
+                        Mostrando {{ $productos->firstItem() }} al {{ $productos->lastItem() }} de
+                        {{ $productos->total() }} registros
+                    </div>
+                    <div>
+                        {{ $productos->withQueryString()->links() }}
+                    </div>
                 </div>
             @else
                 <div class="text-center py-5">
-                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">No se encontraron productos</h5>
-                    <p class="text-muted">Ajusta los filtros o registra productos nuevos.</p>
-                    <a href="{{ route('almacen.alta-rapida') }}" class="btn btn-primary">
-                        <i class="fas fa-plus me-2"></i>Alta Rápida
-                    </a>
+                    <div class="mb-3">
+                        <i class="fas fa-search fa-4x text-light"></i>
+                    </div>
+                    <h4 class="text-muted fw-light">Sin coincidencias para la búsqueda</h4>
+                    <a href="{{ route('almacen.index') }}" class="btn btn-primary mt-3">Restablecer filtros</a>
                 </div>
             @endif
-        </div>
-    </div>
-
-    <!-- Resumen simple -->
-    <div class="row mt-4">
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <small class="text-muted">Total Productos</small>
-                    <div class="h5">{{ isset($productos) ? $productos->total() : 0 }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <small class="text-muted">Con Stock</small>
-                    <div class="h5">{{ isset($conStock) ? $conStock : (isset($productos) ? $productos->where('existencias', '>', 0)->count() : 0) }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <small class="text-muted">Sin Stock</small>
-                    <div class="h5">{{ isset($sinStock) ? $sinStock : (isset($productos) ? $productos->where('existencias', '<=', 0)->count() : 0) }}</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-body">
-                    <small class="text-muted">Valor Total</small>
-                    <div class="h5">S/. {{ isset($valorTotal) ? number_format($valorTotal,2) : (isset($productos) ? number_format($productos->sum(function($p){ return ($p->existencias ?? 0) * ($p->costo ?? 0); }),2) : '0.00') }}</div>
-                </div>
-            </div>
         </div>
     </div>
 
