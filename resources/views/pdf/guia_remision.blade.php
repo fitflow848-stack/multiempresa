@@ -6,8 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Guía de Remisión #{{ $guia->id ?? '' }}</title>
     <style>
+        /* Reservamos espacio inferior para el footer fijo */
         @page {
-            margin: 0.8cm;
+            margin: 0.8cm 0.8cm 3.5cm 0.8cm; /* top right bottom left */
         }
 
         body {
@@ -15,11 +16,15 @@
             font-size: 9px;
             color: #1a1a1a;
             line-height: 1.2;
+            margin: 0;
+            padding: 0;
         }
 
         /* Contenedor principal */
         .container {
             width: 100%;
+            box-sizing: border-box;
+            padding-bottom: 6px; /* espacio adicional para evitar que contenido quede pegado al final */
         }
 
         /* Encabezado: Logo - Datos Empresa - RUC Box */
@@ -82,6 +87,7 @@
         .data-table {
             width: 100%;
             border: none;
+            table-layout: fixed;
         }
 
         .data-table td {
@@ -98,7 +104,7 @@
             width: 5px;
         }
 
-        /* Tabla de Productos (Estilo Mio Cane) */
+        /* Tabla de Productos */
         .items-table {
             width: 100%;
             border-collapse: collapse;
@@ -124,29 +130,116 @@
             text-align: left !important;
         }
 
-        /* Secciones inferiores */
-        .two-cols {
-            width: 100%;
-            display: table;
-            table-layout: fixed;
+        /* Bloque que estará justo encima del footer */
+        .bottom-info {
+            margin-top: 8px;
+            margin-bottom: 6px;
         }
 
-        .col {
-            display: table-cell;
-            vertical-align: top;
+        .bottom-info .observ-box {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 8px;
+            min-height: 50px;
+            box-sizing: border-box;
+            font-size: 9px;
         }
 
-        .qr-section {
-            width: 100px;
+        .bottom-info .representacion {
             text-align: center;
-            padding-left: 10px;
-        }
-
-        .footer-note {
-            margin-top: 10px;
             font-size: 8px;
             color: #555;
+            margin-top: 6px;
+        }
+
+        /* Footer fijo */
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3.2cm; /* ajustar si necesitas más/menos espacio */
+            padding: 8px 0.8cm 6px 0.8cm;
+            box-sizing: border-box;
+            background: transparent;
+            font-size: 9px;
+        }
+
+        /* Contenido interno del footer con layout tipo tabla (compatible con Dompdf) */
+        .footer-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .footer-table td {
+            vertical-align: top;
+            padding: 6px;
+        }
+
+        /* caja del QR */
+        .footer-qr {
+            width: 110px;
+        }
+
+        .qr-box {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 10px;
             text-align: center;
+            height: 100px;
+            box-sizing: border-box;
+        }
+
+        .qr-box img {
+            width: 80px;
+            height: 80px;
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* caja central (observaciones, destinatarios) dentro del footer */
+        .footer-middle {
+            padding: 0 10px;
+        }
+
+        .footer-middle .inner-box {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 8px;
+            min-height: 100px;
+            box-sizing: border-box;
+        }
+
+        /* caja de firma */
+        .footer-sign {
+            width: 150px;
+            text-align: center;
+        }
+
+        .footer-sign .sign-box {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 8px;
+            min-height: 100px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .footer-sign .sign-title {
+            margin-top: 60px;
+            border-top: 1px solid #333;
+            padding-top: 5px;
+            font-weight: bold;
+            font-size: 10px;
+            color: #333;
+        }
+
+        .footer-bottom-line {
+            width: 100%;
+            text-align: center;
+            font-size: 8px;
+            color: #666;
+            margin-top: 4px;
         }
 
         .clear {
@@ -187,13 +280,20 @@
         <div class="rounded-box">
             <table class="data-table">
                 <tr>
+                    <td class="label">Emisor</td>
+                    <td class="separator">:</td>
+                    <td>{{ $empresa->razon_social ?? '-' }}</td>
+                    <td class="label">RUC</td>
+                    <td class="separator">:</td>
+                    <td>{{ $empresa->ruc ?? '-' }}</td>
+                </tr>
+                <tr>
                     <td class="label">Punto de Partida</td>
                     <td class="separator">:</td>
                     <td>{{ $guia->direccion_partida ?? '-' }}</td>
                     <td class="label">Fecha Traslado</td>
                     <td class="separator">:</td>
-                    <td>{{ optional($guia)->fecha_traslado ? \Carbon\Carbon::parse($guia->fecha_traslado)->format('d/m/Y') : '-' }}
-                    </td>
+                    <td>{{ optional($guia)->fecha_traslado ? \Carbon\Carbon::parse($guia->fecha_traslado)->format('d/m/Y') : '-' }}</td>
                 </tr>
                 <tr>
                     <td class="label">Punto de Llegada</td>
@@ -204,32 +304,6 @@
                     <td>{{ $guia->motivo_traslado ?? '-' }}</td>
                 </tr>
             </table>
-        </div>
-
-        <div class="two-cols">
-            <div class="col" style="width: 75%;">
-                <div class="rounded-box" style="margin-right: 5px;">
-                    <table class="data-table">
-                        <tr>
-                            <td class="label">Destinatario</td>
-                            <td class="separator">:</td>
-                            <td>{{ $guia->razon_llegada ?? ($guia->destino ?? '-') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="label">RUC/DNI</td>
-                            <td class="separator">:</td>
-                            <td>{{ $guia->ruc_llegada ?? '-' }}</td>
-                        </tr>
-                    </table>
-                </div>
-            </div>
-            <div class="col qr-section">
-                @if (isset($qrCode))
-                    <div style="width: 80px; height: 80px; margin: 0 auto;">{!! $qrCode !!}</div>
-                @elseif(isset($qr_image))
-                    <img src="{{ $qr_image }}" style="width: 80px;">
-                @endif
-            </div>
         </div>
 
         <table class="items-table">
@@ -263,64 +337,62 @@
             </tbody>
         </table>
 
-        <div class="rounded-box" style="margin-top: 10px;">
-            <strong>Observaciones:</strong><br>
-            {{ $guia->observacion ?? 'Sin observaciones adicionales' }}
-        </div>
-
-        <div class="footer-note">
-            Representación impresa de la Guía de Remisión Electrónica remitente.<br>
-            Consulte la validez de este documento en el portal de la SUNAT.
-        </div>
+        
     </div>
-    <div style="width: 100%; margin-top: 15px; font-family: Arial, sans-serif;">
-        <table style="width: 100%; border-collapse: collapse;">
+
+    <!-- Footer fijo -->
+    <div class="footer" role="contentinfo" aria-label="footer">
+        <!-- Bloque que estará encima del footer -->
+        <div class="bottom-info">
+            <div class="observ-box">
+                <strong>Observaciones:</strong><br>
+                <span style="color: #444;">{!! nl2br(e($guia->observacion ?? 'Sin observaciones adicionales')) !!}</span>
+            </div>
+
+            <div class="representacion">
+                Representación impresa de la Guía de Remisión Electrónica remitente.<br>
+                Consulte la validez de este documento en el portal de la SUNAT.
+            </div>
+        </div>
+        <table class="footer-table">
             <tr>
-                <td style="width: 110px; vertical-align: top;">
-                    <div style="border: 1px solid #ccc; border-radius: 8px; padding: 10px; text-align: center;">
-                        <div style="width: 90px; height: 90px;">' . $qrSvg . '</div>
+                <td class="footer-qr">
+                    <div class="qr-box">
+                        @if (!empty($qr_image))
+                            <img src="{{ $qr_image }}" alt="QR">
+                        @endif
                     </div>
                 </td>
 
-                <td style="padding: 0 10px; vertical-align: top;">
-                    <div
-                        style="border: 1px solid #ccc; border-radius: 8px; padding: 8px; min-height: 100px; position: relative; font-size: 9px;">
+                <td class="footer-middle">
+                    <div class="inner-box">
                         <div style="text-align: right; margin-bottom: 5px;">
-                            <span
-                                style="background: #006BB6; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold;">
+                            <span style="background: #006BB6; color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold;">
                                 Peso bruto (Kg): {{ $guia->peso_bruto }}
                             </span>
                         </div>
 
-                        <div style="margin-bottom: 8px;">
-                            <strong>Observaciones:</strong><br>
-                            <span style="color: #444;">{!! nl2br($guia->observacion) !!}</span>
-                        </div>
-
-                        <div>
+                        <div style="margin-bottom: 6px;">
                             <strong>Destinatarios:</strong><br>
                             <span style="color: #444; font-size: 8px;">{!! $destinatariosHtml !!}</span>
                         </div>
+
                     </div>
                 </td>
 
-                <td style="width: 150px; vertical-align: top;">
-                    <div
-                        style="border: 1px solid #ccc; border-radius: 8px; padding: 8px; min-height: 100px; text-align: center;">
-                        <div
-                            style="margin-top: 70px; border-top: 1px solid #333; padding-top: 5px; font-weight: bold; font-size: 10px; color: #333;">
-                            RECIBÍ CONFORME
-                        </div>
+                <td class="footer-sign">
+                    <div class="sign-box">
+                        <div class="sign-title">RECIBÍ CONFORME</div>
                     </div>
                 </td>
             </tr>
         </table>
 
-        <div
-            style="width: 100%; margin-top: 10px; text-align: center; font-size: 8px; color: #666; border-top: 0.5px solid #eee; padding-top: 5px;">
-            <strong>{{ $empresa->website }}</strong> -  {{ $empresa->direccion_fiscal }}
+        <div class="footer-bottom-line">
+            <strong>{{ $empresa->website }}</strong> - {{ $empresa->direccion_fiscal }}
         </div>
     </div>
+
 </body>
 
 </html>

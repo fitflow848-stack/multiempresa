@@ -20,8 +20,14 @@ class PdfController extends Controller
         $url = env('APP_URL') . '/guia/remision/' . $guia->id;
         $user = Auth::user();
         $empresa = Company::where('id', $user->company_id)->first();
-        // Generar código QR como SVG (no usa ImageMagick)
-        $qrSvg = QrCode::size(160)->generate($url);
+
+        // Generar código QR como PNG
+        $image = QrCode::format('png')
+            ->size(150)
+            ->margin(1)
+            ->generate($url);
+
+        $qr_image = 'data:image/png;base64,' . base64_encode($image);
 
         // Construir bloque de destinatarios
         $destinatariosHtml = '';
@@ -47,28 +53,20 @@ class PdfController extends Controller
         $data = [
             'guia' => $guia,
             'productos' => $productos,
-            'qrCode' => $qrSvg,
+            // Cambiado: ahora la vista recibirá $qr_image
+            'qr_image' => $qr_image,
             'destinatarios' => $destinatarios,
             'destinatariosHtml' => $destinatariosHtml,
             'empresa' => $empresa,
             'logo' => $logoBase64,
         ];
 
-        // Renderizar la vista principal
         $html = view('pdf.guia_remision', $data)->render();
 
-        // Usaremos Dompdf para generar el PDF
         $dompdf = new Dompdf();
-
-        // Agregar footer al HTML principal
-        $htmlWithFooter = $html;
-
-        // Cargar en Dompdf
-        $dompdf->loadHtml($htmlWithFooter);
+        $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
-
-        // Enviar al navegador inline
         $dompdf->stream('guia_remision.pdf', ['Attachment' => false]);
     }
 }
