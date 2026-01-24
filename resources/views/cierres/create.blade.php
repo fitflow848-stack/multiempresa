@@ -17,11 +17,33 @@
 
 	<form action="{{ route('cierre-caja.store') }}" method="POST" id="arqueoForm" class="mt-4">
 		@csrf
+		
+		@if(isset($ultimoCierre))
+			<div class="alert alert-info alert-dismissible fade show" role="alert">
+				<i class="fas fa-info-circle me-2"></i>
+				<strong>Saldo inicial automático:</strong> Se ha cargado el monto de cierre de tu último arqueo 
+				({{ $ultimoCierre->fecha_cierre->format('d/m/Y H:i') }}) como saldo inicial: 
+				<strong>S/ {{ number_format($ultimoCierre->monto_cierre, 2) }}</strong>
+				<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+			</div>
+		@else
+			<div class="alert alert-warning alert-dismissible fade show" role="alert">
+				<i class="fas fa-exclamation-triangle me-2"></i>
+				<strong>Primer arqueo:</strong> No se encontraron cierres previos. El saldo inicial se establece en S/ 0.00
+				<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+			</div>
+		@endif
+		
 		<div class="row">
 			<div class="col-md-6">
 				<div class="mb-2">
-					<label class="form-label small fw-bold">Saldo Inicial</label>
-					<input type="number" step="0.01" name="monto_apertura" id="saldo_inicial" class="form-control form-control-sm" value="0.00">
+					<label class="form-label small fw-bold">
+						Saldo Inicial
+						@if(isset($ultimoCierre))
+							<small class="text-muted">(último cierre: {{ $ultimoCierre->fecha_cierre->format('d/m/Y H:i') }})</small>
+						@endif
+					</label>
+					<input type="number" step="0.01" name="monto_apertura" id="saldo_inicial" class="form-control form-control-sm" value="{{ $saldoInicial ?? '0.00' }}">
 				</div>
 
 				<div class="mb-2">

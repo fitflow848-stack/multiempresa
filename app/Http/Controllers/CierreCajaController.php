@@ -21,7 +21,16 @@ class CierreCajaController extends Controller
 
     public function create()
     {
-        return view('cierres.create');
+        // Obtener el último cierre del usuario actual que esté completado
+        $ultimoCierre = CierreCaja::where('user_id', auth()->id())
+            ->whereNotNull('fecha_cierre')
+            ->orderBy('fecha_cierre', 'desc')
+            ->first();
+        
+        // El saldo inicial será el monto de cierre del último arqueo, o 0 si no hay cierres previos
+        $saldoInicial = $ultimoCierre ? $ultimoCierre->monto_cierre : 0.00;
+        
+        return view('cierres.create', compact('saldoInicial', 'ultimoCierre'));
     }
 
     public function store(Request $request)
