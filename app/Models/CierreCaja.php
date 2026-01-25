@@ -24,6 +24,10 @@ class CierreCaja extends Model
         'observaciones',
     ];
 
+    protected $casts = [
+        'fecha_cierre' => 'datetime',
+    ];
+
     /**
      * Relación con el usuario que realiza el cierre
      */

@@ -1,80 +1,162 @@
-<nav id="layout-menu" class="layout-menu-horizontal menu-horizontal menu bg-white border-bottom">
-    <div class="container-xxl d-flex align-items-center justify-content-between w-100">
+<style>
+    /* Remover el CSS problemático y usar mejor approach */
+    .navbar-nav {
+        gap: 0.25rem;
+    }
+
+    .nav-link {
+        white-space: nowrap;
+        font-size: 0.9rem;
+        padding: 0.5rem 0.75rem !important;
+    }
+
+    /* Ajustar para pantallas medianas */
+    @media (min-width: 1200px) and (max-width: 1400px) {
+        .nav-link {
+            font-size: 0.85rem;
+            padding: 0.5rem 0.6rem !important;
+        }
         
-        <div class="d-flex align-items-center">
-            <a href="{{ route('principal.index') }}" class="app-brand-link me-3">
-                <span class="app-brand-text demo menu-text fw-bolder" 
-                      style="color: #566a7f; font-size: 1.2rem;">Wolvix</span>
-            </a>
-        </div>
+        .nav-link i {
+            font-size: 0.9rem;
+        }
+    }
 
-        <ul class="menu-inner list-unstyled m-0 flex-grow-1">
-            <li class="menu-item {{ request()->is('principal*') ? 'active' : '' }}">
-                <a href="{{ route('principal.index') }}" class="menu-link">
-                    <i class="menu-icon tf-icons bx bx-home-circle"></i>
-                    <div>Dashboard</div>
-                </a>
-            </li>
+    /* Para pantallas muy grandes */
+    @media (min-width: 1400px) {
+        .navbar-nav {
+            gap: 0.5rem;
+        }
+    }
 
-            <li class="menu-item {{ request()->is('compras*') ? 'active' : '' }}">
-                <a href="{{ route('compras.index') }}" class="menu-link">
-                    <i class="menu-icon tf-icons bx bx-cart"></i>
-                    <div>Compras</div>
-                </a>
-            </li>
+    /* Mobile styles */
+    @media (max-width: 1199px) {
+        .navbar-nav .nav-link {
+            padding: 0.75rem 1rem !important;
+            border-bottom: 1px solid #f0f0f0;
+        }
 
-            <li class="menu-item {{ request()->is('almacen*') ? 'active' : '' }}">
-                <a href="{{ route('almacen.index') }}" class="menu-link">
-                    <i class="menu-icon tf-icons bx bx-package"></i>
-                    <div>Almacén</div>
-                </a>
-            </li>
+        .navbar-nav .nav-link:hover {
+            background-color: #f8f9fa;
+        }
+    }
+</style>
 
-            <li class="menu-item {{ request()->is('pos*') ? 'active' : '' }}">
-                <a href="{{ route('pos.index') }}" class="menu-link">
-                    <i class="menu-icon tf-icons bx bx-collection"></i>
-                    <div>Ventas</div>
-                </a>
-            </li>
+<nav class="navbar navbar-expand-xl navbar-light bg-white border-bottom sticky-top">
+    <div class="container-fluid px-3 px-xl-4">
+        <!-- Logo -->
+        <a href="{{ route('principal.index') }}" class="navbar-brand d-flex align-items-center me-2 me-xl-4">
+            <span class="fw-bolder" style="color: #566a7f; font-size: 1.2rem;">Wolvix</span>
+        </a>
 
-            <li class="menu-item {{ request()->is('cotizaciones*') ? 'active' : '' }}">
-                <a href="{{ route('cotizaciones.index') }}" class="menu-link">
-                    <i class="menu-icon tf-icons bx bx-file"></i>
-                    <div>Cotizaciones</div>
-                </a>
-            </li>
+        <!-- Toggler Button -->
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" 
+                data-bs-target="#navbarNavigation" aria-controls="navbarNavigation" 
+                aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
 
-            <li class="menu-item {{ request()->is('deudas*') ? 'active' : '' }}">
-                <a href="{{ route('deudas.index') }}" class="menu-link">
-                    <i class="menu-icon tf-icons bx bx-receipt"></i>
-                    <div>Deudas</div>
-                </a>
-            </li>
+        <!-- Collapsible Menu -->
+        <div class="collapse navbar-collapse" id="navbarNavigation">
+            <ul class="navbar-nav me-auto mb-2 mb-xl-0">
+                <li class="nav-item">
+                    <a href="{{ route('principal.index') }}"
+                        class="nav-link {{ request()->is('principal*') ? 'active fw-bold text-primary' : '' }}">
+                        <i class="bx bx-home-circle me-1"></i> Dashboard
+                    </a>
+                </li>
 
-            <li class="menu-item {{ request()->is('tesoreria*') ? 'active' : '' }}">
-                <a href="#" class="menu-link">
-                    <i class="menu-icon tf-icons bx bx-wallet"></i>
-                    <div>Tesorería</div>
-                </a>
-            </li>
+                <li class="nav-item">
+                    <a href="{{ route('compras.index') }}"
+                        class="nav-link {{ request()->is('compras*') ? 'active fw-bold text-primary' : '' }}">
+                        <i class="bx bx-cart me-1"></i> Compras
+                    </a>
+                </li>
 
-            <li class="menu-item {{ request()->is('documentos*') ? 'active' : '' }}">
-                <a href="#" class="menu-link">
-                    <i class="menu-icon tf-icons bx bx-cloud-upload"></i>
-                    <div>Doc. Electrónico</div>
-                </a>
-            </li>
+                <li class="nav-item">
+                    <a href="{{ route('almacen.index') }}"
+                        class="nav-link {{ request()->is('almacen*') ? 'active fw-bold text-primary' : '' }}">
+                        <i class="bx bx-package me-1"></i> Almacén
+                    </a>
+                </li>
 
-            <li class="menu-item {{ request()->is('reportes*') ? 'active' : '' }}">
-                <a href="#" class="menu-link">
-                    <i class="menu-icon tf-icons bx bx-bar-chart-alt-2"></i>
-                    <div>Reportes</div>
-                </a>
-            </li>
-        </ul>
+                <li class="nav-item">
+                    <a href="{{ route('pos.index') }}"
+                        class="nav-link {{ request()->is('pos*') ? 'active fw-bold text-primary' : '' }}">
+                        <i class="bx bx-collection me-1"></i> Ventas
+                    </a>
+                </li>
 
-        <div class="navbar-nav-admin ms-2">
-            <span class="text-muted small fw-light" style="white-space: nowrap;">Admin Wolvix</span>
+                <li class="nav-item">
+                    <a href="{{ route('cotizaciones.index') }}"
+                        class="nav-link {{ request()->is('cotizaciones*') ? 'active fw-bold text-primary' : '' }}">
+                        <i class="bx bx-file me-1"></i> Cotizaciones
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a href="{{ route('deudas.index') }}"
+                        class="nav-link {{ request()->is('deudas*') ? 'active fw-bold text-primary' : '' }}">
+                        <i class="bx bx-receipt me-1"></i> Deudas
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="bx bx-wallet me-1"></i> Tesorería
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a href="{{ route('guia.index') }}" class="nav-link">
+                        <i class="bx bx-cloud-upload me-1"></i> <span class="d-none d-xxl-inline">Guías de </span>Remisión
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="bx bx-file-blank me-1"></i> Doc. Electrónico
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="bx bx-bar-chart-alt-2 me-1"></i> Reportes
+                    </a>
+                </li>
+            </ul>
+
+            <!-- User Menu -->
+            <ul class="navbar-nav ms-auto align-items-xl-center mt-3 mt-xl-0">
+                @auth
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" 
+                           id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <div class="d-flex flex-column text-end me-2">
+                                <span class="fw-bold small lh-1">{{ Auth::user()->name }}</span>
+                                <small class="text-muted" style="font-size: 0.7rem;">Administrador</small>
+                            </div>
+                            <i class="bx bx-user-circle fs-3"></i>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="userDropdown">
+                            <li>
+                                <a class="dropdown-item" href="{{ route('principal.index') }}">
+                                    <i class="bx bx-user me-2"></i> Mi Perfil
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form action="{{ route('logout') }}" method="POST" id="logout-form">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item text-danger">
+                                        <i class="bx bx-log-out me-2"></i> Cerrar Sesión
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </li>
+                @endauth
+            </ul>
         </div>
     </div>
 </nav>
