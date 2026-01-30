@@ -358,8 +358,15 @@ class DeudaController extends Controller
             'logo' => $logoBase64 ? 'data:image/png;base64,' . $logoBase64 : null
         ];
 
-        // Formato ticket 8cm (similar a PosController)
-        $customPaper = [0, 0, 226.77, 400]; // Altura puede ser dinámica si se requiere
+        // Formato ticket 8cm
+        // Calculamos una altura aproximada basada en el contenido
+        $alturaBase = 500;
+        $alturaLogo = $logoBase64 ? 60 : 0;
+        $alturaObs = $pago->observaciones ? ceil(strlen($pago->observaciones) / 40) * 15 : 0;
+
+        $alturaTotal = $alturaBase + $alturaLogo + $alturaObs + 50; // +50 buffer
+
+        $customPaper = [0, 0, 226.77, $alturaTotal];
 
         $pdf = Pdf::loadView('deudas.comprobante_pago', $viewData)
             ->setPaper($customPaper, 'portrait');
