@@ -19,7 +19,8 @@ class VentaDetalle extends Model
         'precio_unitario',
         'importe',
         'igv',
-        'orden'
+        'orden',
+        'almacen_ingreso_detalle_id'
     ];
 
     protected $casts = [

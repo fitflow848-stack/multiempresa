@@ -55,7 +55,7 @@ class ClienteController extends Controller
             $query->skip($request->start)->take($request->length);
         }
 
-        $clientes = $query->withSum(['deudas' => function($query) {
+        $clientes = $query->withSum(['deudas' => function ($query) {
             $query->whereIn('estado', ['pendiente', 'parcial']);
         }], 'monto_deuda')->get()->map(function ($cliente) {
             $montoDeuda = $cliente->deudas_sum_monto_deuda ?: 0;
@@ -66,7 +66,7 @@ class ClienteController extends Controller
                 'nombre' => $cliente->nombre,
                 'telefono' => $cliente->telefono ?? '',
                 'email' => $cliente->email ?? '',
-                'debe' => number_format($montoDeuda, 2),
+                'debe' => $montoDeuda,
                 'estado' => $cliente->estado ? 'Activo' : 'Inactivo',
                 'acciones' => view('clientes.partials.acciones', compact('cliente'))->render()
             ];

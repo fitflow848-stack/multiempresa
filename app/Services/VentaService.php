@@ -6,6 +6,7 @@ use App\Models\Venta;
 use App\Models\VentaDetalle;
 use App\Models\CierreCaja;
 use App\Models\Deuda;
+use App\Models\AlmacenIngresoDetalle;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Exception;
@@ -123,7 +124,7 @@ class VentaService
             // Si hay una deuda (pago parcial), crear registro de deuda
             if ($entrega < $total && isset($clienteData['id']) && !empty($clienteData['id'])) {
                 $montoDeuda = $total - $entrega;
-                
+
                 $deuda = new Deuda();
                 $deuda->cliente_id = $clienteData['id'];
                 $deuda->venta_id = $venta->id_venta;
@@ -161,12 +162,31 @@ class VentaService
                 $detalle->importe = $precio_total;
                 $detalle->orden = $index + 1;
                 $detalle->save();
-                dd($item['almacen_detalle_id']);
-                // Actualizar stock si existe almacen_detalle_id
-                if (isset($item['almacen_detalle_id']) && !empty($item['almacen_detalle_id'])) {
-                    $this->stockService->decrementarStock($item['almacen_detalle_id'], $cantidad);
+
+                // Resolver el lote para descontar stock
+                $almacenDetalleId = $item['almacen_detalle_id'] ?? null;
+
+                // Si no viene el lote, buscamos el más antiguo con stock (FIFO)
+                if (empty($almacenDetalleId)) {
+                    $lote = AlmacenIngresoDetalle::where('producto_id', $item['producto_id'])
+                        ->where('cantidad', '>', 0)
+                        ->orderBy('id', 'asc')
+                        ->first();
+
+                    if ($lote) {
+                        $almacenDetalleId = $lote->id;
+                    }
+                }
+
+                // Actualizar detalle con el lote usado (si se encontró)
+                if ($almacenDetalleId) {
+                    $detalle->almacen_ingreso_detalle_id = $almacenDetalleId;
+                    $detalle->save();
+
+                    // Descontar stock usando el servicio
+                    $this->stockService->decrementarStock($almacenDetalleId, $cantidad);
                 } else {
-                    Log::warning("El item no tiene almacen_detalle_id al crear venta", ['item' => $item, 'venta_id' => $venta->id_venta]);
+                    Log::warning("No se encontró stock/lote para el producto ID {$item['producto_id']} en la venta {$venta->id_venta}");
                 }
             }
 

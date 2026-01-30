@@ -14,6 +14,7 @@ class CierreCaja extends Model
 
     protected $fillable = [
         'user_id',
+        'id_empresa',
         'fecha_cierre',
         'monto_apertura', // Saldo Inicial
         'monto_cierre',   // Cierre Caja (Efectivo Real)

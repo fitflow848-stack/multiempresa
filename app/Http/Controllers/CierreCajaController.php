@@ -26,10 +26,10 @@ class CierreCajaController extends Controller
             ->whereNotNull('fecha_cierre')
             ->orderBy('fecha_cierre', 'desc')
             ->first();
-        
+
         // El saldo inicial será el monto de cierre del último arqueo, o 0 si no hay cierres previos
         $saldoInicial = $ultimoCierre ? $ultimoCierre->monto_cierre : 0.00;
-        
+
         return view('cierres.create', compact('saldoInicial', 'ultimoCierre'));
     }
 
@@ -47,6 +47,7 @@ class CierreCajaController extends Controller
         ]);
 
         $data['user_id'] = auth()->id();
+        $data['id_empresa'] = auth()->user()->company_id;
 
         CierreCaja::create($data);
 
@@ -68,7 +69,7 @@ class CierreCajaController extends Controller
                     INNER JOIN clientes c ON c.id = v.id_cliente
                     INNER JOIN users u ON u.id = v.id_usuario 
                 WHERE
-                    cierre_caja_id = $cierre->id 
+                    cierre_caja_id = $cierre->id AND v.estado != 0 
                 ) UNION
                 (
                 SELECT

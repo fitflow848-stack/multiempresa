@@ -370,9 +370,13 @@ class PosController extends Controller
         ]);
     }
 
-    public function pdfVenta(Request $request, $id)
+    public function pdfVenta(Request $request, $id, $format = 'default')
     {
-        $format = $request->query('format', 'default'); // 'default' o '8cm'
+        // Si no viene por ruta, intentar query params (retrocompatibilidad)
+        if ($format === 'default' && $request->has('format')) {
+            $format = $request->query('format');
+        }
+
         $saveOnly = $request->query('saveOnly', false); // opcional
         return $this->pdfVentaService->pdfVenta((int)$id, $format, (bool)$saveOnly);
     }

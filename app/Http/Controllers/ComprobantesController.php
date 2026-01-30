@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CierreCaja;
 use App\Models\Venta;
 use App\Models\VentaDetalle;
 use App\Models\Cliente;
+use App\Models\OperacionCaja;
 use App\Models\TipoPago;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -146,6 +148,7 @@ class ComprobantesController extends Controller
         // Lógica para cancelar comprobantes seleccionados
         $ventasIds = $request->get('ventas_ids', []);
         $user = Auth::user();
+        \Illuminate\Support\Facades\Log::info("Intento de cancelar ventas: " . json_encode($ventasIds) . " Usuario: " . $user->id);
 
         DB::beginTransaction();
         try {
@@ -168,33 +171,17 @@ class ComprobantesController extends Controller
                     if ($detalle->almacen_ingreso_detalle_id) {
                         $lote = \App\Models\AlmacenIngresoDetalle::find($detalle->almacen_ingreso_detalle_id);
                         if ($lote) {
-                            $lote->increment('cantidad_actual', $detalle->cantidad);
+                            $lote->increment('cantidad', $detalle->cantidad);
                         }
                     }
                 }
 
-                // 2. Registrar salida de dinero de caja (Si fue pagada)
-                // Buscamos la caja abierta actual del usuario o tienda
-                if ($venta->total > 0) { // Solo si hubo movimiento de dinero
-                    // Asumiendo que existe un modelo CajaMovimiento o OperacionCaja
-                    // Ajustamos según tu estructura: 'operaciones_caja' vinculado a 'cierre_caja'
-
-                    // Buscar caja abierta
-                    $cajaAbierta = \App\Models\CierreCaja::where('id_empresa', $user->company_id)
-                        ->whereNull('fecha_cierre')
-                        ->orderBy('id', 'desc')
-                        ->first();
-
-                    if ($cajaAbierta) {
-                        // Registrar como un "EGRESO" por anulación
-                        \App\Models\OperacionCaja::create([
-                            'cierre_caja_id' => $cajaAbierta->id,
-                            'tipo' => 'EGRESO', // O 'ANULACION' si tienes ese tipo
-                            'monto' => $venta->total,
-                            'concepto' => 'Anulación de venta ' . ($venta->serie . '-' . $venta->numero),
-                            'usuario_id' => $user->id,
-                            'fecha' => now(),
-                        ]);
+                // 2. Descontar ingreso de caja (Si fue pagada)
+                if ($venta->total > 0 && $venta->cierre_caja_id) {
+                    $caja = \App\Models\CierreCaja::find($venta->cierre_caja_id);
+                    if ($caja) {
+                        $caja->ingresos = floatval($caja->ingresos) - floatval($venta->total);
+                        $caja->save();
                     }
                 }
 
@@ -202,6 +189,7 @@ class ComprobantesController extends Controller
                 $venta->estado = 0; // 0: Anulada
                 $venta->save();
                 $count++;
+                \Illuminate\Support\Facades\Log::info("Venta cancelada ID: {$venta->id_venta}. Nuevo estado: {$venta->estado}. Total descontado: {$venta->total}");
             }
 
             DB::commit();
@@ -245,20 +233,20 @@ class ComprobantesController extends Controller
                     if ($detalle->almacen_ingreso_detalle_id) {
                         $lote = \App\Models\AlmacenIngresoDetalle::find($detalle->almacen_ingreso_detalle_id);
                         if ($lote) {
-                            $lote->increment('cantidad_actual', $detalle->cantidad);
+                            $lote->increment('cantidad', $detalle->cantidad);
                         }
                     }
                 }
 
                 // 2. Registrar salida de dinero (Devolución)
                 if ($venta->total > 0) {
-                    $cajaAbierta = \App\Models\CierreCaja::where('id_empresa', $user->company_id)
+                    $cajaAbierta = CierreCaja::where('id_empresa', $user->company_id)
                         ->whereNull('fecha_cierre')
                         ->orderBy('id', 'desc')
                         ->first();
 
                     if ($cajaAbierta) {
-                        \App\Models\OperacionCaja::create([
+                        OperacionCaja::create([
                             'cierre_caja_id' => $cajaAbierta->id,
                             'tipo' => 'EGRESO',
                             'monto' => $venta->total,
