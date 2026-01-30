@@ -21,6 +21,7 @@ class AlmacenIngresoDetalle extends Model
         'pvp',
         'pvpd',
         'pvc',
+        'pvcd',
         'stock_min',
         'stock_max',
         'lote',

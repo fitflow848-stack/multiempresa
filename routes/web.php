@@ -90,6 +90,8 @@ Route::middleware(['auth'])->group(function () {
 
     Route::prefix('pos')->name('pos.')->group(function () {
         Route::get('/', [PosController::class, 'index'])->name('index');
+        Route::get('/precios', [PosController::class, 'precios'])->name('precios');
+        Route::post('/precios/update', [PosController::class, 'updatePrecios'])->name('precios.update');
         Route::get('/emitir', [PosController::class, 'emitir'])->name('emitir');
         Route::post('/emitir', [PosController::class, 'emitir'])->name('emitir.post');
         Route::post('/save-venta', [PosController::class, 'saveVenta'])->name('save-venta');

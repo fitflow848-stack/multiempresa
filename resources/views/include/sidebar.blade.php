@@ -16,7 +16,7 @@
             font-size: 0.85rem;
             padding: 0.5rem 0.6rem !important;
         }
-        
+
         .nav-link i {
             font-size: 0.9rem;
         }
@@ -50,9 +50,8 @@
         </a>
 
         <!-- Toggler Button -->
-        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" 
-                data-bs-target="#navbarNavigation" aria-controls="navbarNavigation" 
-                aria-expanded="false" aria-label="Toggle navigation">
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavigation"
+            aria-controls="navbarNavigation" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
 
@@ -80,18 +79,30 @@
                     </a>
                 </li>
 
-                <li class="nav-item">
-                    <a href="{{ route('pos.index') }}"
-                        class="nav-link {{ request()->is('pos*') ? 'active fw-bold text-primary' : '' }}">
+                <li class="nav-item dropdown">
+                    <a href="#"
+                        class="nav-link dropdown-toggle {{ request()->is('pos*') ? 'active fw-bold text-primary' : '' }}"
+                        id="ventasDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bx bx-collection me-1"></i> Ventas
                     </a>
-                </li>
-
-                <li class="nav-item">
-                    <a href="{{ route('cotizaciones.index') }}"
-                        class="nav-link {{ request()->is('cotizaciones*') ? 'active fw-bold text-primary' : '' }}">
-                        <i class="bx bx-file me-1"></i> Cotizaciones
-                    </a>
+                    <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="ventasDropdown">
+                        <li>
+                            <a class="dropdown-item" href="{{ route('pos.index') }}">
+                                Punto de Venta
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{{ route('cotizaciones.index') }}"
+                                class="nav-link {{ request()->is('cotizaciones*') ? 'active fw-bold text-primary' : '' }}">
+                                Cotizaciones
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{{ route('pos.precios') }}">
+                                Precios
+                            </a>
+                        </li>
+                    </ul>
                 </li>
 
                 <li class="nav-item">
@@ -106,17 +117,20 @@
                         <i class="bx bx-wallet me-1"></i> Tesorería
                     </a>
                 </li>
-
-                <li class="nav-item">
-                    <a href="{{ route('guia.index') }}" class="nav-link">
-                        <i class="bx bx-cloud-upload me-1"></i> <span class="d-none d-xxl-inline">Guías de </span>Remisión
+                
+                <li class="nav-item dropdown">
+                    <a href="#"
+                        class="nav-link dropdown-toggle {{ request()->is('guia*') ? 'active fw-bold text-primary' : '' }}"
+                        id="ventasDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bx bx-collection me-1"></i> Doc. Electrónico
                     </a>
-                </li>
-
-                <li class="nav-item">
-                    <a href="#" class="nav-link">
-                        <i class="bx bx-file-blank me-1"></i> Doc. Electrónico
-                    </a>
+                    <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="ventasDropdown">
+                        <li>
+                            <a class="dropdown-item" href="{{ route('guia.index') }}">
+                                Guías de Remisión
+                            </a>
+                        </li>
+                    </ul>
                 </li>
 
                 <li class="nav-item">
@@ -130,8 +144,8 @@
             <ul class="navbar-nav ms-auto align-items-xl-center mt-3 mt-xl-0">
                 @auth
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" 
-                           id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown"
+                            role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <div class="d-flex flex-column text-end me-2">
                                 <span class="fw-bold small lh-1">{{ Auth::user()->name }}</span>
                                 <small class="text-muted" style="font-size: 0.7rem;">Administrador</small>
@@ -144,7 +158,9 @@
                                     <i class="bx bx-user me-2"></i> Mi Perfil
                                 </a>
                             </li>
-                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
                             <li>
                                 <form action="{{ route('logout') }}" method="POST" id="logout-form">
                                     @csrf

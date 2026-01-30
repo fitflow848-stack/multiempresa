@@ -160,38 +160,37 @@
             </div>
         </div>
 
-        <!-- Footer -->
-        <!-- Reemplaza tu div .pos-footer por esto -->
-        <div class="pos-footer-led">
-            <div class="footer-totals-led">
-                <div>
-                    <span class="label">Gravada</span> : <span class="value">S/ <span
-                            id="footer-gravada">0.00</span></span>
-                </div>
-                <div>
-                    <span class="label">IGV</span> : <span class="value">S/ <span id="footer-igv">0.00</span></span>
-                </div>
-                <div>
-                    <span class="label">ICBPER</span> : <span class="value">S/ <span
-                            id="footer-icbper">0.00</span></span>
-                </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="pos-footer-led">
+        <div class="footer-totals-led">
+            <div>
+                <span class="label">Gravada</span> : <span class="value">S/ <span
+                        id="footer-gravada">0.00</span></span>
             </div>
-            <div class="footer-dsctos">
-                <div>
-                    <span class="label">Dscto Detalle</span> : <span class="value">S/ <span
-                            id="footer-dscto">0.00</span></span>
-                    <span class="productos-listados">en <span id="footer-productos-listados">0</span> productos
-                        listados</span>
-                </div>
-                <div>
-                    <span class="label">TOTAL</span> : <span class="value">S/ <span
-                            id="footer-total">0.00</span></span>
-                    <span class="productos-listados" style="opacity:0;">listados</span>
-                </div>
+            <div>
+                <span class="label">IGV</span> : <span class="value">S/ <span id="footer-igv">0.00</span></span>
             </div>
-            <div class="footer-cliente" onclick="mostrarBuscadorClientes()" style="cursor: pointer;">
-                <span id="footer-cliente" style="font-weight:bold;">CLIENTE CONTABLE</span>
+            <div>
+                <span class="label">ICBPER</span> : <span class="value">S/ <span id="footer-icbper">0.00</span></span>
             </div>
+        </div>
+        <div class="footer-dsctos">
+            <div>
+                <span class="label">Dscto Detalle</span> : <span class="value">S/ <span
+                        id="footer-dscto">0.00</span></span>
+                <span class="productos-listados">en <span id="footer-productos-listados">0</span> productos
+                    listados</span>
+            </div>
+            <div>
+                <span class="label">TOTAL</span> : <span class="value">S/ <span
+                        id="footer-total">0.00</span></span>
+                <span class="productos-listados" style="opacity:0;">listados</span>
+            </div>
+        </div>
+        <div class="footer-cliente" onclick="mostrarBuscadorClientes()" style="cursor: pointer;">
+            <span id="footer-cliente" style="font-weight:bold;">CLIENTE CONTABLE</span>
         </div>
     </div>
 </div>
@@ -287,7 +286,7 @@
 
     // Función para mostrar la modal de selección de tipo de documento
     async function mostrarSeleccionTipoDocumento() {
-        
+
         if (ticket.length === 0) {
             alert('No hay productos en el ticket para emitir');
             return;
@@ -359,10 +358,13 @@
                         );
 
                         // Abrir PDF de cotización en nueva pestaña
-                        const cotizacionId = data.data.cotizacion_id || data.data.venta_id || data.data.id || data.id;
+                        const cotizacionId = data.data.cotizacion_id || data.data.venta_id || data.data.id ||
+                            data.id;
                         if (cotizacionId) {
-                            const urlA4 = '{{ route('cotizaciones.pdfCotizacion', ':id') }}'.replace(':id', cotizacionId);
-                            const url8cm = '{{ route('cotizaciones.pdfCotizacion8cm', ':id') }}'.replace(':id', cotizacionId);
+                            const urlA4 = '{{ route('cotizaciones.pdfCotizacion', ':id') }}'.replace(':id',
+                                cotizacionId);
+                            const url8cm = '{{ route('cotizaciones.pdfCotizacion8cm', ':id') }}'.replace(':id',
+                                cotizacionId);
                             const openUrl = url8cm; // Para proformas usar formato 8cm por defecto
                             window.open(openUrl, '_blank');
                         }
@@ -381,7 +383,7 @@
                         // Limpiar ticket actual y regresar al POS
                         ticket = [];
                         renderTicket();
-                        
+
                         setTimeout(() => {
                             window.location.href = '{{ route('pos.index') }}';
                         }, 1000);
@@ -1274,8 +1276,12 @@
 
         if (existente) {
             // Verificar disponibilidad antes de incrementar
-            if ((existente.cantidad + qtyToAdd) <= existente.cantidad_disponible) {
-                existente.cantidad += qtyToAdd;
+            // Si es reemplazo, la cantidad final es qtyToAdd
+            // Si es suma, la cantidad final es existente.cantidad + qtyToAdd
+            const cantidadFinal = producto.replaceQuantity ? qtyToAdd : (existente.cantidad + qtyToAdd);
+
+            if (cantidadFinal <= existente.cantidad_disponible) {
+                existente.cantidad = cantidadFinal;
                 existente.importe = existente.cantidad * existente.precio;
             } else {
                 alert(`Stock insuficiente. Disponible: ${existente.cantidad_disponible} unidades`);

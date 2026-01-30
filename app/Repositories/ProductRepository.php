@@ -15,14 +15,18 @@ class ProductRepository
             SELECT
                 p.id AS producto_id,
                 ad.producto_linea_id AS product_linea_id,
+                MAX(ad.id) AS id,
                 CONCAT_WS(' / ', p.nombre, CONCAT(pl.presentacion, ' ', pl.concentracion)) AS nombre,
                 CONCAT(
                     'lt. ', ad.lote, ' Fv. ', LPAD(DAY(ad.fecha_vencimiento), 2, '0'),
                     ' ', LOWER(LEFT(MONTHNAME(ad.fecha_vencimiento), 3)), ' ', RIGHT(YEAR(ad.fecha_vencimiento), 2)
                 ) AS detalle,
                 SUM(ad.cantidad) AS cantidad_total,
+                MAX(ad.costo) AS costo,
                 MAX(ad.pvp) AS pvp,
+                MAX(ad.pvpd) AS pvpd,
                 MAX(ad.pvc) AS pvc,
+                MAX(ad.pvcd) AS pvcd,
                 COUNT(ad.id) AS total_lotes,
                 ad.fecha_vencimiento
             FROM almacen_ingreso_detalle ad

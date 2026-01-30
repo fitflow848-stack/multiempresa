@@ -161,7 +161,7 @@ class VentaService
                 $detalle->importe = $precio_total;
                 $detalle->orden = $index + 1;
                 $detalle->save();
-
+                dd($item['almacen_detalle_id']);
                 // Actualizar stock si existe almacen_detalle_id
                 if (isset($item['almacen_detalle_id']) && !empty($item['almacen_detalle_id'])) {
                     $this->stockService->decrementarStock($item['almacen_detalle_id'], $cantidad);

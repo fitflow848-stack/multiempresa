@@ -36,7 +36,7 @@ class ComprobantesController extends Controller
         if (!empty($cliente)) {
             $ventasQuery->whereHas('cliente', function ($q) use ($cliente) {
                 $q->where('nombre', 'LIKE', "%$cliente%")
-                  ->orWhere('numero_documento', 'LIKE', "%$cliente%");
+                    ->orWhere('numero_documento', 'LIKE', "%$cliente%");
             });
         }
 
@@ -46,8 +46,8 @@ class ComprobantesController extends Controller
         }
 
         $ventas = $ventasQuery->orderBy('fecha_emision', 'desc')
-                             ->orderBy('id_venta', 'desc')
-                             ->paginate(20);
+            ->orderBy('id_venta', 'desc')
+            ->paginate(20);
 
         // Calcular resumen
         $resumen = $this->calcularResumen($ventasQuery->get());
@@ -55,27 +55,27 @@ class ComprobantesController extends Controller
         // Obtener comprobante seleccionado
         $comprobanteSeleccionado = null;
         $detalleSeleccionado = collect();
-        
+
         $ventaSeleccionadaId = $request->get('venta_id');
         if ($ventaSeleccionadaId) {
             $comprobanteSeleccionado = Venta::with(['cliente', 'detalles.producto', 'tipoPago', 'ventaSunat'])
                 ->where('id_venta', $ventaSeleccionadaId)
                 ->where('id_empresa', $company->id)
                 ->first();
-            
+
             if ($comprobanteSeleccionado) {
                 $detalleSeleccionado = $comprobanteSeleccionado->detalles;
             }
         }
 
         return view('comprobantes.index', compact(
-            'user', 
-            'company', 
-            'ventas', 
+            'user',
+            'company',
+            'ventas',
             'resumen',
             'fechaDesde',
-            'fechaHasta', 
-            'cliente', 
+            'fechaHasta',
+            'cliente',
             'tipoDocumento',
             'comprobanteSeleccionado',
             'detalleSeleccionado'
@@ -123,7 +123,7 @@ class ComprobantesController extends Controller
         if (!empty($cliente)) {
             $ventasQuery->whereHas('cliente', function ($q) use ($cliente) {
                 $q->where('nombre', 'LIKE', "%$cliente%")
-                  ->orWhere('numero_documento', 'LIKE', "%$cliente%");
+                    ->orWhere('numero_documento', 'LIKE', "%$cliente%");
             });
         }
 
@@ -146,35 +146,150 @@ class ComprobantesController extends Controller
         // Lógica para cancelar comprobantes seleccionados
         $ventasIds = $request->get('ventas_ids', []);
         $user = Auth::user();
-        
-        $count = Venta::where('id_empresa', $user->company_id)
-            ->whereIn('id_venta', $ventasIds)
-            ->update(['estado' => 0]);
 
-        return response()->json([
-            'success' => true,
-            'message' => "Se cancelaron $count comprobantes",
-            'cancelados' => $count
-        ]);
+        DB::beginTransaction();
+        try {
+            $ventas = Venta::where('id_empresa', $user->company_id)
+                ->whereIn('id_venta', $ventasIds)
+                ->where('estado', '!=', 0) // Solo anular las que no están anuladas
+                ->get();
+
+            $count = 0;
+
+            foreach ($ventas as $venta) {
+                // 1. Restaurar Stock
+                foreach ($venta->detalles as $detalle) {
+                    // Restaurar stock de producto general
+                    if ($detalle->producto) {
+                        $detalle->producto->increment('cantidad', $detalle->cantidad);
+                    }
+
+                    // Restaurar stock de lote específico si existe
+                    if ($detalle->almacen_ingreso_detalle_id) {
+                        $lote = \App\Models\AlmacenIngresoDetalle::find($detalle->almacen_ingreso_detalle_id);
+                        if ($lote) {
+                            $lote->increment('cantidad_actual', $detalle->cantidad);
+                        }
+                    }
+                }
+
+                // 2. Registrar salida de dinero de caja (Si fue pagada)
+                // Buscamos la caja abierta actual del usuario o tienda
+                if ($venta->total > 0) { // Solo si hubo movimiento de dinero
+                    // Asumiendo que existe un modelo CajaMovimiento o OperacionCaja
+                    // Ajustamos según tu estructura: 'operaciones_caja' vinculado a 'cierre_caja'
+
+                    // Buscar caja abierta
+                    $cajaAbierta = \App\Models\CierreCaja::where('id_empresa', $user->company_id)
+                        ->whereNull('fecha_cierre')
+                        ->orderBy('id', 'desc')
+                        ->first();
+
+                    if ($cajaAbierta) {
+                        // Registrar como un "EGRESO" por anulación
+                        \App\Models\OperacionCaja::create([
+                            'cierre_caja_id' => $cajaAbierta->id,
+                            'tipo' => 'EGRESO', // O 'ANULACION' si tienes ese tipo
+                            'monto' => $venta->total,
+                            'concepto' => 'Anulación de venta ' . ($venta->serie . '-' . $venta->numero),
+                            'usuario_id' => $user->id,
+                            'fecha' => now(),
+                        ]);
+                    }
+                }
+
+                // 3. Cambiar estado
+                $venta->estado = 0; // 0: Anulada
+                $venta->save();
+                $count++;
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Se cancelaron $count comprobantes y se restauró el stock.",
+                'cancelados' => $count
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => "Error al cancelar: " . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function devolver(Request $request)
     {
-        // Lógica para procesar devoluciones
+        // Lógica para procesar devoluciones (estado 'Devuelto' = 3)
         $ventasIds = $request->get('ventas_ids', []);
         $user = Auth::user();
-        
-        // Aquí iría la lógica específica de devolución
-        // Por ahora solo marcamos como devuelto
-        $count = Venta::where('id_empresa', $user->company_id)
-            ->whereIn('id_venta', $ventasIds)
-            ->update(['estado' => 3]);
 
-        return response()->json([
-            'success' => true,
-            'message' => "Se procesaron $count devoluciones",
-            'devueltos' => $count
-        ]);
+        DB::beginTransaction();
+        try {
+            // Solo procesar las que no están ya anuladas (0) ni devueltas (3)
+            $ventas = Venta::where('id_empresa', $user->company_id)
+                ->whereIn('id_venta', $ventasIds)
+                ->whereNotIn('estado', [0, 3])
+                ->get();
+
+            $count = 0;
+
+            foreach ($ventas as $venta) {
+                // 1. Restaurar Stock
+                foreach ($venta->detalles as $detalle) {
+                    if ($detalle->producto) {
+                        $detalle->producto->increment('cantidad', $detalle->cantidad);
+                    }
+                    if ($detalle->almacen_ingreso_detalle_id) {
+                        $lote = \App\Models\AlmacenIngresoDetalle::find($detalle->almacen_ingreso_detalle_id);
+                        if ($lote) {
+                            $lote->increment('cantidad_actual', $detalle->cantidad);
+                        }
+                    }
+                }
+
+                // 2. Registrar salida de dinero (Devolución)
+                if ($venta->total > 0) {
+                    $cajaAbierta = \App\Models\CierreCaja::where('id_empresa', $user->company_id)
+                        ->whereNull('fecha_cierre')
+                        ->orderBy('id', 'desc')
+                        ->first();
+
+                    if ($cajaAbierta) {
+                        \App\Models\OperacionCaja::create([
+                            'cierre_caja_id' => $cajaAbierta->id,
+                            'tipo' => 'EGRESO',
+                            'monto' => $venta->total,
+                            'concepto' => 'Devolución de venta ' . ($venta->serie . '-' . $venta->numero),
+                            'usuario_id' => $user->id,
+                            'fecha' => now(),
+                        ]);
+                    }
+                }
+
+                // 3. Cambiar estado a 3 (Devuelto)
+                // Asumimos estado 3 = Devuelto
+                $venta->estado = 3;
+                $venta->save();
+                $count++;
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Se procesaron $count devoluciones correctamente.",
+                'devueltos' => $count
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => "Error al devolver: " . $e->getMessage()
+            ], 500);
+        }
     }
 
     private function calcularResumen($ventas)

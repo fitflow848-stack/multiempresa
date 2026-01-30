@@ -376,4 +376,43 @@ class PosController extends Controller
         $saveOnly = $request->query('saveOnly', false); // opcional
         return $this->pdfVentaService->pdfVenta((int)$id, $format, (bool)$saveOnly);
     }
+
+    public function precios(Request $request)
+    {
+        $user = Auth::user();
+        $company = $user->company;
+
+        $familias = \App\Models\Familia::all();
+        $marcas = \App\Models\Marca::all();
+
+        return view('pos.precios', compact('user', 'company', 'familias', 'marcas'));
+    }
+
+    public function updatePrecios(Request $request)
+    {
+        $request->validate([
+            'id' => 'required|exists:almacen_ingreso_detalle,id',
+            'field' => 'required|string',
+            'value' => 'required|numeric'
+        ]);
+
+        try {
+            $detalle = \App\Models\AlmacenIngresoDetalle::find($request->id);
+            $field = $request->field;
+
+            // Allow updating specific price fields
+            $allowedFields = ['costo', 'pvp', 'pvpd', 'pvc', 'pvcd'];
+
+            if (in_array($field, $allowedFields)) {
+                $detalle->$field = $request->value;
+                $detalle->save();
+                return response()->json(['success' => true]);
+            }
+
+            return response()->json(['success' => false, 'message' => 'Campo no permitido'], 400);
+        } catch (\Exception $e) {
+            Log::error("Error updating price: " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error al actualizar'], 500);
+        }
+    }
 }

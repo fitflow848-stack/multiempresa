@@ -1,9 +1,16 @@
 <script>
-    // Abre un modal para indicar cantidad y precio antes de agregar al ticket
-    function abrirModalCantidad() {
+    let isEditMode = false;
+
+    // Abre un modal para conocer cantidad y precio antes de agregar al ticket
+    function abrirModalCantidad(editMode = false) {
         if (!currentProduct) return;
 
-        const precio = parseFloat(currentProduct.pvp || currentProduct.pvc || 0).toFixed(2);
+        isEditMode = editMode;
+        const precio = parseFloat(currentProduct.pvp || currentProduct.pvc || currentProduct.precio || 0).toFixed(2);
+        const cantidadInicial = editMode && currentProduct.cantidad ? parseFloat(currentProduct.cantidad) : 1;
+        const titulo = editMode ? 'Actualizar Cantidad' : 'Agregar al Carrito';
+        const btnTexto = editMode ? 'Actualizar' : '🛒 Agregar';
+        const subtitulo = editMode ? 'Modifique la cantidad actual' : 'Ajuste la cantidad y el precio del producto';
 
         const modalHtml = `
         <div id="modal-cantidad-general" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(33, 37, 41, 0.8); backdrop-filter: blur(4px); z-index: 4000; display: flex; justify-content: center; align-items: center;" onclick="cerrarModalCantidad()">
@@ -11,12 +18,9 @@
                 
                 <div style="background: #f8f9fa; padding: 20px 24px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <h3 style="margin: 0; font-size: 20px; color: #1a1d23; font-weight: 700;">Agregar al Carrito</h3>
-                        <p style="margin: 4px 0 0; color: #6c757d; font-size: 14px;">Ajuste la cantidad y el precio del producto</p>
+                        <h3 style="margin: 0; font-size: 20px; color: #1a1d23; font-weight: 700;">${titulo}</h3>
+                        <p style="margin: 4px 0 0; color: #6c757d; font-size: 14px;">${subtitulo}</p>
                     </div>
-                    <label style="cursor: pointer; background: #fff; padding: 8px 16px; border-radius: 50px; border: 1px solid #dee2e6; font-size: 14px; color: #495057; display: flex; align-items: center; gap: 8px; transition: all 0.2s;">
-                        <input type="checkbox" id="modal-finalizar-venta" style="width: 16px; height: 16px;"> Finalizar Venta
-                    </label>
                 </div>
 
                 <div style="display: flex; flex-wrap: wrap;">
@@ -25,7 +29,7 @@
                         <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 24px;">
                             <div>
                                 <label style="display: block; font-size: 12px; font-weight: 700; color: #6c757d; text-transform: uppercase; margin-bottom: 8px;">Cantidad</label>
-                                <input id="modal-cantidad-cantidad" type="number" step="any" value="1" style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 10px; font-size: 18px; font-weight: 600; text-align: center; color: #2d3436; outline: none; transition: border-color 0.2s;">
+                                <input id="modal-cantidad-cantidad" type="number" step="any" value="${cantidadInicial}" style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 10px; font-size: 18px; font-weight: 600; text-align: center; color: #2d3436; outline: none; transition: border-color 0.2s;">
                             </div>
                             <div>
                                 <label style="display: block; font-size: 12px; font-weight: 700; color: #6c757d; text-transform: uppercase; margin-bottom: 8px;">Precio Unit.</label>
@@ -33,7 +37,7 @@
                             </div>
                             <div>
                                 <label style="display: block; font-size: 12px; font-weight: 700; color: #007bff; text-transform: uppercase; margin-bottom: 8px;">Total Item</label>
-                                <input id="modal-cantidad-importe" type="text" value="${precio}" style="width: 100%; padding: 12px; border: 2px solid #e7f1ff; border-radius: 10px; font-size: 18px; font-weight: 700; text-align: center; color: #007bff; background: #f0f7ff;" readonly>
+                                <input id="modal-cantidad-importe" type="text" value="${(cantidadInicial * precio).toFixed(2)}" style="width: 100%; padding: 12px; border: 2px solid #e7f1ff; border-radius: 10px; font-size: 18px; font-weight: 700; text-align: center; color: #007bff; background: #f0f7ff;" readonly>
                             </div>
                         </div>
 
@@ -45,10 +49,6 @@
                                     <div style="font-size: 13px; color: #636e72; line-height: 1.6;">
                                         PVP: <b>S/${currentProduct.pvp || '0.00'}</b> • PVC: <b>S/${currentProduct.pvc || '0.00'}</b>
                                     </div>
-                                    <div style="margin-top: 12px; display: flex; gap: 15px;">
-                                        <label style="font-size: 13px; color: #4b6584; display: flex; align-items: center; gap: 5px; cursor: pointer;"><input type="checkbox" id="modal-editar-concepto"> Editar</label>
-                                        <label style="font-size: 13px; color: #4b6584; display: flex; align-items: center; gap: 5px; cursor: pointer;"><input type="checkbox" id="modal-bonificacion"> Bonificación</label>
-                                    </div>
                                 </div>
                                 <div style="width: 80px; text-align: center;">
                                   <i class='bx  bx-box'></i> 
@@ -59,7 +59,7 @@
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
                             <button onclick="cerrarModalCantidad()" style="padding: 14px; border-radius: 10px; border: 1px solid #dee2e6; background: #fff; color: #495057; font-weight: 600; cursor: pointer; transition: 0.2s;">↶ Volver</button>
-                            <button id="modal-cantidad-agregar" style="padding: 14px; border-radius: 10px; border: none; background: #10ac84; color: #fff; font-weight: 700; font-size: 16px; cursor: pointer; box-shadow: 0 4px 15px rgba(16, 172, 132, 0.3);">🛒 Agregar</button>
+                            <button id="modal-cantidad-agregar" style="padding: 14px; border-radius: 10px; border: none; background: #10ac84; color: #fff; font-weight: 700; font-size: 16px; cursor: pointer; box-shadow: 0 4px 15px rgba(16, 172, 132, 0.3);">${btnTexto}</button>
                         </div>
                     </div>
 
@@ -151,6 +151,15 @@
         if (borrar) borrar.addEventListener('click', () => appendToFocused('B'));
         if (sig) sig.addEventListener('click', () => appendToFocused('±'));
 
+        // Handle Enter key for quick submit
+        const handleEnter = (e) => {
+            if (e.key === 'Enter') {
+                aceptarModalCantidad();
+            }
+        };
+        qty.addEventListener('keypress', handleEnter);
+        price.addEventListener('keypress', handleEnter);
+
         cerrarContextMenu();
     }
 
@@ -174,29 +183,33 @@
             // Allow adding but warn
             if (!confirm(
                     `Stock insuficiente. Disponible: ${currentProduct.cantidad_total || 0}. Agregar de todos modos?`
-                    )) {
+                )) {
                 return;
             }
         }
 
         const productoParaTicket = {
-            id: `ctx_${currentProduct.producto_id}_${Date.now()}`,
+            id: currentProduct.id || `ctx_${currentProduct.producto_id}_${Date.now()}`,
             producto_id: currentProduct.producto_id,
             producto_linea_id: currentProduct.product_linea_id || currentProduct.producto_linea_id || null,
             nombre: currentProduct.nombre || currentProduct.descripcion || '',
             cantidad: cantidad,
-            cantidad_disponible: currentProduct.cantidad_total || 0,
+            cantidad_disponible: currentProduct.cantidad_total || currentProduct.cantidad_disponible || 0,
             precio: precio,
             importe: parseFloat((cantidad * precio).toFixed(2)),
             pvp: currentProduct.pvp || precio,
             pvc: currentProduct.pvc || precio,
-            descuento: 0,
-            descuentoFijo: 0,
-            descuentoTexto: '0%'
+            descuento: currentProduct.descuento || 0,
+            descuentoFijo: currentProduct.descuentoFijo || 0,
+            descuentoTexto: currentProduct.descuentoTexto || '0%',
+
+            // Flag to replace instead of add
+            replaceQuantity: isEditMode
         };
 
         // Si tiene un solo lote intentar resolver almacen_detalle_id
-        if (currentProduct.total_lotes && parseInt(currentProduct.total_lotes) === 1) {
+        // Solo hacerlo si no es edit (en edit ya tenemos id)
+        if (!isEditMode && currentProduct.total_lotes && parseInt(currentProduct.total_lotes) === 1) {
             try {
                 const resp = await fetch(
                     `/pos/obtener-lotes?producto_id=${encodeURIComponent(currentProduct.producto_id)}`);
@@ -214,23 +227,24 @@
             } catch (e) {
                 console.warn('No fue posible obtener lotes:', e);
             }
+        } else {
+            // Keep existing identifiers
+            productoParaTicket.almacen_detalle_id = currentProduct.almacen_detalle_id || null;
+            productoParaTicket.lote = currentProduct.lote || null;
+            productoParaTicket.fecha_vencimiento = currentProduct.fecha_vencimiento || null;
+            productoParaTicket.es_lote_especifico = currentProduct.es_lote_especifico || false;
         }
 
         // Usar la función central para agregar al ticket
         if (typeof agregarProductoAlTicket === 'function') {
             agregarProductoAlTicket(productoParaTicket);
-        } else if (typeof agregarAlTicket === 'function') {
-            agregarAlTicket(productoParaTicket);
         } else {
-            // Fallback: push al array ticket si existe
-            if (typeof ticket !== 'undefined' && Array.isArray(ticket)) {
-                ticket.push(productoParaTicket);
-                if (typeof renderTicket === 'function') renderTicket();
-            }
+            // Fallback
+            console.error("Function agregarProductoAlTicket not found");
         }
 
         mostrarNotificacion && typeof mostrarNotificacion === 'function' && mostrarNotificacion(
-            `Se agregó ${cantidad} unidad(es) de ${productoParaTicket.nombre}`);
+            `Se ${isEditMode ? 'actualizó' : 'agregó'} ${cantidad} unidad(es) de ${productoParaTicket.nombre}`);
 
         cerrarModalCantidad();
     }

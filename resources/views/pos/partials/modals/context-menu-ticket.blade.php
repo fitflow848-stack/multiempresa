@@ -3,7 +3,7 @@
 
     <div class="context-menu-item"
         style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px;"
-        onclick="abrirModalCantidad()">
+        onclick="abrirModalCantidad(true)">
         <span style="color: #4CAF50;">🔢</span>
         <span>Unidades</span>
         <span style="margin-left: auto;">▶</span>
@@ -168,7 +168,7 @@
             if (montoIngresado > (maxMontoPermitido + 0.01)) {
                 return alert(
                     `¡Error! El descuento máximo para este producto es de S/ ${maxMontoPermitido.toFixed(2)}. No puede aplicar S/ ${montoIngresado.toFixed(2)}`
-                    );
+                );
             }
 
             // 4. CONVERSIÓN A PORCENTAJE (Por detrás)
