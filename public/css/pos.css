@@ -5,489 +5,416 @@
 body,
 html {
     overflow: hidden;
-    /* Evitamos el scroll de la página entera */
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: #f0f2f5;
 }
 
 .pos-container {
     display: flex;
     flex-direction: column;
-    /* Ajusta 70px según el alto real de tu menú horizontal */
-    height: calc(100vh - 70px);
-    background: #f4f7fa;
-    /* Fondo grisáceo para resaltar las cards blancas */
-    padding: 10px;
-    gap: 10px;
+    height: calc(100vh - 80px);
+    /* Subtract header height */
+    overflow: hidden;
 }
 
-.company-header,
-.top-bar,
-.center-area,
-.ticket-section,
-.pos-footer-led {
-    display: flex;
-    background: white !important;
-    border-radius: 8px !important;
-    border: 1px solid #e1e4e8 !important;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-}
-
-/* --- Cabecera y Filtros --- */
-.left-sidebar {
-    flex-shrink: 0;
-    /* No se achica */
-}
-
-.company-header,
-.top-bar {
-    margin-bottom: 5px;
-    padding: 10px 15px;
-}
-
-.company-header {
-    width: 100%;
+/* --- Header Redesign --- */
+.pos-header {
     background: #fff;
-    padding: 8px 12px;
-    border-bottom: 1px solid #ddd;
-    font-weight: bold;
-    font-size: 14px;
-    color: #333;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 0 15px;
+    height: 40px;
+    /* Compact header */
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.company-options {
+.header-left {
     display: flex;
-    font-weight: normal;
-    gap: 4px;
+    align-items: center;
 }
 
-.company-options div {
+.header-select {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 2px 5px;
+    font-size: 11px;
+    color: #333;
+    outline: none;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 11px;
+}
+
+.nav-item {
     cursor: pointer;
     color: #555;
-    padding: 2px 4px;
-}
-
-.sidebar-menu {
-    flex: 1;
-    display: flex;
-
-}
-
-.top-bar {
-    background: white;
-    border-bottom: 1px solid #ddd;
+    font-weight: 500;
     display: flex;
     align-items: center;
-    padding: 8px 15px;
-    gap: 15px;
-    font-size: 11px;
-}
-
-.left-section {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex: 1;
-}
-
-.families-section {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: bold;
-}
-
-.search-fields {
-    display: flex;
     gap: 5px;
-    margin-left: 10px;
-}
-
-.search-input {
     padding: 4px 8px;
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    font-size: 11px;
-    width: 150px;
+    border-radius: 4px;
+    transition: background 0.2s;
 }
 
-.search-buttons {
-    display: flex;
-    gap: 3px;
-    margin-left: 5px;
-}
-
-.search-btn {
-    padding: 4px 6px;
-    border: 1px solid #ccc;
-    background: white;
-    border-radius: 3px;
-    font-size: 10px;
-    cursor: pointer;
-}
-
-.right-section {
+.nav-item a {
+    text-decoration: none;
+    color: inherit;
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 5px;
 }
 
-.payment-options {
+.nav-item:hover {
+    background: #f0f0f0;
+    color: #000;
+}
+
+.nav-info {
+    color: #888;
     display: flex;
     align-items: center;
-    gap: 10px;
-}
-
-.payment-option {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+    gap: 5px;
 }
 
 
-.search-section {
-    display: flex;
-    padding: 8px 12px;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.search-input {
-    width: 100%;
-    padding: 4px 6px;
-    border: 1px solid #ddd;
-    border-radius: 2px;
-    font-size: 10px;
-    margin-bottom: 4px;
-}
-
-.main-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    overflow: hidden;
-}
-
-.center-area {
-    flex: 1; /* Toma todo el espacio disponible */
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; /* Importante para el scroll interno */
-    padding: 0;
-    min-height: 0;
-}
-#productos-listado {
-    flex: 1;
-    overflow-y: auto; /* Solo esta parte tiene scroll */
-    min-height: 0;
-}
-
-.genack-watermark {
-    font-size: 36px;
-    color: #e0e0e0;
-    font-weight: 300;
-    margin-bottom: 10px;
-    font-family: 'Courier New', monospace;
-}
-
-/* --- Sección del Ticket --- */
-.ticket-section {
-    height: 35vh; /* Ocupa el 35% de la vista */
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.ticket-header {
-    background: #d32f2f;
-    color: white;
+/* --- Action Bar (Search + Payment) --- */
+.action-bar {
+    background: #f9fafb;
+    /* Lighter background */
     padding: 6px 15px;
-    font-weight: bold;
-    font-size: 11px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.ticket-controls {
-    background: #f8f9fa;
-    padding: 6px 15px;
+    border-bottom: 1px solid #e0e0e0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #ddd;
+    gap: 10px;
+    height: 42px;
+    /* Fixed height */
 }
 
-.controls-left {
+.bar-left {
     display: flex;
-    gap: 6px;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
 }
 
-.controls-right {
-    display: flex;
-    gap: 6px;
-}
-
-.control-btn {
-    padding: 3px 8px;
-    border: 1px solid #ddd;
-    background: white;
-    border-radius: 2px;
-    font-size: 10px;
+.families-btn {
+    font-size: 16px;
     cursor: pointer;
-    min-width: 24px;
-    text-align: center;
+    padding: 2px 6px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    background: #fff;
 }
 
-.control-btn:hover {
-    background: #e9ecef;
+.search-group {
+    display: flex;
+    gap: 5px;
+    flex: 1;
+    max-width: 600px;
 }
 
-.control-btn.danger {
-    background: #dc3545;
-    color: white;
-    border-color: #dc3545;
+.search-input {
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    padding: 4px 8px;
+    font-size: 11px;
+    /* Smaller font as requested */
+    height: 26px;
 }
 
-.control-btn.primary {
-    background: #17a2b8;
-    color: white;
-    border-color: #17a2b8;
+.main-search {
+    flex: 1;
+    /* Takes more space */
+    background: #fff;
+    font-weight: 500;
+    border-color: #bbb;
 }
 
-.control-btn.success {
-    background: #28a745;
-    color: white;
-    border-color: #28a745;
+.secondary-search {
+    flex: 2;
+    background: #fff;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 2px;
+}
+
+.icon-btn {
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 3px;
+    padding: 2px 6px;
+    cursor: pointer;
+    font-size: 12px;
+    height: 26px;
+}
+
+.bar-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 11px;
+}
+
+.payment-group {
+    display: flex;
+    gap: 10px;
+    background: #fff;
+    padding: 2px 8px;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+}
+
+.payment-radio {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+}
+
+.option-check {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.currency-display {
+    font-weight: bold;
+    color: #666;
+}
+
+/* --- Main Content Area --- */
+.main-content-split {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 5px;
+    gap: 5px;
+    background: #fff;
+}
+
+.results-area {
+    flex: 0 0 auto;
+    /* No grow automatically, shrinks if needed? Actually we want it visible only when there are results? or always top? */
+    /* Let's make it fixed max height or flexible */
+    max-height: 30%;
+    min-height: 0;
+    overflow-y: auto;
+    border: 1px solid #eee;
+    display: none;
+    /* Initially hidden until search? logic in JS handles content */
+}
+
+/* Show results area when it has content */
+.results-area:not(:empty) {
+    display: block;
+    flex: 1;
+    /* Take space if visible */
+}
+
+.ticket-area {
+    flex: 1;
+    /* Takes remaining space */
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.ticket-header-compact {
+    background: #f1f3f4;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: bold;
+    color: #555;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ticket-actions-mini {
+    display: flex;
+    gap: 5px;
+}
+
+.ticket-actions-mini button {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 4px;
+    opacity: 0.7;
+}
+
+.ticket-actions-mini button:hover {
+    opacity: 1;
+}
+
+.ticket-controls-compact {
+    display: flex;
+    justify-content: flex-end;
+    gap: 5px;
+    padding: 4px 5px;
+    background: #fff;
+    border-bottom: 1px solid #eee;
+}
+
+.btn-compact {
+    padding: 3px 10px;
+    font-size: 10px;
+    border-radius: 2px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.btn-compact.danger {
+    background: #ffebee;
+    color: #c62828;
+    border-color: #ffcdd2;
+}
+
+.btn-compact.primary {
+    background: #e3f2fd;
+    color: #1565c0;
+    border-color: #bbdefb;
+}
+
+.btn-compact.success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border-color: #c8e6c9;
 }
 
 .ticket-table {
     flex: 1;
     overflow-y: auto;
+    position: relative;
+    /* Spacious feel */
 }
 
-.table-header {
-    background: #f8f9fa;
-    border-bottom: 1px solid #ddd;
-    padding: 6px 15px;
-    display: flex;
-    font-size: 10px;
-    font-weight: bold;
-    color: #666;
-}
-
-.table-header>div {
-    flex: 1;
-    text-align: left;
-    padding-right: 10px;
-}
-
-.table-header>div:first-child {
-    flex: 0.5;
-}
-
-.table-header>div:nth-child(2) {
-    flex: 2;
-}
-
-.table-body {
-    position: absolute;
-    top: 25px;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    color: #999;
-    font-size: 12px;
-    text-align: center;
-    height: calc(100% - 25px);
-}
-
-.empty-message {
-    text-align: center;
-    line-height: 1.4;
-}
-
-.pos-footer {
-    position: absolute;
-    bottom: 0;
-    width: 100%;
-    background: #2c2c2c;
-    color: white;
-    padding: 8px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-family: monospace;
-}
-
-.footer-totals {
-    display: flex;
-    gap: 25px;
-}
-
-.footer-total {
-    color: #00ff6a;
-    font-weight: bold;
-}
-
-.footer-info {
-    color: #ccc;
-}
-
-.productos-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 10px;
-}
-
-.producto-card {
-    border: 1px solid #ddd;
-    padding: 10px;
-    cursor: pointer;
-    background: #fff;
-    text-align: center;
-}
-
-.producto-card:hover {
-    background: #f5f5f5;
-}
-
-.productos-table thead {
-    position: sticky;
-    top: 0;
-    background: #f8f9fa;
-    z-index: 10;
-}
-
-.productos-table th,
-.productos-table td {
-    border-bottom: 1px solid #eee;
-    padding: 6px 8px;
-    text-align: left;
-    font-size: 12px;
-}
-
-.productos-table th {
-    padding: 10px;
-    border-bottom: 2px solid #eee;
-    text-transform: uppercase;
-    font-size: 11px;
-}
-
-.productos-table td {
-    padding: 8px 10px;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.productos-table td:first-child {
-    text-align: left;
-}
-
-.productos-table td:not(:first-child) {
-    text-align: center;
-}
-
-.productos-table td:last-child,
-.productos-table td:nth-last-child(2) {
-    text-align: right;
-}
-
-.productos-table tr:hover {
-    background: #E7F3FF !important;
-}
-
+/* --- Footer --- */
 .pos-footer-led {
-    flex-shrink: 0;
-    margin-top: auto;
-    background: #000 !important; /* Estilo LED que tenías */
+    background: #000;
     color: #0f0;
-    padding: 10px;
+    padding: 8px 15px;
+    font-family: 'Courier New', monospace;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 40px;
+    flex-shrink: 0;
+    z-index: 200;
+    min-height: 60px;
+    border-top: 2px solid #333;
+    position: relative;
+    /* For absolute positioning of client */
 }
 
 .footer-totals-led {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    min-width: 160px;
+    gap: 5px;
+    font-size: 14px;
+    font-weight: bold;
 }
 
-.footer-totals-led .label,
-.footer-dsctos .label {
-    font-weight: bold;
+.footer-totals-led div {
+    display: flex;
+    justify-content: space-between;
+    min-width: 180px;
 }
 
 .footer-dsctos {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    min-width: 340px;
+    gap: 5px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #0f0;
 }
 
-.footer-dsctos .productos-listados {
-    color: #25ff07;
-    font-size: 14px;
-    margin-left: 7px;
+.footer-dsctos div {
+    display: flex;
+    gap: 15px;
+    /* Add gap between label/value and extra text */
+    align-items: center;
 }
 
 .footer-cliente {
-    flex: 1;
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 20px;
+    /* Big font for client */
+    font-weight: bold;
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    font-size: 19px;
-    font-weight: bold;
-    transition: all 0.2s ease;
+    gap: 10px;
+    background: #000;
+    padding-left: 10px;
 }
 
-.footer-cliente:hover {
-    background: #333;
-    color: #00ff00;
-    border-radius: 4px;
-    padding: 4px 8px;
+
+/* --- Table Styling --- */
+.productos-table {
+    width: 100%;
+    border-collapse: collapse;
 }
 
-.tipo-documento-option:hover {
-    background: #e3f2fd !important;
-    border-color: #2196f3 !important;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.productos-table th {
+    background: #f8f9fa;
+    position: sticky;
+    top: 0;
+    font-size: 10px;
+    text-transform: uppercase;
+    color: #666;
+    padding: 6px 8px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
 }
 
-.footer-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
+.productos-table td {
+    padding: 8px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 12px;
+    color: #333;
 }
 
-.footer-btn {
-    background: #222;
-    color: #25ff07;
-    border: 1px solid #333;
-    font-size: 18px;
-    padding: 0 7px;
-    border-radius: 3px;
-    cursor: pointer;
+.productos-table tr:hover {
+    background: #f5fafd;
 }
 
-.footer-btn:active {
-    background: #444;
-}
-
-@media (max-width:800px) {
-    .pos-footer-led {
-        flex-direction: column;
-        font-size: 14px;
+/* Responsive */
+@media (max-width: 800px) {
+    .action-bar {
+        height: auto;
+        flex-wrap: wrap;
     }
 
-    .footer-cliente {
-        justify-content: flex-start;
+    .search-group {
+        max-width: 100%;
+        order: 2;
+        width: 100%;
     }
 
-    .footer-actions {
-        flex-direction: row;
+    .bar-right {
+        margin-left: auto;
     }
 }

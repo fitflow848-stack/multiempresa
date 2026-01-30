@@ -4,9 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Deuda;
 use App\Models\Cliente;
+use App\Models\DeudaPago;
+use App\Models\Venta;
+use App\Models\Company;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Str;
 
 class DeudaController extends Controller
 {
@@ -58,7 +63,7 @@ class DeudaController extends Controller
 
     public function show($id)
     {
-        $deuda = Deuda::with(['cliente', 'venta', 'user'])
+        $deuda = Deuda::with(['cliente', 'venta', 'user', 'pagos.user'])
             ->findOrFail($id);
 
         return view('deudas.show', compact('deuda'));
@@ -72,7 +77,7 @@ class DeudaController extends Controller
         ]);
 
         $deuda = Deuda::findOrFail($id);
-        
+
         if ($deuda->estado === Deuda::ESTADO_PAGADA) {
             return response()->json([
                 'success' => false,
@@ -81,31 +86,63 @@ class DeudaController extends Controller
         }
 
         $montoPago = floatval($request->monto_pago);
-        
-        if ($montoPago > $deuda->monto_deuda) {
-            return response()->json([
-                'success' => false,
-                'message' => 'El monto del pago no puede ser mayor a la deuda pendiente'
-            ], 400);
+
+        if ($montoPago > $deuda->monto_deuda) { // Margen de error por decimales podría ser necesario
+            if (abs($montoPago - $deuda->monto_deuda) > 0.01) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El monto del pago no puede ser mayor a la deuda pendiente'
+                ], 400);
+            }
+            $montoPago = $deuda->monto_deuda;
         }
 
         DB::beginTransaction();
         try {
-            $deuda->aplicarPago($montoPago, $request->observaciones);
-            
-            // Aquí podrías registrar el pago en una tabla de movimientos de caja si la tienes
-            
+            // Guardar registro en deuda_pagos
+            $pago = DeudaPago::create([
+                'deuda_id' => $deuda->id,
+                'user_id' => Auth::id(),
+                'monto' => $montoPago,
+                'fecha_pago' => now(),
+                'metodo_pago' => $request->metodo_pago ?? 'Efectivo',
+                'referencia' => $request->referencia ?? null,
+                'codigo_comprobante' => 'PAY-' . strtoupper(Str::random(8)),
+                'observaciones' => $request->observaciones
+            ]);
+
+            // Actualizar deuda
+            $nuevoMontoPagado = $deuda->monto_pagado + $montoPago;
+            $nuevaDeuda = $deuda->monto_total - $nuevoMontoPagado;
+            $estado = $nuevaDeuda <= 0.01 ? Deuda::ESTADO_PAGADA : Deuda::ESTADO_PARCIAL;
+
+            $deuda->update([
+                'monto_pagado' => $nuevoMontoPagado,
+                'monto_deuda' => max(0, $nuevaDeuda),
+                'estado' => $estado,
+                'observaciones' => $request->observaciones // O concatenar?
+            ]);
+
+            // Si la deuda se pagó por completo, actualizar la venta
+            if ($estado === Deuda::ESTADO_PAGADA && $deuda->venta_id) {
+                $venta = Venta::find($deuda->venta_id);
+                if ($venta) {
+                    $venta->pagado = 1;
+                    $venta->save();
+                }
+            }
+
             DB::commit();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Pago aplicado correctamente',
                 'deuda' => [
                     'monto_deuda' => $deuda->monto_deuda,
                     'estado' => $deuda->estado
-                ]
+                ],
+                'pago_id' => $pago->id
             ]);
-            
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -118,7 +155,7 @@ class DeudaController extends Controller
     public function marcarComoPagada($id)
     {
         $deuda = Deuda::findOrFail($id);
-        
+
         if ($deuda->estado === Deuda::ESTADO_PAGADA) {
             return response()->json([
                 'success' => false,
@@ -128,15 +165,37 @@ class DeudaController extends Controller
 
         DB::beginTransaction();
         try {
+            // Calcular monto pendiente (lo que se va a pagar)
+            $montoAPagar = $deuda->monto_deuda;
+
+            // Crear registro de pago full
+            $pago = DeudaPago::create([
+                'deuda_id' => $deuda->id,
+                'user_id' => Auth::id(),
+                'monto' => $montoAPagar,
+                'fecha_pago' => now(),
+                'metodo_pago' => 'Otros', // O 'Regularizacion'
+                'codigo_comprobante' => 'PAY-FULL-' . strtoupper(Str::random(6)),
+                'observaciones' => 'Marcado como pagada manualmente'
+            ]);
+
             $deuda->marcarComoPagada();
-            
+
+            // Actualizar venta
+            if ($deuda->venta_id) {
+                $venta = Venta::find($deuda->venta_id);
+                if ($venta) {
+                    $venta->pagado = 1;
+                    $venta->save();
+                }
+            }
+
             DB::commit();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Deuda marcada como pagada correctamente'
             ]);
-            
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -254,11 +313,11 @@ class DeudaController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ];
 
-        $callback = function() use ($csvData) {
+        $callback = function () use ($csvData) {
             $file = fopen('php://output', 'w');
             // Agregar BOM para UTF-8
             fwrite($file, "\xEF\xBB\xBF");
-            
+
             foreach ($csvData as $row) {
                 fputcsv($file, $row, ';'); // Usar punto y coma como separador para Excel en español
             }
@@ -266,5 +325,45 @@ class DeudaController extends Controller
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    public function generarComprobantePago($idLayout)
+    {
+        $pago = DeudaPago::with(['deuda.cliente', 'deuda.venta.company'])->findOrFail($idLayout);
+        $deuda = $pago->deuda;
+        $cliente = $deuda->cliente;
+        $empresa = $deuda->venta->company ?? Company::first();
+
+        // Obtener logo
+        $logoBase64 = null;
+        if ($empresa && $empresa->logo) {
+            $logoFilePath = $empresa->logo_path ?? null;
+            if ($logoFilePath && file_exists($logoFilePath)) {
+                $logoBase64 = base64_encode(file_get_contents($logoFilePath));
+            }
+        }
+        if (!$logoBase64) {
+            // Intenta buscar el default
+            $defaultLogoPath = public_path('images/scorpion.png'); // Ajustar según tu proyecto
+            if (file_exists($defaultLogoPath)) {
+                $logoBase64 = base64_encode(file_get_contents($defaultLogoPath));
+            }
+        }
+
+        $viewData = [
+            'pago' => $pago,
+            'deuda' => $deuda,
+            'cliente' => $cliente,
+            'empresa' => $empresa,
+            'logo' => $logoBase64 ? 'data:image/png;base64,' . $logoBase64 : null
+        ];
+
+        // Formato ticket 8cm (similar a PosController)
+        $customPaper = [0, 0, 226.77, 400]; // Altura puede ser dinámica si se requiere
+
+        $pdf = Pdf::loadView('deudas.comprobante_pago', $viewData)
+            ->setPaper($customPaper, 'portrait');
+
+        return $pdf->stream('ticket-pago-' . $pago->id . '.pdf');
     }
 }

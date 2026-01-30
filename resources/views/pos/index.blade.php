@@ -5,92 +5,81 @@
 <link rel="stylesheet" href="{{ asset('css/pos.css') }}">
 
 <div class="pos-container">
-    <div class="left-sidebar">
-        <div class="company-header">
-            <div>
-                <select name="sucursal" id="sucursal-select">
-                    @foreach ($sucursales as $sucursal)
-                        <option value="{{ $sucursal->id }}">{{ $sucursal->nombre }}</option>
-                    @endforeach
-                </select>
+    <div class="pos-header">
+        <div class="header-left">
+            <img src="{{ $logo }}" alt="Logo" style="height: 30px; margin-right: 15px;">
+            <select name="sucursal" id="sucursal-select" class="header-select">
+                @foreach ($sucursales as $sucursal)
+                    <option value="{{ $sucursal->id }}">{{ $sucursal->nombre }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="header-right">
+            <div class="nav-item" onclick="navegarAClientes()"><i class="fa-solid fa-user-group"></i> Clientes</div>
+            <div class="nav-item"><a href="{{ route('comprobantes.index') }}"><i class="fa-solid fa-book-open"></i>
+                    Comprobantes</a></div>
+            <div class="nav-item"><a href="{{ route('cierre-caja.index') }}"><i class="fa-solid fa-money-bill-wave"></i>
+                    Caja</a></div>
+            <div class="nav-info"><i class="fa-solid fa-user"></i> {{ Auth::user()->name }}</div>
+            <div class="nav-info"><i class="fa-solid fa-shop"></i> TPV VD</div>
+        </div>
+    </div>
+
+    <div class="action-bar compact-bar">
+        <!-- Sección Izquierda: Búsqueda -->
+        <div class="bar-left">
+            <div class="families-btn" title="Familias">
+                <span>📦</span>
             </div>
-            <div class="company-options">
-                <div style="cursor: pointer;" onclick="navegarAClientes()"><i class="fa-solid fa-user-group"></i>
-                    Clientes</div>
-                <div><i class="fa-solid fa-book-open"></i> <a href="{{ route('comprobantes.index') }}">Comprobantes</a>
-                </div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <a href="{{ route('cierre-caja.index') }}"><i class="fa-solid fa-money-bill-wave"></i> Caja</a>
-                </div>
-                <div><i class="fa-solid fa-user"></i> {{ Auth::user()->name }}</div>
-                <div><i class="fa-solid fa-shop"></i> TPV VD</div>
+
+            <div class="search-group">
+                <input type="text" class="search-input main-search" placeholder="Buscar por Código de Barras..."
+                    autofocus>
+                <input type="text" class="search-input secondary-search"
+                    placeholder="Nombre | Marca | Modelo | Detalle">
+            </div>
+
+            <div class="action-buttons">
+                <button class="icon-btn" title="Listado">📋</button>
             </div>
         </div>
 
-        <div class="top-bar">
-            <!-- Sección Izquierda -->
-            <div class="left-section">
-                <div class="families-section">
-                    <span>📦</span>
-                    <span style="font-weight: bold;">Familias</span>
-                    <span>📋</span>
-                </div>
-
-                <div class="search-fields">
-                    <input type="text" class="search-input" placeholder="Código de Barras">
-                    <input type="text" class="search-input" placeholder="Nombre | Marca | Modelo | Detalle">
-                </div>
-
-                <div class="search-buttons">
-                    <button class="search-btn">📋</button>
-                    <button class="search-btn">📄</button>
-                </div>
+        <!-- Sección Derecha: Pago y Opciones -->
+        <div class="bar-right">
+            <div class="payment-group">
+                <label class="payment-radio">
+                    <input type="radio" name="payment" checked>
+                    <span>Contado</span>
+                </label>
+                <label class="payment-radio">
+                    <input type="radio" name="payment">
+                    <span>Crédito</span>
+                </label>
             </div>
 
-            <!-- Sección Derecha -->
-            <div class="right-section">
-                <div style="display: flex; align-items: center; gap: 5px;">
-                    <span>🛒</span>
-                </div>
+            <div class="option-check">
+                <input type="checkbox" id="proforma-checkbox" name="Proforma">
+                <label for="proforma-checkbox">Proforma</label>
+            </div>
 
-                <div class="payment-options">
-                    <div class="payment-option">
-                        <input type="radio" name="payment" checked>
-                        <span>Contado</span>
-                    </div>
-                    <div class="payment-option">
-                        <input type="radio" name="payment">
-                        <span>Crédito</span>
-                    </div>
-                    <div style="display: flex; gap: 5px; align-items: center;">
-                        <input type="checkbox" id="proforma-checkbox" name="Proforma">
-                        <span>Proforma</span>
-                    </div>
-                </div>
-
-                <div style="color: #666; font-size: 11px;">
-                    SOL -
-                </div>
+            <div class="currency-display">
+                SOL -
             </div>
         </div>
-
     </div>
 
     <!-- Contenido Principal -->
-    <div class="main-content">
-        <!-- Área Central -->
-        <div class="center-area">
-            {{-- <div class="genack-watermark">genack</div> --}}
-            {{-- <div style="color: #ccc; font-size: 11px;">core business</div> --}}
-            <!-- Reemplaza el grid por una tabla; ponlo donde quieras mostrar resultados -->
-            <div id="productos-listado" style="width:100%">
-                <table class="productos-table" style="width:100%; border-collapse:collapse;">
+    <div class="main-content-split">
+        <!-- Area de Resultados (Izquierda o Arriba según preferencia, aquí lo hacemos flexible) -->
+        <div class="results-area">
+            <div id="productos-listado">
+                <table class="productos-table">
                     <thead>
-                        <tr style="background:#f5f5f5;">
-                            <th style="width: 60%;">Producto</th>
+                        <tr>
+                            <th style="width: 50%;">Producto</th>
                             <th style="width: 15%;">Stock</th>
-                            <th style="width: 12.5%;">PVP</th>
-                            <th style="width: 12.5%;">PVC</th>
+                            <th style="width: 15%;">PVP</th>
+                            <th style="width: 20%;">PVC</th>
                         </tr>
                     </thead>
                     <tbody id="productos-tbody">
@@ -100,33 +89,25 @@
             </div>
         </div>
 
-        <!-- Sección del Ticket -->
-        <div class="ticket-section">
-            <div class="ticket-header">
-                TICKET ACTUAL
-                <span>▷</span>
-            </div>
-
-            <div class="ticket-controls">
-                <div class="controls-left">
-                    <button class="control-btn">X</button>
-                    <button class="control-btn primary">Ctrl.</button>
-                    <button class="control-btn" onclick="aplicarDescuentoGlobal()"
-                        title="Aplicar descuento global">💸</button>
-                    <button class="control-btn"
+        <!-- Sección del Ticket (Derecha o Abajo) -->
+        <div class="ticket-area">
+            <div class="ticket-header-compact">
+                <span>TICKET ACTUAL ▷</span>
+                <div class="ticket-actions-mini">
+                    <button
                         onclick="typeof Swal !== 'undefined' ? limpiarTicketRapidoConSweetAlert() : limpiarTicketRapido()"
-                        title="Limpiar ticket">🗑️</button>
-                </div>
-
-                <div class="controls-right">
-                    <button class="control-btn danger"
-                        onclick="typeof Swal !== 'undefined' ? cancelarVentaConSweetAlert() : cancelarVenta()">❌
-                        Cancelar</button>
-                    <button class="control-btn primary" onclick="guardarTicket()">💾 Guardar</button>
-                    <button class="control-btn success" type="button" onclick="mostrarSeleccionTipoDocumento()">📤
-                        Emitir</button>
+                        title="Limpiar todo">🗑️</button>
+                    <button onclick="aplicarDescuentoGlobal()" title="Descuento Global">💸</button>
                 </div>
             </div>
+
+            <div class="ticket-controls-compact">
+                <button class="btn-compact danger"
+                    onclick="typeof Swal !== 'undefined' ? cancelarVentaConSweetAlert() : cancelarVenta()">Cancelar</button>
+                <button class="btn-compact primary" onclick="guardarTicket()">Guardar</button>
+                <button class="btn-compact success" onclick="mostrarSeleccionTipoDocumento()">Emitir</button>
+            </div>
+
 
             <!-- Reemplaza el ticket-table por esta tabla, y pon un div para el fondo/marca de agua si lo deseas -->
             <div class="ticket-table" style="position:relative;">

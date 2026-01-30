@@ -162,7 +162,8 @@
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
                         <h6 class="m-0 fw-bold text-primary">Movimientos de la Jornada</h6>
-                        <span id="movimientos-count" class="badge bg-secondary rounded-pill">{{ count($movimientos) }} registros</span>
+                        <span id="movimientos-count" class="badge bg-secondary rounded-pill">{{ count($movimientos) }}
+                            registros</span>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive-scroll">
@@ -526,36 +527,45 @@
                     calcTotals));
 
                 btnOpen?.addEventListener('click', async () => {
-                        // Abrir modal y precargar datos si existe arqueo
-                        modal.style.display = 'flex';
-                        calcTotals();
-                        window.currentArqueoId = null;
-                        try {
-                            const resp = await fetch(`{{ url('/arqueo') }}?cierre_id=${cierreId}`);
-                            if (!resp.ok) throw new Error('no ok');
-                            const data = await resp.json();
-                            if (data.found && data.arqueo) {
-                                const a = data.arqueo;
-                                // guardar id para que el save haga update
-                                window.currentArqueoId = a.id;
-                                // llenar inputs
-                                Object.keys(a.monedas || {}).forEach(k => {
-                                    const inp = document.querySelector('.m-count[data-value="' + k + '"]');
-                                    if (inp) inp.value = a.monedas[k];
-                                });
-                                Object.keys(a.billetes || {}).forEach(k => {
-                                    const inp = document.querySelector('.b-count[data-value="' + k + '"]');
-                                    if (inp) inp.value = a.billetes[k];
-                                });
-                                document.getElementById('total-caja').innerText = parseFloat(a.total || 0).toFixed(2);
-                                document.getElementById('total-monedas').innerText = parseFloat(a.monedas ? Object.keys(a.monedas).reduce((s,k)=>s+(parseFloat(k)* (parseFloat(a.monedas[k])||0)),0) : 0).toFixed(2);
-                                document.getElementById('total-billetes').innerText = parseFloat(a.billetes ? Object.keys(a.billetes).reduce((s,k)=>s+(parseFloat(k)* (parseFloat(a.billetes[k])||0)),0) : 0).toFixed(2);
-                                document.getElementById('arqueo-notas').value = a.notas || '';
-                            }
-                        } catch (e) {
-                            console.warn('No existe arqueo previo o error al cargar:', e);
+                    // Abrir modal y precargar datos si existe arqueo
+                    modal.style.display = 'flex';
+                    calcTotals();
+                    window.currentArqueoId = null;
+                    try {
+                        const resp = await fetch(`{{ url('/arqueo') }}?cierre_id=${cierreId}`);
+                        if (!resp.ok) throw new Error('no ok');
+                        const data = await resp.json();
+                        if (data.found && data.arqueo) {
+                            const a = data.arqueo;
+                            // guardar id para que el save haga update
+                            window.currentArqueoId = a.id;
+                            // llenar inputs
+                            Object.keys(a.monedas || {}).forEach(k => {
+                                const inp = document.querySelector('.m-count[data-value="' +
+                                    k + '"]');
+                                if (inp) inp.value = a.monedas[k];
+                            });
+                            Object.keys(a.billetes || {}).forEach(k => {
+                                const inp = document.querySelector('.b-count[data-value="' +
+                                    k + '"]');
+                                if (inp) inp.value = a.billetes[k];
+                            });
+                            document.getElementById('total-caja').innerText = parseFloat(a.total ||
+                                0).toFixed(2);
+                            document.getElementById('total-monedas').innerText = parseFloat(a
+                                    .monedas ? Object.keys(a.monedas).reduce((s, k) => s + (
+                                        parseFloat(k) * (parseFloat(a.monedas[k]) || 0)), 0) : 0)
+                                .toFixed(2);
+                            document.getElementById('total-billetes').innerText = parseFloat(a
+                                    .billetes ? Object.keys(a.billetes).reduce((s, k) => s + (
+                                        parseFloat(k) * (parseFloat(a.billetes[k]) || 0)), 0) : 0)
+                                .toFixed(2);
+                            document.getElementById('arqueo-notas').value = a.notas || '';
                         }
-                    });
+                    } catch (e) {
+                        console.warn('No existe arqueo previo o error al cargar:', e);
+                    }
+                });
                 btnClose?.addEventListener('click', () => {
                     modal.style.display = 'none';
                 });
@@ -564,7 +574,7 @@
                     const monedas = {};
                     document.querySelectorAll('.m-count').forEach(inp => {
                         monedas[inp.getAttribute('data-value')] = parseFloat(inp.value) ||
-                        0;
+                            0;
                     });
                     const billetes = {};
                     document.querySelectorAll('.b-count').forEach(inp => {
@@ -590,37 +600,46 @@
                                 cierre_id: cierreId
                             })
                         });
-                        if(!resp.ok) throw new Error('Error en servidor');
-                            const data = await resp.json();
-                            const tbody = document.getElementById('movimientos-tbody');
-                            const usuario = '{{ auth()->user()->name ?? "" }}';
-                            const arqueo = data.arqueo || {};
-                            const createdAt =arqueo.created_at ? new Date(arqueo.created_at) : new Date();
-                            const hora = createdAt.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit'});
-                            const importe = parseFloat(arqueo.total || 0).toFixed(2);
-                            const concepto = (arqueo.notas && arqueo.notas.length) ? arqueo.notas : 'Arqueo de caja';
+                        if (!resp.ok) throw new Error('Error en servidor');
+                        const data = await resp.json();
+                        const tbody = document.getElementById('movimientos-tbody');
+                        const usuario = '{{ auth()->user()->name ?? '' }}';
+                        const arqueo = data.arqueo || {};
+                        const createdAt = arqueo.created_at ? new Date(arqueo.created_at) :
+                            new Date();
+                        const hora = createdAt.toLocaleTimeString('en-GB', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        const importe = parseFloat(arqueo.total || 0).toFixed(2);
+                        const concepto = (arqueo.notas && arqueo.notas.length) ? arqueo.notas :
+                            'Arqueo de caja';
 
-                            // Si ya teníamos un arqueo cargado (update), actualizar la fila existente
-                            if (window.currentArqueoId) {
-                                // buscar fila existente por atributo data-arqueo-id
-                                let row = document.querySelector(`tr[data-arqueo-id="${window.currentArqueoId}"]`);
-                                if (!row) {
-                                    // intentar buscar por importe/concepto
-                                    row = Array.from(document.querySelectorAll('#movimientos-tbody tr')).find(r => r.innerText.includes('ARQUEO')) || null;
-                                }
-                                if (row) {
-                                    row.setAttribute('data-arqueo-id', data.id || arqueo.id || window.currentArqueoId);
-                                    row.children[0].textContent = hora;
-                                    row.children[2].querySelector('.fw-bold').textContent = concepto;
-                                    row.children[2].querySelector('.text-muted').textContent = usuario;
-                                    row.children[3].textContent = 'S/ ' + parseFloat(importe).toFixed(2);
-                                }
-                            } else {
-                                // insertar nueva fila
-                                if (tbody) {
-                                    const tr = document.createElement('tr');
-                                    tr.setAttribute('data-arqueo-id', data.id || arqueo.id || '');
-                                    tr.innerHTML = `
+                        // Si ya teníamos un arqueo cargado (update), actualizar la fila existente
+                        if (window.currentArqueoId) {
+                            // buscar fila existente por atributo data-arqueo-id
+                            let row = document.querySelector(
+                                `tr[data-arqueo-id="${window.currentArqueoId}"]`);
+                            if (!row) {
+                                // intentar buscar por importe/concepto
+                                row = Array.from(document.querySelectorAll('#movimientos-tbody tr'))
+                                    .find(r => r.innerText.includes('ARQUEO')) || null;
+                            }
+                            if (row) {
+                                row.setAttribute('data-arqueo-id', data.id || arqueo.id || window
+                                    .currentArqueoId);
+                                row.children[0].textContent = hora;
+                                row.children[2].querySelector('.fw-bold').textContent = concepto;
+                                row.children[2].querySelector('.text-muted').textContent = usuario;
+                                row.children[3].textContent = 'S/ ' + parseFloat(importe).toFixed(
+                                2);
+                            }
+                        } else {
+                            // insertar nueva fila
+                            if (tbody) {
+                                const tr = document.createElement('tr');
+                                tr.setAttribute('data-arqueo-id', data.id || arqueo.id || '');
+                                tr.innerHTML = `
                                         <td class="ps-3 py-3 small text-muted">${hora}</td>
                                         <td>
                                             <span class="badge bg-secondary font-monospace" style="font-size: 0.65rem;">ARQUEO</span>
@@ -631,22 +650,29 @@
                                         </td>
                                         <td class="text-end pe-3 fw-bold text-dark">S/ ${parseFloat(importe).toFixed(2)}</td>
                                     `;
-                                    if (tbody.firstChild) tbody.insertBefore(tr, tbody.firstChild);
-                                    else tbody.appendChild(tr);
+                                if (tbody.firstChild) tbody.insertBefore(tr, tbody.firstChild);
+                                else tbody.appendChild(tr);
 
-                                    const cnt = document.getElementById('movimientos-count');
-                                    if (cnt) {
-                                        const current = parseInt(cnt.textContent) || 0;
-                                        cnt.textContent = (current + 1) + ' registros';
-                                    }
+                                const cnt = document.getElementById('movimientos-count');
+                                if (cnt) {
+                                    const current = parseInt(cnt.textContent) || 0;
+                                    cnt.textContent = (current + 1) + ' registros';
                                 }
                             }
+                        }
 
-                            // guardar id actual (por si hubo creación)
-                            window.currentArqueoId = data.id || arqueo.id || window.currentArqueoId;
+                        // guardar id actual (por si hubo creación)
+                        window.currentArqueoId = data.id || arqueo.id || window.currentArqueoId;
 
-                            alert('Arqueo registrado (ID: '+(data.id||arqueo.id || '')+')');
-                            modal.style.display='none';
+                        // Actualizar campo "Conteo Real en Caja" con el total del arqueo
+                        const inputCierre = document.getElementById('cierre_caja');
+                        if (inputCierre) {
+                            inputCierre.value = total.toFixed(2);
+                            recalcular(); // Recalcular diferencias
+                        }
+
+                        alert('Arqueo registrado (ID: ' + (data.id || arqueo.id || '') + ')');
+                        modal.style.display = 'none';
                     } catch (e) {
                         console.error(e);
                         alert('Error al registrar arqueo');

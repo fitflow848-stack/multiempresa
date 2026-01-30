@@ -36,43 +36,43 @@ Route::get('/', function () {
     return redirect('/login');
 });
 
-    // Endpoint helper para obtener pvpd y monto máximo de descuento para POS
-    Route::get('/pos/pvpd', function (Request $request) {
-        $producto_id = $request->get('producto_id');
-        $almacen_detalle_id = $request->get('almacen_detalle_id');
-        $cantidad = (float) $request->get('cantidad', 1);
-        $precio = (float) $request->get('precio', 0);
+// Endpoint helper para obtener pvpd y monto máximo de descuento para POS
+Route::get('/pos/pvpd', function (Request $request) {
+    $producto_id = $request->get('producto_id');
+    $almacen_detalle_id = $request->get('almacen_detalle_id');
+    $cantidad = (float) $request->get('cantidad', 1);
+    $precio = (float) $request->get('precio', 0);
 
-        $pvpd = null;
+    $pvpd = null;
 
-        if ($almacen_detalle_id) {
-            $detalle = AlmacenIngresoDetalle::find($almacen_detalle_id);
-            if ($detalle) $pvpd = $detalle->pvpd;
+    if ($almacen_detalle_id) {
+        $detalle = AlmacenIngresoDetalle::find($almacen_detalle_id);
+        if ($detalle) $pvpd = $detalle->pvpd;
+    }
+
+    if ($pvpd === null && $producto_id) {
+        $detalle = AlmacenIngresoDetalle::where('producto_id', $producto_id)
+            ->whereNotNull('pvpd')
+            ->orderBy('id', 'desc')
+            ->first();
+        if ($detalle) $pvpd = $detalle->pvpd;
+    }
+
+    $maxAmount = null;
+    if ($pvpd !== null) {
+        $pvpd = (float) $pvpd;
+        if ($pvpd <= 1) {
+            $maxAmount = $cantidad * $precio * $pvpd;
+        } else {
+            $maxAmount = $pvpd;
         }
+    }
 
-        if ($pvpd === null && $producto_id) {
-            $detalle = AlmacenIngresoDetalle::where('producto_id', $producto_id)
-                ->whereNotNull('pvpd')
-                ->orderBy('id', 'desc')
-                ->first();
-            if ($detalle) $pvpd = $detalle->pvpd;
-        }
-
-        $maxAmount = null;
-        if ($pvpd !== null) {
-            $pvpd = (float) $pvpd;
-            if ($pvpd <= 1) {
-                $maxAmount = $cantidad * $precio * $pvpd;
-            } else {
-                $maxAmount = $pvpd;
-            }
-        }
-
-        return response()->json([
-            'pvpd' => $pvpd,
-            'maxAmount' => $maxAmount,
-        ]);
-    });
+    return response()->json([
+        'pvpd' => $pvpd,
+        'maxAmount' => $maxAmount,
+    ]);
+});
 
 // Rutas de autenticación
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -116,6 +116,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{deuda}/marcar-pagada', [DeudaController::class, 'marcarComoPagada'])->name('marcar-pagada');
         Route::get('/reportes/general', [DeudaController::class, 'reporteDeudas'])->name('reporte');
         Route::get('/reportes/exportar-excel', [DeudaController::class, 'exportarExcel'])->name('exportar-excel');
+        Route::get('/pago/{id}/comprobante', [DeudaController::class, 'generarComprobantePago'])->name('comprobante-pago');
     });
 
     // Rutas del módulo de cotizaciones

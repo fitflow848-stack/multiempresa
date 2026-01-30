@@ -47,7 +47,7 @@ class PosController extends Controller
             ->get();
 
         $cotizacionData = null;
-
+        $logo = $company->logo ? asset('storage/' . $company->logo) : asset('assets/img/logo.png');
         // Si se pasa una cotización, cargar sus datos
         if ($request->has('cotizacion_id')) {
             $cotizacion = Cotizacion::with(['cliente', 'detalles'])
@@ -75,7 +75,7 @@ class PosController extends Controller
             }
         }
 
-        return view('pos.index', compact('user', 'company', 'sucursales', 'cotizacionData'));
+        return view('pos.index', compact('user', 'company', 'sucursales', 'cotizacionData', 'logo'));
     }
 
     public function buscar(Request $request)

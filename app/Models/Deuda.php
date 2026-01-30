@@ -62,6 +62,11 @@ class Deuda extends Model
         return $this->belongsTo(Sucursal::class);
     }
 
+    public function pagos()
+    {
+        return $this->hasMany(DeudaPago::class)->orderBy('fecha_pago', 'desc');
+    }
+
     // Scopes
     public function scopePendientes($query)
     {
@@ -71,7 +76,7 @@ class Deuda extends Model
     public function scopeVencidas($query)
     {
         return $query->where('estado', self::ESTADO_VENCIDA)
-                    ->orWhere('fecha_vencimiento', '<', now());
+            ->orWhere('fecha_vencimiento', '<', now());
     }
 
     // Métodos auxiliares
