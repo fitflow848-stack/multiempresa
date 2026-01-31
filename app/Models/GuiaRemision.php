@@ -12,6 +12,8 @@ class GuiaRemision extends Model
     protected $table = 'guia_remision';
 
     protected $fillable = [
+        'company_id',
+        'branch_id',
         'ruc_partida',
         'razon_partida',
         'direccion_partida',
@@ -39,6 +41,16 @@ class GuiaRemision extends Model
         'ticker',
         'sunat_status'
     ];
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class, 'company_id');
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Sucursal::class, 'branch_id');
+    }
 
     // Relación con Departamento (Partida)
     public function departamentoPartida()

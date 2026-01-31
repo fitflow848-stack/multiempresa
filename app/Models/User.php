@@ -26,6 +26,7 @@ class User extends Authenticatable implements FilamentUser
         'email',
         'password',
         'company_id',
+        'branch_id',
         'is_active',
         'phone',
         'birth_date',
@@ -63,6 +64,11 @@ class User extends Authenticatable implements FilamentUser
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function branch(): BelongsTo
+    {
+        return $this->belongsTo(Sucursal::class, 'branch_id');
     }
 
     /**

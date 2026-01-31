@@ -94,6 +94,11 @@ class Company extends Model
         return $this->hasMany(Sucursal::class, 'company_id');
     }
 
+    public function documents(): HasMany
+    {
+        return $this->hasMany(CompanyDocument::class);
+    }
+
     /**
      * Obtener la URL completa del logo
      */

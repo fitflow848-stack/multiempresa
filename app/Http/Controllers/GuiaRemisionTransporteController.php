@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CompanyDocument;
 use App\Models\Departamento;
 use App\Models\DocumentosEmpresa;
 use App\Models\GuiaDestinatario;
@@ -30,13 +31,13 @@ class GuiaRemisionTransporteController extends Controller
 
     public function getAll()
     {
-        $ingreso = GuiaRemision::where('id_area', Auth::user()->company_id)->get();
+        $ingreso = GuiaRemision::where(['company_id' => Auth::user()->company_id, 'branch_id' => Auth::user()->branch_id])->get();
         return response()->json($ingreso);
     }
 
     public function add()
     {
-        $documento = DocumentosEmpresa::where(['id_empresa' => 14, 'id_tido' => 11])->first();
+        $documento = CompanyDocument::where(['company_id' => Auth::user()->company_id, 'branch_id' => Auth::user()->branch_id, 'sunat_document_id' => 11])->first();
         $serie =  $documento->serie;
         $numero =  $documento->numero;
         $departamentos = Departamento::all();
@@ -50,7 +51,8 @@ class GuiaRemisionTransporteController extends Controller
 
             // 1. Crear la guía de remisión localmente
             $guia = GuiaRemision::create($request->except(['detalle', 'cliente_documento', 'cliente_nombre']));
-            $guia->id_area = Auth::user()->company_id;
+            $guia->company_id = Auth::user()->company_id;
+            $guia->branch_id = Auth::user()->branch_id;
             $guia->save();
 
             // 2. Guardar el destinatario
@@ -89,7 +91,7 @@ class GuiaRemisionTransporteController extends Controller
             }
 
             // 4. Preparar datos para SUNAT API
-            $user = \Illuminate\Support\Facades\Auth::user();
+            $user = Auth::user();
             $company = $user->company;
 
             $clienteObj = (object) [

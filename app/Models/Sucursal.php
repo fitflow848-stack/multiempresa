@@ -18,6 +18,11 @@ class Sucursal extends Model
         'telefono',
     ];
 
+    public function documents()
+    {
+        return $this->hasMany(CompanyDocument::class, 'branch_id');
+    }
+
     public function company()
     {
         return $this->belongsTo(Company::class, 'company_id');
