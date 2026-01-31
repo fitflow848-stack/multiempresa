@@ -25,7 +25,19 @@ class GuiaRemision extends Model
         'motivo_traslado',
         'observacion',
         'peso_bruto',
-        'fecha_traslado'
+        'fecha_traslado',
+        'serie',
+        'numero',
+        'documento_relacionado',
+        'transportista_doc',
+        'transportista_nombre',
+        'transportista_mtc',
+        'motivo_traslado_codigo',
+        'modalidad_traslado_codigo',
+        'nombre_archivo',
+        'hash',
+        'ticker',
+        'sunat_status'
     ];
 
     // Relación con Departamento (Partida)

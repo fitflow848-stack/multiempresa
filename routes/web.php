@@ -281,6 +281,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/guia/get/all', [GuiaRemisionTransporteController::class, 'getAll'])->name('guia.getAll');
     Route::resource('guia', GuiaRemisionTransporteController::class);
     Route::post('guia/save', [GuiaRemisionTransporteController::class, 'store'])->name('guia.save');
+    Route::post('guia/sendSunat/{id}', [GuiaRemisionTransporteController::class, 'sendSunat'])->name('guia.sendSunat');
     Route::get('/guia/trasporte/registrar', [GuiaRemisionTransporteController::class, 'add'])->name('guia-transporte.add');
 
     Route::post('/get/provincia', [ProvinciaController::class, 'getProvincia'])->name('provincia.get');

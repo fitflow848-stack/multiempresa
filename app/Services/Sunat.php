@@ -350,4 +350,85 @@ class Sunat
 
         return json_encode($data, JSON_UNESCAPED_UNICODE);
     }
+    public function generarGuiaRemision($data)
+    {
+        return $this->sendRequest('/generar/guia/remision', 'POST', $data);
+    }
+
+    public function enviarGuiaRemision($data)
+    {
+        return $this->sendRequest('/enviar/guia/remision', 'POST', $data);
+    }
+
+    public function formatJsonEnviarGuia($ruc, $nombre_documento, $contenido_documento)
+    {
+        $data = [
+            "endpoint" => "beta",
+            "ruc" => 10706671817,
+            "usuario" => "MODDATOS",
+            "clave" => "moddatos",
+            "client_id" => "test-85e5b0ae-255c-4891-a595-0b98c65c9854",
+            "secret_client" => "test-Hty/M6QshYvPgItX2P0+Kw==",
+            "nombre_documento" => $nombre_documento,
+            "contenido_documento" => $contenido_documento
+        ];
+
+        return json_encode($data);
+    }
+
+    public function formatJsonGuiaRemision($guia, $empresa, $cliente, $transportista, $items, $motivo = '01', $mod_traslado = '01')
+    {
+        $data = [
+            "endpoint" => "beta",
+            "documento" => "remitente",
+            "serie" => (string)($guia->serie ?? 'T001'),
+            "numero" => (string)($guia->numero ?? '1'),
+            "fecha_emision" => date('Y-m-d'),
+            "serie_numero_relacionado" => $guia->documento_relacionado ?? null,
+            "empresa" => [
+                "ruc" => 10706671817,
+                "usuario" => "MODDATOS",
+                "clave" => "moddatos",
+                "razon_social" => $empresa->nombre,
+                "direccion" => $empresa->direccion,
+                "ubigeo" => $empresa->ubigeo ?? "150101",
+                "distrito" => $empresa->distrito ?? "Lima",
+                "provincia" => $empresa->provincia ?? "Lima",
+                "departamento" => $empresa->departamento ?? "Lima"
+            ],
+            "cliente" => [
+                "num_doc" => $cliente->num_doc ?? $cliente->numero_documento ?? "",
+                "rzn_social" => $cliente->rzn_social ?? $cliente->nombre ?? "",
+                "direccion" => $cliente->direccion ?? "-"
+            ],
+            "datos_envio" => [
+                "unidad_medida" => "KGM",
+                "peso_total" => (float) ($guia->peso_total ?? $guia->peso_bruto ?? 1),
+                "cod_traslado" => (string)$motivo,
+                "mod_traslado" => (string)$mod_traslado,
+                "fecha_traslado" => $guia->fecha_traslado ?? date('Y-m-d'),
+                "ubigeo_llegada" => $guia->distrito_llegada ?? '150101',
+                "ubigeo_salida" => $guia->distrito_partida ?? '150101',
+                "direccion_llegada" => $guia->direccion_llegada,
+                "direccion_salida" => $guia->direccion_partida
+            ],
+            "transportista" => [
+                "num_doc" => $transportista->num_doc ?? $transportista->numero_documento ?? "",
+                "rzn_social" => $transportista->rzn_social ?? $transportista->nombre ?? "",
+                "nro_mtc" => $transportista->nro_mtc ?? ""
+            ],
+            "detalles" => []
+        ];
+
+        foreach ($items as $item) {
+            $data['detalles'][] = [
+                "cod_producto" => (string)($item->cod_producto ?? $item->codigo ?? '001'),
+                "unidad" => $item->unidad ?? $item->unidad_medida ?? 'NIU',
+                "descripcion" => $item->descripcion,
+                "cantidad" => (float) $item->cantidad
+            ];
+        }
+
+        return json_encode($data, JSON_UNESCAPED_UNICODE);
+    }
 }

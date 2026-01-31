@@ -106,6 +106,10 @@
             </div>
 
             <form id="formGuia">
+                <input type="hidden" name="serie" value="{{ $serie }}">
+                <input type="hidden" name="numero" value="{{ $numero }}">
+                <input type="hidden" name="motivo_traslado_codigo" value="01">
+                <input type="hidden" name="modalidad_traslado_codigo" value="01">
                 <div class="row">
                     <div class="col-md-7">
                         <div class="card">
@@ -173,6 +177,31 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="bi bi-people me-2"></i> Cliente (Destinatario)</h5>
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="destinatario-item">
+                                    <div class="row g-3">
+                                        <div class="col-md-3">
+                                            <label class="form-label">DNI/RUC</label>
+                                            <div class="input-group">
+                                                <input type="text" class="form-control" name="cliente_documento"
+                                                    id="cliente_documento">
+                                                <button type="button" class="btn btn-outline-primary btn-search-cliente"><i
+                                                        class="bx bx-search"></i></button>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-9">
+                                            <label class="form-label">Apellidos y Nombres / Razón Social</label>
+                                            <input type="text" class="form-control" name="cliente_nombre"
+                                                id="cliente_nombre" readonly>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="col-md-5">
@@ -220,6 +249,12 @@
                                     <label class="form-label">Motivo de Traslado</label>
                                     <input type="text" class="form-control" name="motivo_traslado"
                                         placeholder="Ej: Venta, Compra, Traslado entre almacenes">
+                                    <input type="hidden" name="motivo_traslado_codigo" value="01">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Documento Relacionado (Opcional)</label>
+                                    <input type="text" class="form-control" name="documento_relacionado"
+                                        placeholder="Ej: F001-52">
                                 </div>
                                 <div>
                                     <label class="form-label">Observaciones</label>
@@ -227,35 +262,39 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5><i class="bi bi-people me-2"></i>Destinatarios</h5>
-                        <button type="button" id="addDestinatario" class="btn btn-sm btn-success">
-                            <i class="bi bi-plus-lg"></i> Agregar Destinatario
-                        </button>
-                    </div>
-                    <div class="card-body p-3" id="destinatarios">
-                        <div class="destinatario-item">
-                            <div class="row g-3">
-                                <div class="col-md-3">
-                                    <label class="form-label">DNI/RUC</label>
-                                    <div class="input-group">
-                                        <input type="text" class="form-control" name="documento[]">
-                                        <button type="button" class="btn btn-outline-primary btn-search"><i
-                                                class="bx bx-search"></i></button>
+                        <div class="card">
+                            <div class="card-header">
+                                <h5><i class="bi bi-truck me-2"></i>Transportista</h5>
+                            </div>
+                            <div class="card-body p-3">
+                                <div class="row g-2">
+                                    <div class="col-md-12">
+                                        <label class="form-label">DNI/RUC Transportista</label>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="transportista_doc"
+                                                name="transportista_doc">
+                                            <button type="button" class="btn btn-primary btn-search-transportista">
+                                                <i class="bx bx-search"></i>
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="col-md-9">
-                                    <label class="form-label">Apellidos y Nombres / Razón Social</label>
-                                    <input type="text" class="form-control" name="datos[]" readonly>
+                                    <div class="col-md-12">
+                                        <label class="form-label">Nombre / Razón Social</label>
+                                        <input type="text" class="form-control" id="transportista_nombre"
+                                            name="transportista_nombre">
+                                    </div>
+                                    <div class="col-md-12">
+                                        <label class="form-label">Nro Registro MTC</label>
+                                        <input type="text" class="form-control" name="transportista_mtc">
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
+
 
                 <div class="card">
                     <div class="card-header">
@@ -463,6 +502,48 @@
             });
         });
 
+        $(document).on('click', '.btn-search-transportista', function() {
+            const documento = $('#transportista_doc').val();
+            if (!documento) return;
+
+            Swal.fire({
+                title: 'Buscando...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            let tipo = documento.length > 8 ? 'ruc' : 'dni';
+            let ruta = tipo === 'ruc' ? '{{ route('apidocumento.ruc') }}' : '{{ route('apidocumento.dni') }}';
+
+            $.ajax({
+                url: ruta,
+                method: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    documento: documento
+                },
+                success: function(response) {
+                    Swal.close();
+                    if (response) {
+                        let nombre = tipo === 'ruc' ? response.razonSocial : (response.nombre ||
+                            `${response.nombres} ${response.apellidoPaterno} ${response.apellidoMaterno}`
+                        );
+                        $('#transportista_nombre').val(nombre);
+                    }
+                },
+                error: function() {
+                    Swal.close();
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Error al buscar transportista'
+                    });
+                }
+            });
+        });
+
         $(document).on('click', '.btn-search_partida', function() {
             const documento = $('#ruc_partida').val(); // Correcto
             const tipo = 'ruc'; // Asegúrate de que sea constante o variable
@@ -557,20 +638,6 @@
             let formData = new FormData(this);
             formData.append('_token', token); // Agregar el token CSRF
 
-            // Agregar los destinatarios al FormData
-            let destinatarios = [];
-            $('#destinatarios .destinatario').each(function() {
-                const documento = $(this).find('input[name="documento[]"]').val();
-                const datos = $(this).find('input[name="datos[]"]').val();
-                if (documento && datos) {
-                    destinatarios.push({
-                        documento: documento,
-                        datos: datos
-                    });
-                }
-            });
-            formData.append('destinatarios', JSON.stringify(destinatarios)); // Agregar destinatarios como JSON
-
             // Agregar los datos de la tabla al FormData
             $('#productTable tbody tr').each(function(index, row) {
                 const rowData = {
@@ -637,8 +704,10 @@
 
                         response.forEach(function(producto) {
                             // Mapear campos defensivamente según el JSON retornado
-                            const codigo = producto.producto_id ?? producto.cod_sap ?? producto.codigo ?? '';
-                            const descripcion = producto.nombre ?? producto.descripcion ?? producto.detalle ?? '';
+                            const codigo = producto.producto_id ?? producto.cod_sap ?? producto
+                                .codigo ?? '';
+                            const descripcion = producto.nombre ?? producto.descripcion ??
+                                producto.detalle ?? '';
                             const serie = producto.serie ?? '-';
                             const cantidad = producto.cantidad_total ?? producto.cantidad ?? 1;
                             const unidad = producto.unidad ?? producto.unidad_medida ?? 'UND';
@@ -646,7 +715,8 @@
                             const tipo = producto.product_linea_id ?? producto.tipo ?? '';
                             let origen = '';
                             if (typeof producto.origen === 'string') origen = producto.origen;
-                            if (Array.isArray(producto.origen) && producto.origen.length > 0) origen = producto.origen[0].nombre;
+                            if (Array.isArray(producto.origen) && producto.origen.length > 0)
+                                origen = producto.origen[0].nombre;
 
                             $('#cod_sap_results').append(
                                 `<li class="list-group-item list-group-item-action" data-sap="${codigo}" data-descripcion="${descripcion.replace(/"/g,'&quot;')}" data-serie="${serie}" data-cantidad="${cantidad}" data-unidad="${unidad}" data-peso="${peso}" data-tipo="${tipo}">` +
@@ -750,29 +820,61 @@
         });
 
 
-        // Función para agregar un nuevo destinatario
-        $('#addDestinatario').on('click', function() {
-            const nuevoDestinatario = `
-                    <div class="destinatario">
-                        <div class="d-flex">
-                            <div class="form-group me-3">
-                                <label for="documento" class="control-label">DNI/RUC</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control" name="documento[]">
-                                    <button type="button" class="btn btn-outline-primary btn-search">
-                                        <i class="bi bi-search"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="form-group col-md-6">
-                                <label for="datos" class="control-label">APELLIDOS Y NOMBRE/RAZÓN SOCIAL</label>
-                                <input type="text" class="form-control" name="datos[]" readonly>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            // Agregar el nuevo destinatario al contenedor con el id "destinatarios"
-            $('#destinatarios').append(nuevoDestinatario);
+        // Escuchar el click en los botones de búsqueda para el cliente
+        $(document).on('click', '.btn-search-cliente', function() {
+            let documento = $('#cliente_documento').val();
+            let tipo = documento.length > 8 ? 'ruc' : 'dni';
+
+            if (!documento) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Campo Vacío',
+                    text: 'Por favor, ingrese el RUC/DNI.'
+                });
+                return;
+            }
+
+            Swal.fire({
+                title: 'Buscando...',
+                html: 'Por favor, espere.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            let ruta = tipo == 'ruc' ? '{{ route('apidocumento.ruc') }}' : '{{ route('apidocumento.dni') }}';
+
+            $.ajax({
+                url: ruta,
+                method: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    documento: documento
+                },
+                success: function(response) {
+                    Swal.close();
+                    if (response) {
+                        let datos = tipo == 'ruc' ? response.razonSocial :
+                            `${response.nombre ? response.nombre : ''} ${response.nombres} ${response.apellidoPaterno} ${response.apellidoMaterno}`;
+                        $('#cliente_nombre').val(datos);
+                    } else {
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'Datos no encontrados',
+                            text: 'No se encontraron datos.'
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    Swal.close();
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Hubo un error al buscar el DNI/RUC.'
+                    });
+                }
+            });
         });
     </script>
 @endsection

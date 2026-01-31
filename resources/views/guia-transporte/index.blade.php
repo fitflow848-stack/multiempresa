@@ -42,7 +42,8 @@
             color: #64748b;
         }
 
-        .form-control, .form-select {
+        .form-control,
+        .form-select {
             border-radius: 10px;
             border: 1px solid #e2e8f0;
             padding: 0.65rem 1rem;
@@ -60,12 +61,12 @@
             border-radius: 8px;
             border: none;
         }
-        
+
         .thead-custom {
             background-color: #f8fafc;
             border-bottom: 2px solid #edf2f7;
         }
-        
+
         .thead-custom th {
             color: #64748b !important;
             text-transform: uppercase;
@@ -82,8 +83,8 @@
                 <p class="text-muted mb-0">Gestión de traslados y documentos electrónicos</p>
             </div>
             <div class="col-md-6 text-md-end mt-3 mt-md-0">
-                <a href="{{ route('guia-transporte.add') }}" 
-                   class="btn btn-primary px-4 py-2 shadow-sm bg-gradient-guia border-0">
+                <a href="{{ route('guia-transporte.add') }}"
+                    class="btn btn-primary px-4 py-2 shadow-sm bg-gradient-guia border-0">
                     <i class="fas fa-plus-circle me-2"></i>Crear Nueva Guía
                 </a>
             </div>
@@ -102,7 +103,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        </tbody>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -121,12 +122,8 @@
                     "url": '{{ route('guia.getAll') }}',
                     "dataSrc": ""
                 },
-                "language": {
-                    "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
-                },
                 "dom": '<"d-flex justify-content-between mb-3"f>rt<"d-flex justify-content-between mt-3"ip>',
-                "columns": [
-                    { 
+                "columns": [{
                         "data": "id",
                         "render": function(data, type, row) {
                             return `<div class="d-flex flex-column">
@@ -135,7 +132,7 @@
                                     </div>`;
                         }
                     },
-                    { 
+                    {
                         "data": "created_at",
                         "render": function(data) {
                             return `<div class="guia-date">
@@ -143,22 +140,44 @@
                                     </div>`;
                         }
                     },
-                    { 
+                    {
                         "data": "motivo_traslado",
                         "render": function(data) {
                             return `<span class="badge-motivo">${data || 'Venta'}</span>`;
                         }
                     },
-                    { 
+                    {
                         "data": "observacion",
                         "render": function(data) {
                             return `<span class="text-muted" style="font-size:0.85rem">${data || '-'}</span>`;
                         }
                     },
                     {
-                        "data": null,
-                        "className": "text-center",
                         "render": function(data, type, row) {
+                            let xmlBtn = '';
+                            let sendBtn = '';
+                            if (row.nombre_archivo) {
+                                xmlBtn = `
+                                    <a class="btn btn-white btn-sm border shadow-sm px-3 rounded-pill text-primary fw-bold ms-1" 
+                                       href="{{ asset('storage/xml/guias') }}/${row.nombre_archivo}.xml" 
+                                       target="_blank">
+                                        <i class="fas fa-file-code me-1"></i> XML
+                                    </a>`;
+
+                                if (!row.ticker) {
+                                    sendBtn = `
+                                        <button class="btn btn-white btn-sm border shadow-sm px-3 rounded-pill text-info fw-bold ms-1 btn-send-sunat-guia" 
+                                                data-id="${row.id}">
+                                            <i class="fas fa-paper-plane me-1"></i> Enviar SUNAT
+                                        </button>`;
+                                } else {
+                                    sendBtn = `
+                                        <span class="badge bg-success shadow-sm px-3 py-2 rounded-pill ms-1">
+                                            <i class="fas fa-check-circle me-1"></i> Enviado
+                                        </span>`;
+                                }
+                            }
+
                             return `
                                 <div class="btn-group">
                                     <a class="btn btn-white btn-sm border shadow-sm px-3 rounded-pill text-danger fw-bold" 
@@ -166,10 +185,66 @@
                                        target="_blank">
                                         <i class="fas fa-file-pdf me-1"></i> PDF
                                     </a>
+                                    ${xmlBtn}
+                                    ${sendBtn}
                                 </div>`;
                         }
                     }
                 ]
+            });
+
+            // Manejar envío a SUNAT
+            $(document).on('click', '.btn-send-sunat-guia', function() {
+                const id = $(this).data('id');
+                const btn = $(this);
+
+                Swal.fire({
+                    title: '¿Enviar a SUNAT?',
+                    text: 'Se enviará el documento electrónico a SUNAT.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, enviar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        btn.prop('disabled', true).html(
+                            '<span class="spinner-border spinner-border-sm me-1"></span> Enviando...'
+                            );
+
+                        $.ajax({
+                            url: `{{ url('/guia/sendSunat') }}/${id}`,
+                            type: 'POST',
+                            data: {
+                                _token: '{{ csrf_token() }}'
+                            },
+                            success: function(response) {
+                                if (response.estado) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Enviado con éxito',
+                                        text: `Ticker: ${response.ticker}`,
+                                    }).then(() => {
+                                        tabla.ajax.reload();
+                                    });
+                                } else {
+                                    Swal.fire('Error', response.mensaje ||
+                                        'Error al enviar a SUNAT', 'error');
+                                    btn.prop('disabled', false).html(
+                                        '<i class="fas fa-paper-plane me-1"></i> Enviar SUNAT'
+                                        );
+                                }
+                            },
+                            error: function(xhr) {
+                                Swal.fire('Error',
+                                    'Hubo un error en la comunicación con la API',
+                                    'error');
+                                btn.prop('disabled', false).html(
+                                    '<i class="fas fa-paper-plane me-1"></i> Enviar SUNAT'
+                                    );
+                            }
+                        });
+                    }
+                });
             });
         });
     </script>
