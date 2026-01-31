@@ -194,6 +194,68 @@
 <script src="{{ asset('assets/js/helpers.js') }}"></script>
 @include('pos.partials.js.persistencia-venta')
 
+@if (isset($cotizacionData) && $cotizacionData)
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sobreescribir persistencia si viene de una cotización
+            // Limpiamos persistencia anterior para evitar mezclas
+            try {
+                localStorage.removeItem('ventaPersistentePOS');
+                sessionStorage.removeItem('ticketGuardadoPOS');
+            } catch (e) {}
+
+            ticket = [];
+            let cotizacionData = @json($cotizacionData);
+            let idCoti = cotizacionData.cotizacion.id;
+            // Variable global para usar al emitir
+            window.cotizacionId = idCoti;
+
+            // Poblar ticket
+            if (cotizacionData.productos) {
+                cotizacionData.productos.forEach(p => {
+                    ticket.push({
+                        id: p.producto_id,
+                        producto_id: p.producto_id,
+                        product_linea_id: null, // Si hace falta buscarlo
+                        nombre: p.descripcion,
+                        cantidad: parseFloat(p.cantidad),
+                        cantidad_disponible: 9999, // Asumimos stock disponible al venir de cotización aprobada, o 9999
+                        precio: parseFloat(p.precio),
+                        importe: parseFloat(p.importe),
+                        pvp: parseFloat(p.precio),
+                        pvc: parseFloat(p.precio),
+                        lote: p.lote,
+                        fecha_vencimiento: p.fecha_vencimiento,
+                        es_lote_especifico: !!p.lote,
+                        descuento: p.descuento || 0,
+                        descuentoFijo: 0,
+                        descuentoTexto: (p.descuento ? p.descuento + '%' : '0%')
+                    });
+                });
+            }
+
+            // Renderizar
+            renderTicket();
+
+            // Cargar cliente si existe
+            if (cotizacionData.cliente) {
+                window.clienteActual = cotizacionData.cliente;
+                // Actualizar UI
+                const elNombre = document.getElementById('footer-cliente');
+                if (elNombre) elNombre.innerText = clienteActual.nombre;
+
+                // Y otros elementos de cliente
+                const infoNombre = document.getElementById('cliente-info-nombre');
+                if (infoNombre) infoNombre.textContent = clienteActual.nombre;
+                const infoDoc = document.getElementById('cliente-info-documento');
+                if (infoDoc) infoDoc.textContent = clienteActual.numero_documento || '';
+            }
+
+            mostrarNotificacion('Datos cargados desde Cotización #' + cotizacionData.cotizacion.numero);
+        });
+    </script>
+@endif
+
 @include('pos.partials.js.cliente-venta')
 
 <script>
@@ -441,6 +503,7 @@
             tipo_documento: tipoDocumento,
             proforma: (document.getElementById('proforma-checkbox') && document.getElementById('proforma-checkbox')
                 .checked) ? '1' : '0',
+            id_coti: window.cotizacionId || null,
             _token: '{{ csrf_token() }}'
         };
 

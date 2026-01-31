@@ -163,7 +163,10 @@ class PosController extends Controller
         // Determinar la serie según el tipo de documento
         $serieDocumento = obtenerSerieDocumento($company, $tipoDocumento);
         $metodos = TipoPago::where('activo', true)->orderBy('orden')->get();
-        return view('pos.emitir', compact('user', 'company', 'ticketData', 'total', 'clienteData', 'tipoDocumento', 'serieDocumento', 'metodos', 'isProforma'));
+
+        $idCoti = $request->input('id_coti');
+
+        return view('pos.emitir', compact('user', 'company', 'ticketData', 'total', 'clienteData', 'tipoDocumento', 'serieDocumento', 'metodos', 'isProforma', 'idCoti'));
     }
 
     public function saveVenta(StoreVentaRequest $request)
@@ -184,6 +187,7 @@ class PosController extends Controller
                 'genera_deuda' => $request->genera_deuda ?? 0,
                 'observaciones' => $request->observaciones ?? '',
                 'proforma' => $request->proforma ?? 0,
+                'id_coti' => $request->id_coti ?? null,
             ];
             // $request->ticket y $request->cliente se pasan tal cual (el service decodifica si es string)
             $venta = $this->ventaService->crearVentaDesdeTicket($request->ticket, $request->cliente, $meta);

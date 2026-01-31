@@ -207,6 +207,7 @@
         const totalVenta = parseFloat('{{ $total ?? 0 }}');
         const tipoDocumentoSeleccionado = '{{ $tipoDocumento ?? 'boleta' }}';
         const isProforma = '{{ $isProforma ?? 0 }}';
+        const idCoti = '{{ $idCoti ?? '' }}';
 
         function calcularCambio() {
             const entrega = parseFloat(document.getElementById('entrega').value) || 0;
@@ -233,6 +234,7 @@
                 guia_transporte: document.getElementById('guia-transporte').value,
                 serie: document.getElementById('serie').value,
                 numero: document.getElementById('numero').value,
+                id_coti: idCoti || null,
                 _token: '{{ csrf_token() }}'
             };
 

@@ -24,7 +24,7 @@ class CotizacionController extends Controller
         $user = Auth::user();
         $company = Company::find($user->company_id);
 
-        $cotizaciones = Cotizacion::with(['cliente', 'usuario'])
+        $cotizaciones = Cotizacion::with(['cliente', 'usuario', 'ventas'])
             ->where('company_id', $user->company_id)
             ->orderBy('created_at', 'desc')
             ->paginate(20);
@@ -488,11 +488,16 @@ class CotizacionController extends Controller
             abort(403);
         }
 
+        // Si está pendiente, la aprobamos automáticamente al convertir
+        if ($cotizacion->estado === 'pendiente') {
+            $cotizacion->update(['estado' => 'aprobada']);
+        }
+
         // Solo permitir convertir cotizaciones aprobadas
         if ($cotizacion->estado !== 'aprobada') {
             return response()->json([
                 'success' => false,
-                'message' => 'Solo se pueden convertir cotizaciones aprobadas'
+                'message' => 'Solo se pueden convertir cotizaciones aprobadas (o pendientes)'
             ], 400);
         }
 

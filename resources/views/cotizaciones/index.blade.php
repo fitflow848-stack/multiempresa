@@ -74,12 +74,6 @@
                 <h2 class="fw-bold text-dark mb-1">Cotizaciones</h2>
                 <p class="text-muted mb-0">Seguimiento de propuestas comerciales y preventas</p>
             </div>
-            <div class="col-md-6 text-md-end mt-3 mt-md-0">
-                <a href="{{ route('cotizaciones.create') }}"
-                    class="btn btn-primary px-4 py-2 shadow-sm bg-gradient-quote border-0">
-                    <i class="fas fa-plus me-2"></i>Nueva Cotización
-                </a>
-            </div>
         </div>
 
 
@@ -164,9 +158,20 @@
                                         <span class="status-badge bg-{{ $cotizacion->color_estado }} text-white">
                                             {{ $cotizacion->texto_estado }}
                                         </span>
+                                        @if ($cotizacion->ventas->count() > 0)
+                                            <div class="mt-1">
+                                                <span class="badge bg-info text-white" style="font-size: 0.65rem;">
+                                                    <i class="fas fa-check-double me-1"></i>FACTURADO
+                                                </span>
+                                            </div>
+                                        @endif
                                     </td>
                                     <td class="text-center">
                                         <div class="d-flex justify-content-center gap-1">
+                                            @php
+                                                $tieneVenta = $cotizacion->ventas->count() > 0;
+                                            @endphp
+
                                             <a href="{{ route('cotizaciones.show', $cotizacion->id) }}"
                                                 class="btn-action bg-primary-soft text-primary" title="Detalles">
                                                 <i class='bx bx-show fs-5'></i>
@@ -180,11 +185,20 @@
                                             @endif
 
                                             @if ($cotizacion->estado === 'aprobada')
-                                                <button type="button"
-                                                    class="btn-action bg-success-subtle text-success border-0"
-                                                    onclick="convertirAVenta({{ $cotizacion->id }})" title="Generar Venta">
-                                                    <i class="bx bx-shopping-cart fs-5"></i>
-                                                </button>
+                                                @if (!$tieneVenta)
+                                                    <button type="button"
+                                                        class="btn-action bg-success-subtle text-success border-0"
+                                                        onclick="convertirAVenta({{ $cotizacion->id }})"
+                                                        title="Generar Venta">
+                                                        <i class="bx bx-cart fs-5"></i>
+                                                    </button>
+                                                @else
+                                                    <button type="button"
+                                                        class="btn-action bg-secondary-subtle text-secondary border-0"
+                                                        disabled title="Ya facturada / asociada a venta">
+                                                        <i class="bx bx-check-double fs-5"></i>
+                                                    </button>
+                                                @endif
                                             @endif
 
                                             @if ($cotizacion->estado === 'pendiente')
@@ -195,8 +209,9 @@
                                                     </button>
                                                     <ul class="dropdown-menu dropdown-menu-end shadow border-0">
                                                         <li><a class="dropdown-item py-2" href="javascript:void(0)"
-                                                                onclick="cambiarEstado({{ $cotizacion->id }}, 'aprobada')"><i
-                                                                    class="fas fa-check text-success me-2"></i> Aprobar</a>
+                                                                onclick="convertirAVenta({{ $cotizacion->id }})"><i
+                                                                    class="fas fa-check text-success me-2"></i> Aprobar y
+                                                                Emitir</a>
                                                         </li>
                                                         <li><a class="dropdown-item py-2" href="javascript:void(0)"
                                                                 onclick="cambiarEstado({{ $cotizacion->id }}, 'rechazada')"><i

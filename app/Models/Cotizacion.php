@@ -68,6 +68,14 @@ class Cotizacion extends Model
     }
 
     /**
+     * Relación con las ventas generadas
+     */
+    public function ventas()
+    {
+        return $this->hasMany(Venta::class, 'id_coti');
+    }
+
+    /**
      * Scope para obtener cotizaciones de una empresa específica
      */
     public function scopeEmpresa($query, $companyId)
@@ -89,7 +97,7 @@ class Cotizacion extends Model
     public function scopeVigentes($query)
     {
         return $query->where('vigencia', '>=', now())
-                    ->where('estado', 'pendiente');
+            ->where('estado', 'pendiente');
     }
 
     /**
@@ -98,7 +106,7 @@ class Cotizacion extends Model
     public function scopeVencidas($query)
     {
         return $query->where('vigencia', '<', now())
-                    ->where('estado', 'pendiente');
+            ->where('estado', 'pendiente');
     }
 
     /**
@@ -122,7 +130,7 @@ class Cotizacion extends Model
      */
     public function getColorEstadoAttribute()
     {
-        return match($this->estado) {
+        return match ($this->estado) {
             'pendiente' => $this->esta_vencida ? 'danger' : 'warning',
             'aprobada' => 'success',
             'rechazada' => 'danger',
@@ -136,7 +144,7 @@ class Cotizacion extends Model
      */
     public function getTextoEstadoAttribute()
     {
-        return match($this->estado) {
+        return match ($this->estado) {
             'pendiente' => $this->esta_vencida ? 'Vencida' : 'Pendiente',
             'aprobada' => 'Aprobada',
             'rechazada' => 'Rechazada',

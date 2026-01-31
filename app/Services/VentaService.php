@@ -119,6 +119,7 @@ class VentaService
             $venta->direccion = $clienteData['direccion'] ?? '-';
             $venta->cierre_caja_id = $openCaja->id;
             $venta->id_usuario = $user->id;
+            $venta->id_coti = $meta['id_coti'] ?? null;
             $venta->save();
 
             // Si hay una deuda (pago parcial), crear registro de deuda
