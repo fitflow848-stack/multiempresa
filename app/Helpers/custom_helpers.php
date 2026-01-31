@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\CompanyDocument;
 use App\Models\EmpresaGlobal;
 use App\Models\Planta;
 use Carbon\Carbon;
@@ -378,17 +379,13 @@ if(! function_exists('obtenerSerieDocumento')) {
      */
     function obtenerSerieDocumento($company, $tipoDocumento)
     {
-        switch ($tipoDocumento) {
-            case 'boleta':
-                return $company->serie_boleta ?? 'B001';
-            case 'factura':
-                return $company->serie_factura ?? 'F001';
-            case 'nota-venta':
-                return $company->serie_nota_venta ?? 'NV01';
-            case 'ticket':
-                return 'T001'; // Los tickets normalmente tienen serie fija
-            default:
-                return 'B001';
-        }
+        $documento = DB::table('documentos_sunat')
+            ->where('nombre', 'like', '%' . $tipoDocumento . '%')
+            ->first();
+
+        $document = CompanyDocument::where('company_id','=', $company->id)
+        ->where('branch_id','=', Auth::user()->branch_id)
+        ->where('sunat_document_id',$documento->id_tido)->first();
+        return $document->series;
     }
 }
