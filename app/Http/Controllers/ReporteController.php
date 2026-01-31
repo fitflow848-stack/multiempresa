@@ -9,16 +9,16 @@ use App\Models\Producto;
 use App\Models\Venta;
 use App\Models\VentaDetalle;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB; 
-use App\Models\Cotizacion; 
-use App\Models\Deuda; 
-use App\Models\CierreCaja; 
-use App\Models\DeudaPago; 
-use App\Models\Compra; 
-use App\Models\CompraLinea; 
-use App\Models\AlmacenIngresoDetalle; 
+use Illuminate\Support\Facades\DB;
+use App\Models\Cotizacion;
+use App\Models\Deuda;
+use App\Models\CierreCaja;
+use App\Models\DeudaPago;
+use App\Models\Compra;
+use App\Models\CompraLinea;
+use App\Models\AlmacenIngresoDetalle;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Maatwebsite\Excel\Facades\Excel; 
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReporteController extends Controller
 {
@@ -29,68 +29,13 @@ class ReporteController extends Controller
         $vendedores = User::all();
         $locales = Sucursal::all(); // Assuming Sucursal tracks locals, or Company if single tenant
 
-        // Types of reports key-value
-        $reportTypes = [
-            'ventas' => [
-                '1' => 'CLIENTES FRECUENTES',
-                '2' => 'COMPROBANTES',
-                '3' => 'CON COSTO MAYOR A PRECIO',
-                '4' => 'DETALLE VENTAS POR USUARIO',
-                '5' => 'DEVOLUCIONES',
-                '6'  => 'PEDIDOS',
-                '7'  => 'POR CLIENTES',
-                '8'  => 'POR CLIENTES CONSOLIDADO',
-                '9'  => 'POR COBRAR',
-                '10'  => 'POR COBRAR CONSOLIDADO',
-                '11'  => 'POR PRODUCTO',
-                '12'  => 'POR SERVICIO',
-                '13'  => 'POR USUARIO',
-                '14'  => 'POR VENDEDOR',
-                '15'  => 'PRODUCTOS CON MAYOR MOVIMIENTO',
-                '16'  => 'PRODUCTOS CON MAYOR UTILIDAD',
-                '17'  => 'ARQUEO CAJA GENERAL',
-                '18'  => 'ARQUEO CAJA POR USUARIO',
-                '19' => 'PAGOS POR CLIENTE'
-            ],
-            'Suscripciones' => [
-                '20' => 'COMPROBANTES',
-                '21' => 'INCIDENCIAS',
-                '22' => 'INICIO OPERACIONES',
-                '23' => 'PAGOS SUSCRIPCION',
-                '24' => 'SUSCRIPCIONES',
-            ],
-            'Promociones' => [
-                '25' => 'PROMOCIONES',
-            ],
-            'Productos' => [
-                '26' => 'CON CONDICION DE VENTA',
-                '27' => 'CON REGISTRO SANITARIO',
-            ],
-            'Comprobantes' => [
-                '28' => 'COMPROBANTES CON CLIENTES CAMBIADOS',
-                '29' => 'CONSOLIDADO FACTURADOS POR LOTE',
-            ],
-            'Compras' => [
-                '30' => 'COMPRAS',
-                '31' => 'CONSOLIDADO POR PRODUCTO',
-            ],
-            'Busquedas' => [
-                '32' => 'LOTE PRODUCCION - COMPRAS',
-                '33' => 'LOTE PRODUCCION - VENTAS',
-                '34' => 'N/S PRODUCTO - COMPRA',
-                '35' => 'N/S PRODUCTO - VENTA',
-            ],
-            'Almacen' => [
-                '36' => 'CAPITAL ACTUAL COMPRA',
-                '37' => 'CAPITAL ACTUAL PROMEDIO',
-                '38' => 'PRODUCTOS CON COSTO MAYOR A PRECIO',
-                '39' => 'SALDOS POR PEDIDO',
-                '40' => 'STOCK CONSOLIDADO',
-                '41' => 'STOCK POR LOCAL',
-                '42' => 'STOCK POR REFERENCIA',
-                '43' => 'TRASLADOS',
-            ],
-        ];
+        // Types of reports key-value fetch from DB
+        $reports = DB::table('reports')->where('active', true)->orderBy('id')->get();
+        // Group by category to match previous structure
+        $reportTypes = [];
+        foreach ($reports as $r) {
+            $reportTypes[$r->category][$r->id] = $r->name;
+        }
 
         return view('reportes.index', compact('familias', 'vendedores', 'locales', 'reportTypes'));
     }
@@ -100,98 +45,30 @@ class ReporteController extends Controller
         // Handle search request -> Return HTML partial or JSON
         $reportId = $request->input('report_id');
 
-        switch ($reportId) {
-            case '11': // POR PRODUCTO
-                return $this->reportePorProducto($request);
-            case '1': // CLIENTES FRECUENTES
-                return $this->reporteClientesFrecuentes($request);
-            case '2': // COMPROBANTES
-                return $this->reporteComprobantes($request);
-            case '3': // CON COSTO MAYOR A PRECIO
-                return $this->reporteCostoMayor($request);
-            case '4': // DETALLE VENTAS POR USUARIO
-                return $this->reporteVentasUsuario($request);
-            case '5': // DEVOLUCIONES
-                return $this->reporteDevoluciones($request);
-            case '6': // PEDIDOS
-                return $this->reportePedidos($request);
-            case '7': // POR CLIENTES
-                return $this->reportePorClientes($request);
-            case '8': // POR CLIENTES CONSOLIDADO
-                return $this->reportePorClientesConsolidado($request);
-            case '9': // POR COBRAR
-                return $this->reportePorCobrar($request);
-            case '10': // POR COBRAR CONSOLIDADO
-                return $this->reportePorCobrarConsolidado($request);
-            case '12': // POR SERVICIO
-                return $this->reportePorServicio($request);
-            case '13': // POR USUARIO
-                return $this->reportePorUsuario($request);
-            case '14': // POR VENDEDOR
-                return $this->reportePorVendedor($request);
-            case '15': // PRODUCTOS CON MAYOR MOVIMIENTO
-                return $this->reporteMayorMovimiento($request);
-            case '15': // PRODUCTOS CON MAYOR MOVIMIENTO
-                return $this->reporteMayorMovimiento($request);
-            case '16': // PRODUCTOS CON MAYOR UTILIDAD
-                return $this->reporteMayorUtilidad($request);
-            case '17': // ARQUEO CAJA GENERAL
+        $report = DB::table('reports')->find($reportId);
+
+        if ($report && $report->method && method_exists($this, $report->method)) {
+            // Some methods need specific args or we just pass request
+            // Special handling for legacy methods that needed args from the switch default, 
+            // though most just take $request.
+            // Arqueo caja params:
+            if ($report->method === 'reporteArqueoCajaGeneral') {
                 return $this->reporteArqueoCaja($request, false);
-            case '18': // ARQUEO CAJA POR USUARIO
+            }
+            if ($report->method === 'reporteArqueoCajaUsuario') {
                 return $this->reporteArqueoCaja($request, true);
-            case '19': // PAGOS POR CLIENTE
-                return $this->reportePagosCliente($request);
-            case '19': // PAGOS POR CLIENTE
-                return $this->reportePagosCliente($request);
-            case '20': // SUSCRIPCIONES - COMPROBANTES
-            case '21': // SUSCRIPCIONES - INCIDENCIAS
-            case '22': // SUSCRIPCIONES - INICIO OPERACIONES
-            case '23': // SUSCRIPCIONES - PAGOS SUSCRIPCION
-            case '24': // SUSCRIPCIONES - SUSCRIPCIONES
+            }
+            // Suscripciones special case handled by a generic method, we can pass ID if needed 
+            // but the method name in DB is 'reporteSuscripcionesPlaceholder' so it will be called.
+            // However, that method expects an $id arg. Let's wrapper or adjust.
+            if ($report->method === 'reporteSuscripcionesPlaceholder') {
                 return $this->reporteSuscripcionesPlaceholder($request, $reportId);
-            case '25': // PROMOCIONES
-                return $this->reportePromociones($request);
-            case '25': // PROMOCIONES
-                return $this->reportePromociones($request);
-            case '26': // CON CONDICION DE VENTA
-                return $this->reporteCondicionVenta($request);
-            case '27': // CON REGISTRO SANITARIO
-                return $this->reporteRegistroSanitario($request);
-            case '28': // COMPROBANTES CON CLIENTES CAMBIADOS
-                return $this->reporteClientesCambiadosPlaceholder($request);
-            case '29': // CONSOLIDADO FACTURADOS POR LOTE
-                return $this->reporteFacturadosPorLote($request);
-            case '30': // COMPRAS
-                return $this->reporteCompras($request);
-            case '31': // CONSOLIDADO POR PRODUCTO (COMPRAS)
-                return $this->reporteComprasPorProducto($request);
-            case '32': // LOTE PRODUCCION - COMPRAS
-                return $this->reporteBusquedaLoteCompras($request);
-            case '33': // LOTE PRODUCCION - VENTAS
-                return $this->reporteBusquedaLoteVentas($request);
-            case '34': // N/S PRODUCTO - COMPRA
-                return $this->reporteBusquedaSerieCompras($request);
-            case '35': // N/S PRODUCTO - VENTA
-                return $this->reporteBusquedaSerieVentas($request);
-            case '36': // CAPITAL ACTUAL COMPRA
-                return $this->reporteCapitalActualCompra($request);
-            case '37': // CAPITAL ACTUAL PROMEDIO
-                return $this->reporteCapitalActualPromedio($request);
-            case '38': // PRODUCTOS CON COSTO MAYOR A PRECIO
-                return $this->reporteProductosCostoMayorPrecio($request);
-            case '39': // SALDOS POR PEDIDO
-                return $this->reporteSaldosPorPedido($request);
-            case '40': // STOCK CONSOLIDADO
-                return $this->reporteStockConsolidado($request);
-            case '41': // STOCK POR LOCAL
-                return $this->reporteStockPorLocal($request);
-            case '42': // STOCK POR REFERENCIA
-                return $this->reporteStockPorReferencia($request);
-            case '43': // TRASLADOS
-                return $this->reporteTraslados($request);
-            default:
-                return response()->json(['html' => '<div class="alert alert-warning">Reporte no implementado</div>']);
+            }
+
+            return $this->{$report->method}($request);
         }
+
+        return response()->json(['html' => '<div class="alert alert-warning">Reporte no implementado o no encontrado</div>']);
     }
 
     private function reportePorProducto(Request $request)
@@ -200,10 +77,13 @@ class ReporteController extends Controller
         $query = VentaDetalle::with(['venta', 'producto'])
             ->whereHas('venta', function ($q) use ($request) {
                 // Apply date filters
-                if ($request->input('desde')) $q->whereDate('fecha_emision', '>=', $request->input('desde'));
-                if ($request->input('hasta')) $q->whereDate('fecha_emision', '<=', $request->input('hasta'));
+                if ($request->input('desde'))
+                    $q->whereDate('fecha_emision', '>=', $request->input('desde'));
+                if ($request->input('hasta'))
+                    $q->whereDate('fecha_emision', '<=', $request->input('hasta'));
                 // Apply local/seller filters
-                if ($request->input('vendedor_id')) $q->where('id_usuario', $request->input('vendedor_id'));
+                if ($request->input('vendedor_id'))
+                    $q->where('id_usuario', $request->input('vendedor_id'));
             });
 
         // Apply family filter on product
@@ -230,9 +110,12 @@ class ReporteController extends Controller
             ->orderByDesc('total_compras');
 
         // Apply filters
-        if ($request->input('desde')) $query->whereDate('fecha_emision', '>=', $request->input('desde'));
-        if ($request->input('hasta')) $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
-        if ($request->input('vendedor_id')) $query->where('id_usuario', $request->input('vendedor_id')); // Venta tiene id_usuario? Verificar modelo
+        if ($request->input('desde'))
+            $query->whereDate('fecha_emision', '>=', $request->input('desde'));
+        if ($request->input('hasta'))
+            $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
+        if ($request->input('vendedor_id'))
+            $query->where('id_usuario', $request->input('vendedor_id')); // Venta tiene id_usuario? Verificar modelo
 
         $resultados = $query->with('cliente')->limit(100)->get();
 
@@ -245,9 +128,12 @@ class ReporteController extends Controller
             ->where('estado', '!=', '0')
             ->orderByDesc('fecha_emision');
 
-        if ($request->input('desde')) $query->whereDate('fecha_emision', '>=', $request->input('desde'));
-        if ($request->input('hasta')) $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
-        if ($request->input('vendedor_id')) $query->where('id_usuario', $request->input('vendedor_id'));
+        if ($request->input('desde'))
+            $query->whereDate('fecha_emision', '>=', $request->input('desde'));
+        if ($request->input('hasta'))
+            $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
+        if ($request->input('vendedor_id'))
+            $query->where('id_usuario', $request->input('vendedor_id'));
         if ($request->input('tipo_comprobante')) {
             // Logic to filter by doc type if needed, utilizing the accessor or specific series
         }
@@ -261,7 +147,8 @@ class ReporteController extends Controller
         // Productos donde precio_compra > pvp
         $query = Producto::whereColumn('precio_compra', '>', 'pvp');
 
-        if ($request->input('familia_id')) $query->where('familia_id', $request->input('familia_id'));
+        if ($request->input('familia_id'))
+            $query->where('familia_id', $request->input('familia_id'));
 
         $resultados = $query->limit(200)->get();
         return view('reportes.partials.costo_mayor', compact('resultados'))->render();
@@ -275,9 +162,12 @@ class ReporteController extends Controller
             ->orderBy('id_usuario')
             ->orderByDesc('fecha_emision');
 
-        if ($request->input('desde')) $query->whereDate('fecha_emision', '>=', $request->input('desde'));
-        if ($request->input('hasta')) $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
-        if ($request->input('vendedor_id')) $query->where('id_usuario', $request->input('vendedor_id'));
+        if ($request->input('desde'))
+            $query->whereDate('fecha_emision', '>=', $request->input('desde'));
+        if ($request->input('hasta'))
+            $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
+        if ($request->input('vendedor_id'))
+            $query->where('id_usuario', $request->input('vendedor_id'));
 
         $resultados = $query->limit(200)->get();
         return view('reportes.partials.ventas_usuario', compact('resultados'))->render();
@@ -291,8 +181,10 @@ class ReporteController extends Controller
             ->orWhere('serie', 'like', 'NC%')
             ->orderByDesc('fecha_emision');
 
-        if ($request->input('desde')) $query->whereDate('fecha_emision', '>=', $request->input('desde'));
-        if ($request->input('hasta')) $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
+        if ($request->input('desde'))
+            $query->whereDate('fecha_emision', '>=', $request->input('desde'));
+        if ($request->input('hasta'))
+            $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
 
         $resultados = $query->limit(200)->get();
         return view('reportes.partials.devoluciones', compact('resultados'))->render();
@@ -304,8 +196,10 @@ class ReporteController extends Controller
         $query = Cotizacion::with(['cliente', 'usuario'])
             ->orderByDesc('fecha');
 
-        if ($request->input('desde')) $query->whereDate('fecha', '>=', $request->input('desde'));
-        if ($request->input('hasta')) $query->whereDate('fecha', '<=', $request->input('hasta'));
+        if ($request->input('desde'))
+            $query->whereDate('fecha', '>=', $request->input('desde'));
+        if ($request->input('hasta'))
+            $query->whereDate('fecha', '<=', $request->input('hasta'));
 
         $resultados = $query->limit(200)->get();
         return view('reportes.partials.pedidos', compact('resultados'))->render();
@@ -319,9 +213,12 @@ class ReporteController extends Controller
             ->orderBy('id_cliente')
             ->orderByDesc('fecha_emision');
 
-        if ($request->input('desde')) $query->whereDate('fecha_emision', '>=', $request->input('desde'));
-        if ($request->input('hasta')) $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
-        if ($request->input('vendedor_id')) $query->where('id_usuario', $request->input('vendedor_id'));
+        if ($request->input('desde'))
+            $query->whereDate('fecha_emision', '>=', $request->input('desde'));
+        if ($request->input('hasta'))
+            $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
+        if ($request->input('vendedor_id'))
+            $query->where('id_usuario', $request->input('vendedor_id'));
 
         $resultados = $query->limit(200)->get();
         return view('reportes.partials.por_clientes', compact('resultados'))->render();
@@ -339,9 +236,12 @@ class ReporteController extends Controller
             ->groupBy('id_cliente')
             ->orderByDesc('monto_total');
 
-        if ($request->input('desde')) $query->whereDate('fecha_emision', '>=', $request->input('desde'));
-        if ($request->input('hasta')) $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
-        if ($request->input('vendedor_id')) $query->where('id_usuario', $request->input('vendedor_id'));
+        if ($request->input('desde'))
+            $query->whereDate('fecha_emision', '>=', $request->input('desde'));
+        if ($request->input('hasta'))
+            $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
+        if ($request->input('vendedor_id'))
+            $query->where('id_usuario', $request->input('vendedor_id'));
 
         $resultados = $query->with('cliente')->limit(200)->get();
         return view('reportes.partials.por_clientes_consolidado', compact('resultados'))->render();
@@ -355,8 +255,10 @@ class ReporteController extends Controller
             ->whereNotIn('estado', ['pagada', 'anulada'])
             ->orderByDesc('fecha_venta');
 
-        if ($request->input('desde')) $query->whereDate('fecha_venta', '>=', $request->input('desde'));
-        if ($request->input('hasta')) $query->whereDate('fecha_venta', '<=', $request->input('hasta'));
+        if ($request->input('desde'))
+            $query->whereDate('fecha_venta', '>=', $request->input('desde'));
+        if ($request->input('hasta'))
+            $query->whereDate('fecha_venta', '<=', $request->input('hasta'));
 
         $resultados = $query->limit(200)->get();
         return view('reportes.partials.por_cobrar', compact('resultados'))->render();
@@ -389,9 +291,12 @@ class ReporteController extends Controller
         // Ventas de productos que son servicios (Unidad 'ZZ' o similar)
         $query = VentaDetalle::with(['venta.cliente', 'producto', 'venta.user'])
             ->whereHas('venta', function ($q) use ($request) {
-                if ($request->input('desde')) $q->whereDate('fecha_emision', '>=', $request->input('desde'));
-                if ($request->input('hasta')) $q->whereDate('fecha_emision', '<=', $request->input('hasta'));
-                if ($request->input('vendedor_id')) $q->where('user_id', $request->input('vendedor_id'));
+                if ($request->input('desde'))
+                    $q->whereDate('fecha_emision', '>=', $request->input('desde'));
+                if ($request->input('hasta'))
+                    $q->whereDate('fecha_emision', '<=', $request->input('hasta'));
+                if ($request->input('vendedor_id'))
+                    $q->where('user_id', $request->input('vendedor_id'));
             })
             ->whereHas('producto.unidadMedida', function ($q) {
                 $q->where('codigo', 'ZZ')
@@ -414,8 +319,10 @@ class ReporteController extends Controller
             ->groupBy('id_usuario')
             ->orderByDesc('monto_total');
 
-        if ($request->input('desde')) $query->whereDate('fecha_emision', '>=', $request->input('desde'));
-        if ($request->input('hasta')) $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
+        if ($request->input('desde'))
+            $query->whereDate('fecha_emision', '>=', $request->input('desde'));
+        if ($request->input('hasta'))
+            $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
 
         $resultados = $query->with('user')->get();
         return view('reportes.partials.por_usuario', compact('resultados'))->render();
@@ -437,9 +344,12 @@ class ReporteController extends Controller
         )
             ->whereHas('venta', function ($q) use ($request) {
                 $q->where('estado', '!=', '0');
-                if ($request->input('desde')) $q->whereDate('fecha_emision', '>=', $request->input('desde'));
-                if ($request->input('hasta')) $q->whereDate('fecha_emision', '<=', $request->input('hasta'));
-                if ($request->input('vendedor_id')) $q->where('id_usuario', $request->input('vendedor_id'));
+                if ($request->input('desde'))
+                    $q->whereDate('fecha_emision', '>=', $request->input('desde'));
+                if ($request->input('hasta'))
+                    $q->whereDate('fecha_emision', '<=', $request->input('hasta'));
+                if ($request->input('vendedor_id'))
+                    $q->where('id_usuario', $request->input('vendedor_id'));
             })
             ->groupBy('servicio_id')
             ->orderByDesc('total_cantidad');
@@ -462,9 +372,12 @@ class ReporteController extends Controller
         )
             ->whereHas('venta', function ($q) use ($request) {
                 $q->where('estado', '!=', '0');
-                if ($request->input('desde')) $q->whereDate('fecha_emision', '>=', $request->input('desde'));
-                if ($request->input('hasta')) $q->whereDate('fecha_emision', '<=', $request->input('hasta'));
-                if ($request->input('vendedor_id')) $q->where('id_usuario', $request->input('vendedor_id'));
+                if ($request->input('desde'))
+                    $q->whereDate('fecha_emision', '>=', $request->input('desde'));
+                if ($request->input('hasta'))
+                    $q->whereDate('fecha_emision', '<=', $request->input('hasta'));
+                if ($request->input('vendedor_id'))
+                    $q->where('id_usuario', $request->input('vendedor_id'));
             })
             ->groupBy('servicio_id');
         // El ordenamiento se hará en colección porque necesitamos el costo del producto
@@ -491,8 +404,10 @@ class ReporteController extends Controller
         $query = CierreCaja::with('user')
             ->orderByDesc('fecha_cierre');
 
-        if ($request->input('desde')) $query->whereDate('fecha_cierre', '>=', $request->input('desde'));
-        if ($request->input('hasta')) $query->whereDate('fecha_cierre', '<=', $request->input('hasta'));
+        if ($request->input('desde'))
+            $query->whereDate('fecha_cierre', '>=', $request->input('desde'));
+        if ($request->input('hasta'))
+            $query->whereDate('fecha_cierre', '<=', $request->input('hasta'));
 
         if ($porUsuario || $request->input('vendedor_id')) {
             if ($request->input('vendedor_id')) {
@@ -511,9 +426,12 @@ class ReporteController extends Controller
         $query = DeudaPago::with(['deuda.cliente', 'user'])
             ->orderByDesc('fecha_pago');
 
-        if ($request->input('desde')) $query->whereDate('fecha_pago', '>=', $request->input('desde'));
-        if ($request->input('hasta')) $query->whereDate('fecha_pago', '<=', $request->input('hasta'));
-        if ($request->input('vendedor_id')) $query->where('user_id', $request->input('vendedor_id'));
+        if ($request->input('desde'))
+            $query->whereDate('fecha_pago', '>=', $request->input('desde'));
+        if ($request->input('hasta'))
+            $query->whereDate('fecha_pago', '<=', $request->input('hasta'));
+        if ($request->input('vendedor_id'))
+            $query->where('user_id', $request->input('vendedor_id'));
 
         $resultados = $query->limit(200)->get();
         return view('reportes.partials.pagos_cliente', compact('resultados'))->render();
@@ -542,7 +460,8 @@ class ReporteController extends Controller
         $query = Producto::where('pvp_dto', '>', 0)
             ->whereColumn('pvp_dto', '<', 'pvp');
 
-        if ($request->input('familia_id')) $query->where('familia_id', $request->input('familia_id'));
+        if ($request->input('familia_id'))
+            $query->where('familia_id', $request->input('familia_id'));
 
         $resultados = $query->limit(100)->get();
         return view('reportes.partials.promociones', compact('resultados'))->render();
@@ -581,7 +500,8 @@ class ReporteController extends Controller
         $query = Producto::whereNotNull('registro_sanitario')
             ->where('registro_sanitario', '!=', '');
 
-        if ($request->input('familia_id')) $query->where('familia_id', $request->input('familia_id'));
+        if ($request->input('familia_id'))
+            $query->where('familia_id', $request->input('familia_id'));
 
         $resultados = $query->limit(100)->get();
         return view('reportes.partials.productos_sanitario', compact('resultados'))->render();
@@ -608,8 +528,10 @@ class ReporteController extends Controller
             ->groupBy('almacen_ingreso_detalle.lote', 'venta_detalles.servicio_id')
             ->orderBy('almacen_ingreso_detalle.lote');
 
-        if ($request->input('desde')) $query->whereDate('ventas.fecha_emision', '>=', $request->input('desde'));
-        if ($request->input('hasta')) $query->whereDate('ventas.fecha_emision', '<=', $request->input('hasta'));
+        if ($request->input('desde'))
+            $query->whereDate('ventas.fecha_emision', '>=', $request->input('desde'));
+        if ($request->input('hasta'))
+            $query->whereDate('ventas.fecha_emision', '<=', $request->input('hasta'));
 
         $resultados = $query->with('producto')->limit(100)->get();
         return view('reportes.partials.facturados_lote', compact('resultados'))->render();
@@ -621,8 +543,10 @@ class ReporteController extends Controller
         $query = Compra::with(['proveedor', 'usuario'])
             ->orderByDesc('fecha_emision');
 
-        if ($request->input('desde')) $query->whereDate('fecha_emision', '>=', $request->input('desde'));
-        if ($request->input('hasta')) $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
+        if ($request->input('desde'))
+            $query->whereDate('fecha_emision', '>=', $request->input('desde'));
+        if ($request->input('hasta'))
+            $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
 
         $resultados = $query->limit(200)->get();
         return view('reportes.partials.compras', compact('resultados'))->render();
@@ -640,8 +564,10 @@ class ReporteController extends Controller
             ->groupBy('product_id')
             ->orderByDesc('total_cantidad');
 
-        if ($request->input('desde')) $query->whereDate('compras.fecha_emision', '>=', $request->input('desde'));
-        if ($request->input('hasta')) $query->whereDate('compras.fecha_emision', '<=', $request->input('hasta'));
+        if ($request->input('desde'))
+            $query->whereDate('compras.fecha_emision', '>=', $request->input('desde'));
+        if ($request->input('hasta'))
+            $query->whereDate('compras.fecha_emision', '<=', $request->input('hasta'));
 
         $resultados = $query->with('producto')->limit(100)->get();
         return view('reportes.partials.compras_producto', compact('resultados'))->render();

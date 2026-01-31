@@ -238,7 +238,7 @@
     @if (!$cierre->fecha_cierre)
         <button id="fab-add-operacion" class="btn btn-primary shadow-lg d-flex align-items-center justify-content-center"
             title="Nueva Operación">
-            <i class="fas fa-plus fa-lg"></i>
+            <i class="bx bx-plus fa-lg"></i>
         </button>
     @endif
 
@@ -341,8 +341,7 @@
                                 value="0" min="0"></label>
                         <label> S/10: <input type="number" class="b-count form-control form-control-sm" data-value="10"
                                 value="0" min="0"></label>
-                        <label> S/5: <input type="number" class="b-count form-control form-control-sm" data-value="5"
-                                value="0" min="0"></label>
+
                     </div>
                 </div>
                 <div style="width:220px;">

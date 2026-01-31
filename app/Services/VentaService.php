@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+
 use App\Models\Venta;
 use App\Models\VentaDetalle;
 use App\Models\CierreCaja;
 use App\Models\Deuda;
 use App\Models\AlmacenIngresoDetalle;
+use App\Models\CompanyDocument;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Exception;
@@ -52,7 +54,7 @@ class VentaService
         $serie = $meta['serie'];
         $tipoDocumento = $meta['tipo_documento'];
         $tipoPagoId = $meta['tipo_pago_id'];
-        $entrega = (float)$meta['entrega'];
+        $entrega = (float) $meta['entrega'];
         $observaciones = $meta['observaciones'] ?? '';
         $proforma = $meta['proforma'] ?? 0;
 
@@ -89,18 +91,24 @@ class VentaService
             $total = $total_con_igv;
 
             // Obtener siguiente número
-            $siguienteNumero = $this->obtenerSiguienteNumero($company->id, $serie);
+            $siguienteNumero = $this->obtenerSiguienteNumeroSerie('', $tipoDocumento, true);
+            $documento = DB::table('documentos_sunat')
+            ->where('nombre', 'like', '%' . $tipoDocumento . '%')
+            ->first();
+
+            //aumentar en uno numero companies_document
+            $companyDocument = CompanyDocument::where('company_id', $company->id)
+            ->where('sunat_document_id', $documento->id_tido)
+            ->where('branch_id', Auth::user()->branch_id)
+            ->first();
+
+            $companyDocument->number = $siguienteNumero;
+            $companyDocument->save();
 
             // Crear la venta
             $venta = new Venta();
             $venta->id_empresa = $company->id;
-            $venta->id_tido = match ($tipoDocumento) {
-                'boleta' => 1,
-                'factura' => 2,
-                'nota-venta' => 3,
-                'ticket' => 4,
-                default => 1,
-            };
+            $venta->id_tido = $documento->id_tido;
             $venta->id_cliente = $clienteData['id'] ?? null;
             $venta->id_tipo_pago = $tipoPagoId;
             $venta->fecha_emision = now();
@@ -217,10 +225,12 @@ class VentaService
      */
     private function decodePossibleEscapedJson($raw)
     {
-        if ($raw === null) return null;
+        if ($raw === null)
+            return null;
 
         // Si ya es array, devolver tal cual
-        if (is_array($raw)) return $raw;
+        if (is_array($raw))
+            return $raw;
 
         if (is_string($raw)) {
             $str = $raw;
@@ -252,14 +262,23 @@ class VentaService
     /**
      * Obtener el siguiente número de serie para mostrar en el formulario
      */
-    public function obtenerSiguienteNumeroSerie($serie, $tipoDocumento)
+    public function obtenerSiguienteNumeroSerie($serie, $tipoDocumento, $es_venta = false)
     {
         $user = Auth::user();
-        $serie = $serie;
-        $tipoDocumento = $tipoDocumento;
-
-        $siguienteNumero = $this->obtenerSiguienteNumero($user->company_id, $serie, $tipoDocumento);
-
+        $documento = DB::table('documentos_sunat')
+            ->where('nombre', 'like', '%' . $tipoDocumento . '%')
+            ->first();
+        $companyDoc = CompanyDocument::where('company_id', $user->company_id)
+            ->where('sunat_document_id', $documento->id_tido)
+            ->first();
+        if ($companyDoc) {
+            $siguienteNumero = $companyDoc->number + 1;
+        } else {
+            $siguienteNumero = $this->obtenerSiguienteNumero($user->company_id, $serie);
+        }
+        if($es_venta){
+            return $siguienteNumero;
+        }
         return response()->json([
             'numero' => str_pad($siguienteNumero, 8, '0', STR_PAD_LEFT)
         ]);

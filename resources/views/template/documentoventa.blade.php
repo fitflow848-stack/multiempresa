@@ -173,7 +173,7 @@
                         <td>UNIDAD</td>
                         <td>{{ $item->cantidad }}</td>
                         <td style="text-align: right;">{{ number_format($item->precio_unitario, 2) }}</td>
-                        <td style="text-align: right;">{{ number_format($item->total, 2) }}</td>
+                        <td style="text-align: right;">{{ number_format(($item->precio_unitario * $item->cantidad), 2) }}</td>
                     </tr>
                 @endforeach
             </tbody>

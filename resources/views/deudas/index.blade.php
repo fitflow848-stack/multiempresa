@@ -9,9 +9,6 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
                 <h2><i class="fa fa-credit-card"></i> Gestión de Deudas</h2>
-                <a href="{{ route('deudas.reporte') }}" class="btn btn-info">
-                    <i class="fa fa-chart-bar"></i> Reporte General
-                </a>
             </div>
         </div>
     </div>

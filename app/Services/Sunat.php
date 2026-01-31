@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\Company;
+use Auth;
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Log;
 
@@ -49,12 +51,13 @@ class Sunat
     }
 
     public function formatJsonFacturaBoleta($nombre_documento, $contenido_documento)
-    {
+    {   
+        $empresa = Company::where('id', Auth::user()->company_id)->first();
         $data = [
             "endpoint" => "beta",
-            "ruc" => 20489629551,
-            "usuario" => "MODDATOS",
-            "clave" => "moddatos",
+            "ruc" => $empresa->ruc,
+            "usuario" => $empresa->sol_user,
+            "clave" => $empresa->sol_password,
             "nombre_documento" => $nombre_documento,
             "contenido_documento" => $contenido_documento
         ];
@@ -102,19 +105,21 @@ class Sunat
             $clienteNumDoc = 1111111;
         }
 
+        $empresa = Company::where('id', Auth::user()->company_id)->first();
+
         $data = [
             "endpoint" => "beta",
             "documento" => $documento,
             "empresa" => [
-                "ruc" => 20489629551,
-                "usuario" => "MODDATOS",
-                "clave" => "moddatos",
-                "razon_social" => "SCORPION EMPRESA INDIVIDUAL DE RESPONSABILIDAD LIMITADA",
-                "direccion" => "CAL. NAZARENAS NRO. 13 P.J. COLUMNA PASCO",
-                "ubigeo" => "190113",
-                "distrito" => "pasco",
-                "provincia" => "pasco",
-                "departamento" => "yanacancha"
+                "ruc" => $empresa->ruc,
+                "usuario" => $empresa->sol_user,
+                "clave" => $empresa->sol_password,
+                "razon_social" => $empresa->razon_social,
+                "direccion" => $empresa->direccion_fiscal,
+                "ubigeo" => $empresa->ubigeo,
+                "distrito" => $empresa->district,
+                "provincia" => $empresa->province,
+                "departamento" => $empresa->department
             ],
             "total" => (float) $total,
             "moneda" => $venta->moneda == 1 ? "PEN" : "USD",
@@ -317,6 +322,7 @@ class Sunat
             ];
         }
 
+        $empresa = Company::where('id', Auth::user()->company_id)->first();
         $data = [
             "endpoint" => "beta",
             "documento" => "credito",
@@ -330,15 +336,15 @@ class Sunat
             "moneda" => $ventaNC->moneda == 1 ? "PEN" : "USD",
             "total" => (float)$ventaNC->total,
             "empresa" => [
-                "ruc" => 20489629551,
-                "usuario" => "MODDATOS",
-                "clave" => "moddatos",
-                "razon_social" => "SCORPION EMPRESA INDIVIDUAL DE RESPONSABILIDAD LIMITADA",
-                "direccion" => "CAL. NAZARENAS NRO. 13 P.J. COLUMNA PASCO",
-                "ubigeo" => "190113",
-                "distrito" => "pasco",
-                "provincia" => "pasco",
-                "departamento" => "yanacancha"
+                "ruc" => $empresa->ruc,
+                "usuario" => $empresa->sol_user,
+                "clave" => $empresa->sol_password,
+                "razon_social" => $empresa->razon_social,
+                "direccion" => $empresa->direccion_fiscal,
+                "ubigeo" => $empresa->ubigeo,
+                "distrito" => $empresa->district,
+                "provincia" => $empresa->province,
+                "departamento" => $empresa->department
             ],
             "cliente" => [
                 "num_doc" => $clienteNumDoc ? (int)$clienteNumDoc : null,
@@ -362,11 +368,12 @@ class Sunat
 
     public function formatJsonEnviarGuia($ruc, $nombre_documento, $contenido_documento)
     {
+        $empresa = Company::where('id', Auth::user()->company_id)->first();
         $data = [
             "endpoint" => "beta",
-            "ruc" => 10706671817,
-            "usuario" => "MODDATOS",
-            "clave" => "moddatos",
+            "ruc" => $empresa->ruc,
+            "usuario" => $empresa->sol_user,
+            "clave" => $empresa->sol_password,
             "client_id" => "test-85e5b0ae-255c-4891-a595-0b98c65c9854",
             "secret_client" => "test-Hty/M6QshYvPgItX2P0+Kw==",
             "nombre_documento" => $nombre_documento,
@@ -384,13 +391,13 @@ class Sunat
             "serie" => (string)($guia->serie ?? 'T001'),
             "numero" => (string)($guia->numero ?? '1'),
             "fecha_emision" => date('Y-m-d'),
-            "serie_numero_relacionado" => $guia->documento_relacionado ?? null,
+            "serie_numero_relacionado" => $guia->documento_relacionado ?? '',
             "empresa" => [
-                "ruc" => 10706671817,
-                "usuario" => "MODDATOS",
-                "clave" => "moddatos",
-                "razon_social" => $empresa->nombre,
-                "direccion" => $empresa->direccion,
+                "ruc" => $empresa->ruc,
+                "usuario" => $empresa->sol_user,
+                "clave" => $empresa->sol_password,
+                "razon_social" => $empresa->razon_social,
+                "direccion" => $empresa->direccion_fiscal,
                 "ubigeo" => $empresa->ubigeo ?? "150101",
                 "distrito" => $empresa->distrito ?? "Lima",
                 "provincia" => $empresa->provincia ?? "Lima",

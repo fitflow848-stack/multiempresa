@@ -12,12 +12,12 @@
                         <i class="fa fa-eye"></i> Detalles de Deuda #{{ $deuda->id }}
                     </h2>
                     <div>
-                        <button type="button" class="btn btn-info" onclick="verHistorial()">
-                            <i class="fa fa-history"></i> Ver Historial
-                        </button>
                         <a href="{{ route('deudas.index') }}" class="btn btn-secondary">
                             <i class="fa fa-arrow-left"></i> Volver a Lista
                         </a>
+                        <button type="button" class="btn btn-info" onclick="verHistorial()">
+                            <i class="fa fa-history"></i> Ver Historial
+                        </button>
                         @if ($deuda->estado !== 'pagada')
                             <button type="button" class="btn btn-success" onclick="aplicarPago({{ $deuda->id }})">
                                 <i class="fa fa-dollar-sign"></i> Aplicar Pago
