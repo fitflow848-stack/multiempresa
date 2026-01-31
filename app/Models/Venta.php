@@ -141,7 +141,7 @@ class Venta extends Model
         if ($value) {
             return $value;
         }
-        
+
         // Si no, intentar deducir del id_tido o serie
         if ($this->serie) {
             $serie = strtoupper($this->serie);
@@ -153,8 +153,15 @@ class Venta extends Model
                 return 'nota-venta';
             }
         }
-        
+
         // Por defecto, ticket
         return 'ticket';
+    }
+    /**
+     * Relación con el usuario (vendedor)
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'id_usuario');
     }
 }

@@ -117,7 +117,7 @@
                         <i class="bx bx-wallet me-1"></i> Tesorería
                     </a>
                 </li>
-                
+
                 <li class="nav-item dropdown">
                     <a href="#"
                         class="nav-link dropdown-toggle {{ request()->is('guia*') ? 'active fw-bold text-primary' : '' }}"
@@ -134,7 +134,8 @@
                 </li>
 
                 <li class="nav-item">
-                    <a href="#" class="nav-link">
+                    <a href="{{ route('reportes.index') }}"
+                        class="nav-link {{ request()->is('reportes*') ? 'active fw-bold text-primary' : '' }}">
                         <i class="bx bx-bar-chart-alt-2 me-1"></i> Reportes
                     </a>
                 </li>

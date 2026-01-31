@@ -290,4 +290,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/api/documento/ruc', [ApiDocumentosController::class, 'getRuc'])->name('apidocumento.ruc');
 
     Route::get('guia/remision/{id}', [PdfController::class, 'guia_remision_pdf'])->name('guia.guia_remision_pdf');
+
+    // Reportes
+    Route::get('/reportes', [App\Http\Controllers\ReporteController::class, 'index'])->name('reportes.index');
+    Route::get('/reportes/buscar', [App\Http\Controllers\ReporteController::class, 'generate'])->name('reportes.busqueda');
+    Route::get('/reportes/pdf', [App\Http\Controllers\ReporteController::class, 'pdf'])->name('reportes.pdf');
+    Route::get('/reportes/export', [App\Http\Controllers\ReporteController::class, 'export'])->name('reportes.export');
 });

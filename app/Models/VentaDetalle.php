@@ -47,6 +47,11 @@ class VentaDetalle extends Model
         return $this->belongsTo(Producto::class, 'servicio_id');
     }
 
+    public function almacenIngresoDetalle()
+    {
+        return $this->belongsTo(AlmacenIngresoDetalle::class, 'almacen_ingreso_detalle_id');
+    }
+
     // Scope para ordenar por item
     public function scopeOrdenado($query)
     {
