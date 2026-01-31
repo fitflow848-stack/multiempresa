@@ -13,28 +13,60 @@ use Illuminate\Support\Facades\DB;
 
 class AlmacenController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
         $company = Company::find($user->company_id);
         $sucursales = DB::table('sucursales')
             ->where('company_id', $company->id)
             ->get();
-        // Obtener stock agregado por producto a partir de los ingresos
-        $stocks = DB::table('almacen_ingreso_detalle as d')
+
+        // Query base
+        $query = DB::table('almacen_ingreso_detalle as d')
             ->join('productos as p', 'p.id', 'd.producto_id')
+            ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
+            ->leftJoin('users as u', 'u.id', '=', 'i.user_id')
+            ->leftJoin('sucursales as s', 's.id', '=', 'u.branch_id') // Asumiendo que el stock pertenece a la sucursal del usuario creador
             ->select(
                 'd.id',
                 'd.producto_id',
                 'p.nombre as producto',
-                'p.codigo_barras as codigo_barras',
+                'p.codigo_barras as codigo', // Alias para consistencia
+                's.nombre as almacen_nombre',
                 DB::raw('SUM(d.cantidad) as existencias'),
                 DB::raw('AVG(d.costo) as costo'),
                 DB::raw('AVG(d.pvp) as pvp'),
                 DB::raw('AVG(d.pvpd) as pvpd'),
                 DB::raw('AVG(d.pvc) as pvc')
-            )
-            ->groupBy('d.id', 'd.producto_id', 'p.nombre', 'p.codigo_barras')
+            );
+
+        // Filtros
+        if ($request->has('producto') && $request->get('producto')) {
+            $term = $request->get('producto');
+            $query->where(function ($q) use ($term) {
+                $q->where('p.nombre', 'LIKE', '%' . $term . '%')
+                    ->orWhere('p.codigo_barras', 'LIKE', '%' . $term . '%');
+            });
+        }
+
+        if ($request->has('sucursal') && $request->get('sucursal')) {
+            $query->where('s.id', $request->get('sucursal'));
+        }
+
+        if ($request->has('codigo') && $request->get('codigo')) {
+            $query->where('p.codigo_barras', 'LIKE', '%' . $request->get('codigo') . '%');
+        }
+
+        // El filtro de existencias es un agregado, por lo que usamos having
+        if ($request->has('existencias') && $request->get('existencias')) {
+            if ($request->get('existencias') == 'con') {
+                $query->having('existencias', '>', 0);
+            } elseif ($request->get('existencias') == 'sin') {
+                $query->having('existencias', '<=', 0);
+            }
+        }
+
+        $stocks = $query->groupBy('d.id', 'd.producto_id', 'p.nombre', 'p.codigo_barras', 's.nombre')
             ->paginate(20);
 
         $productos = $stocks;
@@ -97,8 +129,8 @@ class AlmacenController extends Controller
         // 1. Validar los datos
         $request->validate([
             'existencias_fisico' => 'required|numeric|min:0',
-            'precio_compra'      => 'required|numeric|min:0',
-            'pvp'                => 'required|numeric|min:0',
+            'precio_compra' => 'required|numeric|min:0',
+            'pvp' => 'required|numeric|min:0',
         ]);
 
         try {
@@ -110,14 +142,14 @@ class AlmacenController extends Controller
             // 3. Actualizar el detalle del ingreso
             // Nota: Aquí decides si sobreescribes 'cantidad' o si manejas una columna de ajuste
             $detalle->update([
-                'cantidad'   => $request->existencias_fisico,
-                'costo'      => $request->precio_compra,
-                'peso'       => $request->peso,
-                'pvp'        => $request->pvp,
-                'pvpd'       => $request->pvp_dcto,
-                'pvc'        => $request->pvc,
-                'pvp_dto'    => $request->pvc_dcto, // Asumiendo que este es el nombre en tu DB
-                'pv_docena'  => $request->pv_docena,
+                'cantidad' => $request->existencias_fisico,
+                'costo' => $request->precio_compra,
+                'peso' => $request->peso,
+                'pvp' => $request->pvp,
+                'pvpd' => $request->pvp_dcto,
+                'pvc' => $request->pvc,
+                'pvp_dto' => $request->pvc_dcto, // Asumiendo que este es el nombre en tu DB
+                'pv_docena' => $request->pv_docena,
             ]);
 
             // 4. Sincronizar con la tabla de productos (opcional)

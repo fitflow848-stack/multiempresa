@@ -125,8 +125,8 @@
                 <div class="col-md-3 d-flex gap-2">
                     <button type="submit" class="btn btn-dark w-100 fw-bold">Filtrar</button>
                     <a href="{{ route('almacen.index') }}" class="btn btn-light border" title="Limpiar"><i
-                            class="fas fa-sync"></i></a>
-                </div>
+                            class="bx bx-refresh"></i></a>
+                </div>  
             </form>
 
             @if (isset($productos) && $productos->count() > 0)

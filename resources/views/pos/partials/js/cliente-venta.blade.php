@@ -31,13 +31,13 @@
             '<tr><td colspan="4" style="padding: 20px; text-align: center; color: #6c757d;">Cargando clientes...</td></tr>';
 
         fetch(`{{ route('clientes.buscar-pos') }}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({})
-            })
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({})
+        })
             .then(response => response.json())
             .then(data => {
                 clientesDisponibles = data;
@@ -85,7 +85,7 @@
 
             // Convertir debe a número para evitar errores
             const debeNumero = parseFloat(cliente.debe) || 0;
-            
+
             tr.innerHTML = `
                     <td style="padding: 8px; border-bottom: 1px solid #eee;">${icono}</td>
                     <td style="padding: 8px; border-bottom: 1px solid #eee; font-family: monospace;">${cliente.numero_documento}</td>
@@ -112,7 +112,7 @@
         }
 
         clienteActual = clienteSeleccionado;
-        document.getElementById('footer-cliente').innerText = clienteActual.nombre;
+        document.getElementById('footer-cliente').innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento}`;
         mostrarNotificacion(`Cliente seleccionado: ${clienteActual.nombre}`);
         cerrarBuscadorClientes();
 
@@ -130,7 +130,7 @@
         clienteActual = clienteSeleccionado;
 
         // Actualizar UI del cliente en ambos lugares
-        document.getElementById('footer-cliente').innerText = clienteActual.nombre;
+        document.getElementById('footer-cliente').innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento}`;
 
         // Actualizar también en el área de cliente si existe
         const clienteNombre = document.getElementById('cliente-info-nombre');
@@ -193,15 +193,15 @@
         mostrarNotificacion('Consultando RENIEC...');
 
         fetch(`{{ route('pos.consultar-reniec') }}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({
-                    dni: dni
-                })
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                dni: dni
             })
+        })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
@@ -217,7 +217,7 @@
                     };
 
                     clienteActual = nuevoCliente;
-                    document.getElementById('footer-cliente').innerText = clienteActual.nombre;
+                    document.getElementById('footer-cliente').innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento}`;
                     mostrarNotificacion(`Cliente creado desde RENIEC: ${clienteActual.nombre}`);
                     cerrarModalClienteDNI();
                     cerrarBuscadorClientes();
@@ -279,18 +279,18 @@
         mostrarNotificacion('Registrando cliente...');
 
         fetch(`{{ route('clientes.store') }}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify(datosCliente)
-            })
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(datosCliente)
+        })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     clienteActual = data.data;
-                    document.getElementById('footer-cliente').innerText = clienteActual.nombre;
+                    document.getElementById('footer-cliente').innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento}`;
                     mostrarNotificacion(`Cliente registrado: ${clienteActual.nombre}`);
                     cerrarModalNuevoCliente();
                     cerrarBuscadorClientes();
@@ -313,11 +313,11 @@
     // Función para obtener cliente contable existente
     function obtenerClienteContableExistente() {
         fetch(`{{ route('clientes.buscar-pos') }}?term=CLIENTE CONTABLE`, {
-                method: 'GET',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                }
-            })
+            method: 'GET',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
             .then(response => response.json())
             .then(data => {
                 if (data.length > 0) {
@@ -361,13 +361,13 @@
         };
 
         fetch('{{ route('clientes.store') }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify(datosClienteContable)
-            })
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify(datosClienteContable)
+        })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {

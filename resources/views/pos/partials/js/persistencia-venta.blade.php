@@ -68,8 +68,10 @@
                         setTimeout(() => {
                             const clienteNombre = document.getElementById('cliente-info-nombre');
                             const clienteDoc = document.getElementById('cliente-info-documento');
+                            const footerCliente = document.getElementById('footer-cliente');
                             if (clienteNombre) clienteNombre.textContent = clienteActual.nombre;
                             if (clienteDoc) clienteDoc.textContent = clienteActual.documento || '';
+                            if (footerCliente) footerCliente.innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento || clienteActual.documento || ''}`;
                         }, 100);
                     }
 
@@ -105,14 +107,14 @@
         iniciarAutoGuardado();
 
         // Guardar antes de cerrar/cambiar ventana
-        window.addEventListener('beforeunload', function(e) {
+        window.addEventListener('beforeunload', function (e) {
             if (ticket.length > 0) {
                 guardarVentaPersistente();
             }
         });
 
         // Guardar al cambiar de pestaña/ventana
-        document.addEventListener('visibilitychange', function() {
+        document.addEventListener('visibilitychange', function () {
             if (document.visibilityState === 'hidden' && ticket.length > 0) {
                 guardarVentaPersistente();
             }
@@ -229,7 +231,7 @@
                 clienteActual = cliente;
 
                 // Actualizar UI del cliente en el footer
-                document.getElementById('footer-cliente').innerText = cliente.nombre;
+                document.getElementById('footer-cliente').innerText = `${cliente.nombre} - ${cliente.numero_documento || cliente.documento || ''}`;
 
                 // Actualizar también en el área de cliente si existe
                 const clienteNombre = document.getElementById('cliente-info-nombre');
@@ -259,7 +261,7 @@
             if (clienteGuardado) {
                 try {
                     clienteActual = JSON.parse(clienteGuardado);
-                    document.getElementById('footer-cliente').innerText = clienteActual.nombre;
+                    document.getElementById('footer-cliente').innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento || clienteActual.documento || ''}`;
                     sessionStorage.removeItem('clienteGuardadoPOS');
                 } catch (error) {
                     console.error('Error al restaurar cliente guardado:', error);
