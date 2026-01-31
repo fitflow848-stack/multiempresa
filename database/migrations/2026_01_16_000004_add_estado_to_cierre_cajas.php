@@ -9,7 +9,9 @@ return new class extends Migration
     public function up()
     {
         Schema::table('cierre_cajas', function (Blueprint $table) {
-            $table->string('estado')->default('abierta')->after('fecha_cierre');
+            if (!Schema::hasColumn('cierre_cajas', 'estado')) {
+                $table->string('estado')->default('abierta')->after('fecha_cierre');
+            }
         });
     }
 

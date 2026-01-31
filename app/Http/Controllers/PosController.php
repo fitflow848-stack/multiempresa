@@ -298,8 +298,8 @@ class PosController extends Controller
                 if (is_string($cdrRaw) && base64_decode($cdrRaw, true) !== false) {
                     $cdrBinary = base64_decode($cdrRaw);
                 } else {
-                    // Si no es base64, asumir ya es binario/texto en UTF-8 (no hacer utf8_decode)
-                    $cdrBinary = is_string($cdrRaw) ? $cdrRaw : (string)$cdrRaw;
+                    // Si no es base64, usar utf8_decode para obtener binario
+                    $cdrBinary = utf8_decode((string)$cdrRaw);
                 }
 
                 // Nombre de archivo (asegúrate incluye extensión .xml o .zip según proveedor)

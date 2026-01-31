@@ -26,5 +26,7 @@ class VentaSunat extends Model
         'nombre_xml',
         'qr_data',
         'content_xml',
+        'cdr_nombre',
+        'cdr_path',
     ];
 }

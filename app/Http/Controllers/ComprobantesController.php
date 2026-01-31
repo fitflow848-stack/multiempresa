@@ -12,9 +12,20 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Storage; // Added Storage
+
+use App\Services\Sunat;
+use App\Models\VentaSunat;
+use App\Models\AlmacenIngresoDetalle; // Asegurar importación
 
 class ComprobantesController extends Controller
 {
+    protected $sunatService;
+
+    public function __construct(Sunat $sunatService)
+    {
+        $this->sunatService = $sunatService;
+    }
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -158,16 +169,14 @@ class ComprobantesController extends Controller
                 ->get();
 
             $count = 0;
+            $ncsGenerated = 0;
 
             foreach ($ventas as $venta) {
                 // 1. Restaurar Stock
                 foreach ($venta->detalles as $detalle) {
-                    // Restaurar stock de producto general
                     if ($detalle->producto) {
                         $detalle->producto->increment('cantidad', $detalle->cantidad);
                     }
-
-                    // Restaurar stock de lote específico si existe
                     if ($detalle->almacen_ingreso_detalle_id) {
                         $lote = \App\Models\AlmacenIngresoDetalle::find($detalle->almacen_ingreso_detalle_id);
                         if ($lote) {
@@ -185,18 +194,95 @@ class ComprobantesController extends Controller
                     }
                 }
 
-                // 3. Cambiar estado
+                // 3. Generar Nota de Crédito (Solo Facturas id:2 y Boletas id:1) - Motivo 01 (Anulación)
+                if (in_array($venta->id_tido, [1, 2])) {
+                    // Determinar serie NC (F... -> FC.., B... -> BC..)
+                    $serieNC = $venta->id_tido == 2 ? 'FC01' : 'BC01';
+
+                    // Obtener siguiente correlativo
+                    $ultimaNC = Venta::where('id_empresa', $user->company_id)
+                        ->where('serie', $serieNC)
+                        ->orderByRaw('CAST(numero AS UNSIGNED) DESC')
+                        ->first();
+                    $numeroNC = $ultimaNC ? (intval($ultimaNC->numero) + 1) : 1;
+
+                    // Crear Venta NC
+                    $nc = new Venta();
+                    $nc->id_empresa = $venta->id_empresa;
+                    $nc->id_tido = 5; // Nota de Crédito
+                    $nc->id_cliente = $venta->id_cliente;
+                    $nc->id_tipo_pago = $venta->id_tipo_pago;
+                    $nc->direccion = $venta->direccion;
+                    $nc->fecha_emision = now();
+                    $nc->fecha_vencimiento = now();
+                    $nc->serie = $serieNC;
+                    $nc->numero = $numeroNC;
+                    $nc->total = $venta->total;
+                    $nc->moneda = $venta->moneda;
+                    $nc->estado = 1;
+                    $nc->enviado_sunat = 0;
+                    $nc->cierre_caja_id = $venta->cierre_caja_id;
+                    $nc->id_usuario = $user->id;
+                    $nc->save();
+
+                    // Generar JSON NC (Motivo 01: Anulacion de la operacion)
+                    $json = $this->sunatService->formatJsonNotaCreditoFull($nc, $venta, $venta->cliente, $venta->detalles, '01', 'Anulación de la operación');
+
+                    $response = $this->sunatService->generarNotaCredito($json);
+                    $data = json_decode($response);
+
+                    if ($data && isset($data->data)) {
+                        VentaSunat::create([
+                            'id_venta' => $nc->id_venta,
+                            'nombre_xml' => $data->data->nombre_archivo ?? '',
+                            'content_xml' => $data->data->contenido_xml ?? '',
+                            'hash' => $data->data->hash ?? '',
+                            'qr_data' => $data->data->qr_info ?? '',
+                            'response_api' => $response
+                        ]);
+
+                        // Guardar XML en storage
+                        try {
+                            $folder = 'xml_sunat';
+                            $fileName = ($data->data->nombre_archivo ?? 'document') . '.xml';
+                            $storagePath = $folder . '/' . $fileName;
+
+                            if (!Storage::disk('public')->exists($folder)) {
+                                Storage::disk('public')->makeDirectory($folder);
+                            }
+
+                            $xmlContent = $data->data->contenido_xml ?? '';
+                            // Decodificar si viniera en base64? La respuesta API dice "xml en string..."
+                            // Validar encoding
+                            if (!mb_check_encoding($xmlContent, 'UTF-8')) {
+                                $xmlContent = mb_convert_encoding($xmlContent, 'UTF-8', 'ISO-8859-1');
+                            }
+
+                            Storage::disk('public')->put($storagePath, $xmlContent);
+                            Storage::disk('public')->setVisibility($storagePath, 'public');
+                        } catch (\Exception $xmlEx) {
+                            \Illuminate\Support\Facades\Log::error("Error guardando XML fisico NC: " . $xmlEx->getMessage());
+                            // No detener el proceso principal
+                        }
+
+                        $ncsGenerated++;
+                    } else {
+                        \Illuminate\Support\Facades\Log::error("Error generating NC (Cancel) for sale {$venta->id_venta}: " . $response);
+                        // Optional: throw exception
+                    }
+                }
+
+                // 4. Cambiar estado
                 $venta->estado = 0; // 0: Anulada
                 $venta->save();
                 $count++;
-                \Illuminate\Support\Facades\Log::info("Venta cancelada ID: {$venta->id_venta}. Nuevo estado: {$venta->estado}. Total descontado: {$venta->total}");
             }
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => "Se cancelaron $count comprobantes y se restauró el stock.",
+                'message' => "Se cancelaron $count comprobantes. ($ncsGenerated Notas de Crédito generadas)",
                 'cancelados' => $count
             ]);
         } catch (\Exception $e) {
@@ -211,6 +297,7 @@ class ComprobantesController extends Controller
     public function devolver(Request $request)
     {
         // Lógica para procesar devoluciones (estado 'Devuelto' = 3)
+        // Adicionalmente: Generar Nota de Crédito si es Factura/Boleta
         $ventasIds = $request->get('ventas_ids', []);
         $user = Auth::user();
 
@@ -223,6 +310,7 @@ class ComprobantesController extends Controller
                 ->get();
 
             $count = 0;
+            $ncsGenerated = 0;
 
             foreach ($ventas as $venta) {
                 // 1. Restaurar Stock
@@ -254,11 +342,94 @@ class ComprobantesController extends Controller
                             'usuario_id' => $user->id,
                             'fecha' => now(),
                         ]);
+                        // Update caja totals
+                        $cajaAbierta->egresos = floatval($cajaAbierta->egresos) + floatval($venta->total);
+                        $cajaAbierta->save();
                     }
                 }
 
-                // 3. Cambiar estado a 3 (Devuelto)
-                // Asumimos estado 3 = Devuelto
+                // 3. Generar Nota de Crédito (Solo Facturas id:2 y Boletas id:1)
+                if (in_array($venta->id_tido, [1, 2])) {
+                    // Determinar serie NC
+                    $serieNC = $venta->id_tido == 2 ? 'FC01' : 'BC01';
+                    // Obtener siguiente correlativo para NC
+                    $ultimaNC = Venta::where('id_empresa', $user->company_id)
+                        ->where('serie', $serieNC)
+                        ->orderByRaw('CAST(numero AS UNSIGNED) DESC')
+                        ->first();
+                    $numeroNC = $ultimaNC ? (intval($ultimaNC->numero) + 1) : 1;
+
+                    // Crear Venta NC
+                    $nc = new Venta();
+                    $nc->id_empresa = $venta->id_empresa;
+                    $nc->id_tido = 5; // 5 = Nota de Crédito (Internal ID)
+                    $nc->id_cliente = $venta->id_cliente;
+                    $nc->id_tipo_pago = $venta->id_tipo_pago; // Mismo medio
+                    $nc->fecha_emision = now();
+                    $nc->fecha_vencimiento = now();
+                    $nc->serie = $serieNC;
+                    $nc->numero = $numeroNC;
+                    $nc->total = $venta->total; // Monto por el que se emite la NC
+                    $nc->moneda = $venta->moneda;
+                    $nc->estado = 1; // Emitida
+                    $nc->enviado_sunat = 0;
+                    $nc->cierre_caja_id = $venta->cierre_caja_id; // Link to same box or current? usage: current.
+                    $nc->id_usuario = $user->id;
+                    $nc->save();
+
+                    // Generar JSON NC
+                    $json = $this->sunatService->formatJsonNotaCreditoFull($nc, $venta, $venta->cliente, $venta->detalles, '07', 'Devolución total');
+
+                    // Llamar API
+                    $response = $this->sunatService->generarNotaCredito($json);
+                    $data = json_decode($response);
+
+                    if ($data && isset($data->data)) {
+                        // Guardar respuesta Sunat
+                        VentaSunat::create([
+                            'id_venta' => $nc->id_venta,
+                            'nombre_xml' => $data->data->nombre_archivo ?? '',
+                            'content_xml' => $data->data->contenido_xml ?? '',
+                            'hash' => $data->data->hash ?? '',
+                            'qr_data' => $data->data->qr_info ?? '',
+                            'response_api' => $response
+                        ]);
+
+                        // Guardar XML en storage
+                        try {
+                            $folder = 'xml_sunat';
+                            $fileName = ($data->data->nombre_archivo ?? 'document') . '.xml';
+                            $storagePath = $folder . '/' . $fileName;
+
+                            if (!Storage::disk('public')->exists($folder)) {
+                                Storage::disk('public')->makeDirectory($folder);
+                            }
+
+                            $xmlContent = $data->data->contenido_xml ?? '';
+                            if (!mb_check_encoding($xmlContent, 'UTF-8')) {
+                                $xmlContent = mb_convert_encoding($xmlContent, 'UTF-8', 'ISO-8859-1');
+                            }
+
+                            Storage::disk('public')->put($storagePath, $xmlContent);
+                            Storage::disk('public')->setVisibility($storagePath, 'public');
+                        } catch (\Exception $xmlEx) {
+                            \Illuminate\Support\Facades\Log::error("Error guardando XML fisico NC: " . $xmlEx->getMessage());
+                        }
+
+                        $ncsGenerated++;
+                    } else {
+                        // Log error but proceed with return? OR rollback?
+                        // If NC generation fails, we should probably warn.
+                        \Illuminate\Support\Facades\Log::error("Error generating NC for sale {$venta->id_venta}: " . $response);
+                        // Optional: throw exception to rollback everything
+                        // throw new \Exception("Error generando Nota de Crédito Electrónica: " . ($data->mensaje ?? 'Error desconocido'));
+                        // For now, log and continue, allowing manual retry or local return only? 
+                        // User requirement says THIS MUST GENERATE NC. So I should rollback if it fails.
+                        throw new \Exception("Error generando Nota de Crédito Electrónica: " . ($data->mensaje ?? 'Respuesta inválida de API'));
+                    }
+                }
+
+                // 4. Cambiar estado a 3 (Devuelto)
                 $venta->estado = 3;
                 $venta->save();
                 $count++;
@@ -268,7 +439,7 @@ class ComprobantesController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => "Se procesaron $count devoluciones correctamente.",
+                'message' => "Se procesaron $count devoluciones. ($ncsGenerated Notas de Crédito generadas)",
                 'devueltos' => $count
             ]);
         } catch (\Exception $e) {

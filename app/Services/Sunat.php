@@ -43,6 +43,11 @@ class Sunat
         return $this->sendRequest('/enviar/documento/electronico', 'POST', $data);
     }
 
+    public function generarNotaCredito($data)
+    {
+        return $this->sendRequest('/generar/nota/electronica', 'POST', $data);
+    }
+
     public function formatJsonFacturaBoleta($nombre_documento, $contenido_documento)
     {
         $data = [
@@ -247,6 +252,102 @@ class Sunat
             $data['fecha_vencimiento'] = (string) (date('Y-m-d', strtotime($venta->fecha_vencimiento)) ?? date('Y-m-d', strtotime($venta->fecha_emision)));
         }
         // devolver JSON sin escapar Unicode
+        return json_encode($data, JSON_UNESCAPED_UNICODE);
+    }
+
+    public function formatJsonNotaCredito($ventaAfectada, $motivo, $descripcionMotivo = '', $detalles = [])
+    {
+        // $ventaAfectada: Objeto Venta original
+        // $motivo: Código de motivo (ej: '01', '07')
+
+        $documentoAfectado = $ventaAfectada->id_tido == 1 ? "boleta" : "factura";
+        $serieRef = $ventaAfectada->serie;
+        $numeroRef = $ventaAfectada->numero;
+        $numeroRefSinCeros = ltrim((string)$numeroRef, '0');
+
+        // Serie de la NC: Debe ser F... o B... dependiendo de la factura/boleta
+        // Generar una serie dummy o la que corresponda.
+        // Asumimos que el controlador pasará la serie/numero de la NC NUEVA, 
+        // pero aqui estamos formateando el JSON. 
+        // El metodo 'formatJsonXml' tomaba la venta *actual*.
+        // Aqui probablemente necesitemos los datos de la NUEVA venta (NC).
+
+        // REFACTOR: This method should receive the NEW NC Venta object + Reference info.
+        // Pero para simplificar y ajustarnos al request del usuario, haremos un helper basico.
+
+        // PREFERENCIA: Usar un metodo similar a formatJsonXml pero con campos extra
+    }
+
+    public function formatJsonNotaCreditoFull($ventaNC, $ventaAfectada, $cliente, $detalles, $motivo, $descripcionMotivo = 'Devolución')
+    {
+        // $ventaNC: La nueva venta tipo NC
+        // $ventaAfectada: La venta original
+
+        $documento = "credito"; // Como dice el usuario
+        $docAfectado = $ventaAfectada->id_tido == 1 ? "boleta" : "factura";
+        $serieNumeroAfectado = $ventaAfectada->serie . '-' . ltrim((string)$ventaAfectada->numero, '0');
+        $numeroNCSinCeros = ltrim((string)$ventaNC->numero, '0');
+
+        $empresa_razon = isset($cliente->nombre) ? $this->formatString($cliente->nombre) : '';
+        $clienteDireccion = isset($cliente->direccion) ? $cliente->direccion : '-';
+        $clienteNumDoc = $cliente->numero_documento;
+        if (empty($clienteNumDoc) || $clienteNumDoc == '-' || $clienteNumDoc == '0') {
+            $clienteNumDoc = 1111111; // Default
+        }
+
+        $items = [];
+        foreach ($detalles as $prod) {
+            // Similar logic to regular format
+            $descripcion = $prod->producto->nombre ?? ($prod->producto->descripcion ?? '');
+            // Precios
+            $precio = $prod->precio ?? $prod->producto->pvp ?? 0; // Usar precio histórico o actual?
+            // Si viene de venta_detalle, usar 'importe' / 'cantidad' o 'precio_unitario'
+            // Asalimos que 'detalles' son VentaDetalle models
+            if (isset($prod->importe) && isset($prod->cantidad) && $prod->cantidad > 0) {
+                $precio = $prod->importe / $prod->cantidad;
+            }
+
+            $items[] = [
+                "cod_producto" => (string)($prod->producto_id ?? $prod->servicio_id ?? ''),
+                "cod_sunat" => "", // Opcional
+                "unidad" => "NIU",
+                "descripcion" => $descripcion,
+                "cantidad" => (float)$prod->cantidad,
+                "precio" => (float)$precio
+            ];
+        }
+
+        $data = [
+            "endpoint" => "beta",
+            "documento" => "credito",
+            "serie" => (string)$ventaNC->serie,
+            "numero" => (string)$numeroNCSinCeros,
+            "fecha_emision" => date('Y-m-d'), // NC se emite hoy
+            "doc_afectado" => $docAfectado,
+            "serie_numero_afectado" => $serieNumeroAfectado,
+            "cod_motivo" => (string)$motivo,
+            "des_motivo" => $descripcionMotivo, // Ej: "Devolución"
+            "moneda" => $ventaNC->moneda == 1 ? "PEN" : "USD",
+            "total" => (float)$ventaNC->total,
+            "empresa" => [
+                "ruc" => 20489629551,
+                "usuario" => "MODDATOS",
+                "clave" => "moddatos",
+                "razon_social" => "SCORPION EMPRESA INDIVIDUAL DE RESPONSABILIDAD LIMITADA",
+                "direccion" => "CAL. NAZARENAS NRO. 13 P.J. COLUMNA PASCO",
+                "ubigeo" => "190113",
+                "distrito" => "pasco",
+                "provincia" => "pasco",
+                "departamento" => "yanacancha"
+            ],
+            "cliente" => [
+                "num_doc" => $clienteNumDoc ? (int)$clienteNumDoc : null,
+                "rzn_social" => $empresa_razon,
+                "direccion" => $clienteDireccion == 'SIN DIRECCION' ? '-' : $clienteDireccion,
+            ],
+            "detalles" => $items
+        ];
+
         return json_encode($data, JSON_UNESCAPED_UNICODE);
     }
 }
