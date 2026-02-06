@@ -50,8 +50,9 @@
         </a>
 
         <!-- Toggler Button -->
-        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavigation"
-            aria-controls="navbarNavigation" aria-expanded="false" aria-label="Toggle navigation">
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse"
+            data-bs-target="#navbarNavigation" aria-controls="navbarNavigation" aria-expanded="false"
+            aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
 
@@ -131,6 +132,15 @@
                             </a>
                         </li>
                     </ul>
+                </li>
+
+
+
+                <li class="nav-item">
+                    <a href="{{ route('balance.index') }}"
+                        class="nav-link {{ request()->is('balance*') ? 'active fw-bold text-primary' : '' }}">
+                        <i class="bx bx-spreadsheet me-1"></i> Balance
+                    </a>
                 </li>
 
                 <li class="nav-item">

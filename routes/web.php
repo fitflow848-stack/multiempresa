@@ -47,7 +47,8 @@ Route::get('/pos/pvpd', function (Request $request) {
 
     if ($almacen_detalle_id) {
         $detalle = AlmacenIngresoDetalle::find($almacen_detalle_id);
-        if ($detalle) $pvpd = $detalle->pvpd;
+        if ($detalle)
+            $pvpd = $detalle->pvpd;
     }
 
     if ($pvpd === null && $producto_id) {
@@ -55,7 +56,8 @@ Route::get('/pos/pvpd', function (Request $request) {
             ->whereNotNull('pvpd')
             ->orderBy('id', 'desc')
             ->first();
-        if ($detalle) $pvpd = $detalle->pvpd;
+        if ($detalle)
+            $pvpd = $detalle->pvpd;
     }
 
     $maxAmount = null;
@@ -297,4 +299,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reportes/buscar', [App\Http\Controllers\ReporteController::class, 'generate'])->name('reportes.busqueda');
     Route::get('/reportes/pdf', [App\Http\Controllers\ReporteController::class, 'pdf'])->name('reportes.pdf');
     Route::get('/reportes/export', [App\Http\Controllers\ReporteController::class, 'export'])->name('reportes.export');
+
+    // Balance Route
+    Route::get('/balance', [App\Http\Controllers\BalanceController::class, 'index'])->name('balance.index');
 });
