@@ -325,4 +325,5 @@ Route::middleware(['auth'])->group(function () {
 
     // Balance Route
     Route::get('/balance', [App\Http\Controllers\BalanceController::class, 'index'])->name('balance.index');
+    Route::get('/balance/graficos', [App\Http\Controllers\BalanceController::class, 'graficos'])->name('balance.graficos');
 });

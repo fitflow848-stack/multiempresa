@@ -16,7 +16,21 @@ class BalanceController extends Controller
     public function index(Request $request)
     {
         $fecha = $request->input('fecha', now()->format('Y-m-d'));
+        $data = $this->calculateData($fecha);
+        $data['fecha'] = $fecha;
+        return view('balance.index', $data);
+    }
 
+    public function graficos(Request $request)
+    {
+        $fecha = $request->input('fecha', now()->format('Y-m-d'));
+        $data = $this->calculateData($fecha);
+        $data['fecha'] = $fecha;
+        return view('balance.graficos', $data);
+    }
+
+    private function calculateData($fecha)
+    {
         // 1. ACTIVO CORRIENTE
 
         // CAJA: Dinero efectivo en cajas ABIERTAS
@@ -81,7 +95,7 @@ class BalanceController extends Controller
             $tiposActivosCorrientes->push($newType);
         }
 
-        // Total Activo Corriente = Caja + Inventario + (Bancos + CxC + Otros del módulo)
+        // Total Activo Corriente
         $total_manual_y_cxc = $tiposActivosCorrientes->sum('activos_sum_monto');
         $total_activo_corriente = $caja + $inventario + $total_manual_y_cxc;
 
@@ -138,21 +152,20 @@ class BalanceController extends Controller
         // 5. PATRIMONIO
         $patrimonio_calculado = $total_activo - $total_pasivo;
 
-        return view('balance.index', compact(
-            'fecha',
-            'caja',
-            'inventario',
-            'tiposActivosCorrientes',
-            'total_activo_corriente',
-            'tiposActivosNoCorrientes',
-            'total_activo_no_corriente',
-            'total_activo',
-            'tiposPasivosCorrientes',
-            'total_pasivo_corriente',
-            'otros_pasivos_no_corrientes',
-            'total_pasivo_no_corriente',
-            'total_pasivo',
-            'patrimonio_calculado'
-        ));
+        return [
+            'caja' => $caja,
+            'inventario' => $inventario,
+            'tiposActivosCorrientes' => $tiposActivosCorrientes,
+            'total_activo_corriente' => $total_activo_corriente,
+            'tiposActivosNoCorrientes' => $tiposActivosNoCorrientes,
+            'total_activo_no_corriente' => $total_activo_no_corriente,
+            'total_activo' => $total_activo,
+            'tiposPasivosCorrientes' => $tiposPasivosCorrientes,
+            'total_pasivo_corriente' => $total_pasivo_corriente,
+            'otros_pasivos_no_corrientes' => $otros_pasivos_no_corrientes,
+            'total_pasivo_no_corriente' => $total_pasivo_no_corriente,
+            'total_pasivo' => $total_pasivo,
+            'patrimonio_calculado' => $patrimonio_calculado
+        ];
     }
 }

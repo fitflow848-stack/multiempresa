@@ -11,13 +11,17 @@
                 <form action="{{ route('balance.index') }}" method="GET"
                     class="d-flex justify-content-md-end align-items-center">
                     <label for="fecha" class="me-2 fw-bold text-muted">A la fecha:</label>
-                    <div class="input-group w-auto">
+                    <div class="input-group w-auto me-2">
                         <input type="date" name="fecha" id="fecha" class="form-control"
                             value="{{ $fecha }}">
                         <button type="submit" class="btn btn-primary px-4 bg-gradient-primary">
                             <i class="bx bx-refresh me-1"></i> Actualizar
                         </button>
                     </div>
+                    <a href="{{ route('balance.graficos', ['fecha' => $fecha]) }}"
+                        class="btn btn-info px-4 bg-gradient-info text-white">
+                        <i class="bx bx-pie-chart-alt-2 me-1"></i> Ver Gráficos
+                    </a>
                 </form>
             </div>
         </div>
