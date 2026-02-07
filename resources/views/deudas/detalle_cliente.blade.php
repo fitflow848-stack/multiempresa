@@ -113,13 +113,6 @@
                                                     class="btn btn-sm btn-info" title="Ver Detalle completo">
                                                     <i class="bx bx-show"></i>
                                                 </a>
-                                                @if ($deuda->estado !== 'pagada')
-                                                    <button type="button" class="btn btn-sm btn-success"
-                                                        onclick="aplicarPago({{ $deuda->id }}, '{{ $deuda->numero_comprobante }}', {{ $deuda->monto_deuda }})"
-                                                        title="Pagar">
-                                                        <i class="bx bx-money"></i> Pagar
-                                                    </button>
-                                                @endif
                                             </div>
                                         </td>
                                     </tr>
