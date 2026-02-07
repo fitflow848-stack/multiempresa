@@ -37,8 +37,9 @@ class ComprobantesController extends Controller
         $cliente = $request->get('cliente', '');
         $tipoDocumento = $request->get('tipo_documento', 'todos');
 
-        // Query base
+        // Query base - excluir anulados
         $ventasQuery = Venta::where('id_empresa', $company->id)
+            ->where('estado', '!=', 0) // No mostrar anulados
             ->with(['cliente', 'detalles.producto', 'tipoPago', 'ventaSunat'])
             ->whereBetween('fecha_emision', [
                 Carbon::parse($fechaDesde)->startOfDay(),
@@ -185,12 +186,28 @@ class ComprobantesController extends Controller
                     }
                 }
 
-                // 2. Descontar ingreso de caja (Si fue pagada)
-                if ($venta->total > 0 && $venta->cierre_caja_id) {
+                // 2. Descontar ingreso de caja (Si hubo pago y la caja sigue abierta)
+                if ($venta->cierre_caja_id) {
                     $caja = \App\Models\CierreCaja::find($venta->cierre_caja_id);
-                    if ($caja) {
-                        $caja->ingresos = floatval($caja->ingresos) - floatval($venta->total);
-                        $caja->save();
+                    // Solo modificar si la caja existe y NO está cerrada (fecha_cierre null)
+                    // Si ya está cerrada, no debemos alterar sus ingresos históricos.
+                    if ($caja && is_null($caja->fecha_cierre)) {
+                        $montoADescontar = 0;
+
+                        if ($venta->pagado) {
+                            $montoADescontar = $venta->total;
+                        } else {
+                            // Si fue pago parcial, buscar el monto inicial pagado en la deuda
+                            $deuda = \App\Models\Deuda::where('venta_id', $venta->id_venta)->first();
+                            if ($deuda) {
+                                $montoADescontar = $deuda->monto_pagado; // El abono inicial
+                            }
+                        }
+
+                        if ($montoADescontar > 0) {
+                            $caja->ingresos = floatval($caja->ingresos) - floatval($montoADescontar);
+                            $caja->save();
+                        }
                     }
                 }
 

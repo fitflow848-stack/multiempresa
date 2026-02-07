@@ -16,7 +16,13 @@ class ProductRepository
                 p.id AS producto_id,
                 ad.producto_linea_id AS product_linea_id,
                 MAX(ad.id) AS id,
-                CONCAT_WS(' / ', p.nombre, CONCAT(pl.presentacion, ' ', pl.concentracion)) AS nombre,
+                CONCAT_WS(' / ', 
+                    p.nombre, 
+                    NULLIF(CONCAT_WS(' ', 
+                        NULLIF(NULLIF(TRIM(pl.presentacion), ''), '-- Ver --'),
+                        NULLIF(NULLIF(TRIM(pl.concentracion), ''), '-- Ver --')
+                    ), '')
+                ) AS nombre,
                 CONCAT(
                     'lt. ', ad.lote, ' Fv. ', LPAD(DAY(ad.fecha_vencimiento), 2, '0'),
                     ' ', LOWER(LEFT(MONTHNAME(ad.fecha_vencimiento), 3)), ' ', RIGHT(YEAR(ad.fecha_vencimiento), 2)
@@ -28,7 +34,13 @@ class ProductRepository
                 MAX(ad.pvc) AS pvc,
                 MAX(ad.pvcd) AS pvcd,
                 COUNT(ad.id) AS total_lotes,
-                ad.fecha_vencimiento
+                ad.fecha_vencimiento,
+                MAX(ad.stock_min) AS stock_min,
+                CASE 
+                    WHEN SUM(ad.cantidad) <= MAX(COALESCE(ad.stock_min, 0)) AND MAX(COALESCE(ad.stock_min, 0)) > 0 
+                    THEN 1 
+                    ELSE 0 
+                END AS stock_bajo
             FROM almacen_ingreso_detalle ad
             INNER JOIN productos p ON p.id = ad.producto_id
             INNER JOIN producto_lineas pl ON pl.id = ad.producto_linea_id 

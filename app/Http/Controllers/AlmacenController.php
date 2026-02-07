@@ -253,4 +253,201 @@ class AlmacenController extends Controller
             'pv_docena' => 1531.20
         ];
     }
+    public function kardex(Request $request)
+    {
+        $user = Auth::user();
+        $company = $user->company ?? Company::find($user->company_id);
+
+        $movimientos = [];
+        $producto = null;
+        $saldo = 0; // Para calcular saldo acumulado si ordenamos ASC, pero mejor mostrar en vista
+
+        if ($request->has('producto_id')) {
+            $productoId = $request->get('producto_id');
+            $producto = Producto::find($productoId);
+
+            if ($producto) {
+                // Consulta UNION para Entradas, Salidas (Ventas) y Transferencias (Salidas)
+                $movimientos = DB::select("
+                    SELECT * FROM (
+                        -- INGRESOS (Compras / Inventario) - Reconstruyendo cantidad inicial
+                        SELECT 
+                            ai.created_at as fecha,
+                            'ENTRADA' as tipo,
+                            CONCAT('Lote: ', COALESCE(aid.lote, '-'), ' / Ingreso #', ai.id, ' ', COALESCE(ai.observacion, '')) as detalle,
+                            (aid.cantidad + 
+                                COALESCE((SELECT SUM(cantidad) FROM venta_detalles WHERE almacen_ingreso_detalle_id = aid.id), 0) +
+                                COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
+                            ) as entrada,
+                            CAST(0 AS DECIMAL(10,2)) as salida,
+                            COALESCE(aid.costo, 0) as precio_unitario,
+                            u.name as usuario
+                        FROM almacen_ingreso_detalle aid
+                        JOIN almacen_ingresos ai ON ai.id = aid.ingreso_id
+                        LEFT JOIN users u ON u.id = ai.user_id
+                        WHERE aid.producto_id = :prod_id1
+
+                        UNION ALL
+
+                        -- SALIDAS (Ventas)
+                        SELECT
+                            v.created_at as fecha,
+                            'SALIDA' as tipo,
+                            CONCAT('Venta: ', COALESCE(v.serie, ''), '-', LPAD(COALESCE(v.numero, 0), 8, '0'), ' / ', COALESCE(c.nombre, 'Cliente General')) as detalle,
+                            CAST(0 AS DECIMAL(10,2)) as entrada,
+                            CAST(vd.cantidad AS DECIMAL(10,2)) as salida,
+                            vd.precio_unitario,
+                            u.name as usuario
+                        FROM venta_detalles vd
+                        JOIN ventas v ON v.id_venta = vd.id_venta
+                        LEFT JOIN clientes c ON c.id = v.id_cliente
+                        LEFT JOIN users u ON u.id = v.id_usuario
+                        -- Intentamos vincular por almacen_ingreso_detalle_id si es posible para ser precisos
+                        WHERE vd.servicio_id = :prod_id2 AND v.estado != 0
+
+                        UNION ALL
+
+                        -- SALIDAS (Transferencias enviadas)
+                        SELECT
+                            t.created_at as fecha,
+                            'SALIDA TRANSFERENCIA' as tipo,
+                            CONCAT('Transferencia a: ', COALESCE(s.nombre, 'Sucursal Destino'), '. Obs: ', COALESCE(t.observaciones, '-')) as detalle,
+                            CAST(0 AS DECIMAL(10,2)) as entrada,
+                            t.cantidad as salida,
+                            CAST(0 AS DECIMAL(10,2)) as precio_unitario,
+                            u.name as usuario
+                        FROM almacen_transferencias t
+                        LEFT JOIN sucursales s ON s.id = t.sucursal_destino_id
+                        LEFT JOIN users u ON u.id = t.user_id
+                        WHERE t.producto_id = :prod_id3
+                    ) as historial
+                    ORDER BY fecha ASC
+                ", ['prod_id1' => $productoId, 'prod_id2' => $productoId, 'prod_id3' => $productoId]);
+            }
+        }
+
+        return view('almacen.kardex', compact('movimientos', 'producto', 'user', 'company'));
+    }
+    // --- TRANSFERENCIAS ENTRE SUCURSALES ---
+
+    public function transferir()
+    {
+        $user = Auth::user();
+        $company = $user->company ?? Company::find($user->company_id);
+
+        // Sucursales destino (excluyendo la del usuario actual si se quisiera, pero mejor todas)
+        $sucursales = DB::table('sucursales')
+            ->where('company_id', $company->id)
+            ->get();
+
+        return view('almacen.transferir', compact('user', 'company', 'sucursales'));
+    }
+
+    public function getLotesAvailable(Request $request)
+    {
+        $productoId = $request->get('producto_id');
+        $sucursalId = $request->get('sucursal_id'); // Opcional si filtramos por sucursal origen
+
+        // Buscar lotes con stock positivo
+        $query = AlmacenIngresoDetalle::where('producto_id', $productoId)
+            ->where('cantidad', '>', 0)
+            ->with(['ingreso.usuario.branch']); // Asumimos relación sucursal en usuario
+
+        // Si tenemos lógica de sucursal en ingreso, filtrar. 
+        // Por ahora listamos todos los lotes disponibles del producto.
+
+        $lotes = $query->orderBy('fecha_vencimiento', 'asc')->get();
+
+        $results = $lotes->map(function ($lote) {
+            $ingreso = $lote->ingreso;
+            $sucursalNombre = $ingreso && $ingreso->usuario && $ingreso->usuario->branch
+                ? $ingreso->usuario->branch->nombre
+                : 'General/Desconocida';
+
+            return [
+                'id' => $lote->id,
+                'text' => "Lote: " . ($lote->lote ?? 'S/L') . " | Vence: " . ($lote->fecha_vencimiento ?? '-') . " | Stock: " . $lote->cantidad . " | Ubicación: " . $sucursalNombre,
+                'stock' => $lote->cantidad,
+                'sucursal_id' => $ingreso && $ingreso->usuario ? $ingreso->usuario->branch_id : null
+            ];
+        });
+
+        return response()->json($results);
+    }
+
+    public function storeTransferencia(Request $request)
+    {
+        $request->validate([
+            'producto_id' => 'required|exists:productos,id',
+            'lote_origen_id' => 'required|exists:almacen_ingreso_detalle,id',
+            'sucursal_destino_id' => 'required|exists:sucursales,id',
+            'cantidad' => 'required|numeric|min:0.01',
+            'observaciones' => 'nullable|string|max:255'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $loteOrigen = AlmacenIngresoDetalle::lockForUpdate()->find($request->lote_origen_id);
+
+            // Validar stock suficiente
+            if ($loteOrigen->cantidad < $request->cantidad) {
+                throw new \Exception("Stock insuficiente en el lote seleccionado. Disponible: " . $loteOrigen->cantidad);
+            }
+
+            // Validar que no se transfiera a la misma sucursal (opcional, pero lógico)
+            // Obtenemos sucursal origen del usuario creador del lote
+            $usuarioOrigen = $loteOrigen->ingreso->usuario;
+            $sucursalOrigenId = $usuarioOrigen ? $usuarioOrigen->branch_id : null;
+
+            if ($sucursalOrigenId == $request->sucursal_destino_id) {
+                // throw new \Exception("La sucursal de destino es la misma que la de origen.");
+                // Permitir si es solo movimiento lógico o reubicación
+            }
+
+            // 1. Restar del origen
+            $loteOrigen->cantidad -= $request->cantidad;
+            $loteOrigen->save();
+
+            // 2. Crear Ingreso en Destino
+            // Necesitamos un usuario asociado a la sucursal de destino para que el stock "pertenezca" allí.
+            // Si no hay, asignamos al usuario actual pero con una nota, o buscamos el primer usuario de esa sucursal.
+            $usuarioDestino = \App\Models\User::where('branch_id', $request->sucursal_destino_id)->first();
+            $userIdDestino = $usuarioDestino ? $usuarioDestino->id : Auth::id(); // Fallback al usuario actual
+
+            $nuevoIngreso = \App\Models\AlmacenIngreso::create([
+                'empresa_id' => Auth::user()->company_id,
+                'user_id' => $userIdDestino,
+                'fecha' => now(),
+                'observacion' => 'Transferencia desde Lote #' . $loteOrigen->id . '. ' . ($request->observaciones ?? ''),
+                // Si tuviéramos campo sucursal_id directo en ingreso, lo usaríamos aquí.
+            ]);
+
+            // Crear Detalle destino (copia del origen pero con nueva cantidad)
+            $nuevoDetalle = $loteOrigen->replicate();
+            $nuevoDetalle->ingreso_id = $nuevoIngreso->id;
+            $nuevoDetalle->cantidad = $request->cantidad;
+            $nuevoDetalle->save();
+
+            // 3. Registrar Transferencia
+            \App\Models\AlmacenTransferencia::create([
+                'producto_id' => $request->producto_id,
+                'origen_lote_id' => $loteOrigen->id,
+                'destino_lote_id' => $nuevoDetalle->id,
+                'sucursal_origen_id' => $sucursalOrigenId,
+                'sucursal_destino_id' => $request->sucursal_destino_id,
+                'cantidad' => $request->cantidad,
+                'user_id' => Auth::id(), // Quien ejecuta la acción
+                'observaciones' => $request->observaciones
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('almacen.kardex', ['producto_id' => $request->producto_id])
+                ->with('success', 'Transferencia realizada con éxito.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors('Error en transferencia: ' . $e->getMessage())->withInput();
+        }
+    }
 }

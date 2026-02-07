@@ -58,18 +58,22 @@ class CierreCajaController extends Controller
     {
 
         $ventas = DB::select("( SELECT
-                v.fecha_emision,
+                v.created_at AS fecha_emision,
                 'Ingreso - Venta' AS operacion,
                 c.nombre AS cliente_nombre,
                 CONCAT( v.serie, ' ', v.numero ) AS concepto,
-                v.total AS importe,
-                u.NAME AS usuario 
+                CASE 
+                    WHEN d.id IS NULL THEN v.total
+                    ELSE (v.total - (d.monto_deuda + COALESCE((SELECT SUM(monto) FROM deuda_pagos WHERE deuda_id = d.id), 0)))
+                END AS importe,
+                u.name AS usuario 
                 FROM
                     ventas v
                     INNER JOIN clientes c ON c.id = v.id_cliente
                     INNER JOIN users u ON u.id = v.id_usuario 
+                    LEFT JOIN deudas d ON d.venta_id = v.id_venta
                 WHERE
-                    cierre_caja_id = $cierre->id AND v.estado != 0 
+                    v.cierre_caja_id = :cierre_id AND v.estado != 0 
                 ) UNION
                 (
                 SELECT
@@ -78,12 +82,12 @@ class CierreCajaController extends Controller
                     o.tipo AS cliente_nombre,
                     o.concepto,
                     o.importe,
-                    u.`name` AS usuario 
+                    u.name AS usuario 
                 FROM
                     operaciones_caja o
                 INNER JOIN users u ON u.id = o.user_id 
-                where o.cierre_caja_id = $cierre->id
-                ) ORDER BY fecha_emision ASC");
+                where o.cierre_caja_id = :cierre_id_2
+                ) ORDER BY fecha_emision ASC", ['cierre_id' => $cierre->id, 'cierre_id_2' => $cierre->id]);
         $movimientos = $ventas;
         return view('cierres.show', ['cierre' => $cierre, 'movimientos' => $movimientos]);
     }

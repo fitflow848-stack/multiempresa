@@ -3,8 +3,24 @@ let productosEnCotizacion = [];
 let clienteSeleccionado = null;
 let contadorProductos = 1;
 
+// Helper para filtrar valores vacíos o placeholder '-- Ver --'
+function cleanProductDetail(value) {
+    if (!value || value === '-- Ver --' || value.trim() === '') {
+        return '';
+    }
+    return value.trim();
+}
+
+function formatProductDetails(presentacion, concentracion) {
+    const parts = [
+        cleanProductDetail(presentacion),
+        cleanProductDetail(concentracion)
+    ].filter(Boolean);
+    return parts.join(' - ');
+}
+
 // Inicialización
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     initializeCotizaciones();
     cargarDatosSiVieneDeCotizacion();
 });
@@ -18,9 +34,9 @@ function initializeCotizaciones() {
 function setupBuscadorProductos() {
     const codigoBarrasInput = document.getElementById('codigo-barras-input');
     const buscarProductoInput = document.getElementById('buscar-producto-input');
-    
+
     // Búsqueda por código de barras (Enter)
-    codigoBarrasInput.addEventListener('keypress', function(e) {
+    codigoBarrasInput.addEventListener('keypress', function (e) {
         if (e.key === 'Enter') {
             e.preventDefault();
             buscarPorCodigoBarras(this.value);
@@ -29,7 +45,7 @@ function setupBuscadorProductos() {
 
     // Búsqueda por nombre (tiempo de espera)
     let searchTimeout;
-    buscarProductoInput.addEventListener('input', function() {
+    buscarProductoInput.addEventListener('input', function () {
         clearTimeout(searchTimeout);
         const query = this.value.trim();
         if (query.length >= 2) {
@@ -40,7 +56,7 @@ function setupBuscadorProductos() {
     });
 
     // Búsqueda manual con botón
-    document.querySelector('.search-btn').addEventListener('click', function() {
+    document.querySelector('.search-btn').addEventListener('click', function () {
         const query = buscarProductoInput.value.trim();
         if (query) {
             buscarProductos(query);
@@ -50,7 +66,7 @@ function setupBuscadorProductos() {
 
 function setupEventListeners() {
     // Vigencia
-    document.getElementById('vigencia-dias').addEventListener('change', function() {
+    document.getElementById('vigencia-dias').addEventListener('change', function () {
         document.getElementById('footer-vigencia').textContent = this.value + ' días';
     });
 
@@ -118,7 +134,7 @@ function buscarProductos(query = null) {
 
 function mostrarResultadosBusqueda(productos) {
     const tbody = document.getElementById('productos-tbody');
-    
+
     if (productos.length === 0) {
         tbody.innerHTML = `
             <tr>
@@ -139,16 +155,16 @@ function mostrarResultadosBusqueda(productos) {
                     <div style="font-weight: 600; font-size: 13px; color: #333;">
                         ${producto.nombre}
                     </div>
-                    ${producto.presentacion || producto.concentracion ? 
-                        `<div style="font-size: 11px; color: #666; margin-top: 2px;">
-                            ${[producto.presentacion, producto.concentracion].filter(Boolean).join(' - ')}
+                    ${formatProductDetails(producto.presentacion, producto.concentracion) ?
+                `<div style="font-size: 11px; color: #666; margin-top: 2px;">
+                            ${formatProductDetails(producto.presentacion, producto.concentracion)}
                         </div>` : ''
-                    }
-                    ${producto.codigo_ref ? 
-                        `<div style="font-size: 10px; color: #999; margin-top: 1px;">
+            }
+                    ${producto.codigo_ref ?
+                `<div style="font-size: 10px; color: #999; margin-top: 1px;">
                             Ref: ${producto.codigo_ref}
                         </div>` : ''
-                    }
+            }
                 </td>
                 <td style="text-align: center; font-size: 12px; color: ${producto.stock > 0 ? '#28a745' : '#dc3545'};">
                     ${producto.stock || 0}
@@ -168,7 +184,7 @@ function mostrarResultadosBusqueda(productos) {
             </tr>
         `;
     });
-    
+
     tbody.innerHTML = html;
 }
 
@@ -199,9 +215,9 @@ function abrirModalCantidad(producto) {
                 
                 <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
                     <strong>${producto.nombre}</strong>
-                    ${producto.presentacion || producto.concentracion ? 
-                        `<br><small style="color: #666;">${[producto.presentacion, producto.concentracion].filter(Boolean).join(' - ')}</small>` : ''
-                    }
+                    ${formatProductDetails(producto.presentacion, producto.concentracion) ?
+            `<br><small style="color: #666;">${formatProductDetails(producto.presentacion, producto.concentracion)}</small>` : ''
+        }
                     ${producto.codigo_ref ? `<br><small style="color: #999;">Ref: ${producto.codigo_ref}</small>` : ''}
                 </div>
                 
@@ -251,15 +267,15 @@ function abrirModalCantidad(producto) {
             </div>
         </div>
     `;
-    
+
     document.body.appendChild(modal);
-    
+
     // Event listeners para recalcular total
     const cantidadInput = modal.querySelector('#modal-cantidad');
     const precioInput = modal.querySelector('#modal-precio');
     const descuentoInput = modal.querySelector('#modal-descuento');
     const totalInput = modal.querySelector('#modal-total');
-    
+
     function calcularTotal() {
         const cantidad = parseFloat(cantidadInput.value) || 0;
         const precio = parseFloat(precioInput.value) || 0;
@@ -267,11 +283,11 @@ function abrirModalCantidad(producto) {
         const total = (cantidad * precio) - descuento;
         totalInput.value = total.toFixed(2);
     }
-    
+
     cantidadInput.addEventListener('input', calcularTotal);
     precioInput.addEventListener('input', calcularTotal);
     descuentoInput.addEventListener('input', calcularTotal);
-    
+
     calcularTotal(); // Calcular inicial
 }
 
@@ -282,23 +298,23 @@ function agregarProductoACotizacion(producto) {
     const descuento = parseFloat(modal.querySelector('#modal-descuento').value) || 0;
     const lote = modal.querySelector('#modal-lote').value;
     const fechaVenc = modal.querySelector('#modal-fecha-venc').value;
-    
+
     if (!cantidad || cantidad <= 0) {
         alert('La cantidad debe ser mayor a 0');
         return;
     }
-    
+
     if (!precio || precio < 0) {
         alert('El precio debe ser mayor o igual a 0');
         return;
     }
-    
+
     const total = (cantidad * precio) - descuento;
-    
+
     const productoEnCotizacion = {
         id: contadorProductos++,
         producto_id: producto.id,
-        descripcion: producto.nombre + (producto.presentacion ? ' ' + producto.presentacion : ''),
+        descripcion: [producto.nombre, formatProductDetails(producto.presentacion, producto.concentracion) || ''].filter(Boolean).join(' '),
         cantidad: cantidad,
         precio_unitario: precio,
         descuento: descuento,
@@ -309,18 +325,18 @@ function agregarProductoACotizacion(producto) {
         stock: producto.stock || 0,
         cb: producto.cb || producto.codigo_ref || ''
     };
-    
+
     productosEnCotizacion.push(productoEnCotizacion);
     actualizarTablaCotizacion();
     actualizarTotales();
-    
+
     // Cerrar modal
     modal.remove();
 }
 
 function actualizarTablaCotizacion() {
     const tbody = document.getElementById('cotizacion-tbody');
-    
+
     if (productosEnCotizacion.length === 0) {
         tbody.innerHTML = `
             <tr>
@@ -332,7 +348,7 @@ function actualizarTablaCotizacion() {
         `;
         return;
     }
-    
+
     let html = '';
     productosEnCotizacion.forEach((producto, index) => {
         html += `
@@ -357,7 +373,7 @@ function actualizarTablaCotizacion() {
             </tr>
         `;
     });
-    
+
     tbody.innerHTML = html;
 }
 
@@ -374,7 +390,7 @@ function actualizarTotales() {
     const descuentos = productosEnCotizacion.reduce((sum, p) => sum + p.descuento, 0);
     const igv = subtotal * 0.18;
     const total = subtotal + igv;
-    
+
     document.getElementById('footer-subtotal').textContent = subtotal.toFixed(2);
     document.getElementById('footer-igv').textContent = igv.toFixed(2);
     document.getElementById('footer-dscto').textContent = descuentos.toFixed(2);
@@ -400,15 +416,15 @@ function limpiarCotizacion() {
         productosEnCotizacion = [];
         clienteSeleccionado = null;
         contadorProductos = 1;
-        
+
         actualizarTablaCotizacion();
         actualizarTotales();
-        
+
         document.getElementById('footer-cliente').textContent = 'SELECCIONAR CLIENTE';
         document.getElementById('vigencia-dias').value = 30;
         document.getElementById('footer-vigencia').textContent = '30 días';
         document.getElementById('observaciones-input').value = '';
-        
+
         limpiarBusqueda();
     }
 }
@@ -428,20 +444,20 @@ function guardarCotizacion() {
         alert('Debe agregar al menos un producto a la cotización');
         return;
     }
-    
+
     if (!clienteSeleccionado) {
         alert('Debe seleccionar un cliente');
         return;
     }
-    
+
     const vigenciaDias = parseInt(document.getElementById('vigencia-dias').value) || 30;
     const observaciones = document.getElementById('observaciones-input').value;
-    
+
     const subtotal = productosEnCotizacion.reduce((sum, p) => sum + p.subtotal, 0);
     const descuentos = productosEnCotizacion.reduce((sum, p) => sum + p.descuento, 0);
     const igv = subtotal * 0.18;
     const total = subtotal + igv;
-    
+
     const data = {
         cliente_id: clienteSeleccionado.id,
         productos: productosEnCotizacion,
@@ -452,13 +468,13 @@ function guardarCotizacion() {
         observaciones: observaciones,
         vigencia_dias: vigenciaDias
     };
-    
+
     // Mostrar loading
     const btnGuardar = document.querySelector('.control-btn.success');
     const originalText = btnGuardar.innerHTML;
     btnGuardar.innerHTML = '⏳ Guardando...';
     btnGuardar.disabled = true;
-    
+
     fetch('/cotizaciones', {
         method: 'POST',
         headers: {
@@ -467,34 +483,34 @@ function guardarCotizacion() {
         },
         body: JSON.stringify(data)
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            alert('Cotización guardada exitosamente');
-            if (data.redirect) {
-                window.location.href = data.redirect;
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Cotización guardada exitosamente');
+                if (data.redirect) {
+                    window.location.href = data.redirect;
+                } else {
+                    window.location.href = '/cotizaciones';
+                }
             } else {
-                window.location.href = '/cotizaciones';
+                alert(data.message || 'Error al guardar la cotización');
             }
-        } else {
-            alert(data.message || 'Error al guardar la cotización');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error al guardar la cotización');
-    })
-    .finally(() => {
-        btnGuardar.innerHTML = originalText;
-        btnGuardar.disabled = false;
-    });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error al guardar la cotización');
+        })
+        .finally(() => {
+            btnGuardar.innerHTML = originalText;
+            btnGuardar.disabled = false;
+        });
 }
 
 function cargarDatosSiVieneDeCotizacion() {
     // Si viene desde una cotización existente, cargar los datos
     const urlParams = new URLSearchParams(window.location.search);
     const cotizacionId = urlParams.get('cotizacion_id');
-    
+
     if (cotizacionId) {
         fetch(`/cotizaciones/api/${cotizacionId}/datos`)
             .then(response => response.json())
@@ -504,11 +520,11 @@ function cargarDatosSiVieneDeCotizacion() {
                     const cotizacion = data.data.cotizacion;
                     const cliente = data.data.cliente;
                     const productos = data.data.productos;
-                    
+
                     // Establecer cliente
                     clienteSeleccionado = cliente;
                     document.getElementById('footer-cliente').textContent = cliente.nombre;
-                    
+
                     // Cargar productos
                     productosEnCotizacion = productos.map((p, index) => ({
                         id: index + 1,
@@ -521,10 +537,10 @@ function cargarDatosSiVieneDeCotizacion() {
                         lote: p.lote || '',
                         fecha_vencimiento: p.fecha_vencimiento || ''
                     }));
-                    
+
                     actualizarTablaCotizacion();
                     actualizarTotales();
-                    
+
                     contadorProductos = productosEnCotizacion.length + 1;
                 }
             })

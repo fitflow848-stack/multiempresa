@@ -113,6 +113,7 @@ Route::middleware(['auth'])->group(function () {
     // Rutas del módulo de deudas
     Route::prefix('deudas')->name('deudas.')->group(function () {
         Route::get('/', [DeudaController::class, 'index'])->name('index');
+        Route::get('/cliente/{id}', [DeudaController::class, 'deudasPorCliente'])->name('cliente');
         Route::get('/{deuda}', [DeudaController::class, 'show'])->name('show');
         Route::post('/{deuda}/aplicar-pago', [DeudaController::class, 'aplicarPago'])->name('aplicar-pago');
         Route::post('/{deuda}/marcar-pagada', [DeudaController::class, 'marcarComoPagada'])->name('marcar-pagada');
@@ -278,6 +279,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/alta-rapida', [AlmacenController::class, 'altaRapida'])->name('alta-rapida');
         Route::post('/alta-rapida', [AlmacenController::class, 'guardarProducto'])->name('guardar-producto');
         Route::get('/buscar', [AlmacenController::class, 'buscar'])->name('buscar');
+        Route::get('/kardex', [AlmacenController::class, 'kardex'])->name('kardex');
+        Route::get('/transferir', [AlmacenController::class, 'transferir'])->name('transferir');
+        Route::post('/transferir', [AlmacenController::class, 'storeTransferencia'])->name('transferir.store');
+        Route::get('/api/lotes', [AlmacenController::class, 'getLotesAvailable'])->name('api.lotes');
     });
 
     Route::get('/guia/get/all', [GuiaRemisionTransporteController::class, 'getAll'])->name('guia.getAll');
@@ -299,6 +304,24 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/reportes/buscar', [App\Http\Controllers\ReporteController::class, 'generate'])->name('reportes.busqueda');
     Route::get('/reportes/pdf', [App\Http\Controllers\ReporteController::class, 'pdf'])->name('reportes.pdf');
     Route::get('/reportes/export', [App\Http\Controllers\ReporteController::class, 'export'])->name('reportes.export');
+
+    // Activos Corrientes
+    Route::get('/activos-corrientes', [App\Http\Controllers\ActivoCorrienteController::class, 'index'])->name('activos_corrientes.index');
+    Route::post('/activos-corrientes', [App\Http\Controllers\ActivoCorrienteController::class, 'store'])->name('activos_corrientes.store');
+    Route::post('/activos-corrientes/tipo', [App\Http\Controllers\ActivoCorrienteController::class, 'storeTipo'])->name('activos_corrientes.storeTipo');
+    Route::delete('/activos-corrientes/{id}', [App\Http\Controllers\ActivoCorrienteController::class, 'destroy'])->name('activos_corrientes.destroy');
+
+    // Activos Fijos / No Corrientes
+    Route::get('/activos', [App\Http\Controllers\ActivoFijoController::class, 'index'])->name('activos.index');
+    Route::post('/activos', [App\Http\Controllers\ActivoFijoController::class, 'store'])->name('activos.store');
+    Route::post('/activos/tipo', [App\Http\Controllers\ActivoFijoController::class, 'storeTipo'])->name('activos.storeTipo');
+    Route::delete('/activos/{id}', [App\Http\Controllers\ActivoFijoController::class, 'destroy'])->name('activos.destroy');
+
+    // Pasivos Corrientes
+    Route::get('/pasivos', [App\Http\Controllers\PasivoController::class, 'index'])->name('pasivos.index');
+    Route::post('/pasivos', [App\Http\Controllers\PasivoController::class, 'store'])->name('pasivos.store');
+    Route::post('/pasivos/tipo', [App\Http\Controllers\PasivoController::class, 'storeTipo'])->name('pasivos.storeTipo');
+    Route::delete('/pasivos/{id}', [App\Http\Controllers\PasivoController::class, 'destroy'])->name('pasivos.destroy');
 
     // Balance Route
     Route::get('/balance', [App\Http\Controllers\BalanceController::class, 'index'])->name('balance.index');

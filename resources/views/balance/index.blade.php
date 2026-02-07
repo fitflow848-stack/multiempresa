@@ -12,7 +12,8 @@
                     class="d-flex justify-content-md-end align-items-center">
                     <label for="fecha" class="me-2 fw-bold text-muted">A la fecha:</label>
                     <div class="input-group w-auto">
-                        <input type="date" name="fecha" id="fecha" class="form-control" value="{{ $fecha }}">
+                        <input type="date" name="fecha" id="fecha" class="form-control"
+                            value="{{ $fecha }}">
                         <button type="submit" class="btn btn-primary px-4 bg-gradient-primary">
                             <i class="bx bx-refresh me-1"></i> Actualizar
                         </button>
@@ -66,33 +67,24 @@
                                         <td class="pe-4 text-end">S/ {{ number_format($caja, 2) }}</td>
                                     </tr>
                                     <tr>
-                                        <td class="ps-4">Bancos</td>
-                                        <td class="pe-4 text-end text-muted">S/ {{ number_format($bancos, 2) }}</td>
-                                    </tr>
-                                    <tr>
                                         <td class="ps-4">
                                             <div class="fw-semibold text-dark">Inventario</div>
                                             <small class="text-muted">Mercadería valorizada al costo</small>
                                         </td>
                                         <td class="pe-4 text-end">S/ {{ number_format($inventario, 2) }}</td>
                                     </tr>
-                                    <tr>
-                                        <td class="ps-4">
-                                            <div class="fw-semibold text-dark">Cuentas por Cobrar</div>
-                                            <small class="text-muted">Créditos pendientes de clientes</small>
-                                        </td>
-                                        <td class="pe-4 text-end">S/ {{ number_format($cxc, 2) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="ps-4">Anticipo a Proveedores</td>
-                                        <td class="pe-4 text-end text-muted">S/
-                                            {{ number_format($anticipo_proveedores, 2) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="ps-4">Otros Activos Corrientes</td>
-                                        <td class="pe-4 text-end text-muted">S/
-                                            {{ number_format($otros_activos_corrientes, 2) }}</td>
-                                    </tr>
+                                    @foreach ($tiposActivosCorrientes as $tipo)
+                                        <tr>
+                                            <td class="ps-4">
+                                                <div class="fw-semibold text-dark">{{ $tipo->nombre }}</div>
+                                                @if ($tipo->descripcion)
+                                                    <small class="text-muted">{{ $tipo->descripcion }}</small>
+                                                @endif
+                                            </td>
+                                            <td class="pe-4 text-end text-muted">S/
+                                                {{ number_format($tipo->activos_sum_monto ?? 0, 2) }}</td>
+                                        </tr>
+                                    @endforeach
                                 </tbody>
                                 <thead class="bg-light border-top">
                                     <tr>
@@ -103,14 +95,13 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <td class="ps-4">Activo Fijo</td>
-                                        <td class="pe-4 text-end text-muted">S/ {{ number_format($activo_fijo, 2) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="ps-4">Intangibles</td>
-                                        <td class="pe-4 text-end text-muted">S/ {{ number_format($intangibles, 2) }}</td>
-                                    </tr>
+                                    @foreach ($tiposActivosNoCorrientes as $tipo)
+                                        <tr>
+                                            <td class="ps-4">{{ $tipo->nombre }}</td>
+                                            <td class="pe-4 text-end text-muted">S/
+                                                {{ number_format($tipo->activos_sum_monto ?? 0, 2) }}</td>
+                                        </tr>
+                                    @endforeach
                                 </tbody>
                                 <tfoot class="bg-success bg-opacity-10">
                                     <tr>
@@ -145,28 +136,18 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr>
-                                            <td class="ps-4">
-                                                <div class="fw-semibold text-dark">Compras a Crédito</div>
-                                                <small class="text-muted">Facturas pendientes de pago</small>
-                                            </td>
-                                            <td class="pe-4 text-end">S/ {{ number_format($compras_credito, 2) }}</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="ps-4">Adelanto de Clientes</td>
-                                            <td class="pe-4 text-end text-muted">S/
-                                                {{ number_format($adelanto_clientes, 2) }}</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="ps-4">Deuda Bancos</td>
-                                            <td class="pe-4 text-end text-muted">S/ {{ number_format($deuda_bancos, 2) }}
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td class="ps-4">Cuentas por Pagar Terceros</td>
-                                            <td class="pe-4 text-end text-muted">S/ {{ number_format($cxp_terceros, 2) }}
-                                            </td>
-                                        </tr>
+                                        @foreach ($tiposPasivosCorrientes as $tipo)
+                                            <tr>
+                                                <td class="ps-4">
+                                                    <div class="fw-semibold text-dark">{{ $tipo->nombre }}</div>
+                                                    @if ($tipo->descripcion)
+                                                        <small class="text-muted">{{ $tipo->descripcion }}</small>
+                                                    @endif
+                                                </td>
+                                                <td class="pe-4 text-end">S/
+                                                    {{ number_format($tipo->pasivos_sum_monto ?? 0, 2) }}</td>
+                                            </tr>
+                                        @endforeach
                                     </tbody>
                                     <thead class="bg-light border-top">
                                         <tr>

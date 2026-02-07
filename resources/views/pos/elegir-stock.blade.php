@@ -195,7 +195,18 @@
         <div class="product-section">
             <div class="product-header">
                 <div class="product-code">{{ $producto->codigo_ref ?? 'COD-PROD' }} {{ $producto->nombre }}</div>
-                <div class="product-name">{{ $producto->presentacion_modelo ?? '' }} {{ $producto->concentracion_detalle ?? '' }}</div>
+                @php
+                    $presentacion = trim($producto->presentacion_modelo ?? '');
+                    $concentracion = trim($producto->concentracion_detalle ?? '');
+                    $presentacion = $presentacion === '-- Ver --' || $presentacion === '' ? '' : $presentacion;
+                    $concentracion = $concentracion === '-- Ver --' || $concentracion === '' ? '' : $concentracion;
+                    $detalles = collect([$presentacion, $concentracion])
+                        ->filter()
+                        ->implode(' ');
+                @endphp
+                @if ($detalles)
+                    <div class="product-name">{{ $detalles }}</div>
+                @endif
             </div>
 
             <!-- Stock Table -->
@@ -212,29 +223,26 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($lotes as $index => $lote)
-                    <tr>
-                        <td>{{ $index + 1 }}</td>
-                        <td>{{ $lote->lote ?? 'S/N' }}</td>
-                        <td>{{ $lote->fecha_formato }}</td>
-                        <td class="{{ $lote->cantidad > 0 ? 'stock-disponible' : 'stock-cero' }}">
-                            {{ $lote->cantidad }}
-                        </td>
-                        <td>{{ $lote->empaque }}</td>
-                        <td>{{ $lote->unidades }}</td>
-                        <td>
-                            @if($lote->cantidad > 0)
-                                <input type="number" class="cantidad-input" 
-                                       min="0" max="{{ $lote->cantidad }}" 
-                                       value="0" 
-                                       data-lote-id="{{ $lote->id }}"
-                                       data-precio="{{ $lote->pvp }}"
-                                       onchange="actualizarCantidad(this)">
-                            @else
-                                <span class="stock-cero">0</span>
-                            @endif
-                        </td>
-                    </tr>
+                    @foreach ($lotes as $index => $lote)
+                        <tr>
+                            <td>{{ $index + 1 }}</td>
+                            <td>{{ $lote->lote ?? 'S/N' }}</td>
+                            <td>{{ $lote->fecha_formato }}</td>
+                            <td class="{{ $lote->cantidad > 0 ? 'stock-disponible' : 'stock-cero' }}">
+                                {{ $lote->cantidad }}
+                            </td>
+                            <td>{{ $lote->empaque }}</td>
+                            <td>{{ $lote->unidades }}</td>
+                            <td>
+                                @if ($lote->cantidad > 0)
+                                    <input type="number" class="cantidad-input" min="0" max="{{ $lote->cantidad }}"
+                                        value="0" data-lote-id="{{ $lote->id }}"
+                                        data-precio="{{ $lote->pvp }}" onchange="actualizarCantidad(this)">
+                                @else
+                                    <span class="stock-cero">0</span>
+                                @endif
+                            </td>
+                        </tr>
                     @endforeach
                 </tbody>
             </table>
@@ -268,7 +276,8 @@
                 <button class="btn-volver" onclick="window.history.back()">
                     ← Volver TPV
                 </button>
-                <button class="btn-agregar" onclick="agregarAlTicketYVolver()" style="background: #4CAF50; margin-left: 10px;">
+                <button class="btn-agregar" onclick="agregarAlTicketYVolver()"
+                    style="background: #4CAF50; margin-left: 10px;">
                     ✓ Agregar al Ticket
                 </button>
             </div>
@@ -284,12 +293,12 @@
         function actualizarCantidad(input) {
             const cantidad = parseInt(input.value) || 0;
             const max = parseInt(input.getAttribute('max'));
-            
+
             if (cantidad > max) {
                 input.value = max;
                 alert(`Stock máximo disponible: ${max} unidades`);
             }
-            
+
             calcularTotales();
         }
 
@@ -299,7 +308,7 @@
             let stockTotal = 0;
 
             // Calcular stock total
-            @foreach($lotes as $lote)
+            @foreach ($lotes as $lote)
                 stockTotal += {{ $lote->cantidad }};
             @endforeach
 
@@ -307,7 +316,7 @@
             document.querySelectorAll('.cantidad-input').forEach(input => {
                 const cantidad = parseInt(input.value) || 0;
                 const precio = parseFloat(input.dataset.precio);
-                
+
                 totalCantidad += cantidad;
                 totalImporte += cantidad * precio;
             });
@@ -323,7 +332,7 @@
             const producto = {
                 id: {{ $producto->id }},
                 nombre: '{{ $producto->nombre }}',
-                codigo: '{{ $producto->codigo_ref ?? "COD-PROD" }}',
+                codigo: '{{ $producto->codigo_ref ?? 'COD-PROD' }}',
                 producto_linea_id: {{ $lotes[0]->producto_linea_id ?? 'null' }}
             };
 
@@ -333,9 +342,9 @@
                 if (cantidad > 0) {
                     const loteId = input.dataset.loteId;
                     const precio = parseFloat(input.dataset.precio);
-                    
+
                     // Buscar los datos del lote en el array original
-                    @foreach($lotes as $index => $lote)
+                    @foreach ($lotes as $index => $lote)
                         if (loteId === '{{ $lote->id }}') {
                             lotesSeleccionados.push({
                                 lote_id: '{{ $lote->id }}',
@@ -368,10 +377,11 @@
             sessionStorage.setItem('lotesSeleccionados', JSON.stringify(datosParaTicket));
 
             // Mostrar confirmación y regresar
-            alert(`Se agregarán ${lotesSeleccionados.length} lote(s) al ticket. Total: S/ ${lotesSeleccionados.reduce((sum, lote) => sum + lote.importe, 0).toFixed(2)}`);
-            
+            alert(
+                `Se agregarán ${lotesSeleccionados.length} lote(s) al ticket. Total: S/ ${lotesSeleccionados.reduce((sum, lote) => sum + lote.importe, 0).toFixed(2)}`);
+
             // Regresar al POS
-            window.location.href = '{{ route("pos.index") }}';
+            window.location.href = '{{ route('pos.index') }}';
         }
     </script>
 @endsection

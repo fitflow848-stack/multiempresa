@@ -219,6 +219,39 @@
             const entrega = parseFloat(document.getElementById('entrega').value) || 0;
             const deuda = Math.max(0, totalVenta - entrega);
 
+            // Validar que si hay deuda, debe haber un cliente real (no genérico)
+            if (deuda > 0) {
+                const clienteObj = clienteData ? JSON.parse(clienteData) : null;
+                const nombreCliente = clienteObj?.nombre || '';
+                const documentoCliente = clienteObj?.numero_documento || '';
+
+                // Lista de nombres de clientes genéricos que no pueden tener deuda
+                const clientesGenericos = ['CLIENTE CONTABLE', 'Cliente Contado', 'CLIENTE CONTADO', 'Cliente Contable',
+                    ''
+                ];
+
+                const esClienteGenerico = clientesGenericos.some(c =>
+                    nombreCliente.toUpperCase().trim() === c.toUpperCase().trim()
+                ) || !clienteObj || !clienteObj.id || documentoCliente === '00000000';
+
+                if (esClienteGenerico) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'Cliente requerido',
+                            html: `<p>Para generar una <strong>venta a crédito</strong> (con deuda de S/ ${deuda.toFixed(2)}), debe seleccionar un cliente válido.</p><p>Por favor, seleccione un cliente antes de continuar.</p>`,
+                            icon: 'warning',
+                            confirmButtonText: 'Entendido',
+                            confirmButtonColor: '#3085d6'
+                        });
+                    } else {
+                        alert(
+                            `Para generar una venta a crédito (con deuda de S/ ${deuda.toFixed(2)}), debe seleccionar un cliente válido.\n\nPor favor, seleccione un cliente antes de continuar.`
+                            );
+                    }
+                    return;
+                }
+            }
+
             const datosEmision = {
                 ticket: JSON.stringify(ticketData),
                 cliente: JSON.stringify(clienteData),
@@ -243,6 +276,15 @@
             btnAceptar.disabled = true;
             btnAceptar.textContent = 'Procesando...';
 
+            // IMPORTANTE: Abrir la ventana ANTES del fetch para evitar bloqueo de popups
+            // Los navegadores solo permiten window.open() en respuesta directa al clic del usuario
+            const pdfWindow = window.open('about:blank', '_blank');
+            if (pdfWindow) {
+                pdfWindow.document.write(
+                    '<html><head><title>Cargando documento...</title></head><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:Arial;"><h2>Generando documento, por favor espere...</h2></body></html>'
+                );
+            }
+
             // Enviar datos al servidor
             const urlSave = (isProforma === '1' || isProforma === 1) ? '{{ route('cotizaciones.save-cotizacion') }}' :
                 '{{ route('pos.save-venta') }}';
@@ -258,56 +300,133 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        let mensaje =
-                            `¡Venta guardada exitosamente!\nNúmero: ${data.data.numero_completo}\nTotal: S/ ${data.data.total}`;
-
-                        // Si hay deuda, mostrarla en el mensaje
-                        if (datosEmision.deuda > 0) {
-                            mensaje += `\n\n⚠️ DEUDA GENERADA: S/ ${datosEmision.deuda.toFixed(2)}`;
-                            mensaje += `\nPago recibido: S/ ${datosEmision.entrega.toFixed(2)}`;
-                            mensaje += `\nCliente: ${clienteData ? JSON.parse(clienteData).nombre : 'Cliente Contado'}`;
-                        }
-
-                        alert(mensaje);
-
-                        // Abrir PDF correspondiente en nueva pestaña (8cm para tickets)
+                        // Construir URL del PDF
                         const ventaId = data.data.venta_id;
-                        const urlA4 = '{{ route('pos.pdf', ['id' => ':id', 'format' => 'default']) }}'.replace(
-                            ':id', ventaId);
-                        const url8cm = '{{ route('pos.pdf', ['id' => ':id', 'format' => '8cm']) }}'.replace(
-                            ':id', ventaId);
+                        let urlA4 = '{{ route('pos.pdf', ['id' => ':id', 'format' => 'default']) }}'.replace(':id',
+                            ventaId);
+                        let url8cm = '{{ route('pos.pdf', ['id' => ':id', 'format' => '8cm']) }}'.replace(':id',
+                            ventaId);
+
                         if (isProforma === '1' || isProforma === 1) {
                             urlA4 = '{{ route('cotizaciones.pdfCotizacion', ':id') }}'.replace(':id', ventaId);
                             url8cm = '{{ route('cotizaciones.pdfCotizacion8cm', ':id') }}'.replace(':id', ventaId);
                         }
-                        const openUrl = (tipoDocumentoSeleccionado === 'ticket') ? url8cm : urlA4;
-                        window.open(openUrl, '_blank');
 
-                        // Limpiar ticket y datos temporales del localStorage/sessionStorage si existe
-                        try {
-                            localStorage.removeItem('ticketPOS');
-                            sessionStorage.removeItem('ticketPOS');
-                            // También eliminar venta persistente (auto-save) y backups en session
-                            localStorage.removeItem('ventaPersistentePOS');
-                            sessionStorage.removeItem('ticketGuardadoPOS');
-                            sessionStorage.removeItem('clienteGuardadoPOS');
-                        } catch (e) {
-                            console.warn('No se pudieron limpiar algunas claves de storage:', e);
+                        const openUrl = (tipoDocumentoSeleccionado === 'ticket') ? url8cm : urlA4;
+
+                        // Si hay deuda, mostrar información detallada primero
+                        if (datosEmision.deuda > 0) {
+                            // Cerrar la ventana de carga - el usuario verá el PDF después de confirmar
+                            if (pdfWindow && !pdfWindow.closed) {
+                                pdfWindow.close();
+                            }
+
+                            const mensajeDeuda = `
+                                <div style="text-align: left; padding: 10px;">
+                                    <p><strong>✅ Venta guardada exitosamente</strong></p>
+                                    <p>Número: <strong>${data.data.numero_completo}</strong></p>
+                                    <p>Total: <strong>S/ ${data.data.total}</strong></p>
+                                    <hr style="margin: 15px 0;">
+                                    <p style="color: #dc3545; font-size: 18px;"><strong>⚠️ DEUDA GENERADA</strong></p>
+                                    <p>Monto de deuda: <strong style="color: #dc3545; font-size: 20px;">S/ ${datosEmision.deuda.toFixed(2)}</strong></p>
+                                    <p>Pago recibido: S/ ${datosEmision.entrega.toFixed(2)}</p>
+                                    <p>Cliente: ${clienteData ? JSON.parse(clienteData).nombre : 'Cliente Contado'}</p>
+                                </div>
+                            `;
+
+                            if (typeof Swal !== 'undefined') {
+                                Swal.fire({
+                                    title: 'Venta con Deuda',
+                                    html: mensajeDeuda,
+                                    icon: 'warning',
+                                    showCancelButton: true,
+                                    confirmButtonText: '📄 Ver Documento',
+                                    cancelButtonText: 'Cerrar',
+                                    confirmButtonColor: '#3085d6',
+                                    cancelButtonColor: '#6c757d'
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        window.open(openUrl, '_blank');
+                                    }
+                                    limpiarYRedirigir();
+                                });
+                            } else {
+                                // Fallback sin SweetAlert
+                                let mensaje =
+                                    `¡Venta guardada exitosamente!\nNúmero: ${data.data.numero_completo}\nTotal: S/ ${data.data.total}`;
+                                mensaje += `\n\n⚠️ DEUDA GENERADA: S/ ${datosEmision.deuda.toFixed(2)}`;
+                                mensaje += `\nPago recibido: S/ ${datosEmision.entrega.toFixed(2)}`;
+                                mensaje +=
+                                    `\nCliente: ${clienteData ? JSON.parse(clienteData).nombre : 'Cliente Contado'}`;
+                                mensaje += `\n\n¿Desea ver el documento?`;
+
+                                if (confirm(mensaje)) {
+                                    window.open(openUrl, '_blank');
+                                }
+                                limpiarYRedirigir();
+                            }
+                        } else {
+                            // Sin deuda - comportamiento normal con SweetAlert
+                            Swal.fire({
+                                title: '¡Venta exitosa!',
+                                html: `<p>Número: <strong>${data.data.numero_completo}</strong></p><p>Total: <strong>S/ ${data.data.total}</strong></p>`,
+                                icon: 'success',
+                                timer: 2500,
+                                showConfirmButton: false
+                            });
+
+                            // Actualizar la URL de la ventana que ya abrimos
+                            if (pdfWindow && !pdfWindow.closed) {
+                                pdfWindow.location.href = openUrl;
+                            }
+
+                            limpiarYRedirigir();
                         }
 
-                        // Redirigir al POS
-                        window.location.href = '{{ route('pos.index') }}';
+                        function limpiarYRedirigir() {
+                            // Limpiar ticket y datos temporales del localStorage/sessionStorage si existe
+                            try {
+                                localStorage.removeItem('ticketPOS');
+                                sessionStorage.removeItem('ticketPOS');
+                                localStorage.removeItem('ventaPersistentePOS');
+                                sessionStorage.removeItem('ticketGuardadoPOS');
+                                sessionStorage.removeItem('clienteGuardadoPOS');
+                            } catch (e) {
+                                console.warn('No se pudieron limpiar algunas claves de storage:', e);
+                            }
+
+                            // Redirigir al POS
+                            window.location.href = '{{ route('pos.index') }}';
+                        }
                     } else {
-                        alert('Error al guardar la venta: ' + (data.message || 'Error desconocido'));
+                        Swal.fire({
+                            title: 'Error',
+                            text: data.message || 'Error desconocido al guardar la venta',
+                            icon: 'error',
+                            confirmButtonText: 'Entendido'
+                        });
                         btnAceptar.disabled = false;
-                        btnAceptar.textContent = 'Aceptar';
+                        btnAceptar.textContent = 'CONFIRMAR VENTA';
+                        // Cerrar la ventana de carga si hubo error
+                        if (pdfWindow && !pdfWindow.closed) {
+                            pdfWindow.close();
+                        }
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Error de conexión al guardar la venta');
+                    Swal.fire({
+                        title: 'Error de conexión',
+                        text: 'No se pudo conectar con el servidor. Por favor, intente nuevamente.',
+                        icon: 'error',
+                        confirmButtonText: 'Entendido'
+                    });
                     btnAceptar.disabled = false;
-                    btnAceptar.textContent = 'Aceptar';
+                    btnAceptar.textContent = 'CONFIRMAR VENTA';
+                    // Cerrar la ventana de carga si hubo error
+                    if (pdfWindow && !pdfWindow.closed) {
+                        pdfWindow.close();
+                    }
                 });
         }
 

@@ -12,6 +12,7 @@ use App\Models\Cotizacion;
 use App\Models\Deuda;
 use App\Models\AlmacenIngresoDetalle;
 use App\Models\Company;
+use Carbon\Carbon;
 
 class PrincipalController extends Controller
 {
@@ -21,11 +22,9 @@ class PrincipalController extends Controller
         $companyId = $user->company_id;
 
         // --- PEDIDOS VENTAS ---
-        // Proformas (Cotizaciones)
-        $proformas_pendientes_cnt = Cotizacion::where('company_id', $companyId)->count(); // Asumimos todas como pendientes si no hay estado
+        $proformas_pendientes_cnt = Cotizacion::where('company_id', $companyId)->count();
         $proformas_pendientes_monto = Cotizacion::where('company_id', $companyId)->sum('total');
 
-        // Preventas y Reservas (Placeholders si no hay lógica definida)
         $preventas_pendientes_cnt = 0;
         $preventas_pendientes_monto = 0;
         $reservas_pendientes_cnt = 0;
@@ -33,14 +32,10 @@ class PrincipalController extends Controller
         $reservas_entregar_cnt = 0;
 
         // --- VENTAS ---
-        // Creditos pendientes (Podría ser ventas con saldo > 0 o simplemente usar Deuda)
-        // Usaremos Deudas para ser consistentes con Tesoreria, o 0 si se distingue "Venta en proceso de credito"
-        // Dejaremos placeholder para "Creditos pendientes" en sección VENTAS si es redundante con Tesoreria
         $creditos_pendientes_cnt = Deuda::where('sucursal_id', $companyId)->where('monto_deuda', '>', 0)->count();
         $creditos_pendientes_monto = Deuda::where('sucursal_id', $companyId)->where('monto_deuda', '>', 0)->sum('monto_deuda');
 
         // --- TESORERIA ---
-        // Cobros (Clientes)
         $cobros_pendientes_cnt = $creditos_pendientes_cnt;
         $cobros_pendientes_monto = $creditos_pendientes_monto;
 
@@ -53,17 +48,12 @@ class PrincipalController extends Controller
             ->where('fecha_vencimiento', '<', now())
             ->sum('monto_deuda');
 
-        // Pagos (Proveedores) - Placeholder 0
         $pagos_pendientes_cnt = 0;
         $pagos_pendientes_monto = 0;
         $pagos_vencidos_cnt = 0;
         $pagos_vencidos_monto = 0;
 
         // --- COMPRAS ---
-        // Comprobantes pendientes (Recibido = 0?)
-        // Filtramos por proveedor->id_empresa o si Compra tiene id_empresa?
-        // Asumiendo que Compra se relaciona a Company, intentamos query simple
-        // Si no hay id_empresa en Compra, usar filtro por usuario->company_id (si usuario crea compra)
         $comprobantes_pendientes_cnt = Compra::whereHas('usuario', function ($q) use ($companyId) {
             $q->where('company_id', $companyId);
         })->where('recibido', 0)->count();
@@ -73,11 +63,17 @@ class PrincipalController extends Controller
         // --- ALMACEN ---
         $productos_stock_cnt = Producto::where('id_empresa', $companyId)->where('cantidad', '>', 0)->count();
         $productos_sin_stock_cnt = Producto::where('id_empresa', $companyId)->where('cantidad', '<=', 0)->count();
-        // $productos_stock_minimo_cnt = Producto::where('id_empresa', $companyId)->whereColumn('cantidad', '<=', 'stock_minimo')->count();
-        $productos_stock_minimo_cnt = 0; // Placeholder
+
+        // Productos en stock mínimo (cantidad <= stock_min)
+        $productos_stock_minimo_cnt = AlmacenIngresoDetalle::whereHas('producto', function ($q) use ($companyId) {
+            $q->where('id_empresa', $companyId);
+        })
+            ->where('cantidad', '>', 0)
+            ->whereColumn('cantidad', '<=', 'stock_min')
+            ->where('stock_min', '>', 0)
+            ->count();
 
         // --- CAPITAL ACTUAL ---
-        // Calculado desde AlmacenIngresoDetalle (Lotes activos)
         $stock_valuations = AlmacenIngresoDetalle::whereHas('producto', function ($q) use ($companyId) {
             $q->where('id_empresa', $companyId);
         })
@@ -91,13 +87,136 @@ class PrincipalController extends Controller
         $capital_costo = $stock_valuations->total_costo ?? 0;
         $capital_venta = $stock_valuations->total_venta ?? 0;
 
-        // Asumiendo PVP incluye IGV (18%)
         $capital_venta_neto = $capital_venta / 1.18;
         $capital_impuesto = $capital_venta - $capital_venta_neto;
-        // Margen Bruto (Venta neta - Costo) o Margen Comercial (Venta - Costo)?
-        // La imagen dice "Total Margen Utilidad". Usaremos (Venta - Costo).
         $capital_utilidad = $capital_venta - $capital_costo;
         $empresa = Company::where('id', $companyId)->first();
+
+        if (!$empresa) {
+            abort(500, 'No se encontró la empresa asociada al usuario.');
+        }
+
+        // ====== DATOS PARA GRÁFICOS ======
+
+        // Ventas de los últimos 6 meses
+        $ventasMensuales = Venta::where('id_empresa', $companyId)
+            ->where('estado', '!=', 0)
+            ->where('created_at', '>=', Carbon::now()->subMonths(6))
+            ->select(
+                DB::raw('MONTH(created_at) as mes'),
+                DB::raw('YEAR(created_at) as anio'),
+                DB::raw('SUM(total) as total'),
+                DB::raw('COUNT(*) as cantidad')
+            )
+            ->groupBy('mes', 'anio')
+            ->orderBy('anio')
+            ->orderBy('mes')
+            ->get();
+
+        $mesesLabels = [];
+        $ventasData = [];
+        $cantidadVentas = [];
+
+        for ($i = 5; $i >= 0; $i--) {
+            $fecha = Carbon::now()->subMonths($i);
+            $mes = $fecha->month;
+            $anio = $fecha->year;
+            $mesesLabels[] = $fecha->translatedFormat('M Y');
+
+            $venta = $ventasMensuales->first(function ($v) use ($mes, $anio) {
+                return $v->mes == $mes && $v->anio == $anio;
+            });
+
+            $ventasData[] = $venta ? round($venta->total, 2) : 0;
+            $cantidadVentas[] = $venta ? $venta->cantidad : 0;
+        }
+
+        // Ventas por tipo de documento
+        $ventasPorTipo = Venta::where('id_empresa', $companyId)
+            ->where('estado', '!=', 0)
+            ->where('created_at', '>=', Carbon::now()->subMonth())
+            ->select('id_tido', DB::raw('SUM(total) as total'), DB::raw('COUNT(*) as cantidad'))
+            ->groupBy('id_tido')
+            ->get()
+            ->map(function ($item) {
+                $tipos = [1 => 'Factura', 2 => 'Boleta', 3 => 'N. Crédito', 4 => 'Ticket'];
+                return [
+                    'tipo' => $tipos[$item->id_tido] ?? 'Otro',
+                    'total' => round($item->total, 2),
+                    'cantidad' => $item->cantidad
+                ];
+            });
+
+        // Top 5 productos más vendidos (últimos 30 días)
+        $topProductos = DB::table('venta_detalles')
+            ->join('ventas', 'venta_detalles.id_venta', '=', 'ventas.id_venta')
+            ->join('productos', 'venta_detalles.servicio_id', '=', 'productos.id')
+            ->where('ventas.id_empresa', $companyId)
+            ->where('ventas.estado', '!=', 0)
+            ->where('ventas.created_at', '>=', Carbon::now()->subDays(30))
+            ->select(
+                'productos.nombre',
+                DB::raw('SUM(venta_detalles.cantidad) as cantidad'),
+                DB::raw('SUM(venta_detalles.importe) as total')
+            )
+            ->groupBy('productos.id', 'productos.nombre')
+            ->orderByDesc('cantidad')
+            ->limit(5)
+            ->get();
+
+        // Ventas de los últimos 7 días
+        $ventasSemana = Venta::where('id_empresa', $companyId)
+            ->where('estado', '!=', 0)
+            ->where('created_at', '>=', Carbon::now()->subDays(7))
+            ->select(
+                DB::raw('DATE(created_at) as fecha'),
+                DB::raw('SUM(total) as total')
+            )
+            ->groupBy('fecha')
+            ->orderBy('fecha')
+            ->get();
+
+        $diasLabels = [];
+        $ventasDiarias = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $fecha = Carbon::now()->subDays($i);
+            $diasLabels[] = $fecha->translatedFormat('D d');
+            $venta = $ventasSemana->first(fn($v) => $v->fecha == $fecha->toDateString());
+            $ventasDiarias[] = $venta ? round($venta->total, 2) : 0;
+        }
+
+        // Venta de hoy
+        $ventaHoy = Venta::where('id_empresa', $companyId)
+            ->where('estado', '!=', 0)
+            ->whereDate('created_at', Carbon::today())
+            ->sum('total');
+
+        // Venta de ayer para comparación
+        $ventaAyer = Venta::where('id_empresa', $companyId)
+            ->where('estado', '!=', 0)
+            ->whereDate('created_at', Carbon::yesterday())
+            ->sum('total');
+
+        // Venta del mes
+        $ventaMes = Venta::where('id_empresa', $companyId)
+            ->where('estado', '!=', 0)
+            ->whereMonth('created_at', Carbon::now()->month)
+            ->whereYear('created_at', Carbon::now()->year)
+            ->sum('total');
+
+        $chartData = [
+            'mesesLabels' => $mesesLabels,
+            'ventasData' => $ventasData,
+            'cantidadVentas' => $cantidadVentas,
+            'ventasPorTipo' => $ventasPorTipo,
+            'topProductos' => $topProductos,
+            'diasLabels' => $diasLabels,
+            'ventasDiarias' => $ventasDiarias,
+            'ventaHoy' => round($ventaHoy, 2),
+            'ventaAyer' => round($ventaAyer, 2),
+            'ventaMes' => round($ventaMes, 2),
+        ];
+
         return view('welcome', compact(
             'proformas_pendientes_cnt',
             'proformas_pendientes_monto',
@@ -125,7 +244,8 @@ class PrincipalController extends Controller
             'capital_venta',
             'capital_utilidad',
             'capital_impuesto',
-            'empresa'
+            'empresa',
+            'chartData'
         ));
     }
 }

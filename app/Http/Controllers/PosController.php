@@ -112,7 +112,13 @@ class PosController extends Controller
         $producto = DB::selectOne("SELECT
                 p.id,
                 ad.producto_linea_id AS product_linea_id,
-                CONCAT_WS(' / ', p.nombre, CONCAT(pl.presentacion, ' ', pl.concentracion)) AS nombre,
+                CONCAT_WS(' / ', 
+                    p.nombre, 
+                    NULLIF(CONCAT_WS(' ', 
+                        NULLIF(NULLIF(TRIM(pl.presentacion), ''), '-- Ver --'),
+                        NULLIF(NULLIF(TRIM(pl.concentracion), ''), '-- Ver --')
+                    ), '')
+                ) AS nombre,
                 CONCAT(
                     'lt. ', ad.lote, ' Fv. ', LPAD(DAY(ad.fecha_vencimiento), 2, '0'),
                     ' ', LOWER(LEFT(MONTHNAME(ad.fecha_vencimiento), 3)), ' ', RIGHT(YEAR(ad.fecha_vencimiento), 2)

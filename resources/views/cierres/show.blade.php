@@ -497,6 +497,70 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadPartidas();
             recalcular();
+
+            // Guardar nueva partida
+            document.getElementById('pa_save').addEventListener('click', async () => {
+                const nombre = document.getElementById('pa_nombre').value.trim();
+
+                if (!nombre) {
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'Por favor ingrese un nombre para la partida.',
+                        icon: 'warning',
+                        confirmButtonText: 'Entendido'
+                    });
+                    return;
+                }
+
+                try {
+                    const res = await fetch("{{ route('partidas.store') }}", {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            nombre: nombre
+                        })
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok && data.success) {
+                        Swal.fire({
+                            title: '¡Partida creada!',
+                            text: `La partida "${nombre}" ha sido creada exitosamente.`,
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        });
+
+                        // Cerrar modal y limpiar
+                        document.getElementById('modal-add-partida').style.display = 'none';
+                        document.getElementById('pa_nombre').value = '';
+
+                        // Recargar partidas y seleccionar la nueva
+                        await loadPartidas();
+                        document.getElementById('op_partida').value = nombre;
+                    } else {
+                        Swal.fire({
+                            title: 'Error',
+                            text: data.message || 'No se pudo crear la partida.',
+                            icon: 'error',
+                            confirmButtonText: 'Entendido'
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        title: 'Error de conexión',
+                        text: 'No se pudo conectar con el servidor.',
+                        icon: 'error',
+                        confirmButtonText: 'Entendido'
+                    });
+                }
+            });
+
             // Inicializar handlers de Arqueo
             (function() {
                 const modal = document.getElementById('modal-arqueo');
@@ -631,7 +695,7 @@
                                 row.children[2].querySelector('.fw-bold').textContent = concepto;
                                 row.children[2].querySelector('.text-muted').textContent = usuario;
                                 row.children[3].textContent = 'S/ ' + parseFloat(importe).toFixed(
-                                2);
+                                    2);
                             }
                         } else {
                             // insertar nueva fila

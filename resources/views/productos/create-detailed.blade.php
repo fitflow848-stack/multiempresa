@@ -50,9 +50,15 @@
                                     <div class="input-group">
                                         <span class="input-group-text bg-light text-primary border-end-0"><i
                                                 class="fas fa-barcode"></i></span>
-                                        <input type="text" id="cb" class="form-control border-start-0"
-                                            placeholder="Escanear...">
+                                        <input type="text" id="cb"
+                                            class="form-control border-start-0 border-end-0"
+                                            placeholder="Escanear o ingresar...">
+                                        <button type="button" class="btn btn-outline-success" id="btn-generar-cb"
+                                            title="Generar código automáticamente">
+                                            <i class="fas fa-magic"></i> Auto
+                                        </button>
                                     </div>
+                                    <small class="text-muted">Click en "Auto" para generar código automático</small>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Cantidad</label>
@@ -357,6 +363,50 @@
                 $('#presentacion').val('');
                 $('#concentracion').val('');
             }
+
+            // Función para generar código de barras EAN-13
+            function generarCodigoBarras() {
+                // Prefijo para productos internos (200-299 son para uso interno según estándar EAN)
+                const prefijo = '200';
+
+                // Generar 9 dígitos basados en timestamp y random
+                const timestamp = Date.now().toString().slice(-6); // últimos 6 dígitos del timestamp
+                const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0'); // 3 dígitos random
+
+                // Formar los primeros 12 dígitos
+                const codigo12 = prefijo + timestamp + random;
+
+                // Calcular dígito verificador EAN-13
+                let suma = 0;
+                for (let i = 0; i < 12; i++) {
+                    const digito = parseInt(codigo12.charAt(i));
+                    suma += (i % 2 === 0) ? digito : digito * 3;
+                }
+                const verificador = (10 - (suma % 10)) % 10;
+
+                return codigo12 + verificador;
+            }
+
+            // Handler para generar código de barras automáticamente
+            $('#btn-generar-cb').on('click', function() {
+                const nuevoCodigo = generarCodigoBarras();
+                $('#cb').val(nuevoCodigo);
+
+                // Efecto visual de éxito
+                const $input = $('#cb');
+                $input.addClass('is-valid');
+                setTimeout(() => $input.removeClass('is-valid'), 2000);
+
+                // Toast de confirmación
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'Código generado: ' + nuevoCodigo,
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+            });
 
             // Añadir línea cuando se presiona el botón
             $('#btn-add-line').on('click', function() {

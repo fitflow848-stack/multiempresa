@@ -73,9 +73,10 @@ class ReporteController extends Controller
 
     private function reportePorProducto(Request $request)
     {
-        // Logic for "Por Producto"
-        $query = VentaDetalle::with(['venta', 'producto'])
+        // Logic for "Por Producto" - agrupado por comprobante y producto
+        $query = VentaDetalle::with(['venta.user', 'producto', 'almacenIngresoDetalle'])
             ->whereHas('venta', function ($q) use ($request) {
+                $q->where('estado', '!=', '0');
                 // Apply date filters
                 if ($request->input('desde'))
                     $q->whereDate('fecha_emision', '>=', $request->input('desde'));
@@ -93,9 +94,63 @@ class ReporteController extends Controller
             });
         }
 
-        $resultados = $query->limit(100)->get();
+        // Apply barcode filter
+        if ($request->input('codigo_barras')) {
+            $query->whereHas('producto', function ($q) use ($request) {
+                $q->where('codigo_barras', 'like', '%' . $request->input('codigo_barras') . '%');
+            });
+        }
 
-        return view('reportes.partials.por_producto', compact('resultados'))->render();
+        $detalles = $query->orderBy('id_venta')->get();
+
+        // Agrupar por comprobante y nombre del producto para sumar cantidades
+        // Usamos el nombre del producto porque diferentes lotes pueden tener diferentes servicio_id
+        $agrupados = $detalles->groupBy(function ($item) {
+            $nombreProducto = $item->producto->nombre ?? $item->nombre_servicio ?? 'Sin nombre';
+            return $item->id_venta . '|||' . $nombreProducto;
+        })->map(function ($grupo) {
+            $primero = $grupo->first();
+            $cantidadTotal = $grupo->sum('cantidad');
+
+            // Calcular el costo promedio ponderado de todos los items del grupo
+            $costoTotalGrupo = 0;
+            foreach ($grupo as $item) {
+                $costoItem = 0;
+                if ($item->almacenIngresoDetalle && $item->almacenIngresoDetalle->costo > 0) {
+                    $costoItem = $item->almacenIngresoDetalle->costo;
+                } elseif ($item->producto && $item->producto->precio_compra > 0) {
+                    $costoItem = $item->producto->precio_compra;
+                }
+                $costoTotalGrupo += $costoItem * $item->cantidad;
+            }
+
+            $costoUnitario = $cantidadTotal > 0 ? $costoTotalGrupo / $cantidadTotal : 0;
+            $subtotalVenta = $grupo->sum('importe');
+            $ganancia = $subtotalVenta - $costoTotalGrupo;
+
+            return (object) [
+                'venta' => $primero->venta,
+                'producto' => $primero->producto,
+                'cantidad' => $cantidadTotal,
+                'precio_unitario' => $primero->precio_unitario,
+                'costo_unitario' => $costoUnitario,
+                'subtotal' => $subtotalVenta,
+                'costo_total' => $costoTotalGrupo,
+                'ganancia' => $ganancia,
+            ];
+        })->values();
+
+        // Calcular totales
+        $totales = (object) [
+            'cantidad' => $agrupados->sum('cantidad'),
+            'subtotal' => $agrupados->sum('subtotal'),
+            'costo_total' => $agrupados->sum('costo_total'),
+            'ganancia' => $agrupados->sum('ganancia'),
+        ];
+
+        $resultados = $agrupados;
+
+        return view('reportes.partials.por_producto', compact('resultados', 'totales'))->render();
     }
 
     private function reporteClientesFrecuentes(Request $request)
@@ -650,13 +705,18 @@ class ReporteController extends Controller
 
         $total = $query->first()->total_capital ?? 0;
 
-        // Detalle por producto
-        $detalles = AlmacenIngresoDetalle::where('cantidad', '>', 0)
-            ->with('producto')
-            ->select('producto_id', DB::raw('SUM(cantidad) as stock'), DB::raw('SUM(cantidad * costo) as valor'))
+        // Detalle por producto con más información
+        $detalles = AlmacenIngresoDetalle::where('almacen_ingreso_detalle.cantidad', '>', 0)
+            ->with(['producto.marca', 'producto.familia', 'producto.laboratorio'])
+            ->select(
+                'producto_id',
+                DB::raw('SUM(cantidad) as stock'),
+                DB::raw('SUM(cantidad * costo) as valor'),
+                DB::raw('AVG(costo) as costo_unitario_promedio')
+            )
             ->groupBy('producto_id')
             ->orderByDesc('valor')
-            ->limit(100)
+            ->limit(200)
             ->get();
 
         return view('reportes.partials.capital_compra', compact('total', 'detalles'))->render();

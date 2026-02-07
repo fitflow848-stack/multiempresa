@@ -19,4 +19,9 @@ class AlmacenIngreso extends Model
     {
         return $this->hasMany(AlmacenIngresoDetalle::class, 'ingreso_id');
     }
+
+    public function usuario()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 }

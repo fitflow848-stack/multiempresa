@@ -16,26 +16,56 @@
 </div>
 
 <div class="table-responsive">
-    <table class="table table-bordered table-sm table-striped">
+    <table class="table table-bordered table-sm table-striped table-hover">
         <thead class="bg-light">
             <tr>
+                <th>Código</th>
                 <th>Producto</th>
-                <th class="text-center">Stock Actual</th>
-                <th class="text-end">Valor Total (Costo)</th>
+                <th>Marca</th>
+                <th>Familia</th>
+                <th>Laboratorio</th>
+                <th class="text-center">Stock</th>
+                <th class="text-end">Costo Unit.</th>
+                <th class="text-end">Valor Total</th>
             </tr>
         </thead>
         <tbody>
             @forelse($detalles as $row)
+                @php
+                    $costoUnitario = $row->stock > 0 ? $row->valor / $row->stock : 0;
+                @endphp
                 <tr>
-                    <td>{{ $row->producto->nombre ?? 'N/A' }}</td>
-                    <td class="text-center">{{ (float) $row->stock }}</td>
-                    <td class="text-end">{{ number_format($row->valor, 2) }}</td>
+                    <td>
+                        <code>{{ $row->producto->codigo_barras ?? '-' }}</code>
+                    </td>
+                    <td>
+                        <strong>{{ $row->producto->nombre ?? 'N/A' }}</strong>
+                        @if ($row->producto->presentacion_modelo)
+                            <br><small class="text-muted">{{ $row->producto->presentacion_modelo }}</small>
+                        @endif
+                    </td>
+                    <td>{{ $row->producto->marca->nombre ?? '-' }}</td>
+                    <td>{{ $row->producto->familia->nombre ?? '-' }}</td>
+                    <td>{{ $row->producto->laboratorio->nombre ?? '-' }}</td>
+                    <td class="text-center fw-bold">{{ number_format($row->stock, 2) }}</td>
+                    <td class="text-end">S/ {{ number_format($costoUnitario, 2) }}</td>
+                    <td class="text-end text-primary fw-bold">S/ {{ number_format($row->valor, 2) }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="3" class="text-center py-3">No hay stock valorizado</td>
+                    <td colspan="8" class="text-center py-3">No hay stock valorizado</td>
                 </tr>
             @endforelse
         </tbody>
+        @if (count($detalles) > 0)
+            <tfoot class="table-dark">
+                <tr>
+                    <th colspan="5" class="text-end">TOTALES:</th>
+                    <th class="text-center">{{ number_format($detalles->sum('stock'), 2) }}</th>
+                    <th></th>
+                    <th class="text-end">S/ {{ number_format($total, 2) }}</th>
+                </tr>
+            </tfoot>
+        @endif
     </table>
 </div>

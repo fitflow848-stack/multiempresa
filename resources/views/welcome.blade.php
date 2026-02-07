@@ -1,390 +1,703 @@
 @extends('layout.app')
 
 @section('content')
-    <!-- Dashboard view replicating the provided design -->
     <style>
-        /* Basic reset for this section only */
-        .acbem-dashboard {
-            font-family: "Helvetica Neue", Arial, sans-serif;
-            color: #333;
-            padding: 40px 60px;
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --gray: #64748b;
         }
 
-        .acbem-header {
-            display: flex;
-            align-items: flex-start;
-            gap: 30px;
-            margin-bottom: 30px;
+        .dashboard {
+            padding: 24px;
+            background: linear-gradient(135deg, #f0f4ff 0%, #fafbff 100%);
+            min-height: 100vh;
         }
 
-        .acbem-logo {
-            flex: 0 0 360px;
+        /* Header Section */
+        .dashboard-header {
             display: flex;
-            flex-direction: column;
             align-items: center;
+            justify-content: space-between;
+            margin-bottom: 32px;
+            padding: 24px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
         }
 
-        .acbem-logo img {
-            max-width: 100%;
-            height: auto;
-            display: block;
+        .company-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
         }
 
-        .acbem-title {
-            font-weight: 900;
-            letter-spacing: 2px;
-            font-size: 64px;
-            margin-top: 6px;
-            color: #0b0b0b;
+        .company-logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 16px;
+            object-fit: cover;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
-        .acbem-company {
-            flex: 1;
-            padding-left: 30px;
-            border-left: 3px dotted #cfcfcf;
-        }
-
-        .acbem-company h1 {
-            margin: 0 0 6px;
-            font-size: 26px;
+        .company-details h1 {
+            font-size: 1.75rem;
             font-weight: 700;
-        }
-
-        .acbem-company p {
+            color: var(--dark);
             margin: 0;
-            color: #666;
-            line-height: 1.4;
         }
 
-        .acbem-phones {
-            margin-top: 14px;
-            color: #0d7f82;
-            font-weight: 700;
+        .company-details p {
+            color: var(--gray);
+            margin: 4px 0;
+            font-size: 0.9rem;
+        }
+
+        .quick-actions {
             display: flex;
-            flex-direction: column;
-            gap: 6px;
+            gap: 12px;
         }
 
-        .phone-item {
+        .quick-action-btn {
             display: flex;
             align-items: center;
-            gap: 10px;
-            color: #148f95;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 12px;
             font-weight: 600;
-        }
-
-        /* Action buttons */
-        .acbem-actions {
-            display: flex;
-            gap: 22px;
-            justify-content: center;
-            margin: 30px 0 50px;
-        }
-
-        .action-btn {
-            background: #108D8D;
-            color: #fff;
-            padding: 12px 26px;
-            border-radius: 8px;
-            display: inline-flex;
-            gap: 10px;
-            align-items: center;
-            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
             text-decoration: none;
-            font-weight: 700;
-            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
         }
 
-        .action-btn svg {
-            width: 18px;
-            height: 18px;
-            fill: #fff;
+        .quick-action-btn.primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
         }
 
-        /* Stats grid: two rows x three columns */
-        .acbem-stats {
+        .quick-action-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        }
+
+        .quick-action-btn.secondary {
+            background: white;
+            color: var(--dark);
+            border: 2px solid #e2e8f0;
+        }
+
+        .quick-action-btn.secondary:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* Stats Cards Row */
+        .stats-row {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 36px;
-            margin-top: 10px;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
         }
 
         .stat-card {
-            background: transparent;
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            position: relative;
+            overflow: hidden;
         }
 
-        .stat-card h3 {
-            font-size: 15px;
-            color: #666;
-            letter-spacing: 1px;
-            margin-bottom: 14px;
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+        }
+
+        .stat-card.blue::before {
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+        }
+
+        .stat-card.green::before {
+            background: linear-gradient(90deg, #10b981, #34d399);
+        }
+
+        .stat-card.purple::before {
+            background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+        }
+
+        .stat-card.orange::before {
+            background: linear-gradient(90deg, #f59e0b, #fbbf24);
+        }
+
+        .stat-card .icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+
+        .stat-card.blue .icon {
+            background: #eff6ff;
+            color: #3b82f6;
+        }
+
+        .stat-card.green .icon {
+            background: #ecfdf5;
+            color: #10b981;
+        }
+
+        .stat-card.purple .icon {
+            background: #f5f3ff;
+            color: #8b5cf6;
+        }
+
+        .stat-card.orange .icon {
+            background: #fffbeb;
+            color: #f59e0b;
+        }
+
+        .stat-card .label {
+            font-size: 0.875rem;
+            color: var(--gray);
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .stat-card .value {
+            font-size: 1.75rem;
             font-weight: 700;
+            color: var(--dark);
         }
 
-        .stat-list {
+        .stat-card .comparison {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.8rem;
+            margin-top: 8px;
+        }
+
+        .stat-card .comparison.up {
+            color: var(--success);
+        }
+
+        .stat-card .comparison.down {
+            color: var(--danger);
+        }
+
+        /* Charts Grid */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .chart-card h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chart-card h3 i {
+            color: var(--primary);
+        }
+
+        /* Bottom Grid */
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .info-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .info-card h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .info-list {
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            color: #666;
-            font-size: 14px;
+            gap: 12px;
         }
 
-        .stat-row {
+        .info-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-right: 8px;
+            padding: 10px 12px;
+            background: #f8fafc;
+            border-radius: 10px;
+            transition: all 0.2s;
         }
 
-        .stat-key {
-            color: #888;
+        .info-item:hover {
+            background: #f1f5f9;
         }
 
-        .stat-value {
-            color: #222;
-            font-weight: 700;
-            min-width: 110px;
-            text-align: right;
+        .info-item .key {
+            color: var(--gray);
+            font-size: 0.875rem;
         }
 
-        /* second row (COMPRAS / ALMACEN / CAPITAL) */
-        .bottom-row {
-            margin-top: 36px;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 36px;
-            align-items: start;
+        .info-item .value {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .info-item .value.success {
+            color: var(--success);
+        }
+
+        .info-item .value.danger {
+            color: var(--danger);
+        }
+
+        .info-item .value.warning {
+            color: var(--warning);
+        }
+
+        /* Top Products Table */
+        .products-table {
+            width: 100%;
+        }
+
+        .products-table tr {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .products-table tr:last-child {
+            border-bottom: none;
+        }
+
+        .products-table .rank {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.8rem;
+            margin-right: 12px;
+        }
+
+        .products-table .rank.gold {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .products-table .rank.silver {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .products-table .rank.bronze {
+            background: #fed7aa;
+            color: #c2410c;
+        }
+
+        .products-table .rank.normal {
+            background: #f8fafc;
+            color: #94a3b8;
+        }
+
+        .products-table .name {
+            flex: 1;
+            font-weight: 500;
+            color: var(--dark);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .products-table .qty {
+            font-weight: 600;
+            color: var(--primary);
+            margin-left: 12px;
         }
 
         /* Responsive */
-        @media (max-width: 1024px) {
-            .acbem-header {
-                flex-direction: column;
-                align-items: center;
-                text-align: center;
+        @media (max-width: 1200px) {
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
             }
 
-            .acbem-company {
-                border-left: none;
-                padding-left: 0;
-            }
-
-            .acbem-logo {
-                flex: unset;
-            }
-
-            .acbem-actions {
-                flex-wrap: wrap;
-                gap: 12px;
-            }
-
-            .acbem-stats,
-            .bottom-row {
+            .charts-grid {
                 grid-template-columns: 1fr;
             }
 
-            .stat-value {
-                min-width: 70px;
+            .bottom-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-header {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
             }
 
-            .acbem-dashboard {
-                padding: 20px;
+            .company-info {
+                flex-direction: column;
+            }
+
+            .quick-actions {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .stats-row {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 
-    <div class="acbem-dashboard">
+    <div class="dashboard">
         <!-- Header -->
-        <div class="acbem-header">
-            <div class="acbem-logo">
-                <!-- Replace src with your logo path -->
-                <img src="{{ asset('storage/' . $empresa->logo) }}" alt="ACBEM logo">
-            </div>
-
-            <div class="acbem-company">
-                <h1>{{ $empresa->nombre_comercial }}</h1>
-                <p>{{ $empresa->direccion_fiscal }}</p>
-                <p>{{ $empresa->department }} - {{ $empresa->province }} - {{ $empresa->district }}</p>
-
-                <div class="acbem-phones">
-                    <div class="phone-item"><svg viewBox="0 0 24 24" width="16" height="16">
-                            <path
-                                d="M12 2C6.48 2 2 6.48 2 12c0 4.61 3.13 8.48 7.41 9.66.41.09.86-.05 1.12-.36l1.78-2.12c.25-.3.2-.73-.12-.99L10.6 16.6c-.18-.15-.2-.41-.05-.6l1.26-1.6c.32-.41.88-.54 1.35-.3l2.3 1.18c.37.19.82.07 1.08-.28l1.66-2.07c.25-.31.65-.46 1.04-.39C20.86 9.6 22 7.91 22 6c0-5.52-4.48-10-10-10z" />
-                        </svg> Tel.: {{ $empresa->rep_phone }}</div>
-                    <div class="phone-item"><svg viewBox="0 0 24 24" width="16" height="16">
-                            <path
-                                d="M12 2C6.48 2 2 6.48 2 12c0 4.61 3.13 8.48 7.41 9.66.41.09.86-.05 1.12-.36l1.78-2.12c.25-.3.2-.73-.12-.99L10.6 16.6c-.18-.15-.2-.41-.05-.6l1.26-1.6c.32-.41.88-.54 1.35-.3l2.3 1.18c.37.19.82.07 1.08-.28l1.66-2.07c.25-.31.65-.46 1.04-.39C20.86 9.6 22 7.91 22 6c0-5.52-4.48-10-10-10z" />
-                        </svg> {{ $empresa->phone }}</div>
+        <div class="dashboard-header">
+            <div class="company-info">
+                @if ($empresa->logo)
+                    <img src="{{ asset('storage/' . $empresa->logo) }}" alt="Logo" class="company-logo">
+                @endif
+                <div class="company-details">
+                    <h1>{{ $empresa->nombre_comercial }}</h1>
+                    <p><i class="bx bx-map"></i> {{ $empresa->direccion_fiscal }}</p>
+                    <p><i class="bx bx-phone"></i> {{ $empresa->phone ?? $empresa->rep_phone }}</p>
                 </div>
+            </div>
+            <div class="quick-actions">
+                <a href="{{ route('pos.index') }}" class="quick-action-btn primary">
+                    <i class="bx bx-cart"></i> Punto de Venta
+                </a>
+                <a href="{{ route('reportes.index') }}" class="quick-action-btn secondary">
+                    <i class="bx bx-bar-chart-alt-2"></i> Reportes
+                </a>
+                <a href="{{ route('almacen.index') }}" class="quick-action-btn secondary">
+                    <i class="bx bx-package"></i> Productos
+                </a>
             </div>
         </div>
 
-        <!-- Action buttons -->
-        <div class="acbem-actions">
-            <a href="{{ route('pos.index') }}" class="action-btn">
-                <!-- Icon (simple SVG) -->
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M3 6h18v2H3zM3 12h18v2H3zM3 18h18v2H3z" />
-                </svg>
-                PUNTO VENTA
-            </a>
-
-            <a href="{{ route('reportes.index') }}" class="action-btn">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M3 6h18v2H3zM3 11h18v2H3zM3 16h18v2H3z" />
-                </svg>
-                REPORTES
-            </a>
-
-            <a href="{{ route('almacen.index') }}" class="action-btn">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 2L2 7l10 5 10-5zM2 17l10 5 10-5" />
-                </svg>
-                PRODUCTOS
-            </a>
-        </div>
-
-        <!-- Top stats row -->
-        <!-- Top stats row -->
-        <div class="acbem-stats">
-            <div class="stat-card">
-                <h3>PEDIDOS VENTAS</h3>
-                <div class="stat-list">
-                    <div class="stat-row">
-                        <div class="stat-key">Preventas pendientes</div>
-                        <div class="stat-value">{{ $preventas_pendientes_cnt }} ( S/
-                            {{ number_format($preventas_pendientes_monto, 2) }} )</div>
-                    </div>
-                    <div class="stat-row">
-                        <div class="stat-key">Proformas pendientes</div>
-                        <div class="stat-value">{{ $proformas_pendientes_cnt }} ( S/
-                            {{ number_format($proformas_pendientes_monto, 2) }} )</div>
-                    </div>
-                    <div class="stat-row">
-                        <div class="stat-key">Reservas pendientes</div>
-                        <div class="stat-value">{{ $reservas_pendientes_cnt }} ( S/
-                            {{ number_format($reservas_pendientes_monto, 2) }} )</div>
-                    </div>
-                    <div class="stat-row">
-                        <div class="stat-key">Reservas por entregar</div>
-                        <div class="stat-value">{{ $reservas_entregar_cnt }}</div>
-                    </div>
+        <!-- Stats Row -->
+        <div class="stats-row">
+            <div class="stat-card blue">
+                <div class="icon"><i class="bx bx-dollar-circle"></i></div>
+                <div class="label">Venta de Hoy</div>
+                <div class="value">S/ {{ number_format($chartData['ventaHoy'], 2) }}</div>
+                @php
+                    $diff = $chartData['ventaHoy'] - $chartData['ventaAyer'];
+                    $pct = $chartData['ventaAyer'] > 0 ? round(($diff / $chartData['ventaAyer']) * 100, 1) : 0;
+                @endphp
+                <div class="comparison {{ $diff >= 0 ? 'up' : 'down' }}">
+                    <i class="bx bx-{{ $diff >= 0 ? 'up' : 'down' }}-arrow-alt"></i>
+                    {{ abs($pct) }}% vs ayer
                 </div>
             </div>
 
-            <div class="stat-card">
-                <h3>VENTAS</h3>
-                <div class="stat-list">
-                    <div class="stat-row">
-                        <div class="stat-key">Creditos pendientes</div>
-                        <div class="stat-value">{{ $creditos_pendientes_cnt }} ( S/
-                            {{ number_format($creditos_pendientes_monto, 2) }} )</div>
-                    </div>
-                    <div class="stat-row">
-                        <div class="stat-key">Servicios pendientes</div>
-                        <div class="stat-value">0 ( S/ 0.00 )</div>
-                    </div>
-                    <div class="stat-row">
-                        <div class="stat-key">Promociones</div>
-                        <div class="stat-value">0</div>
-                    </div>
-                </div>
+            <div class="stat-card green">
+                <div class="icon"><i class="bx bx-calendar"></i></div>
+                <div class="label">Venta del Mes</div>
+                <div class="value">S/ {{ number_format($chartData['ventaMes'], 2) }}</div>
             </div>
 
-            <div class="stat-card">
-                <h3>TESORERÍA</h3>
-                <div class="stat-list">
-                    <div class="stat-row">
-                        <div class="stat-key">Pagos pendientes</div>
-                        <div class="stat-value">{{ $pagos_pendientes_cnt }} ( S/
-                            {{ number_format($pagos_pendientes_monto, 2) }} )</div>
-                    </div>
-                    <div class="stat-row">
-                        <div class="stat-key">Pagos vencidos</div>
-                        <div class="stat-value">{{ $pagos_vencidos_cnt }} ( S/
-                            {{ number_format($pagos_vencidos_monto, 2) }} )</div>
-                    </div>
-                    <div class="stat-row">
-                        <div class="stat-key">Cobros pendientes</div>
-                        <div class="stat-value">{{ $cobros_pendientes_cnt }} ( S/
-                            {{ number_format($cobros_pendientes_monto, 2) }} )</div>
-                    </div>
-                    <div class="stat-row">
-                        <div class="stat-key">Cobros vencidos</div>
-                        <div class="stat-value">{{ $cobros_vencidos_cnt }} ( S/
-                            {{ number_format($cobros_vencidos_monto, 2) }} )</div>
-                    </div>
-                </div>
+            <div class="stat-card purple">
+                <div class="icon"><i class="bx bx-wallet"></i></div>
+                <div class="label">Capital Invertido</div>
+                <div class="value">S/ {{ number_format($capital_costo, 2) }}</div>
+            </div>
+
+            <div class="stat-card orange">
+                <div class="icon"><i class="bx bx-trending-up"></i></div>
+                <div class="label">Margen Utilidad</div>
+                <div class="value">S/ {{ number_format($capital_utilidad, 2) }}</div>
             </div>
         </div>
 
-        <!-- Bottom stats row -->
-        <div class="bottom-row">
-            <div class="stat-card">
-                <h3>COMPRAS</h3>
-                <div class="stat-list">
-                    <div class="stat-row">
-                        <div class="stat-key">Comprobantes pendientes</div>
-                        <div class="stat-value">{{ $comprobantes_pendientes_cnt }}</div>
+        <!-- Charts -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3><i class="bx bx-line-chart"></i> Ventas de los Últimos 6 Meses</h3>
+                <canvas id="salesChart" height="120"></canvas>
+            </div>
+
+            <div class="chart-card">
+                <h3><i class="bx bx-pie-chart-alt-2"></i> Ventas por Tipo</h3>
+                <canvas id="typeChart" height="200"></canvas>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3><i class="bx bx-bar-chart"></i> Ventas Últimos 7 Días</h3>
+                <canvas id="weekChart" height="100"></canvas>
+            </div>
+
+            <div class="chart-card">
+                <h3><i class="bx bx-trophy"></i> Top Productos (30 días)</h3>
+                <table class="products-table">
+                    @forelse($chartData['topProductos'] as $index => $producto)
+                        <tr>
+                            <td
+                                class="rank {{ $index === 0 ? 'gold' : ($index === 1 ? 'silver' : ($index === 2 ? 'bronze' : 'normal')) }}">
+                                {{ $index + 1 }}
+                            </td>
+                            <td class="name">{{ $producto->nombre }}</td>
+                            <td class="qty">{{ number_format($producto->cantidad, 0) }} uds</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4">Sin datos</td>
+                        </tr>
+                    @endforelse
+                </table>
+            </div>
+        </div>
+
+        <!-- Bottom Info Cards -->
+        <div class="bottom-grid">
+            <div class="info-card">
+                <h4><i class="bx bx-shopping-bag"></i> Ventas & Pedidos</h4>
+                <div class="info-list">
+                    <div class="info-item">
+                        <span class="key">Proformas pendientes</span>
+                        <span class="value">{{ $proformas_pendientes_cnt }} <small>(S/
+                                {{ number_format($proformas_pendientes_monto, 2) }})</small></span>
                     </div>
-                    <div class="stat-row">
-                        <div class="stat-key">Comprobantes borrador</div>
-                        <div class="stat-value">{{ $comprobantes_borrador_cnt }}</div>
+                    <div class="info-item">
+                        <span class="key">Créditos pendientes</span>
+                        <span class="value warning">{{ $creditos_pendientes_cnt }} <small>(S/
+                                {{ number_format($creditos_pendientes_monto, 2) }})</small></span>
                     </div>
-                    <div class="stat-row">
-                        <div class="stat-key">Pedidos borrador</div>
-                        <div class="stat-value">0</div>
-                    </div>
-                    <div class="stat-row">
-                        <div class="stat-key">Pedidos pendientes</div>
-                        <div class="stat-value">0</div>
+                    <div class="info-item">
+                        <span class="key">Cobros vencidos</span>
+                        <span class="value danger">{{ $cobros_vencidos_cnt }} <small>(S/
+                                {{ number_format($cobros_vencidos_monto, 2) }})</small></span>
                     </div>
                 </div>
             </div>
 
-            <div class="stat-card">
-                <h3>ALMACEN</h3>
-                <div class="stat-list">
-                    <div class="stat-row">
-                        <div class="stat-key">Productos con Stock</div>
-                        <div class="stat-value">{{ $productos_stock_cnt }}</div>
+            <div class="info-card">
+                <h4><i class="bx bx-package"></i> Almacén</h4>
+                <div class="info-list">
+                    <div class="info-item">
+                        <span class="key">Productos con stock</span>
+                        <span class="value success">{{ $productos_stock_cnt }}</span>
                     </div>
-                    <div class="stat-row">
-                        <div class="stat-key">Productos sin stock</div>
-                        <div class="stat-value">{{ $productos_sin_stock_cnt }}</div>
+                    <div class="info-item">
+                        <span class="key">Productos sin stock</span>
+                        <span class="value danger">{{ $productos_sin_stock_cnt }}</span>
                     </div>
-                    <div class="stat-row">
-                        <div class="stat-key">Productos Stock Minimo</div>
-                        <div class="stat-value">{{ $productos_stock_minimo_cnt }}</div>
-                    </div>
-                    <div class="stat-row">
-                        <div class="stat-key">Pedidos por recibir</div>
-                        <div class="stat-value">0</div>
+                    @if ($productos_stock_minimo_cnt > 0)
+                        <div class="info-item"
+                            style="background: linear-gradient(90deg, #fef2f2 0%, #fff 100%); border-left: 3px solid #ef4444;">
+                            <span class="key"><i class="bx bx-error-circle" style="color: #ef4444;"></i> Stock
+                                Mínimo</span>
+                            <span class="value danger" style="font-weight: 700;">⚠️
+                                {{ $productos_stock_minimo_cnt }}</span>
+                        </div>
+                    @else
+                        <div class="info-item">
+                            <span class="key">Stock Mínimo</span>
+                            <span class="value success">0</span>
+                        </div>
+                    @endif
+                    <div class="info-item">
+                        <span class="key">Compras pendientes</span>
+                        <span class="value warning">{{ $comprobantes_pendientes_cnt }}</span>
                     </div>
                 </div>
             </div>
 
-            <div class="stat-card">
-                <h3>CAPITAL ACTUAL</h3>
-                <div class="stat-list">
-                    <div class="stat-row">
-                        <div class="stat-key">Total Costo</div>
-                        <div class="stat-value">S/ {{ number_format($capital_costo, 2) }}</div>
+            <div class="info-card">
+                <h4><i class="bx bx-money"></i> Capital Actual</h4>
+                <div class="info-list">
+                    <div class="info-item">
+                        <span class="key">Total Costo</span>
+                        <span class="value">S/ {{ number_format($capital_costo, 2) }}</span>
                     </div>
-                    <div class="stat-row">
-                        <div class="stat-key">Total Margen Utilidad</div>
-                        <div class="stat-value">S/ {{ number_format($capital_utilidad, 2) }}</div>
+                    <div class="info-item">
+                        <span class="key">Total Precio Venta</span>
+                        <span class="value">S/ {{ number_format($capital_venta, 2) }}</span>
                     </div>
-                    <div class="stat-row">
-                        <div class="stat-key">Total Impuesto</div>
-                        <div class="stat-value">S/ {{ number_format($capital_impuesto, 2) }}</div>
+                    <div class="info-item">
+                        <span class="key">Margen Utilidad</span>
+                        <span class="value success">S/ {{ number_format($capital_utilidad, 2) }}</span>
                     </div>
-                    <div class="stat-row">
-                        <div class="stat-key">Total Precio Venta</div>
-                        <div class="stat-value">S/ {{ number_format($capital_venta, 2) }}</div>
+                    <div class="info-item">
+                        <span class="key">IGV Estimado</span>
+                        <span class="value">S/ {{ number_format($capital_impuesto, 2) }}</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chartData = @json($chartData);
+
+            // Sales Chart (Line)
+            new Chart(document.getElementById('salesChart'), {
+                type: 'line',
+                data: {
+                    labels: chartData.mesesLabels,
+                    datasets: [{
+                        label: 'Ventas (S/)',
+                        data: chartData.ventasData,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#6366f1',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#f1f5f9'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return 'S/ ' + value.toLocaleString();
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Type Chart (Doughnut)
+            const tiposLabels = chartData.ventasPorTipo.map(t => t.tipo);
+            const tiposData = chartData.ventasPorTipo.map(t => t.total);
+
+            new Chart(document.getElementById('typeChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: tiposLabels,
+                    datasets: [{
+                        data: tiposData,
+                        backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ef4444'],
+                        borderWidth: 0,
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '65%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Week Chart (Bar)
+            new Chart(document.getElementById('weekChart'), {
+                type: 'bar',
+                data: {
+                    labels: chartData.diasLabels,
+                    datasets: [{
+                        label: 'Ventas (S/)',
+                        data: chartData.ventasDiarias,
+                        backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                        borderRadius: 8,
+                        barThickness: 40
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#f1f5f9'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return 'S/ ' + value.toLocaleString();
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+@endpush

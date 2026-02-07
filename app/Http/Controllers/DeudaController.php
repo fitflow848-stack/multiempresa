@@ -18,47 +18,91 @@ class DeudaController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        $query = Deuda::with(['cliente', 'venta'])
-            ->where('sucursal_id', 1); // Ajustar según tu lógica de sucursales
 
-        // Filtros
-        if ($request->has('cliente_id') && !empty($request->cliente_id)) {
-            $query->where('cliente_id', $request->cliente_id);
+        // Base query: Clientes que tienen deudas (pendientes por defecto)
+        $clientesQuery = Cliente::where('company_id', $user->company_id)
+            ->whereHas('deudas', function ($q) use ($request) {
+                // $q->where('sucursal_id', 1); // Asumiendo sucursal 1 fijo como estaba antes
+
+                // Filtros de deuda
+                if ($request->has('estado') && !empty($request->estado)) {
+                    $q->where('estado', $request->estado);
+                } else {
+                    $q->pendientes(); // Default solo pendientes
+                }
+
+                if ($request->has('fecha_desde') && !empty($request->fecha_desde)) {
+                    $q->whereDate('fecha_venta', '>=', $request->fecha_desde);
+                }
+
+                if ($request->has('fecha_hasta') && !empty($request->fecha_hasta)) {
+                    $q->whereDate('fecha_venta', '<=', $request->fecha_hasta);
+                }
+            });
+
+        // Busqueda por nombre cliente
+        if ($request->has('search') && !empty($request->search)) {
+            $clientesQuery->where(function ($q) use ($request) {
+                $q->where('nombre', 'like', '%' . $request->search . '%')
+                    ->orWhere('numero_documento', 'like', '%' . $request->search . '%');
+            });
         }
 
-        if ($request->has('estado') && !empty($request->estado)) {
-            $query->where('estado', $request->estado);
-        }
+        // Obtener clientes con suma de deuda pendiente
+        $clientes = $clientesQuery->withSum(['deudas' => function ($q) use ($request) {
+            // Misma logica de filtros para la suma
+            if ($request->has('estado') && !empty($request->estado)) {
+                $q->where('estado', $request->estado);
+            } else {
+                $q->pendientes();
+            }
+            if ($request->has('fecha_desde')) $q->whereDate('fecha_venta', '>=', $request->fecha_desde);
+            if ($request->has('fecha_hasta')) $q->whereDate('fecha_venta', '<=', $request->fecha_hasta);
+        }], 'monto_deuda')
+            ->withCount(['deudas' => function ($q) use ($request) {
+                if ($request->has('estado') && !empty($request->estado)) {
+                    $q->where('estado', $request->estado);
+                } else {
+                    $q->pendientes();
+                }
+            }])
+            ->orderByDesc('deudas_sum_monto_deuda') // Ordenar por quien debe mas
+            ->paginate(20); // Paginar clientes
 
-        if ($request->has('fecha_desde') && !empty($request->fecha_desde)) {
-            $query->whereDate('fecha_venta', '>=', $request->fecha_desde);
-        }
-
-        if ($request->has('fecha_hasta') && !empty($request->fecha_hasta)) {
-            $query->whereDate('fecha_venta', '<=', $request->fecha_hasta);
-        }
-
-        // Solo deudas pendientes por defecto
-        if (!$request->has('mostrar_todas')) {
-            $query->pendientes();
-        }
-
-        $deudas = $query->orderBy('fecha_venta', 'desc')
-            ->paginate(20);
-
-        // Para el filtro de clientes
-        $clientes = Cliente::where('company_id', $user->company_id)
-            ->orderBy('nombre')
-            ->get(['id', 'nombre', 'numero_documento']);
-
-        // Estadísticas rápidas
+        // Estadísticas rápidas (Globales)
         $estadisticas = [
-            'total_pendiente' => Deuda::where('sucursal_id', 1)->pendientes()->sum('monto_deuda'),
+            'total_pendiente' => Deuda::where('sucursal_id', 1)->pendientes()->sum('monto_deuda'), // Ajustar sucursal si es dinámico
             'cantidad_pendiente' => Deuda::where('sucursal_id', 1)->pendientes()->count(),
             'vencidas' => Deuda::where('sucursal_id', 1)->vencidas()->count(),
         ];
 
-        return view('deudas.index', compact('deudas', 'clientes', 'estadisticas'));
+        return view('deudas.index', compact('clientes', 'estadisticas'));
+    }
+
+    public function deudasPorCliente(Request $request, $id)
+    {
+        $cliente = Cliente::findOrFail($id);
+
+        $query = Deuda::where('cliente_id', $id)
+            // ->where('sucursal_id', 1) 
+            ->with(['venta', 'pagos']);
+
+        if ($request->has('estado') && !empty($request->estado)) {
+            $query->where('estado', $request->estado);
+        } else {
+            // Por defecto mostrar todas para ver historial
+            // $query->pendientes(); 
+        }
+
+        // Ordenar: Pendientes primero, luego por fecha
+        $deudas = $query->orderByRaw("CASE WHEN estado != 'pagada' THEN 0 ELSE 1 END")
+            ->orderBy('fecha_venta', 'desc')
+            ->paginate(20);
+
+        // Calcular total pendiente de este cliente
+        $totalPendienteCliente = Deuda::where('cliente_id', $id)->pendientes()->sum('monto_deuda');
+
+        return view('deudas.detalle_cliente', compact('cliente', 'deudas', 'totalPendienteCliente'));
     }
 
     public function show($id)
@@ -110,6 +154,29 @@ class DeudaController extends Controller
                 'codigo_comprobante' => 'PAY-' . strtoupper(Str::random(8)),
                 'observaciones' => $request->observaciones
             ]);
+
+            // Actualizar Caja (Registrar ingreso de dinero)
+            // Buscar caja abierta del usuario
+            $cajaAbierta = \App\Models\CierreCaja::where('user_id', Auth::id())
+                ->whereNull('fecha_cierre')
+                ->first();
+
+            if ($cajaAbierta) {
+                // 1. Actualizar acumulador de ingresos
+                $cajaAbierta->ingresos = floatval($cajaAbierta->ingresos ?? 0) + $montoPago;
+                $cajaAbierta->save();
+
+                // 2. Crear operación de caja para detalle
+                \App\Models\OperacionCaja::create([
+                    'cierre_caja_id' => $cajaAbierta->id,
+                    'user_id' => Auth::id(), // Asegurar user_id correcto
+                    'tipo' => 'Ingreso',     // Tipo para filtro (Ingreso/Egreso)
+                    'partida' => 'Cobro Deuda', // Texto para col "OPERACIÓN" en reporte
+                    'concepto' => 'Pago de deuda - Ticket: ' . $deuda->numero_comprobante,
+                    'importe' => $montoPago, // Nombre correcto de la columna es importe
+                    'fecha' => now(),
+                ]);
+            }
 
             // Actualizar deuda
             $nuevoMontoPagado = $deuda->monto_pagado + $montoPago;

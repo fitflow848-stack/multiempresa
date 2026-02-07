@@ -59,7 +59,8 @@
     }
 </style>
 @stack('styles')
-<body class="bg-body"> @include('include.sidebar') 
+
+<body class="bg-body"> @include('include.sidebar')
 
     <div class="layout-wrapper">
         <div class="content-wrapper">
@@ -87,6 +88,10 @@
 
     <!-- Page JS -->
     <script src="{{ asset('assets/js/dashboards-analytics.js') }}"></script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     @stack('scripts')
 </body>
 

@@ -1,5 +1,5 @@
 <div id="context-menu-ticket"
-    style="position: absolute; background: white; border: 1px solid #ccc; box-shadow: 2px 2px 10px rgba(0,0,0,0.2); display: none; z-index: 1100; min-width: 240px; border-radius: 4px; font-family: Arial, sans-serif;">
+    style="position: absolute; background: white; border: 1px solid #ccc; box-shadow: 2px 2px 10px rgba(0,0,0,0.2); display: none; z-index: 1100; min-width: 240px; border-radius: 4px; font-family: Arial, sans-serif; max-height: 70vh; overflow-y: auto;">
 
     <div class="context-menu-item"
         style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px;"
@@ -80,13 +80,36 @@
         event.stopPropagation();
         currentProduct = producto;
         const menu = document.getElementById('context-menu-ticket');
+
+        // Mostrar temporalmente para obtener dimensiones reales
+        menu.style.visibility = 'hidden';
+        menu.style.display = 'block';
+
+        const menuHeight = menu.offsetHeight;
+        const menuWidth = menu.offsetWidth;
+
         let x = event.pageX;
-        let y = event.pageY;
-        if (x + 260 > window.innerWidth) x = window.innerWidth - 270;
-        if (y + 380 > window.innerHeight) y = window.innerHeight - 390;
+        // Centrar verticalmente respecto al clic
+        let y = event.pageY - (menuHeight / 2);
+
+        // Ajustar posición horizontal - mostrar a la izquierda si no hay espacio
+        if (x + menuWidth > window.innerWidth) {
+            x = event.pageX - menuWidth - 5;
+        }
+
+        // Ajustar posición vertical - no salirse por arriba ni por abajo
+        const minY = window.scrollY + 10;
+        const maxY = window.scrollY + window.innerHeight - menuHeight - 10;
+
+        if (y < minY) {
+            y = minY;
+        } else if (y > maxY) {
+            y = maxY;
+        }
+
         menu.style.left = x + 'px';
         menu.style.top = y + 'px';
-        menu.style.display = 'block';
+        menu.style.visibility = 'visible';
     }
 
     // Parsea entradas de cantidad soportando fracciones tipo "1/2" y comas

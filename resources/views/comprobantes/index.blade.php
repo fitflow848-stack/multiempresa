@@ -94,11 +94,8 @@
                     <button class="btn btn-white border px-3" id="btn-seleccionar-todo">
                         <i class="bx bx-check-double me-1 text-primary"></i> Todo
                     </button>
-                    <button class="btn btn-white border px-3 text-danger" id="btn-cancelar">
-                        <i class="bx bx-x-circle me-1"></i> Cancelar
-                    </button>
-                    <button class="btn btn-white border px-3 text-info" id="btn-devolver">
-                        <i class="bx bx-revision me-1"></i> Devolver
+                    <button class="btn btn-danger border px-3" id="btn-anular">
+                        <i class="bx bx-x-circle me-1"></i> Anular
                     </button>
                 </div>
                 <a class="btn btn-dark ms-2 px-4 shadow-sm" href="{{ route('pos.index') }}">
@@ -228,7 +225,8 @@
                                         </td>
                                         <td class="text-end pe-3">
                                             <div class="d-flex justify-content-end gap-1">
-                                                <button type="button" class="btn btn-action-icon btn-light text-primary btn-detalle"
+                                                <button type="button"
+                                                    class="btn btn-action-icon btn-light text-primary btn-detalle"
                                                     data-venta-id="{{ $venta->id_venta }}">
                                                     <i class="bx bx-search-alt"></i>
                                                 </button>
@@ -240,7 +238,8 @@
                                                 </button>
                                                 @if (isset($venta->ventaSunat->nombre_xml))
                                                     <div class="dropdown">
-                                                        <button type="button" class="btn btn-action-icon btn-light text-dark"
+                                                        <button type="button"
+                                                            class="btn btn-action-icon btn-light text-dark"
                                                             data-bs-toggle="dropdown">
                                                             <i class="bx bx-dots-vertical-rounded"></i>
                                                         </button>
@@ -354,377 +353,372 @@
         </div>
     </div>
     <!-- JS dependencies -->
-   
+
     @push('scripts')
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
-    <script>
-        // Re-initialize dropdowns to avoid being clipped by the table's scroll container
-        try {
-            document.querySelectorAll('.dropdown > button[data-bs-toggle="dropdown"]').forEach(function(btn) {
-                // Initialize with custom popper boundary (document.body) to prevent clipping
-                new bootstrap.Dropdown(btn, {
-                    popperConfig: function(defaultBsPopperConfig) {
-                        defaultBsPopperConfig = defaultBsPopperConfig || {};
-                        defaultBsPopperConfig.modifiers = defaultBsPopperConfig.modifiers || [];
-                        defaultBsPopperConfig.modifiers.push({
-                            name: 'preventOverflow',
-                            options: {
-                                boundary: document.body
-                            }
-                        });
-                        return defaultBsPopperConfig;
-                    }
-                });
-            });
-        } catch (err) {
-            console.error('Dropdown init error:', err);
-        }
-
-        // Ensure clicks inside dropdown toggles/menus don't propagate to the row click
-        // Attach direct handlers to stop propagation before the event bubbles to the <tr>
-        try {
-            document.querySelectorAll('.dropdown > button[data-bs-toggle="dropdown"]').forEach(function(btn) {
-                btn.addEventListener('click', function(e) { e.stopPropagation(); });
-                // debug: log clicks on dropdown toggles
-                btn.addEventListener('click', function() { console.debug('dropdown toggle clicked', btn); });
-            });
-            document.querySelectorAll('.dropdown-menu').forEach(function(menu) {
-                menu.addEventListener('click', function(e) { e.stopPropagation(); });
-            });
-        } catch (err) {
-            // Fallback for older browsers or if elements not yet present
-            $(document).on('click', '.dropdown > button[data-bs-toggle="dropdown"]', function(e) { e.stopPropagation(); });
-            $(document).on('click', '.dropdown-menu', function(e) { e.stopPropagation(); });
-        }
-        $(document).ready(function() {
-            let seleccionados = [];
-
-            // Auto-submit filters when user changes inputs (debounced for text input)
-            const $formFiltros = $('#form-filtros');
-            const debounce = (fn, delay) => {
-                let timer = null;
-                return function(...args) {
-                    clearTimeout(timer);
-                    timer = setTimeout(() => fn.apply(this, args), delay);
-                };
-            };
-
-            // Date inputs: submit on change
-            $formFiltros.find('input[name="fecha_desde"], input[name="fecha_hasta"]').on('change', function() {
-                $formFiltros.submit();
-            });
-
-            // Tipo documento: submit on change
-            $formFiltros.find('select[name="tipo_documento"]').on('change', function() {
-                $formFiltros.submit();
-            });
-
-            // Cliente search: debounce input
-            $formFiltros.find('input[name="cliente"]').on('input', debounce(function() {
-                $formFiltros.submit();
-            }, 600));
-
-            // Manejar click en filas para seleccionar comprobante (sin recargar la página)
-            function fetchDetalleVenta(ventaId, markRow = true) {
-                const urlTemplate = '{{ route('comprobantes.detalle', ':id') }}';
-                const url = urlTemplate.replace(':id', ventaId);
-
-                $.get(url)
-                    .done(function(resp) {
-                        if (resp.success) {
-                            const detalles = resp.detalles || [];
-                            const $tbody = $('.col-lg-4 .card-body .table-responsive table tbody');
-                            let html = '';
-
-                            if (detalles.length > 0) {
-                                detalles.forEach(function(d) {
-                                    const nombre = (d.producto && d.producto.nombre) ? d.producto
-                                        .nombre : (d.descripcion || '');
-                                    const codigo = (d.producto && d.producto.codigo_barras) ? d.producto
-                                        .codigo_barras : '';
-                                    const cantidad = parseFloat(d.cantidad || 0).toFixed(0);
-                                    const subtotal = parseFloat(d.precio_total || d.subtotal || 0)
-                                        .toFixed(2);
-
-                                    html += `<tr>` +
-                                        `<td class="ps-3"><div class="fw-bold">${nombre}</div><small class="text-muted">${codigo}</small></td>` +
-                                        `<td class="text-center">${cantidad}</td>` +
-                                        `<td class="text-end pe-3">S/ ${subtotal}</td>` +
-                                        `</tr>`;
-                                });
-                            } else {
-                                html =
-                                    `<tr><td colspan="3" class="text-center py-4 text-muted small"><i class="bx bx-pointer fs-4 mb-2 d-block"></i> Selecciona una fila para ver detalles</td></tr>`;
-                            }
-
-                            $tbody.html(html);
-
-                            if (markRow) {
-                                // marcar la fila correspondiente y sincronizar checkbox
-                                const $row = $(`tr[data-venta-id="${ventaId}"]`);
-                                $('.comprobante-row').removeClass('table-active');
-                                $row.addClass('table-active');
-                                $('.comprobante-check:not(:disabled)').prop('checked', false);
-                                const $chk = $row.find('.comprobante-check');
-                                if (!$chk.is(':disabled')) {
-                                    $chk.prop('checked', true);
+        <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+        <script>
+            // Re-initialize dropdowns to avoid being clipped by the table's scroll container
+            try {
+                document.querySelectorAll('.dropdown > button[data-bs-toggle="dropdown"]').forEach(function(btn) {
+                    // Initialize with custom popper boundary (document.body) to prevent clipping
+                    new bootstrap.Dropdown(btn, {
+                        popperConfig: function(defaultBsPopperConfig) {
+                            defaultBsPopperConfig = defaultBsPopperConfig || {};
+                            defaultBsPopperConfig.modifiers = defaultBsPopperConfig.modifiers || [];
+                            defaultBsPopperConfig.modifiers.push({
+                                name: 'preventOverflow',
+                                options: {
+                                    boundary: document.body
                                 }
-                                actualizarSeleccionados();
-                            }
+                            });
+                            return defaultBsPopperConfig;
                         }
-                    })
-                    .fail(function() {
-                        Swal.fire('Error', 'No se pudo obtener el detalle del comprobante', 'error');
                     });
+                });
+            } catch (err) {
+                console.error('Dropdown init error:', err);
             }
 
-            $('.comprobante-row').click(function(e) {
-                // Ignorar clicks en inputs, botones, iconos y controles internos (incluyendo dropdowns)
-                if (!$(e.target).is('input, button, a, .btn, .btn-send-sunat, svg, path, i') &&
-                    !$(e.target).closest('.btn, .btn-send-sunat, .btn-group, .dropdown, .dropdown-menu')
-                    .length) {
+            // Ensure clicks inside dropdown toggles/menus don't propagate to the row click
+            // Attach direct handlers to stop propagation before the event bubbles to the <tr>
+            try {
+                document.querySelectorAll('.dropdown > button[data-bs-toggle="dropdown"]').forEach(function(btn) {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                    });
+                    // debug: log clicks on dropdown toggles
+                    btn.addEventListener('click', function() {
+                        console.debug('dropdown toggle clicked', btn);
+                    });
+                });
+                document.querySelectorAll('.dropdown-menu').forEach(function(menu) {
+                    menu.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                    });
+                });
+            } catch (err) {
+                // Fallback for older browsers or if elements not yet present
+                $(document).on('click', '.dropdown > button[data-bs-toggle="dropdown"]', function(e) {
+                    e.stopPropagation();
+                });
+                $(document).on('click', '.dropdown-menu', function(e) {
+                    e.stopPropagation();
+                });
+            }
+            $(document).ready(function() {
+                let seleccionados = [];
+
+                // Auto-submit filters when user changes inputs (debounced for text input)
+                const $formFiltros = $('#form-filtros');
+                const debounce = (fn, delay) => {
+                    let timer = null;
+                    return function(...args) {
+                        clearTimeout(timer);
+                        timer = setTimeout(() => fn.apply(this, args), delay);
+                    };
+                };
+
+                // Date inputs: submit on change
+                $formFiltros.find('input[name="fecha_desde"], input[name="fecha_hasta"]').on('change', function() {
+                    $formFiltros.submit();
+                });
+
+                // Tipo documento: submit on change
+                $formFiltros.find('select[name="tipo_documento"]').on('change', function() {
+                    $formFiltros.submit();
+                });
+
+                // Cliente search: debounce input
+                $formFiltros.find('input[name="cliente"]').on('input', debounce(function() {
+                    $formFiltros.submit();
+                }, 600));
+
+                // Manejar click en filas para seleccionar comprobante (sin recargar la página)
+                function fetchDetalleVenta(ventaId, markRow = true) {
+                    const urlTemplate = '{{ route('comprobantes.detalle', ':id') }}';
+                    const url = urlTemplate.replace(':id', ventaId);
+
+                    $.get(url)
+                        .done(function(resp) {
+                            if (resp.success) {
+                                const detalles = resp.detalles || [];
+                                const $tbody = $('.col-lg-4 .card-body .table-responsive table tbody');
+                                let html = '';
+
+                                if (detalles.length > 0) {
+                                    detalles.forEach(function(d) {
+                                        const nombre = (d.producto && d.producto.nombre) ? d.producto
+                                            .nombre : (d.descripcion || '');
+                                        const codigo = (d.producto && d.producto.codigo_barras) ? d.producto
+                                            .codigo_barras : '';
+                                        const cantidad = parseFloat(d.cantidad || 0).toFixed(0);
+                                        const subtotal = parseFloat(d.precio_total || d.subtotal || 0)
+                                            .toFixed(2);
+
+                                        html += `<tr>` +
+                                            `<td class="ps-3"><div class="fw-bold">${nombre}</div><small class="text-muted">${codigo}</small></td>` +
+                                            `<td class="text-center">${cantidad}</td>` +
+                                            `<td class="text-end pe-3">S/ ${subtotal}</td>` +
+                                            `</tr>`;
+                                    });
+                                } else {
+                                    html =
+                                        `<tr><td colspan="3" class="text-center py-4 text-muted small"><i class="bx bx-pointer fs-4 mb-2 d-block"></i> Selecciona una fila para ver detalles</td></tr>`;
+                                }
+
+                                $tbody.html(html);
+
+                                if (markRow) {
+                                    // marcar la fila correspondiente y sincronizar checkbox
+                                    const $row = $(`tr[data-venta-id="${ventaId}"]`);
+                                    $('.comprobante-row').removeClass('table-active');
+                                    $row.addClass('table-active');
+                                    $('.comprobante-check:not(:disabled)').prop('checked', false);
+                                    const $chk = $row.find('.comprobante-check');
+                                    if (!$chk.is(':disabled')) {
+                                        $chk.prop('checked', true);
+                                    }
+                                    actualizarSeleccionados();
+                                }
+                            }
+                        })
+                        .fail(function() {
+                            Swal.fire('Error', 'No se pudo obtener el detalle del comprobante', 'error');
+                        });
+                }
+
+                $('.comprobante-row').click(function(e) {
+                    // Ignorar clicks en inputs, botones, iconos y controles internos (incluyendo dropdowns)
+                    if (!$(e.target).is('input, button, a, .btn, .btn-send-sunat, svg, path, i') &&
+                        !$(e.target).closest('.btn, .btn-send-sunat, .btn-group, .dropdown, .dropdown-menu')
+                        .length) {
+                        const ventaId = $(this).data('venta-id');
+                        fetchDetalleVenta(ventaId, true);
+                    }
+                });
+
+                // Manejar selección individual de comprobantes
+                $('.comprobante-check').change(function() {
+                    actualizarSeleccionados();
+                });
+
+                // Seleccionar/deseleccionar todos
+                $('#check-all').change(function() {
+                    $('.comprobante-check:not(:disabled)').prop('checked', this.checked);
+                    actualizarSeleccionados();
+                });
+
+                // Actualizar contador de seleccionados
+                function actualizarSeleccionados() {
+                    seleccionados = [];
+                    let importeTotal = 0;
+                    let pendienteTotal = 0;
+
+                    $('.comprobante-check:checked').each(function() {
+                        const row = $(this).closest('tr');
+                        const ventaId = $(this).val();
+                        const total = parseFloat(row.data('total') || 0);
+                        const pagado = parseInt(row.data('pagado') || 0);
+
+                        seleccionados.push(ventaId);
+                        importeTotal += isNaN(total) ? 0 : total;
+                        pendienteTotal += isNaN(total) ? 0 : (pagado ? 0 : total);
+                    });
+
+                    $('#importe-seleccionados').text('S/ ' + importeTotal.toFixed(2));
+                    $('#pendiente-seleccionados').text('S/ ' + pendienteTotal.toFixed(2));
+                }
+
+                // Ver detalle (botón lupa) — cargar por AJAX
+                $('.btn-detalle').click(function(e) {
+                    e.stopPropagation();
                     const ventaId = $(this).data('venta-id');
                     fetchDetalleVenta(ventaId, true);
-                }
-            });
-
-            // Manejar selección individual de comprobantes
-            $('.comprobante-check').change(function() {
-                actualizarSeleccionados();
-            });
-
-            // Seleccionar/deseleccionar todos
-            $('#check-all').change(function() {
-                $('.comprobante-check:not(:disabled)').prop('checked', this.checked);
-                actualizarSeleccionados();
-            });
-
-            // Actualizar contador de seleccionados
-            function actualizarSeleccionados() {
-                seleccionados = [];
-                let importeTotal = 0;
-                let pendienteTotal = 0;
-
-                $('.comprobante-check:checked').each(function() {
-                    const row = $(this).closest('tr');
-                    const ventaId = $(this).val();
-                    const total = parseFloat(row.data('total') || 0);
-                    const pagado = parseInt(row.data('pagado') || 0);
-
-                    seleccionados.push(ventaId);
-                    importeTotal += isNaN(total) ? 0 : total;
-                    pendienteTotal += isNaN(total) ? 0 : (pagado ? 0 : total);
                 });
 
-                $('#importe-seleccionados').text('S/ ' + importeTotal.toFixed(2));
-                $('#pendiente-seleccionados').text('S/ ' + pendienteTotal.toFixed(2));
-            }
+                // Imprimir (A4 o 8cm para tickets)
+                $('.btn-imprimir').click(function(e) {
+                    e.stopPropagation();
+                    const $btn = $(this);
+                    const ventaId = $btn.data('venta-id');
+                    const tipo = ($btn.data('tipo') || '').toString().toLowerCase();
 
-            // Ver detalle (botón lupa) — cargar por AJAX
-            $('.btn-detalle').click(function(e) {
-                e.stopPropagation();
-                const ventaId = $(this).data('venta-id');
-                fetchDetalleVenta(ventaId, true);
-            });
+                    // Genero las URLs con placeholders usando route() y luego reemplazo :id por el id real
+                    const urlA4 = '{{ route('pos.pdf', ['id' => ':id', 'format' => 'default']) }}'.replace(
+                        ':id', ventaId);
+                    const url8cm = '{{ route('pos.pdf', ['id' => ':id', 'format' => '8cm']) }}'.replace(
+                        ':id', ventaId);
 
-            // Imprimir (A4 o 8cm para tickets)
-            $('.btn-imprimir').click(function(e) {
-                e.stopPropagation();
-                const $btn = $(this);
-                const ventaId = $btn.data('venta-id');
-                const tipo = ($btn.data('tipo') || '').toString().toLowerCase();
+                    const openUrl = (tipo === 'ticket') ? url8cm : urlA4;
+                    window.open(openUrl, '_blank');
+                });
 
-                // Genero las URLs con placeholders usando route() y luego reemplazo :id por el id real
-                const urlA4 = '{{ route('pos.pdf', ['id' => ':id', 'format' => 'default']) }}'.replace(
-                    ':id', ventaId);
-                const url8cm = '{{ route('pos.pdf', ['id' => ':id', 'format' => '8cm']) }}'.replace(
-                    ':id', ventaId);
+                // Seleccionar todo
+                $('#btn-seleccionar-todo, #btn-seleccionar-todo-resumen').click(function() {
+                    $.post('{{ route('comprobantes.seleccionar-todo') }}', {
+                            _token: '{{ csrf_token() }}',
+                            ...Object.fromEntries(new FormData(document.getElementById('form-filtros')))
+                        })
+                        .done(function(response) {
+                            if (response.success) {
+                                $('.comprobante-check:not(:disabled)').prop('checked', true);
+                                actualizarSeleccionados();
+                                Swal.fire('Éxito', 'Todos los comprobantes han sido seleccionados',
+                                    'success');
+                            }
+                        })
+                        .fail(function() {
+                            Swal.fire('Error', 'Error al seleccionar comprobantes', 'error');
+                        });
+                });
 
-                const openUrl = (tipo === 'ticket') ? url8cm : urlA4;
-                window.open(openUrl, '_blank');
-            });
+                // Anular seleccionados
+                $('#btn-anular').click(function() {
+                    if (seleccionados.length === 0) {
+                        Swal.fire('Advertencia', 'Selecciona al menos un comprobante', 'warning');
+                        return;
+                    }
 
-            // Seleccionar todo
-            $('#btn-seleccionar-todo, #btn-seleccionar-todo-resumen').click(function() {
-                $.post('{{ route('comprobantes.seleccionar-todo') }}', {
-                        _token: '{{ csrf_token() }}',
-                        ...Object.fromEntries(new FormData(document.getElementById('form-filtros')))
-                    })
-                    .done(function(response) {
-                        if (response.success) {
-                            $('.comprobante-check:not(:disabled)').prop('checked', true);
-                            actualizarSeleccionados();
-                            Swal.fire('Éxito', 'Todos los comprobantes han sido seleccionados',
-                                'success');
+                    Swal.fire({
+                        title: '¿Anular comprobantes?',
+                        text: `¿Deseas anular ${seleccionados.length} comprobante(s) seleccionado(s)? Esta acción no se puede deshacer.`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#dc3545',
+                        confirmButtonText: 'Sí, anular',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.post('{{ route('comprobantes.cancelar') }}', {
+                                    _token: '{{ csrf_token() }}',
+                                    ventas_ids: seleccionados
+                                })
+                                .done(function(response) {
+                                    if (response.success) {
+                                        // Remover las filas anuladas de la tabla
+                                        seleccionados.forEach(function(id) {
+                                            $(`tr[data-venta-id="${id}"]`).fadeOut(300,
+                                                function() {
+                                                    $(this).remove();
+                                                });
+                                        });
+
+                                        Swal.fire({
+                                            title: '¡Anulado!',
+                                            text: response.message ||
+                                                'Comprobantes anulados correctamente',
+                                            icon: 'success',
+                                            timer: 2000,
+                                            showConfirmButton: false
+                                        });
+
+                                        // Limpiar selección
+                                        seleccionados = [];
+                                        actualizarSeleccionados();
+                                    }
+                                })
+                                .fail(function() {
+                                    Swal.fire('Error', 'Error al anular comprobantes', 'error');
+                                });
                         }
-                    })
-                    .fail(function() {
-                        Swal.fire('Error', 'Error al seleccionar comprobantes', 'error');
                     });
+                });
+
             });
 
-            // Cancelar seleccionados
-            $('#btn-cancelar, #btn-cancelar-resumen').click(function() {
-                if (seleccionados.length === 0) {
-                    Swal.fire('Advertencia', 'Selecciona al menos un comprobante', 'warning');
+            /**
+             * NEW: handler for btn-send-sunat
+             * - reads data-venta (venta id)
+             * - asks for confirmation
+             * - sends POST to /ventas/sendDocumentoSunat/{id}
+             * - shows progress and result, reloads table on success
+             */
+            $(document).on('click', '.btn-send-sunat', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const $btn = $(this);
+                const idVenta = $btn.data('venta');
+
+                if (!idVenta) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'ID no encontrado',
+                        text: 'No se encontró el ID de la venta para enviar a SUNAT.'
+                    });
                     return;
                 }
 
                 Swal.fire({
-                    title: '¿Estás seguro?',
-                    text: '¿Deseas cancelar los comprobantes seleccionados?',
+                    title: 'Enviar a SUNAT',
+                    text: `¿Deseas enviar la venta ${idVenta} a SUNAT ahora?`,
                     icon: 'question',
                     showCancelButton: true,
-                    confirmButtonText: 'Sí, cancelar',
-                    cancelButtonText: 'No, cancelar'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.post('{{ route('comprobantes.cancelar') }}', {
-                                _token: '{{ csrf_token() }}',
-                                ventas_ids: seleccionados
-                            })
-                            .done(function(response) {
-                                if (response.success) {
-                                    Swal.fire('Éxito', response.message, 'success');
-                                    location.reload();
-                                }
-                            })
-                            .fail(function() {
-                                Swal.fire('Error', 'Error al cancelar comprobantes', 'error');
+                    confirmButtonText: 'Sí, enviar',
+                    cancelButtonText: 'Cancelar'
+                }).then((res) => {
+                    if (!res.isConfirmed) return;
+
+                    // disable button and show spinner
+                    $btn.prop('disabled', true);
+                    const originalHtml = $btn.html();
+                    $btn.html(
+                        `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Enviando`
+                    );
+
+                    // AJAX POST to controller endpoint
+                    $.ajax({
+                        url: `/pos/sendDocumentoSunat/${idVenta}`,
+                        type: 'POST',
+                        data: {
+                            _token: '{{ csrf_token() }}'
+                        },
+                        timeout: 120000, // 2 min (adjust as needed)
+                        success: function(resp) {
+                            // resp expected to contain summary structure from controller
+                            let processed = 0;
+                            let failed = 0;
+                            if (resp && resp.summary) {
+                                processed = resp.summary.processed_count || 0;
+                                failed = resp.summary.failed_count || 0;
+                            } else if (resp && resp.processed) {
+                                processed = resp.processed.length || 0;
+                                failed = resp.failed.length || 0;
+                            }
+
+                            let msg =
+                                `Envío completado. Procesadas: ${processed}. Fallos: ${failed}.`;
+                            Swal.fire({
+                                icon: failed > 0 ? 'warning' : 'success',
+                                title: 'Resultado SUNAT',
+                                html: `<div>${msg}</div>`,
+                                width: 600,
+                                confirmButtonText: 'Aceptar'
+                            }).then(() => {
+                                // reload page to reflect changes (enviado_sunat)
+                                location.reload();
                             });
-                    }
-                });
-            });
-
-            // Devolver seleccionados
-            $('#btn-devolver, #btn-devolver-resumen').click(function() {
-                if (seleccionados.length === 0) {
-                    Swal.fire('Advertencia', 'Selecciona al menos un comprobante', 'warning');
-                    return;
-                }
-
-                Swal.fire({
-                    title: '¿Estás seguro?',
-                    text: '¿Deseas procesar las devoluciones de los comprobantes seleccionados?',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'Sí, devolver',
-                    cancelButtonText: 'No, cancelar'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        $.post('{{ route('comprobantes.devolver') }}', {
-                                _token: '{{ csrf_token() }}',
-                                ventas_ids: seleccionados
-                            })
-                            .done(function(response) {
-                                if (response.success) {
-                                    Swal.fire('Éxito', response.message, 'success');
-                                    location.reload();
-                                }
-                            })
-                            .fail(function() {
-                                Swal.fire('Error', 'Error al procesar devoluciones', 'error');
+                        },
+                        error: function(xhr, status, err) {
+                            let text = 'Error al enviar la venta a SUNAT.';
+                            if (xhr && xhr.responseJSON && xhr.responseJSON.error) {
+                                text = xhr.responseJSON.error;
+                            }
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: text
                             });
-                    }
+                        },
+                        complete: function() {
+                            // restore button state
+                            $btn.prop('disabled', false).html(originalHtml);
+                        }
+                    });
                 });
             });
-
-        });
-
-        /**
-         * NEW: handler for btn-send-sunat
-         * - reads data-venta (venta id)
-         * - asks for confirmation
-         * - sends POST to /ventas/sendDocumentoSunat/{id}
-         * - shows progress and result, reloads table on success
-         */
-        $(document).on('click', '.btn-send-sunat', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            const $btn = $(this);
-            const idVenta = $btn.data('venta');
-
-            if (!idVenta) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'ID no encontrado',
-                    text: 'No se encontró el ID de la venta para enviar a SUNAT.'
-                });
-                return;
-            }
-
-            Swal.fire({
-                title: 'Enviar a SUNAT',
-                text: `¿Deseas enviar la venta ${idVenta} a SUNAT ahora?`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Sí, enviar',
-                cancelButtonText: 'Cancelar'
-            }).then((res) => {
-                if (!res.isConfirmed) return;
-
-                // disable button and show spinner
-                $btn.prop('disabled', true);
-                const originalHtml = $btn.html();
-                $btn.html(
-                    `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Enviando`
-                );
-
-                // AJAX POST to controller endpoint
-                $.ajax({
-                    url: `/pos/sendDocumentoSunat/${idVenta}`,
-                    type: 'POST',
-                    data: {
-                        _token: '{{ csrf_token() }}'
-                    },
-                    timeout: 120000, // 2 min (adjust as needed)
-                    success: function(resp) {
-                        // resp expected to contain summary structure from controller
-                        let processed = 0;
-                        let failed = 0;
-                        if (resp && resp.summary) {
-                            processed = resp.summary.processed_count || 0;
-                            failed = resp.summary.failed_count || 0;
-                        } else if (resp && resp.processed) {
-                            processed = resp.processed.length || 0;
-                            failed = resp.failed.length || 0;
-                        }
-
-                        let msg =
-                            `Envío completado. Procesadas: ${processed}. Fallos: ${failed}.`;
-                        Swal.fire({
-                            icon: failed > 0 ? 'warning' : 'success',
-                            title: 'Resultado SUNAT',
-                            html: `<div>${msg}</div>`,
-                            width: 600,
-                            confirmButtonText: 'Aceptar'
-                        }).then(() => {
-                            // reload page to reflect changes (enviado_sunat)
-                            location.reload();
-                        });
-                    },
-                    error: function(xhr, status, err) {
-                        let text = 'Error al enviar la venta a SUNAT.';
-                        if (xhr && xhr.responseJSON && xhr.responseJSON.error) {
-                            text = xhr.responseJSON.error;
-                        }
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: text
-                        });
-                    },
-                    complete: function() {
-                        // restore button state
-                        $btn.prop('disabled', false).html(originalHtml);
-                    }
-                });
-            });
-        });
-    </script>
-        
+        </script>
     @endpush
 @endsection

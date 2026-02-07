@@ -78,29 +78,61 @@ class VentaService
                 throw new Exception('No hay una caja abierta. Abra una caja antes de emitir ventas.');
             }
 
-            // Calcular totales (precios PVP ya incluyen IGV 18%)
-            $total_con_igv = 0;
+            // Calcular totales considerando el tipo de impuesto de los productos
+            $total = 0;
+            $igv_total = 0;
+            // Variables para desglosar (aunque por ahora solo usamos total e igv para guardar)
+            $op_gravadas = 0;
+            $op_exoneradas = 0;
+            $op_inafectas = 0;
+
             foreach ($ticket as $item) {
                 if (isset($item['precio']) && isset($item['cantidad'])) {
-                    $total_con_igv += floatval($item['precio']) * intval($item['cantidad']);
+                    $precio = floatval($item['precio']);
+                    $cantidad = intval($item['cantidad']);
+                    $importe = $precio * $cantidad;
+                    $total += $importe;
+
+                    // Determinar tipo de impuesto del producto
+                    $tipoImpuesto = 10; // Por defecto Gravado - Operación Onerosa
+                    $prodId = $item['producto_id'] ?? ($item['id'] ?? null);
+
+                    if ($prodId) {
+                        $producto = \App\Models\Producto::find($prodId);
+                        if ($producto) {
+                            $tipoImpuesto = $producto->tipo_impuesto;
+                        }
+                    }
+
+                    // Calcular según tipo
+                    if ($tipoImpuesto == 20) { // Exonerado - Operación Onerosa
+                        $op_exoneradas += $importe;
+                    } elseif ($tipoImpuesto == 30) { // Inafecto - Operación Onerosa
+                        $op_inafectas += $importe;
+                    } else { // Gravado (10 u otros por defecto)
+                        // El precio unitario (PVP) incluye IGV
+                        $base = $importe / 1.18;
+                        $igv_item = $importe - $base;
+                        $op_gravadas += $base;
+                        $igv_total += $igv_item;
+                    }
                 }
             }
 
-            $subtotal = round($total_con_igv / 1.18, 2);
-            $igv = round($total_con_igv - $subtotal, 2);
-            $total = $total_con_igv;
+            $igv = round($igv_total, 2);
+            $subtotal = round($total - $igv, 2); // Base total (gravada + exonerada + inafecta)
 
             // Obtener siguiente número
             $siguienteNumero = $this->obtenerSiguienteNumeroSerie('', $tipoDocumento, true);
             $documento = DB::table('documentos_sunat')
-            ->where('nombre', 'like', '%' . $tipoDocumento . '%')
-            ->first();
+                ->where('nombre', 'like', '%' . $tipoDocumento . '%')
+                ->first();
 
             //aumentar en uno numero companies_document
             $companyDocument = CompanyDocument::where('company_id', $company->id)
-            ->where('sunat_document_id', $documento->id_tido)
-            ->where('branch_id', Auth::user()->branch_id)
-            ->first();
+                ->where('sunat_document_id', $documento->id_tido)
+                ->where('branch_id', Auth::user()->branch_id)
+                ->first();
 
             $companyDocument->number = $siguienteNumero;
             $companyDocument->save();
@@ -199,10 +231,14 @@ class VentaService
                 }
             }
 
-            // Actualizar totales de la caja abierta (registrar ingreso de la venta)
+            // Actualizar totales de la caja abierta (registrar SOLO el monto efectivamente pagado)
             try {
-                $openCaja->ingresos = floatval($openCaja->ingresos ?? 0) + floatval($venta->total ?? 0);
-                $openCaja->save();
+                // IMPORTANTE: Solo sumamos $entrega (monto pagado), NO el total de la venta
+                // Si es pago parcial, solo el monto pagado va a caja
+                if ($entrega > 0) {
+                    $openCaja->ingresos = floatval($openCaja->ingresos ?? 0) + $entrega;
+                    $openCaja->save();
+                }
             } catch (\Throwable $e) {
                 Log::error('Error actualizando totales de caja en VentaService: ' . $e->getMessage());
             }
@@ -276,7 +312,7 @@ class VentaService
         } else {
             $siguienteNumero = $this->obtenerSiguienteNumero($user->company_id, $serie);
         }
-        if($es_venta){
+        if ($es_venta) {
             return $siguienteNumero;
         }
         return response()->json([

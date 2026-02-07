@@ -50,9 +50,8 @@
         </a>
 
         <!-- Toggler Button -->
-        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse"
-            data-bs-target="#navbarNavigation" aria-controls="navbarNavigation" aria-expanded="false"
-            aria-label="Toggle navigation">
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavigation"
+            aria-controls="navbarNavigation" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
 
@@ -73,11 +72,29 @@
                     </a>
                 </li>
 
-                <li class="nav-item">
-                    <a href="{{ route('almacen.index') }}"
-                        class="nav-link {{ request()->is('almacen*') ? 'active fw-bold text-primary' : '' }}">
+                <li class="nav-item dropdown">
+                    <a href="#"
+                        class="nav-link dropdown-toggle {{ request()->is('almacen*') ? 'active fw-bold text-primary' : '' }}"
+                        id="almacenDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bx bx-package me-1"></i> Almacén
                     </a>
+                    <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="almacenDropdown">
+                        <li>
+                            <a class="dropdown-item" href="{{ route('almacen.index') }}">
+                                Inventario
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{{ route('almacen.kardex') }}">
+                                Kardex / Movimientos
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{{ route('almacen.transferir') }}">
+                                Transferencias
+                            </a>
+                        </li>
+                    </ul>
                 </li>
 
                 <li class="nav-item dropdown">
@@ -136,11 +153,38 @@
 
 
 
-                <li class="nav-item">
-                    <a href="{{ route('balance.index') }}"
-                        class="nav-link {{ request()->is('balance*') ? 'active fw-bold text-primary' : '' }}">
+                <li class="nav-item dropdown">
+                    <a href="#"
+                        class="nav-link dropdown-toggle {{ request()->is('balance*') || request()->is('activos*') || request()->is('pasivos*') ? 'active fw-bold text-primary' : '' }}"
+                        id="balanceDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bx bx-spreadsheet me-1"></i> Balance
                     </a>
+                    <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="balanceDropdown">
+                        <li>
+                            <a class="dropdown-item {{ request()->routeIs('balance.index') ? 'active' : '' }}"
+                                href="{{ route('balance.index') }}">
+                                Balance General
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item {{ request()->routeIs('activos_corrientes.index') ? 'active' : '' }}"
+                                href="{{ route('activos_corrientes.index') }}">
+                                Activos Corrientes
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item {{ request()->routeIs('activos.index') ? 'active' : '' }}"
+                                href="{{ route('activos.index') }}">
+                                Activos No Corrientes
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item {{ request()->routeIs('pasivos.index') ? 'active' : '' }}"
+                                href="{{ route('pasivos.index') }}">
+                                Pasivos Corrientes
+                            </a>
+                        </li>
+                    </ul>
                 </li>
 
                 <li class="nav-item">
