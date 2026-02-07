@@ -27,10 +27,17 @@ class AuthController extends Controller
         }
 
         $credentials = $request->only('email', 'password');
-        
+
         if (Auth::attempt($credentials, $request->filled('remember'))) {
             $request->session()->regenerate();
-            
+
+            // Set cookie for 30 days if remember is checked
+            if ($request->filled('remember')) {
+                cookie()->queue(cookie('remember_email', $request->email, 43200));
+            } else {
+                cookie()->queue(cookie()->forget('remember_email'));
+            }
+
             // Redirigir a la ruta solicitada originalmente o al POS
             $intended = $request->session()->get('url.intended', route('principal.index'));
             return redirect($intended);
@@ -44,10 +51,10 @@ class AuthController extends Controller
     public function logout(Request $request)
     {
         Auth::logout();
-        
+
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-        
+
         return redirect('/login');
     }
 }
