@@ -27,6 +27,12 @@ class ProductRepository
                     'lt. ', ad.lote, ' Fv. ', LPAD(DAY(ad.fecha_vencimiento), 2, '0'),
                     ' ', LOWER(LEFT(MONTHNAME(ad.fecha_vencimiento), 3)), ' ', RIGHT(YEAR(ad.fecha_vencimiento), 2)
                 ) AS detalle,
+                m.nombre AS marca,
+                MAX(f.nombre) AS familia,
+                MAX(um.nombre) AS unidad_medida,
+                MAX(p.ficha_tecnica) AS ficha_tecnica,
+                MAX(p.almacenamiento) AS almacenamiento,
+                MAX(p.codigo_barras) AS codigo_barras,
                 SUM(ad.cantidad) AS cantidad_total,
                 MAX(ad.costo) AS costo,
                 MAX(ad.pvp) AS pvp,
@@ -44,8 +50,11 @@ class ProductRepository
             FROM almacen_ingreso_detalle ad
             INNER JOIN productos p ON p.id = ad.producto_id
             INNER JOIN producto_lineas pl ON pl.id = ad.producto_linea_id 
+            LEFT JOIN marcas m ON m.id = p.marca_id
+            LEFT JOIN familias f ON f.id = p.familia_id
+            LEFT JOIN unidades_medida um ON um.id = p.unidad_medida_id
             WHERE (p.nombre LIKE ? OR p.codigo_barras LIKE ?) AND ad.cantidad > 0
-            GROUP BY p.id, ad.producto_linea_id, p.nombre, pl.presentacion, pl.concentracion, ad.lote, ad.fecha_vencimiento
+            GROUP BY p.id, ad.producto_linea_id, p.nombre, pl.presentacion, pl.concentracion, ad.lote, ad.fecha_vencimiento, m.nombre
             ORDER BY p.nombre ASC
         ", ["%{$q}%", "%{$q}%"]);
     }

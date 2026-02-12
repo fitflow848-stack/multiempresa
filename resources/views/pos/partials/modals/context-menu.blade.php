@@ -36,12 +36,6 @@
         <span style="color: #607D8B;">📍</span>
         <span>Ubicación del Producto</span>
     </div>
-    <div class="context-menu-item" onclick="verListado()"
-        style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px;">
-        <span style="color: #795548;">📄</span>
-        <span>Ver Listado</span>
-        <span style="margin-left: auto;">▶</span>
-    </div>
     <div class="context-menu-item" onclick="anotarNuevoProducto()"
         style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px;">
         <span style="color: #4CAF50;">✏️</span>

@@ -48,11 +48,11 @@
         <div class="bar-right">
             <div class="payment-group">
                 <label class="payment-radio">
-                    <input type="radio" name="payment" checked>
+                    <input type="radio" name="payment" value="contado" checked>
                     <span>Contado</span>
                 </label>
                 <label class="payment-radio">
-                    <input type="radio" name="payment">
+                    <input type="radio" name="payment" value="credito" id="radio-credito">
                     <span>Crédito</span>
                 </label>
             </div>
@@ -76,7 +76,8 @@
                 <table class="productos-table">
                     <thead>
                         <tr>
-                            <th style="width: 50%;">Producto</th>
+                            <th style="width: 35%;">Producto</th>
+                            <th style="width: 15%; text-align: center;">Marca</th>
                             <th style="width: 15%; text-align: center;">Stock</th>
                             <th style="width: 15%; text-align: end;">PVP</th>
                             <th style="width: 20%; text-align: end;">PVC</th>
@@ -154,7 +155,8 @@
                 <span class="label">IGV</span> : <span class="value">S/ <span id="footer-igv">0.00</span></span>
             </div>
             <div>
-                <span class="label">ICBPER</span> : <span class="value">S/ <span id="footer-icbper">0.00</span></span>
+                <span class="label">ICBPER</span> : <span class="value">S/ <span
+                        id="footer-icbper">0.00</span></span>
             </div>
         </div>
         <div class="footer-dsctos">
@@ -332,7 +334,11 @@
     async function mostrarSeleccionTipoDocumento() {
 
         if (ticket.length === 0) {
-            alert('No hay productos en el ticket para emitir');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Ticket Vacio',
+                text: 'No hay productos en el ticket para emitir'
+            });
             return;
         }
 
@@ -342,12 +348,20 @@
             if (!res.ok) throw new Error('Error de red');
             const data = await res.json();
             if (!data.open) {
-                alert('No hay una caja abierta. Abra una caja antes de emitir ventas.');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Caja Cerrada',
+                    text: 'No hay una caja abierta. Abra una caja antes de emitir ventas.'
+                });
                 return;
             }
         } catch (err) {
             console.error('No se pudo verificar caja abierta:', err);
-            alert('No se pudo verificar el estado de la caja. Intente nuevamente.');
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de Red',
+                text: 'No se pudo verificar el estado de la caja. Intente nuevamente.'
+            });
             return;
         }
 
@@ -405,9 +419,11 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert(
-                            `¡Cotización guardada exitosamente!\nNúmero: ${data.data.numero_completo || data.numero_completo || 'N/A'}\nTotal: S/ ${data.data.total || data.total || total_con_igv.toFixed(2)}`
-                        );
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Cotización guardada!',
+                            html: `Número: <strong>${data.data.numero_completo || data.numero_completo || 'N/A'}</strong><br>Total: S/ ${data.data.total || data.total || total_con_igv.toFixed(2)}`
+                        });
 
                         // Obtener URL del PDF de cotización
                         const cotizacionId = data.data.cotizacion_id || data.data.venta_id || data.data.id ||
@@ -437,7 +453,12 @@
                             window.location.href = '{{ route('pos.index') }}';
                         }, 1000);
                     } else {
-                        alert('Error al guardar la cotización: ' + (data.message || 'Error desconocido'));
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Error al guardar la cotización: ' + (data.message ||
+                                'Error desconocido')
+                        });
                         if (btnAceptar) {
                             btnAceptar.disabled = false;
                             btnAceptar.textContent = 'Emitir';
@@ -449,7 +470,11 @@
                 })
                 .catch(error => {
                     console.error('Error guardando cotización:', error);
-                    alert('Error de conexión al guardar la cotización');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de Red',
+                        text: 'Error de conexión al guardar la cotización'
+                    });
                     if (btnAceptar) {
                         btnAceptar.disabled = false;
                         btnAceptar.textContent = 'Emitir';
@@ -480,13 +505,46 @@
     function emitirVentaConTipo(tipoDocumento) {
         // Doble validación antes de proceder
         if (ticket.length === 0) {
-            alert('No hay productos en el ticket para emitir');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Ticket Vacío',
+                text: 'No hay productos en el ticket para emitir'
+            });
             return;
         }
 
         // Asegurar que siempre hay un cliente (crear cliente contable si es necesario)
         if (!clienteActual || !clienteActual.id) {
             crearClienteContable();
+        }
+
+        // VALIDACIÓN: Factura requiere RUC (11 dígitos)
+        if (tipoDocumento === 'factura') {
+            const doc = (clienteActual && clienteActual.numero_documento) ? clienteActual.numero_documento : '';
+            if (doc.length !== 11) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'RUC Requerido',
+                    text: 'Para emitir FACTURA, el cliente debe tener un RUC válido (11 dígitos).'
+                });
+                return;
+            }
+        }
+
+        // VALIDACIÓN: Crédito requiere cliente específico
+        const radioCredito = document.getElementById('radio-credito');
+        if (radioCredito && radioCredito.checked) {
+            const nombresGenericos = ['CLIENTE CONTABLE', 'Cliente Contado', 'VARIOS'];
+            // Validar por nombre o si el ID es el genérico (usualmente 1)
+            if (!clienteActual || !clienteActual.id || nombresGenericos.includes(clienteActual.nombre) || clienteActual
+                .id == 1) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Cliente Requerido',
+                    text: 'Para ventas a CRÉDITO, debe seleccionar un cliente específico (no Cliente Contable).'
+                });
+                return;
+            }
         }
 
         // Calcular totales - Los precios ya incluyen IGV
@@ -820,6 +878,72 @@
     function mostrarFichaTecnica() {
         if (!currentProduct) return;
 
+        // Parsear ficha técnica
+        let fichaTecnicaData = {};
+        try {
+            let rawData = currentProduct.ficha_tecnica;
+
+            if (rawData) {
+                if (typeof rawData === 'string') {
+                    // Intentar parsear JSON
+                    try {
+                        let parsed = JSON.parse(rawData);
+                        // Fix: Si está doblemente codificado (sigue siendo string después de parsear)
+                        if (typeof parsed === 'string') {
+                            parsed = JSON.parse(parsed);
+                        }
+                        fichaTecnicaData = parsed || {};
+                    } catch (e) {
+                        console.warn('No es un JSON válido, tal vez es texto plano', e);
+                        // Si falla, quizás no es JSON.
+                    }
+                } else if (typeof rawData === 'object') {
+                    fichaTecnicaData = rawData;
+                }
+            }
+        } catch (e) {
+            console.warn('Error general parsing ficha_tecnica:', e);
+        }
+
+        // Construir HTML extra de ficha técnica si existe
+        let extraInfoHtml = '';
+        if (fichaTecnicaData && Object.keys(fichaTecnicaData).length > 0) {
+            extraInfoHtml +=
+                '<div style="margin-top: 15px; background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6;">';
+            extraInfoHtml +=
+                '<h5 style="margin: 0 0 10px 0; color: #495057; font-size: 14px;">Detalles Médicos</h5>';
+            extraInfoHtml += '<ul style="padding-left: 20px; margin: 0; font-size: 13px;">';
+
+            const fieldsMap = {
+                'composicion': 'Composición',
+                'mecanismo_accion': 'Mecanismo de Acción',
+                'indicaciones': 'Indicaciones',
+                'contraindicaciones': 'Contraindicaciones',
+                'dosificacion': 'Dosificación',
+                'efectos_secundarios': 'Efectos Secundarios',
+                'interacciones': 'Interacciones',
+                'sobredosis': 'Sobredosis'
+            };
+
+            // Mostrar campos específicos en orden
+            for (const [key, label] of Object.entries(fieldsMap)) {
+                if (fichaTecnicaData[key]) {
+                    extraInfoHtml += `<li><strong>${label}:</strong> ${fichaTecnicaData[key]}</li>`;
+                }
+            }
+
+            // Mostrar otros campos que no estén en la lista
+            for (const [key, value] of Object.entries(fichaTecnicaData)) {
+                if (!fieldsMap[key]) {
+                    // Capitalize key for cleaner display if needed, or just show as is
+                    const cleanKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    extraInfoHtml += `<li><strong>${cleanKey}:</strong> ${value}</li>`;
+                }
+            }
+
+            extraInfoHtml += '</ul></div>';
+        }
+
         // Crear modal de ficha técnica
         const modalHtml = `
                     <div id="modal-ficha-tecnica" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; justify-content: center; align-items: center;" onclick="cerrarModalFichaTecnica()">
@@ -835,12 +959,13 @@
                                         <h4 style="margin: 0 0 10px 0; color: #007bff; font-size: 16px;">${currentProduct.nombre || 'N/A'}</h4>
                                         <p style="margin: 0; color: #6c757d; font-size: 14px;">${currentProduct.detalle || 'Sin descripción disponible'}</p>
                                     </div>
+                                    ${extraInfoHtml}
                                 </div>
 
                                 <div>
                                     <label style="font-weight: 600; color: #495057; font-size: 12px; text-transform: uppercase; margin-bottom: 5px; display: block;">Código del Producto</label>
                                     <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6; font-family: monospace; font-size: 14px;">
-                                        ${currentProduct.producto_id || 'N/A'}
+                                        ${currentProduct.codigo_barras || currentProduct.producto_id || 'N/A'}
                                     </div>
                                 </div>
 
@@ -861,7 +986,7 @@
                                 <div>
                                     <label style="font-weight: 600; color: #495057; font-size: 12px; text-transform: uppercase; margin-bottom: 5px; display: block;">Unidad de Medida</label>
                                     <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6; font-size: 14px;">
-                                        NIU (Unidades)
+                                        ${currentProduct.unidad_medida || 'NIU (Unidades)'}
                                     </div>
                                 </div>
                             </div>
@@ -982,15 +1107,55 @@
 
     function mostrarFichaExistencias() {
         if (!currentProduct) return;
-
-        alert('Función de Ficha de Existencias - En desarrollo');
-        cerrarContextMenu();
+        // Reutilizamos el listado de lotes como ficha de existencias por ahora
+        mostrarListadoLotes();
     }
 
     function mostrarUbicacionProducto() {
         if (!currentProduct) return;
 
-        alert('Función de Ubicación del Producto - En desarrollo');
+        // Parsear almacenamiento si es JSON
+        let ubicacionData = null;
+        try {
+            if (currentProduct.almacenamiento && typeof currentProduct.almacenamiento === 'string') {
+                ubicacionData = JSON.parse(currentProduct.almacenamiento);
+            } else if (typeof currentProduct.almacenamiento === 'object') {
+                ubicacionData = currentProduct.almacenamiento;
+            }
+        } catch (e) {
+            console.warn('Error parsing almacenamiento:', e);
+        }
+
+        // Si no hay datos parseados, usar el string raw o mensaje default
+        let contenidoUbicacion = '';
+        if (ubicacionData) {
+            // Si es objeto, intentar mostrar campos comunes
+            if (Object.keys(ubicacionData).length > 0) {
+                contenidoUbicacion = '<ul style="text-align: left;">';
+                for (const [key, value] of Object.entries(ubicacionData)) {
+                    contenidoUbicacion += `<li><strong>${key}:</strong> ${value}</li>`;
+                }
+                contenidoUbicacion += '</ul>';
+            } else {
+                contenidoUbicacion = '<p>Sin información detallada de ubicación.</p>';
+            }
+        } else {
+            contenidoUbicacion =
+                `<p>${currentProduct.almacenamiento || 'No se ha registrado ubicación para este producto.'}</p>`;
+        }
+
+        const modalHtml = `
+            <div id="modal-ubicacion" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; justify-content: center; align-items: center;" onclick="document.getElementById('modal-ubicacion').remove()">
+                <div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); min-width: 300px; max-width: 500px; text-align: center;" onclick="event.stopPropagation()">
+                    <h3 style="color: #dc3545; margin-top: 0;">📍 Ubicación del Producto</h3>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #dee2e6; margin: 15px 0;">
+                        ${contenidoUbicacion}
+                    </div>
+                    <button onclick="document.getElementById('modal-ubicacion').remove()" style="padding: 8px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">Cerrar</button>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
         cerrarContextMenu();
     }
 
@@ -1330,6 +1495,7 @@
                                     ${p.total_lotes > 1 ? '<span style="color: #2196f3; font-size: 12px; margin-left: 5px;">🔄</span>' : ''}
                                 </div>
                             </td>
+                            <td style="padding: 6px 8px; text-align: center; font-weight: 500; color: #555;">${p.marca || '-'}</td>
                             <td style="padding: 6px 8px; text-align: center; font-weight: 500; ${stockBajo ? 'color: #ef4444;' : ''}">${stockDisplay}</td>
                             <td style="padding: 6px 8px; text-align: right; color: #2e7d32; font-weight: 500;">${p.pvp ? 'S/ ' + parseFloat(p.pvp).toFixed(2) : ""}</td>
                             <td style="padding: 6px 8px; text-align: right; color: #1976d2; font-weight: 500;">${p.pvc ? 'S/ ' + parseFloat(p.pvc).toFixed(2) : ""}</td>

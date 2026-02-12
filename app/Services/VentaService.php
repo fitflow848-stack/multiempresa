@@ -231,12 +231,17 @@ class VentaService
                 }
             }
 
-            // Actualizar totales de la caja abierta (registrar SOLO el monto efectivamente pagado)
+            // Actualizar totales de la caja abierta (registrar SOLO el monto efectivo real que queda en caja)
             try {
-                // IMPORTANTE: Solo sumamos $entrega (monto pagado), NO el total de la venta
-                // Si es pago parcial, solo el monto pagado va a caja
-                if ($entrega > 0) {
-                    $openCaja->ingresos = floatval($openCaja->ingresos ?? 0) + $entrega;
+                // Solo sumamos a "ingresos" si el pago es en EFECTIVO
+                $tipoPago = \App\Models\TipoPago::find($tipoPagoId);
+
+                if ($entrega > 0 && $tipoPago && $tipoPago->es_efectivo) {
+                    // Si paga con más (ej. 150) y el total es 135, a caja solo entran 135 (el resto es vuelto)
+                    // Si paga con menos (ej. 100) y el total es 135, a caja entran 100 (pago parcial)
+                    $monto_a_caja = ($entrega > $total) ? $total : $entrega;
+
+                    $openCaja->ingresos = floatval($openCaja->ingresos ?? 0) + $monto_a_caja;
                     $openCaja->save();
                 }
             } catch (\Throwable $e) {

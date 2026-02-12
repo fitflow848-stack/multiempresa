@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iniciar Sesión - GenAck</title>
+    <title>Iniciar Sesión - WOLVIX</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <!-- Favicon -->
@@ -436,8 +436,8 @@
         <div class="shape shape-3"></div>
 
         <div class="brand-content">
-            <img src="{{ asset('assets/img/logo.png') }}" alt="GenAck Logo" class="brand-logo-large">
-            <h1 class="brand-title">GenAck POS</h1>
+            <img src="{{ asset('assets/img/logo.png') }}" alt="WOLVIX Logo" class="brand-logo-large">
+            <h1 class="brand-title">WOLVIX POS</h1>
             <p class="brand-desc">Gestiona tu negocio de manera inteligente, segura y eficiente con nuestra plataforma
                 integral.</p>
         </div>
@@ -447,7 +447,7 @@
     <div class="form-side">
         <div class="login-wrapper">
             <!-- Mobile Logo -->
-            <img src="{{ asset('assets/img/logo.png') }}" alt="GenAck Logo" class="mobile-logo">
+            <img src="{{ asset('assets/img/logo.png') }}" alt="WOLVIX Logo" class="mobile-logo">
 
             <div class="auth-header">
                 <h2 class="auth-title">¡Bienvenido de nuevo! 👋</h2>
@@ -525,7 +525,7 @@
                 </button>
 
                 <div class="footer">
-                    © {{ date('Y') }} GenAck. Sistema de Gestión.
+                    © {{ date('Y') }} WOLVIX. Sistema de Gestión.
                 </div>
             </form>
         </div>

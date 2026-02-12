@@ -62,6 +62,7 @@ class CierreCajaController extends Controller
                 'Ingreso - Venta' AS operacion,
                 c.nombre AS cliente_nombre,
                 CONCAT( v.serie, ' ', v.numero ) AS concepto,
+                tp.nombre AS metodo_pago,
                 CASE 
                     WHEN d.id IS NULL THEN v.total
                     ELSE (v.total - (d.monto_deuda + COALESCE((SELECT SUM(monto) FROM deuda_pagos WHERE deuda_id = d.id), 0)))
@@ -71,6 +72,7 @@ class CierreCajaController extends Controller
                     ventas v
                     INNER JOIN clientes c ON c.id = v.id_cliente
                     INNER JOIN users u ON u.id = v.id_usuario 
+                    LEFT JOIN tipos_pagos tp ON tp.id = v.id_tipo_pago
                     LEFT JOIN deudas d ON d.venta_id = v.id_venta
                 WHERE
                     v.cierre_caja_id = :cierre_id AND v.estado != 0 
@@ -81,6 +83,7 @@ class CierreCajaController extends Controller
                     o.partida AS operacion,
                     o.tipo AS cliente_nombre,
                     o.concepto,
+                    'Efectivo' AS metodo_pago,
                     o.importe,
                     u.name AS usuario 
                 FROM

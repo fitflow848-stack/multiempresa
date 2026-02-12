@@ -62,6 +62,9 @@
                 <p class="text-muted small mb-0">Usuario: {{ auth()->user()->name ?? 'Administrador' }}</p>
             </div>
             <div class="d-flex gap-2">
+                <a href="{{ route('pos.index') }}" class="btn btn-sm btn-outline-primary px-3">
+                    <i class="fas fa-cash-register me-1"></i> Volver TPV
+                </a>
                 <a href="{{ route('cierre-caja.index') }}" class="btn btn-sm btn-outline-secondary px-3">
                     <i class="fas fa-chevron-left me-1"></i> Volver
                 </a>
@@ -173,6 +176,7 @@
                                         <th class="ps-3 py-3" style="width: 80px;">Hora</th>
                                         <th style="width: 150px;">Operación</th>
                                         <th>Concepto / Referencia</th>
+                                        <th style="width: 120px;">Método Pago</th>
                                         <th class="text-end pe-3">Importe</th>
                                     </tr>
                                 </thead>
@@ -211,6 +215,10 @@
                                                     {{ $movimiento->cliente_nombre ?? '---' }} | <i
                                                         class="fas fa-user-circle"></i> {{ $movimiento->usuario }}
                                                 </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <span
+                                                    class="badge bg-light text-dark border">{{ $movimiento->metodo_pago ?? '---' }}</span>
                                             </td>
                                             <td class="text-end pe-3 fw-bold text-dark">
                                                 S/ {{ number_format($movimiento->importe, 2) }}

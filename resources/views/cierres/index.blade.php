@@ -9,11 +9,16 @@
                 <h1 class="h3 mb-0">Cierres de Caja</h1>
                 <small class="text-muted">Registro y control de cierres de caja</small>
             </div>
-            @if (!$openCaja)
-                <a href="{{ route('cierre-caja.create') }}" class="btn btn-primary">
-                    <i class="fas fa-plus me-2"></i>Abrir Caja
+            <div class="d-flex gap-2">
+                <a href="{{ route('pos.index') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-cash-register me-2"></i>Ir a TPV
                 </a>
-            @endif
+                @if (!$openCaja)
+                    <a href="{{ route('cierre-caja.create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Abrir Caja
+                    </a>
+                @endif
+            </div>
         </div>
 
         <!-- Filtros -->
@@ -72,30 +77,30 @@
                             <tbody>
                                 @foreach ($cierres as $cierre)
                                     <tr>
-                                            <td class="fw-bold">#{{ $cierre->id }}</td>
-                                            <td>{{ optional($cierre->user)->name }}</td>
-                                            <td>{{ optional($cierre->fecha_cierre) ? \Carbon\Carbon::parse($cierre->fecha_cierre)->format('d/m/Y H:i') : '-' }}
-                                            </td>
-                                            <td>S/ {{ number_format($cierre->monto_apertura, 2) }}</td>
-                                            <td class="fw-bold">S/ {{ number_format($cierre->monto_cierre, 2) }}</td>
-                                            <td>S/ {{ number_format($cierre->ingresos, 2) }}</td>
-                                            <td>S/ {{ number_format($cierre->egresos, 2) }}</td>
-                                            <td>{{ \Illuminate\Support\Str::limit($cierre->observaciones, 60) }}</td>
-                                            <td>
-                                                <div style="display:flex; gap:8px; align-items:center;">
-                                                    @if($cierre->fecha_cierre === null)
-                                                        <span class="badge bg-success">ABIERTA</span>
-                                                    @else
-                                                        <span class="badge bg-secondary">CERRADA</span>
-                                                    @endif
-                                                    <div class="btn-group btn-group-sm">
-                                                        <a href="{{ route('cierre-caja.show', $cierre->id) }}"
-                                                            class="btn btn-outline-primary" title="Ver"><i
-                                                                class="bx bx-show"></i></a>
-                                                    </div>
+                                        <td class="fw-bold">#{{ $cierre->id }}</td>
+                                        <td>{{ optional($cierre->user)->name }}</td>
+                                        <td>{{ optional($cierre->fecha_cierre) ? \Carbon\Carbon::parse($cierre->fecha_cierre)->format('d/m/Y H:i') : '-' }}
+                                        </td>
+                                        <td>S/ {{ number_format($cierre->monto_apertura, 2) }}</td>
+                                        <td class="fw-bold">S/ {{ number_format($cierre->monto_cierre, 2) }}</td>
+                                        <td>S/ {{ number_format($cierre->ingresos, 2) }}</td>
+                                        <td>S/ {{ number_format($cierre->egresos, 2) }}</td>
+                                        <td>{{ \Illuminate\Support\Str::limit($cierre->observaciones, 60) }}</td>
+                                        <td>
+                                            <div style="display:flex; gap:8px; align-items:center;">
+                                                @if ($cierre->fecha_cierre === null)
+                                                    <span class="badge bg-success">ABIERTA</span>
+                                                @else
+                                                    <span class="badge bg-secondary">CERRADA</span>
+                                                @endif
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="{{ route('cierre-caja.show', $cierre->id) }}"
+                                                        class="btn btn-outline-primary" title="Ver"><i
+                                                            class="bx bx-show"></i></a>
                                                 </div>
-                                            </td>
-                                        </tr>
+                                            </div>
+                                        </td>
+                                    </tr>
                                 @endforeach
                             </tbody>
                         </table>

@@ -221,8 +221,6 @@
         <div class="main-content">
             <!-- Área Central -->
             <div class="center-area">
-                {{-- <div class="genack-watermark">genack</div> --}}
-                {{-- <div style="color: #ccc; font-size: 11px;">core business</div> --}}
                 <!-- Reemplaza el grid por una tabla; ponlo donde quieras mostrar resultados -->
                 <div id="productos-listado" style="width:100%">
                     <table class="productos-table" style="width:100%; border-collapse:collapse;">
