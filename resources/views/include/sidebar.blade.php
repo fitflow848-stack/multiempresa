@@ -65,134 +65,164 @@
                     </a>
                 </li>
 
-                <li class="nav-item">
-                    <a href="{{ route('compras.index') }}"
-                        class="nav-link {{ request()->is('compras*') ? 'active fw-bold text-primary' : '' }}">
-                        <i class="bx bx-cart me-1"></i> Compras
-                    </a>
-                </li>
+                @can('compras.ver')
+                    <li class="nav-item">
+                        <a href="{{ route('compras.index') }}"
+                            class="nav-link {{ request()->is('compras*') ? 'active fw-bold text-primary' : '' }}">
+                            <i class="bx bx-cart me-1"></i> Compras
+                        </a>
+                    </li>
+                @endcan
 
-                <li class="nav-item dropdown">
-                    <a href="#"
-                        class="nav-link dropdown-toggle {{ request()->is('almacen*') ? 'active fw-bold text-primary' : '' }}"
-                        id="almacenDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bx bx-package me-1"></i> Almacén
-                    </a>
-                    <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="almacenDropdown">
-                        <li>
-                            <a class="dropdown-item" href="{{ route('almacen.index') }}">
-                                Inventario
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="{{ route('almacen.kardex') }}">
-                                Kardex / Movimientos
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="{{ route('almacen.transferir') }}">
-                                Transferencias
-                            </a>
-                        </li>
-                    </ul>
-                </li>
+                @can('inventario.ver')
+                    <li class="nav-item dropdown">
+                        <a href="#"
+                            class="nav-link dropdown-toggle {{ request()->is('almacen*') ? 'active fw-bold text-primary' : '' }}"
+                            id="almacenDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bx bx-package me-1"></i> Almacén
+                        </a>
+                        <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="almacenDropdown">
+                            <li>
+                                <a class="dropdown-item" href="{{ route('almacen.index') }}">
+                                    Inventario
+                                </a>
+                            </li>
+                            @can('inventario.kardex')
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('almacen.kardex') }}">
+                                        Kardex / Movimientos
+                                    </a>
+                                </li>
+                            @endcan
+                            @can('inventario.transferir')
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('almacen.transferir') }}">
+                                        Transferencias
+                                    </a>
+                                </li>
+                            @endcan
+                        </ul>
+                    </li>
+                @endcan
 
-                <li class="nav-item dropdown">
-                    <a href="#"
-                        class="nav-link dropdown-toggle {{ request()->is('pos*') ? 'active fw-bold text-primary' : '' }}"
-                        id="ventasDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bx bx-collection me-1"></i> Ventas
-                    </a>
-                    <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="ventasDropdown">
-                        <li>
-                            <a class="dropdown-item" href="{{ route('pos.index') }}">
-                                Punto de Venta
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="{{ route('cotizaciones.index') }}"
-                                class="nav-link {{ request()->is('cotizaciones*') ? 'active fw-bold text-primary' : '' }}">
-                                Cotizaciones
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="{{ route('pos.precios') }}">
-                                Precios
-                            </a>
-                        </li>
-                    </ul>
-                </li>
+                @canany(['pos.ver', 'ventas.ver', 'cotizaciones.ver'])
+                    <li class="nav-item dropdown">
+                        <a href="#"
+                            class="nav-link dropdown-toggle {{ request()->is('pos*') || request()->is('cotizaciones*') ? 'active fw-bold text-primary' : '' }}"
+                            id="ventasDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bx bx-collection me-1"></i> Ventas
+                        </a>
+                        <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="ventasDropdown">
+                            @can('pos.ver')
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('pos.index') }}">
+                                        Punto de Venta
+                                    </a>
+                                </li>
+                            @endcan
+                            @can('cotizaciones.ver')
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('cotizaciones.index') }}">
+                                        Cotizaciones
+                                    </a>
+                                </li>
+                            @endcan
+                            @can('ventas.editar')
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('pos.precios') }}">
+                                        Precios
+                                    </a>
+                                </li>
+                            @endcan
+                        </ul>
+                    </li>
+                @endcanany
 
-                <li class="nav-item">
-                    <a href="{{ route('deudas.index') }}"
-                        class="nav-link {{ request()->is('deudas*') ? 'active fw-bold text-primary' : '' }}">
-                        <i class="bx bx-receipt me-1"></i> Deudas
-                    </a>
-                </li>
+                @can('deudas.ver')
+                    <li class="nav-item">
+                        <a href="{{ route('deudas.index') }}"
+                            class="nav-link {{ request()->is('deudas*') ? 'active fw-bold text-primary' : '' }}">
+                            <i class="bx bx-receipt me-1"></i> Deudas
+                        </a>
+                    </li>
+                @endcan
 
-                <li class="nav-item">
-                    <a href="#" class="nav-link">
-                        <i class="bx bx-wallet me-1"></i> Tesorería
-                    </a>
-                </li>
+                @can('caja.ver')
+                    <li class="nav-item">
+                        <a href="{{ route('cierre-caja.index') }}"
+                            class="nav-link {{ request()->is('cierre-caja*') ? 'active fw-bold text-primary' : '' }}">
+                            <i class="bx bx-wallet me-1"></i> Tesorería
+                        </a>
+                    </li>
+                @endcan
 
-                <li class="nav-item dropdown">
-                    <a href="#"
-                        class="nav-link dropdown-toggle {{ request()->is('guia*') ? 'active fw-bold text-primary' : '' }}"
-                        id="ventasDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bx bx-collection me-1"></i> Doc. Electrónico
-                    </a>
-                    <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="ventasDropdown">
-                        <li>
-                            <a class="dropdown-item" href="{{ route('guia.index') }}">
-                                Guías de Remisión
-                            </a>
-                        </li>
-                    </ul>
-                </li>
+                @can('guias_remision.ver')
+                    <li class="nav-item dropdown">
+                        <a href="#"
+                            class="nav-link dropdown-toggle {{ request()->is('guia*') ? 'active fw-bold text-primary' : '' }}"
+                            id="docsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bx bx-collection me-1"></i> Doc. Electrónico
+                        </a>
+                        <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="docsDropdown">
+                            <li>
+                                <a class="dropdown-item" href="{{ route('guia.index') }}">
+                                    Guías de Remisión
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                @endcan
 
 
 
-                <li class="nav-item dropdown">
-                    <a href="#"
-                        class="nav-link dropdown-toggle {{ request()->is('balance*') || request()->is('activos*') || request()->is('pasivos*') ? 'active fw-bold text-primary' : '' }}"
-                        id="balanceDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bx bx-spreadsheet me-1"></i> Balance
-                    </a>
-                    <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="balanceDropdown">
-                        <li>
-                            <a class="dropdown-item {{ request()->routeIs('balance.index') ? 'active' : '' }}"
-                                href="{{ route('balance.index') }}">
-                                Balance General
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item {{ request()->routeIs('activos_corrientes.index') ? 'active' : '' }}"
-                                href="{{ route('activos_corrientes.index') }}">
-                                Activos Corrientes
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item {{ request()->routeIs('activos.index') ? 'active' : '' }}"
-                                href="{{ route('activos.index') }}">
-                                Activos No Corrientes
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item {{ request()->routeIs('pasivos.index') ? 'active' : '' }}"
-                                href="{{ route('pasivos.index') }}">
-                                Pasivos Corrientes
-                            </a>
-                        </li>
-                    </ul>
-                </li>
+                @can('contabilidad.ver')
+                    <li class="nav-item dropdown">
+                        <a href="#"
+                            class="nav-link dropdown-toggle {{ request()->is('balance*') || request()->is('activos*') || request()->is('pasivos*') ? 'active fw-bold text-primary' : '' }}"
+                            id="balanceDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bx bx-spreadsheet me-1"></i> Balance
+                        </a>
+                        <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="balanceDropdown">
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('balance.index') ? 'active' : '' }}"
+                                    href="{{ route('balance.index') }}">
+                                    Balance General
+                                </a>
+                            </li>
+                            @can('contabilidad.gestionar_activos')
+                                <li>
+                                    <a class="dropdown-item {{ request()->routeIs('activos_corrientes.index') ? 'active' : '' }}"
+                                        href="{{ route('activos_corrientes.index') }}">
+                                        Activos Corrientes
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item {{ request()->routeIs('activos.index') ? 'active' : '' }}"
+                                        href="{{ route('activos.index') }}">
+                                        Activos No Corrientes
+                                    </a>
+                                </li>
+                            @endcan
+                            @can('contabilidad.gestionar_pasivos')
+                                <li>
+                                    <a class="dropdown-item {{ request()->routeIs('pasivos.index') ? 'active' : '' }}"
+                                        href="{{ route('pasivos.index') }}">
+                                        Pasivos Corrientes
+                                    </a>
+                                </li>
+                            @endcan
+                        </ul>
+                    </li>
+                @endcan
 
-                <li class="nav-item">
-                    <a href="{{ route('reportes.index') }}"
-                        class="nav-link {{ request()->is('reportes*') ? 'active fw-bold text-primary' : '' }}">
-                        <i class="bx bx-bar-chart-alt-2 me-1"></i> Reportes
-                    </a>
-                </li>
+                @can('reportes.ver')
+                    <li class="nav-item">
+                        <a href="{{ route('reportes.index') }}"
+                            class="nav-link {{ request()->is('reportes*') ? 'active fw-bold text-primary' : '' }}">
+                            <i class="bx bx-bar-chart-alt-2 me-1"></i> Reportes
+                        </a>
+                    </li>
+                @endcan
             </ul>
 
             <!-- User Menu -->

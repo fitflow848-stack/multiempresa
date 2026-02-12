@@ -51,13 +51,13 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/arqueo', [ArqueoCajaController::class, 'index'])->name('arqueo.index');
 
-    Route::prefix('pos')->name('pos.')->group(function () {
+    Route::prefix('pos')->name('pos.')->middleware('can:pos.ver')->group(function () {
         Route::get('/', [PosController::class, 'index'])->name('index');
-        Route::get('/precios', [PosController::class, 'precios'])->name('precios');
-        Route::post('/precios/update', [PosController::class, 'updatePrecios'])->name('precios.update');
-        Route::get('/emitir', [PosController::class, 'emitir'])->name('emitir');
-        Route::post('/emitir', [PosController::class, 'emitir'])->name('emitir.post');
-        Route::post('/save-venta', [PosController::class, 'saveVenta'])->name('save-venta');
+        Route::get('/precios', [PosController::class, 'precios'])->name('precios')->middleware('can:productos.editar');
+        Route::post('/precios/update', [PosController::class, 'updatePrecios'])->name('precios.update')->middleware('can:productos.editar');
+        Route::get('/emitir', [PosController::class, 'emitir'])->name('emitir')->middleware('can:ventas.crear');
+        Route::post('/emitir', [PosController::class, 'emitir'])->name('emitir.post')->middleware('can:ventas.crear');
+        Route::post('/save-venta', [PosController::class, 'saveVenta'])->name('save-venta')->middleware('can:ventas.crear');
         Route::post('/obtener-siguiente-numero', [PosController::class, 'obtenerSiguienteNumeroSerie'])->name('obtener-siguiente-numero');
         Route::get('/pdf/{id}', [PosController::class, 'pdfVenta'])->name('pdfVenta');
         Route::post('/sendDocumentoSunat/{id}', [PosController::class, 'sendDocumentoSunat'])->name('sendDocumentoSunat');
@@ -72,28 +72,28 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/pos/crear-cliente', [PosController::class, 'crearCliente'])->name('pos.crear-cliente');
 
     // Rutas del módulo de deudas
-    Route::prefix('deudas')->name('deudas.')->group(function () {
+    Route::prefix('deudas')->name('deudas.')->middleware('can:deudas.ver')->group(function () {
         Route::get('/', [DeudaController::class, 'index'])->name('index');
         Route::get('/cliente/{id}', [DeudaController::class, 'deudasPorCliente'])->name('cliente');
         Route::get('/{deuda}', [DeudaController::class, 'show'])->name('show');
-        Route::post('/{deuda}/aplicar-pago', [DeudaController::class, 'aplicarPago'])->name('aplicar-pago');
-        Route::post('/{deuda}/marcar-pagada', [DeudaController::class, 'marcarComoPagada'])->name('marcar-pagada');
-        Route::get('/reportes/general', [DeudaController::class, 'reporteDeudas'])->name('reporte');
-        Route::get('/reportes/exportar-excel', [DeudaController::class, 'exportarExcel'])->name('exportar-excel');
+        Route::post('/{deuda}/aplicar-pago', [DeudaController::class, 'aplicarPago'])->name('aplicar-pago')->middleware('can:deudas.pagar');
+        Route::post('/{deuda}/marcar-pagada', [DeudaController::class, 'marcarComoPagada'])->name('marcar-pagada')->middleware('can:deudas.pagar');
+        Route::get('/reportes/general', [DeudaController::class, 'reporteDeudas'])->name('reporte')->middleware('can:deudas.reporte');
+        Route::get('/reportes/exportar-excel', [DeudaController::class, 'exportarExcel'])->name('exportar-excel')->middleware('can:deudas.reporte');
         Route::get('/pago/{id}/comprobante', [DeudaController::class, 'generarComprobantePago'])->name('comprobante-pago');
     });
 
     // Rutas del módulo de cotizaciones
-    Route::prefix('cotizaciones')->name('cotizaciones.')->group(function () {
+    Route::prefix('cotizaciones')->name('cotizaciones.')->middleware('can:cotizaciones.ver')->group(function () {
         Route::get('/', [CotizacionController::class, 'index'])->name('index');
-        Route::get('/create', [CotizacionController::class, 'create'])->name('create');
-        Route::post('/', [CotizacionController::class, 'store'])->name('store');
+        Route::get('/create', [CotizacionController::class, 'create'])->name('create')->middleware('can:cotizaciones.crear');
+        Route::post('/', [CotizacionController::class, 'store'])->name('store')->middleware('can:cotizaciones.crear');
         Route::get('/{cotizacion}', [CotizacionController::class, 'show'])->name('show');
-        Route::get('/{cotizacion}/edit', [CotizacionController::class, 'edit'])->name('edit');
-        Route::put('/{cotizacion}', [CotizacionController::class, 'update'])->name('update');
-        Route::delete('/{cotizacion}', [CotizacionController::class, 'destroy'])->name('destroy');
-        Route::post('/{cotizacion}/cambiar-estado', [CotizacionController::class, 'cambiarEstado'])->name('cambiar-estado');
-        Route::post('/{cotizacion}/convertir-venta', [CotizacionController::class, 'convertirAVenta'])->name('convertir-venta');
+        Route::get('/{cotizacion}/edit', [CotizacionController::class, 'edit'])->name('edit')->middleware('can:cotizaciones.editar');
+        Route::put('/{cotizacion}', [CotizacionController::class, 'update'])->name('update')->middleware('can:cotizaciones.editar');
+        Route::delete('/{cotizacion}', [CotizacionController::class, 'destroy'])->name('destroy')->middleware('can:cotizaciones.eliminar');
+        Route::post('/{cotizacion}/cambiar-estado', [CotizacionController::class, 'cambiarEstado'])->name('cambiar-estado')->middleware('can:cotizaciones.editar');
+        Route::post('/{cotizacion}/convertir-venta', [CotizacionController::class, 'convertirAVenta'])->name('convertir-venta')->middleware('can:cotizaciones.convertir');
         Route::get('/api/{cotizacion}/datos', [CotizacionController::class, 'getDatos'])->name('api.datos');
         Route::get('/emitir', [CotizacionController::class, 'emitir'])->name('emitir');
         Route::post('/emitir', [CotizacionController::class, 'emitir'])->name('emitir.post');
@@ -103,12 +103,12 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Rutas del módulo de cierre de caja
-    Route::prefix('cierre-caja')->name('cierre-caja.')->group(function () {
+    Route::prefix('cierre-caja')->name('cierre-caja.')->middleware('can:caja.ver')->group(function () {
         Route::get('/', [CierreCajaController::class, 'index'])->name('index');
-        Route::get('/create', [CierreCajaController::class, 'create'])->name('create');
-        Route::post('/', [CierreCajaController::class, 'store'])->name('store');
+        Route::get('/create', [CierreCajaController::class, 'create'])->name('create')->middleware('can:caja.abrir_cerrar');
+        Route::post('/', [CierreCajaController::class, 'store'])->name('store')->middleware('can:caja.abrir_cerrar');
         Route::get('/{cierre}', [CierreCajaController::class, 'show'])->name('show');
-        Route::post('/{cierre}/close', [CierreCajaController::class, 'close'])->name('close');
+        Route::post('/{cierre}/close', [CierreCajaController::class, 'close'])->name('close')->middleware('can:caja.abrir_cerrar');
         Route::get('/caja/open', [CierreCajaController::class, 'getOpenCaja'])->name('caja.open');
     });
 
@@ -119,46 +119,46 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/partidas', [PartidaController::class, 'index'])->name('partidas.index');
     Route::post('/partidas', [PartidaController::class, 'store'])->name('partidas.store');
 
-    Route::prefix('comprobantes')->name('comprobantes.')->group(function () {
+    Route::prefix('comprobantes')->name('comprobantes.')->middleware('can:comprobantes.ver')->group(function () {
         Route::get('/', [ComprobantesController::class, 'index'])->name('index');
         Route::get('/{id}/detalle', [ComprobantesController::class, 'detalle'])->name('detalle');
-        Route::get('/{id}/imprimir', [ComprobantesController::class, 'imprimir'])->name('imprimir');
+        Route::get('/{id}/imprimir', [ComprobantesController::class, 'imprimir'])->name('imprimir')->middleware('can:comprobantes.imprimir');
         Route::post('/seleccionar-todo', [ComprobantesController::class, 'seleccionarTodo'])->name('seleccionar-todo');
-        Route::post('/cancelar', [ComprobantesController::class, 'cancelar'])->name('cancelar');
-        Route::post('/devolver', [ComprobantesController::class, 'devolver'])->name('devolver');
+        Route::post('/cancelar', [ComprobantesController::class, 'cancelar'])->name('cancelar')->middleware('can:comprobantes.cancelar');
+        Route::post('/devolver', [ComprobantesController::class, 'devolver'])->name('devolver')->middleware('can:comprobantes.anular');
     });
 
     // Rutas del módulo de clientes
-    Route::prefix('clientes')->name('clientes.')->group(function () {
+    Route::prefix('clientes')->name('clientes.')->middleware('can:clientes.ver')->group(function () {
         Route::get('/', [ClienteController::class, 'index'])->name('index');
         Route::post('/data', [ClienteController::class, 'data'])->name('data');
-        Route::get('/create', [ClienteController::class, 'create'])->name('create');
-        Route::post('/', [ClienteController::class, 'store'])->name('store');
+        Route::get('/create', [ClienteController::class, 'create'])->name('create')->middleware('can:clientes.crear');
+        Route::post('/', [ClienteController::class, 'store'])->name('store')->middleware('can:clientes.crear');
         Route::get('/{cliente}', [ClienteController::class, 'show'])->name('show');
-        Route::get('/{cliente}/edit', [ClienteController::class, 'edit'])->name('edit');
-        Route::put('/{cliente}', [ClienteController::class, 'update'])->name('update');
-        Route::delete('/{cliente}', [ClienteController::class, 'destroy'])->name('destroy');
+        Route::get('/{cliente}/edit', [ClienteController::class, 'edit'])->name('edit')->middleware('can:clientes.editar');
+        Route::put('/{cliente}', [ClienteController::class, 'update'])->name('update')->middleware('can:clientes.editar');
+        Route::delete('/{cliente}', [ClienteController::class, 'destroy'])->name('destroy')->middleware('can:clientes.eliminar');
         Route::post('consultar-reniec', [ClienteController::class, 'consultarReniec'])->name('consultar-reniec');
         Route::post('/crear-desde-reniec', [ClienteController::class, 'crearDesdeReniec'])->name('crear-desde-reniec');
         Route::post('/buscar-pos', [ClienteController::class, 'buscarParaPos'])->name('buscar-pos');
     });
 
-    Route::prefix('compras')->name('compras.')->group(function () {
+    Route::prefix('compras')->name('compras.')->middleware('can:compras.ver')->group(function () {
         Route::get('/', [ComprasController::class, 'index'])->name('index');
         Route::post('/data', [ComprasController::class, 'data'])->name('data');
-        Route::get('/create', [ComprasController::class, 'create'])->name('create');
-        Route::post('/', [ComprasController::class, 'store'])->name('store');
+        Route::get('/create', [ComprasController::class, 'create'])->name('create')->middleware('can:compras.crear');
+        Route::post('/', [ComprasController::class, 'store'])->name('store')->middleware('can:compras.crear');
         Route::get('/{compra}/success', [ComprasController::class, 'success'])->name('success');
         Route::get('/{compra}', [ComprasController::class, 'show'])->name('show');
-        Route::post('/{compra}/update-local', [ComprasController::class, 'updateLocalDestino'])->name('update-local');
-        Route::get('/{compra}/recibir', [ComprasController::class, 'receiveForm'])->name('receive');
-        Route::post('/{compra}/recibir', [ComprasController::class, 'storeReception'])->name('receive.store');
-        Route::get('/{compra}/recibir/procesar', [ComprasController::class, 'processReception'])->name('receive.process');
-        Route::post('/{compra}/recibir/productos', [ComprasController::class, 'storeReceptionProducts'])->name('receive.products.store');
+        Route::post('/{compra}/update-local', [ComprasController::class, 'updateLocalDestino'])->name('update-local')->middleware('can:compras.editar');
+        Route::get('/{compra}/recibir', [ComprasController::class, 'receiveForm'])->name('receive')->middleware('can:compras.recibir');
+        Route::post('/{compra}/recibir', [ComprasController::class, 'storeReception'])->name('receive.store')->middleware('can:compras.recibir');
+        Route::get('/{compra}/recibir/procesar', [ComprasController::class, 'processReception'])->name('receive.process')->middleware('can:compras.recibir');
+        Route::post('/{compra}/recibir/productos', [ComprasController::class, 'storeReceptionProducts'])->name('receive.products.store')->middleware('can:compras.recibir');
         // Batch reception routes
-        Route::post('/recibir/seleccionados', [ComprasController::class, 'startBatchReception'])->name('receive.start_batch');
-        Route::get('/recibir/batch', [ComprasController::class, 'processBatch'])->name('receive.batch');
-        Route::post('/recibir/batch/next', [ComprasController::class, 'receiveAndNext'])->name('receive.batch.next');
+        Route::post('/recibir/seleccionados', [ComprasController::class, 'startBatchReception'])->name('receive.start_batch')->middleware('can:compras.recibir');
+        Route::get('/recibir/batch', [ComprasController::class, 'processBatch'])->name('receive.batch')->middleware('can:compras.recibir');
+        Route::post('/recibir/batch/next', [ComprasController::class, 'receiveAndNext'])->name('receive.batch.next')->middleware('can:compras.recibir');
     });
 
     Route::prefix('productos')->name('productos.')->group(function () {
@@ -233,24 +233,26 @@ Route::middleware(['auth'])->group(function () {
     })->name('session.store');
 
     // Rutas del módulo de almacén
-    Route::prefix('almacen')->name('almacen.')->group(function () {
+    Route::prefix('almacen')->name('almacen.')->middleware('can:inventario.ver')->group(function () {
         Route::get('/', [AlmacenController::class, 'index'])->name('index');
-        Route::get('/ajustar-existencias/{id}', [AlmacenController::class, 'ajustarExistencias'])->name('ajustar-existencias');
-        Route::post('/ajustar-existencias/{id}', [AlmacenController::class, 'guardarAjuste'])->name('guardar-ajuste');
-        Route::get('/alta-rapida', [AlmacenController::class, 'altaRapida'])->name('alta-rapida');
-        Route::post('/alta-rapida', [AlmacenController::class, 'guardarProducto'])->name('guardar-producto');
+        Route::get('/ajustar-existencias/{id}', [AlmacenController::class, 'ajustarExistencias'])->name('ajustar-existencias')->middleware('can:inventario.ajustar');
+        Route::post('/ajustar-existencias/{id}', [AlmacenController::class, 'guardarAjuste'])->name('guardar-ajuste')->middleware('can:inventario.ajustar');
+        Route::get('/alta-rapida', [AlmacenController::class, 'altaRapida'])->name('alta-rapida')->middleware('can:productos.crear');
+        Route::post('/alta-rapida', [AlmacenController::class, 'guardarProducto'])->name('guardar-producto')->middleware('can:productos.crear');
         Route::get('/buscar', [AlmacenController::class, 'buscar'])->name('buscar');
-        Route::get('/kardex', [AlmacenController::class, 'kardex'])->name('kardex');
-        Route::get('/transferir', [AlmacenController::class, 'transferir'])->name('transferir');
-        Route::post('/transferir', [AlmacenController::class, 'storeTransferencia'])->name('transferir.store');
+        Route::get('/kardex', [AlmacenController::class, 'kardex'])->name('kardex')->middleware('can:inventario.kardex');
+        Route::get('/transferir', [AlmacenController::class, 'transferir'])->name('transferir')->middleware('can:inventario.transferir');
+        Route::post('/transferir', [AlmacenController::class, 'storeTransferencia'])->name('transferir.store')->middleware('can:inventario.transferir');
         Route::get('/api/lotes', [AlmacenController::class, 'getLotesAvailable'])->name('api.lotes');
     });
 
-    Route::get('/guia/get/all', [GuiaRemisionTransporteController::class, 'getAll'])->name('guia.getAll');
-    Route::resource('guia', GuiaRemisionTransporteController::class);
-    Route::post('guia/save', [GuiaRemisionTransporteController::class, 'store'])->name('guia.save');
-    Route::post('guia/sendSunat/{id}', [GuiaRemisionTransporteController::class, 'sendSunat'])->name('guia.sendSunat');
-    Route::get('/guia/trasporte/registrar', [GuiaRemisionTransporteController::class, 'add'])->name('guia-transporte.add');
+    Route::prefix('guia')->middleware('can:guias_remision.ver')->group(function () {
+        Route::get('/get/all', [GuiaRemisionTransporteController::class, 'getAll'])->name('guia.getAll');
+        Route::resource('/', GuiaRemisionTransporteController::class)->names('guia');
+        Route::post('/save', [GuiaRemisionTransporteController::class, 'store'])->name('guia.save')->middleware('can:guias_remision.crear');
+        Route::post('/sendSunat/{id}', [GuiaRemisionTransporteController::class, 'sendSunat'])->name('guia.sendSunat')->middleware('can:guias_remision.enviar');
+        Route::get('/trasporte/registrar', [GuiaRemisionTransporteController::class, 'add'])->name('guia-transporte.add')->middleware('can:guias_remision.crear');
+    });
 
     Route::post('/get/provincia', [ProvinciaController::class, 'getProvincia'])->name('provincia.get');
     Route::post('/get/distrito', [DistritoController::class, 'getdistrito'])->name('distrito.get');
@@ -261,30 +263,40 @@ Route::middleware(['auth'])->group(function () {
     Route::get('guia/remision/{id}', [PdfController::class, 'guia_remision_pdf'])->name('guia.guia_remision_pdf');
 
     // Reportes
-    Route::get('/reportes', [App\Http\Controllers\ReporteController::class, 'index'])->name('reportes.index');
-    Route::get('/reportes/buscar', [App\Http\Controllers\ReporteController::class, 'generate'])->name('reportes.busqueda');
-    Route::get('/reportes/pdf', [App\Http\Controllers\ReporteController::class, 'pdf'])->name('reportes.pdf');
-    Route::get('/reportes/export', [App\Http\Controllers\ReporteController::class, 'export'])->name('reportes.export');
+    Route::prefix('reportes')->middleware('can:reportes.ver')->group(function () {
+        Route::get('/', [App\Http\Controllers\ReporteController::class, 'index'])->name('reportes.index');
+        Route::get('/buscar', [App\Http\Controllers\ReporteController::class, 'generate'])->name('reportes.busqueda');
+        Route::get('/pdf', [App\Http\Controllers\ReporteController::class, 'pdf'])->name('reportes.pdf');
+        Route::get('/export', [App\Http\Controllers\ReporteController::class, 'export'])->name('reportes.export')->middleware('can:reportes.exportar');
+    });
 
     // Activos Corrientes
-    Route::get('/activos-corrientes', [App\Http\Controllers\ActivoCorrienteController::class, 'index'])->name('activos_corrientes.index');
-    Route::post('/activos-corrientes', [App\Http\Controllers\ActivoCorrienteController::class, 'store'])->name('activos_corrientes.store');
-    Route::post('/activos-corrientes/tipo', [App\Http\Controllers\ActivoCorrienteController::class, 'storeTipo'])->name('activos_corrientes.storeTipo');
-    Route::delete('/activos-corrientes/{id}', [App\Http\Controllers\ActivoCorrienteController::class, 'destroy'])->name('activos_corrientes.destroy');
+    Route::prefix('activos-corrientes')->middleware('can:contabilidad.gestionar_activos')->group(function () {
+        Route::get('/', [App\Http\Controllers\ActivoCorrienteController::class, 'index'])->name('activos_corrientes.index');
+        Route::post('/', [App\Http\Controllers\ActivoCorrienteController::class, 'store'])->name('activos_corrientes.store');
+        Route::post('/tipo', [App\Http\Controllers\ActivoCorrienteController::class, 'storeTipo'])->name('activos_corrientes.storeTipo');
+        Route::delete('/{id}', [App\Http\Controllers\ActivoCorrienteController::class, 'destroy'])->name('activos_corrientes.destroy');
+    });
 
     // Activos Fijos / No Corrientes
-    Route::get('/activos', [App\Http\Controllers\ActivoFijoController::class, 'index'])->name('activos.index');
-    Route::post('/activos', [App\Http\Controllers\ActivoFijoController::class, 'store'])->name('activos.store');
-    Route::post('/activos/tipo', [App\Http\Controllers\ActivoFijoController::class, 'storeTipo'])->name('activos.storeTipo');
-    Route::delete('/activos/{id}', [App\Http\Controllers\ActivoFijoController::class, 'destroy'])->name('activos.destroy');
+    Route::prefix('activos')->middleware('can:contabilidad.gestionar_activos')->group(function () {
+        Route::get('/', [App\Http\Controllers\ActivoFijoController::class, 'index'])->name('activos.index');
+        Route::post('/', [App\Http\Controllers\ActivoFijoController::class, 'store'])->name('activos.store');
+        Route::post('/tipo', [App\Http\Controllers\ActivoFijoController::class, 'storeTipo'])->name('activos.storeTipo');
+        Route::delete('/{id}', [App\Http\Controllers\ActivoFijoController::class, 'destroy'])->name('activos.destroy');
+    });
 
     // Pasivos Corrientes
-    Route::get('/pasivos', [App\Http\Controllers\PasivoController::class, 'index'])->name('pasivos.index');
-    Route::post('/pasivos', [App\Http\Controllers\PasivoController::class, 'store'])->name('pasivos.store');
-    Route::post('/pasivos/tipo', [App\Http\Controllers\PasivoController::class, 'storeTipo'])->name('pasivos.storeTipo');
-    Route::delete('/pasivos/{id}', [App\Http\Controllers\PasivoController::class, 'destroy'])->name('pasivos.destroy');
+    Route::prefix('pasivos')->middleware('can:contabilidad.gestionar_pasivos')->group(function () {
+        Route::get('/', [App\Http\Controllers\PasivoController::class, 'index'])->name('pasivos.index');
+        Route::post('/', [App\Http\Controllers\PasivoController::class, 'store'])->name('pasivos.store');
+        Route::post('/tipo', [App\Http\Controllers\PasivoController::class, 'storeTipo'])->name('pasivos.storeTipo');
+        Route::delete('/{id}', [App\Http\Controllers\PasivoController::class, 'destroy'])->name('pasivos.destroy');
+    });
 
     // Balance Route
-    Route::get('/balance', [App\Http\Controllers\BalanceController::class, 'index'])->name('balance.index');
-    Route::get('/balance/graficos', [App\Http\Controllers\BalanceController::class, 'graficos'])->name('balance.graficos');
+    Route::prefix('balance')->middleware('can:contabilidad.ver')->group(function () {
+        Route::get('/', [App\Http\Controllers\BalanceController::class, 'index'])->name('balance.index');
+        Route::get('/graficos', [App\Http\Controllers\BalanceController::class, 'graficos'])->name('balance.graficos');
+    });
 });
