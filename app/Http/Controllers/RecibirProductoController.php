@@ -27,20 +27,27 @@ class RecibirProductoController extends Controller
         $compra = DB::select("SELECT
             p.id,
             p.nombre,
-            pl.cantidad,
+            cl.cantidad,
+            cl.costo as compra_costo,
+            cl.pvp as compra_pvp,
+            cl.pvc as compra_pvc,
             CONCAT(
-                'lt. ', pl.lote,
+                'lt. ', cl.lote,
                 ' Fv. ',
-                LPAD(DAY(pl.fecha_venc), 2, '0'), ' ',
-                LOWER(LEFT(MONTHNAME(pl.fecha_venc), 3)), ' ',
-                RIGHT(YEAR(pl.fecha_venc), 2)
+                COALESCE(LPAD(DAY(cl.fecha_vencimiento), 2, '0'), ''), ' ',
+                COALESCE(LOWER(LEFT(MONTHNAME(cl.fecha_vencimiento), 3)), ''), ' ',
+                COALESCE(RIGHT(YEAR(cl.fecha_vencimiento), 2), '')
             ) AS detalle,
-            cl.*
+            cl.*,
+            pl.pvp as master_pvp,
+            pl.pvp_dto as master_pvp_dto,
+            pl.pvc as master_pvc,
+            pl.precio_compra as master_costo
         FROM
             compras c
         INNER JOIN compra_lineas cl on cl.compra_id = c.id
         INNER JOIN productos p on p.id = cl.product_id
-        INNER JOIN producto_lineas pl on pl.producto_id = p.id
+        LEFT JOIN producto_lineas pl on pl.id = cl.product_linea_id
         WHERE c.id = ?", [$id]);
         return response()->json($compra);
     }
@@ -95,12 +102,12 @@ class RecibirProductoController extends Controller
                 // 👉 ACTUALIZAR STOCK Y DATOS ADICIONALES EN PRODUCTO
                 Producto::where('id', $item['producto_id'])
                     ->increment('cantidad', $item['cantidad']);
-                
+
                 // Actualizar datos adicionales en la línea de compra
                 $compraLinea = CompraLinea::where('compra_id', $item['compra_id'])
-                                        ->where('product_id', $item['producto_id'])
-                                        ->first();
-                
+                    ->where('product_id', $item['producto_id'])
+                    ->first();
+
                 if ($compraLinea) {
                     $compraLinea->update([
                         'precio_compra' => $item['cop'],

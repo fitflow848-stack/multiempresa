@@ -248,7 +248,8 @@
                         </thead>
                         <tbody>
                             @foreach ($productos as $i => $p)
-                                <tr data-producto-id="{{ $p['producto_id'] }}" data-producto-id-linea="{{ $p['producto_id_linea'] ?? '' }}">
+                                <tr data-producto-id="{{ $p['producto_id'] }}"
+                                    data-producto-id-linea="{{ $p['producto_id_linea'] ?? '' }}">
                                     <td class="text-center text-muted">{{ $i + 1 }}</td>
                                     <td class="sticky-col fw-bold">{{ $p['nombre'] }}</td>
                                     <td class="text-center fw-bold">{{ $p['cantidad'] }}</td>
@@ -276,7 +277,7 @@
                                             value="{{ $p['pvp'] ?? 0 }}"></td>
                                     <td class="bg-precios"><span class="val-calc pa-pvpd text-pa">0.00</span></td>
                                     <td class="bg-precios"><input type="number" class="table-input pvc"
-                                            value="{{ $p['pvp'] ?? 0 }}"></td>
+                                            value="{{ $p['pvc'] ?? ($p['pvp'] ?? 0) }}"></td>
 
                                     {{-- Stock --}}
                                     <td class="bg-stock"><input type="number" class="table-input stock-min"

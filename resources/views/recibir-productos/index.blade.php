@@ -303,10 +303,21 @@
                     const stockMax = item.stock_max || item.stockMax || 0;
                     const lote = item.lote || '';
 
-                    const copVal = parseFloat(item.cop ?? item.costo ?? 0) || 0;
-                    const pvpVal = parseFloat(item.pvp ?? 0) || 0;
-                    // si tenemos pvp en el origen, calculamos mu para mostrarlo y mantener PVP
-                    const muVal = (copVal > 0 && pvpVal > 0) ? ((pvpVal - copVal) / copVal) * 100 : 10;
+                    const copVal = parseFloat(item.compra_costo ?? item.costo ?? 0) || 0;
+                    const pvpVal = parseFloat(item.master_pvp ?? item.compra_pvp ?? item.pvp ?? 0) || 0;
+                    const pvpDVal = parseFloat(item.master_pvp_dto ?? item.pvp_dto ?? 0) || 0;
+
+                    // Si el PVP es igual al costo, forzamos un margen predeterminado para evitar MU=0
+                    // a menos que el usuario lo haya definido así explícitamente en el catálogo.
+                    let muVal = 10;
+                    if (copVal > 0 && pvpVal > 0) {
+                        muVal = ((pvpVal - copVal) / copVal) * 100;
+                    }
+
+                    let muDVal = 0;
+                    if (copVal > 0 && pvpDVal > 0) {
+                        muDVal = ((pvpDVal - copVal) / copVal) * 100;
+                    }
 
                     $tbody.append(`
                         <tr data-producto-id="${item.product_id || item.product_linea_id || item.id}" 
@@ -316,15 +327,16 @@
                             data-stock-min="${stockMin}"
                             data-stock-max="${stockMax}"
                             data-lote="${lote}"
-                            data-fecha-vencimiento="${item.fecha_vencimiento || item.fecha_venc || ''}">
+                            data-fecha-vencimiento="${item.fecha_vencimiento || item.fecha_venc || ''}"
+                            data-pvc="${item.master_pvc || item.compra_pvc || 0}">
                             <td class="fw-bold">${nombre}</td>
                             <td class="text-center">${cantidad}</td>
                             <td class="costo-ref text-muted text-end">${copVal.toFixed(2)}</td>
                             <td><input type="number" class="table-input cop" value="${copVal.toFixed(2)}"></td>
                             <td><input type="number" class="table-input mu" value="${muVal.toFixed(2)}"></td>
-                            <td><input type="number" class="table-input mu_desc" value="0"></td>
+                            <td><input type="number" class="table-input mu_desc" value="${muDVal.toFixed(2)}"></td>
                             <td class="mup text-end">0.00</td>
-                            <td class="pvp text-end">${pvpVal > 0 ? pvpVal.toFixed(2) : (copVal > 0 ? (copVal * (1 + muVal/100)).toFixed(2) : '0.00')}</td>
+                            <td class="pvp text-end">${pvpVal.toFixed(2)}</td>
                             <td class="pa text-end fw-bold text-primary">0.00</td>
                             <td class="pvp_d text-end">0.00</td>
                             <td class="pa_d text-end fw-bold text-danger">0.00</td>
@@ -350,7 +362,8 @@
                     const nombre = p.nombre || p.descripcion || p.descripcion_producto || '';
                     const cantidad = p.cantidad || p.qty || 1;
                     const detalle = p.detalle || '';
-                    const costo = (p.costo !== undefined && p.costo !== null) ? Number(p.costo).toFixed(2) : (p.precio_compra ? Number(p.precio_compra).toFixed(2) : '0.00');
+                    const costo = (p.costo !== undefined && p.costo !== null) ? Number(p.costo).toFixed(
+                        2) : (p.precio_compra ? Number(p.precio_compra).toFixed(2) : '0.00');
                     const stock_min = p.stock_min || p.stockMin || 0;
                     const stock_max = p.stock_max || p.stockMax || 0;
                     const lote = p.lote || '';
@@ -469,7 +482,7 @@
                         pa_d: parseFloat($tr.find('.pa_d').text()) || 0
                     });
                 });
-                
+
                 // Agregar campos adicionales si existen en data-attributes
                 dataFinal = dataFinal.map(function(item, idx) {
                     const $tr = $('#tabla-detalle tbody tr').eq(idx);
@@ -477,6 +490,7 @@
                     item.stock_max = parseFloat($tr.data('stock-max')) || 0;
                     item.lote = $tr.data('lote') || '';
                     item.fecha_vencimiento = $tr.data('fecha-vencimiento') || null;
+                    item.pvc = parseFloat($tr.data('pvc')) || 0;
                     return item;
                 });
 
