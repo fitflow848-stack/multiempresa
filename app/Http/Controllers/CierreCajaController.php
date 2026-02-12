@@ -56,13 +56,14 @@ class CierreCajaController extends Controller
 
     public function show(CierreCaja $cierre)
     {
-
-        $ventas = DB::select("( SELECT
+        $movimientos = DB::select("( SELECT
                 v.created_at AS fecha_emision,
                 'Ingreso - Venta' AS operacion,
+                'ingreso' AS tipo_movimiento,
                 c.nombre AS cliente_nombre,
                 CONCAT( v.serie, ' ', v.numero ) AS concepto,
                 tp.nombre AS metodo_pago,
+                tp.es_efectivo,
                 CASE 
                     WHEN d.id IS NULL THEN v.total
                     ELSE (v.total - (d.monto_deuda + COALESCE((SELECT SUM(monto) FROM deuda_pagos WHERE deuda_id = d.id), 0)))
@@ -81,9 +82,11 @@ class CierreCajaController extends Controller
                 SELECT
                     o.created_at AS fecha_emision,
                     o.partida AS operacion,
+                    o.tipo AS tipo_movimiento,
                     o.tipo AS cliente_nombre,
                     o.concepto,
                     'Efectivo' AS metodo_pago,
+                    1 AS es_efectivo,
                     o.importe,
                     u.name AS usuario 
                 FROM
@@ -91,7 +94,57 @@ class CierreCajaController extends Controller
                 INNER JOIN users u ON u.id = o.user_id 
                 where o.cierre_caja_id = :cierre_id_2
                 ) ORDER BY fecha_emision ASC", ['cierre_id' => $cierre->id, 'cierre_id_2' => $cierre->id]);
-        $movimientos = $ventas;
+
+        // Si el cierre está abierto, calculamos los totales dinámicamente
+        if (!$cierre->fecha_cierre) {
+            $ingresosTotal = 0;
+            $egresosTotal = 0;
+            $aportacionesTotal = 0;
+            $sustraccionesTotal = 0;
+
+            // Totales exclusivos para el balance de EFECTIVO
+            $ingresosEfectivo = 0;
+            $egresosEfectivo = 0;
+            $aportacionesEfectivo = 0;
+            $sustraccionesEfectivo = 0;
+
+            foreach ($movimientos as $mov) {
+                $importe = floatval($mov->importe);
+                $esEfectivo = (bool) ($mov->es_efectivo ?? false);
+
+                switch ($mov->tipo_movimiento) {
+                    case 'ingreso':
+                        $ingresosTotal += $importe;
+                        if ($esEfectivo) $ingresosEfectivo += $importe;
+                        break;
+                    case 'gasto':
+                        $egresosTotal += $importe;
+                        if ($esEfectivo) $egresosEfectivo += $importe;
+                        break;
+                    case 'aportacion':
+                    case 'aporte':
+                        $aportacionesTotal += $importe;
+                        if ($esEfectivo) $aportacionesEfectivo += $importe;
+                        break;
+                    case 'sustraccion':
+                    case 'retiro':
+                        $sustraccionesTotal += $importe;
+                        if ($esEfectivo) $sustraccionesEfectivo += $importe;
+                        break;
+                }
+            }
+
+            // Para la vista principal de arqueo, usamos los totales de EFECTIVO
+            // ya que se asume que el cierre es del cajón de dinero.
+            $cierre->ingresos = $ingresosEfectivo;
+            $cierre->egresos = $egresosEfectivo;
+            $cierre->aportaciones = $aportacionesEfectivo;
+            $cierre->sustracciones = $sustraccionesEfectivo;
+
+            // Podemos pasar los totales generales a la vista si fuera necesario, 
+            // pero por ahora priorizamos que el teórico cuadre con el efectivo.
+        }
+
         return view('cierres.show', ['cierre' => $cierre, 'movimientos' => $movimientos]);
     }
 

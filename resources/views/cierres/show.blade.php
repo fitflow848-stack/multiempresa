@@ -128,9 +128,19 @@
                                 <span class="label-custom">Total Teórico:</span>
                                 <span id="display_teorico" class="display-value text-dark">S/ 0.00</span>
                             </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span id="label_descuadre" class="label-custom">Diferencia:</span>
-                                <span id="display_descuadre" class="display-value">S/ 0.00</span>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="label-custom">Efectivo en Caja (Real):</span>
+                                <span id="display_real" class="display-value text-dark">S/ 0.00</span>
+                            </div>
+                            <div class="border-top pt-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span id="label_descuadre" class="label-custom">Diferencia:</span>
+                                    <span id="display_descuadre" class="display-value">S/ 0.00</span>
+                                </div>
+                                <div id="warning_descuadre" class="alert alert-danger py-1 px-2 small mt-2 mb-0"
+                                    style="display: none; font-size: 0.75rem;">
+                                    <i class="fas fa-exclamation-triangle me-1"></i> Descuadre detectado
+                                </div>
                             </div>
                         </div>
 
@@ -356,7 +366,15 @@
                     <h6>Totales</h6>
                     <div>Monedas: S/ <span id="total-monedas">0.00</span></div>
                     <div>Billetes: S/ <span id="total-billetes">0.00</span></div>
-                    <div style="font-weight:bold; margin-top:8px;">TOTAL CAJA: S/ <span id="total-caja">0.00</span></div>
+                    <div class="border-top mt-2 pt-2">
+                        <div style="font-weight:bold; font-size:1.1rem;">TOTAL CAJA: S/ <span id="total-caja">0.00</span>
+                        </div>
+                        <div class="small text-muted mt-1">Total Teórico: S/ <span id="modal-arqueo-teorico">0.00</span>
+                        </div>
+                        <div id="modal-arqueo-diff-container" class="small mt-1" style="font-weight:bold;">
+                            Diferencia: S/ <span id="modal-arqueo-diferencia">0.00</span>
+                        </div>
+                    </div>
                     <div style="margin-top:12px;">
                         <label>Notas:<br>
                             <textarea id="arqueo-notas" class="form-control form-control-sm" style="width:100%; height:80px;"></textarea>
@@ -398,23 +416,35 @@
             document.getElementById('display_teorico').innerText = 'S/ ' + teorico.toLocaleString('en-US', {
                 minimumFractionDigits: 2
             });
+            document.getElementById('display_real').innerText = 'S/ ' + cierreReal.toLocaleString('en-US', {
+                minimumFractionDigits: 2
+            });
 
             const descText = document.getElementById('display_descuadre');
             const descLabel = document.getElementById('label_descuadre');
+            const warningDiv = document.getElementById('warning_descuadre');
 
             descText.innerText = 'S/ ' + Math.abs(diferencia).toLocaleString('en-US', {
                 minimumFractionDigits: 2
             });
 
-            if (diferencia < 0) {
-                descLabel.innerText = 'FALTANTE:';
-                descText.className = 'display-value text-danger';
-            } else if (diferencia > 0) {
-                descLabel.innerText = 'SOBRANTE:';
-                descText.className = 'display-value text-primary';
-            } else {
+            if (Math.abs(diferencia) <= 0.01) {
                 descLabel.innerText = 'DIFERENCIA:';
                 descText.className = 'display-value text-success';
+                warningDiv.style.display = 'none';
+            } else if (diferencia < 0) {
+                descLabel.innerText = 'FALTANTE:';
+                descText.className = 'display-value text-danger';
+                warningDiv.style.display = 'block';
+                warningDiv.className = 'alert alert-danger py-1 px-2 small mt-2 mb-0';
+                warningDiv.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i> ¡Atención! Hay un faltante en caja.';
+            } else if (diferencia > 0) {
+                descLabel.innerText = 'SOBRANTE:';
+                descText.className = 'display-value text-warning';
+                warningDiv.style.display = 'block';
+                warningDiv.className = 'alert alert-warning py-1 px-2 small mt-2 mb-0';
+                warningDiv.innerHTML =
+                    '<i class="fas fa-exclamation-triangle me-1"></i> ¡Atención! Hay un sobrante en caja.';
             }
         }
 
@@ -589,9 +619,30 @@
                         const cnt = parseFloat(inp.value) || 0;
                         totalB += val * cnt;
                     });
+                    const totalCaja = totalM + totalB;
                     document.getElementById('total-monedas').innerText = totalM.toFixed(2);
                     document.getElementById('total-billetes').innerText = totalB.toFixed(2);
-                    document.getElementById('total-caja').innerText = (totalM + totalB).toFixed(2);
+                    document.getElementById('total-caja').innerText = totalCaja.toFixed(2);
+
+                    // Diferencia con el teórico
+                    const teorico = parseFloat(document.getElementById('teorico_cierre').value) || 0;
+                    const diff = totalCaja - teorico;
+
+                    document.getElementById('modal-arqueo-teorico').innerText = teorico.toFixed(2);
+                    const diffEl = document.getElementById('modal-arqueo-diferencia');
+                    const diffContainer = document.getElementById('modal-arqueo-diff-container');
+
+                    diffEl.innerText = Math.abs(diff).toFixed(2);
+                    if (Math.abs(diff) <= 0.01) {
+                        diffContainer.style.color = 'green';
+                        diffContainer.innerHTML = 'Caja Cuadrada <i class="fas fa-check-circle"></i>';
+                    } else if (diff < 0) {
+                        diffContainer.style.color = 'red';
+                        diffContainer.innerHTML = 'Faltante: S/ <span>' + Math.abs(diff).toFixed(2) + '</span>';
+                    } else {
+                        diffContainer.style.color = 'blue';
+                        diffContainer.innerHTML = 'Sobrante: S/ <span>' + diff.toFixed(2) + '</span>';
+                    }
                 }
 
                 document.querySelectorAll('.m-count, .b-count').forEach(i => i.addEventListener('input',
