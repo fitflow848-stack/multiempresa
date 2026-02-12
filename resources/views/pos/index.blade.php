@@ -152,6 +152,10 @@
                         id="footer-gravada">0.00</span></span>
             </div>
             <div>
+                <span class="label">Exonerada</span> : <span class="value">S/ <span
+                        id="footer-exonerada">0.00</span></span>
+            </div>
+            <div>
                 <span class="label">IGV</span> : <span class="value">S/ <span id="footer-igv">0.00</span></span>
             </div>
             <div>
@@ -379,14 +383,25 @@
 
         // Si el checkbox de proforma está marcado, emitir como cotización directamente
         if (document.getElementById('proforma-checkbox') && document.getElementById('proforma-checkbox').checked) {
-            // Calcular totales (precios ya incluyen IGV)
+            // Calcular totales considerando tipo de impuesto
             let total_con_igv = 0;
+            let subtotal_gravado = 0;
+            let total_igv = 0;
+
             ticket.forEach(item => {
-                total_con_igv += parseFloat(item.precio || 0) * parseFloat(item.cantidad || 0);
+                const itemTotal = parseFloat(item.precio || 0) * parseFloat(item.cantidad || 0);
+                total_con_igv += itemTotal;
+
+                if (item.tipo_impuesto !== 'exonerado') {
+                    const itemGravado = itemTotal / 1.18;
+                    subtotal_gravado += itemGravado;
+                    total_igv += (itemTotal - itemGravado);
+                }
             });
 
-            const subtotal = Math.round((total_con_igv / 1.18) * 100) / 100;
-            const igv = Math.round((total_con_igv - subtotal) * 100) / 100;
+            // Subtotal total es base gravada + exonerada
+            const subtotal = total_con_igv - total_igv;
+            const igv = total_igv;
 
             const datosVenta = {
                 ticket: JSON.stringify(ticket),
@@ -553,21 +568,25 @@
             }
         }
 
-        // Calcular totales - Los precios ya incluyen IGV
+        // Calcular totales considerando tipo de impuesto
         let total_con_igv = 0;
-        let subtotal = 0;
-        let igv = 0;
-        let total = 0;
+        let subtotal_gravado = 0;
+        let total_igv = 0;
 
         ticket.forEach(item => {
             const itemTotal = parseFloat(item.precio) * parseInt(item.cantidad);
             total_con_igv += itemTotal;
+
+            if (item.tipo_impuesto !== 'exonerado') {
+                const itemGravado = itemTotal / 1.18;
+                subtotal_gravado += itemGravado;
+                total_igv += (itemTotal - itemGravado);
+            }
         });
 
-        // Separar IGV del total (precio ya incluye IGV del 18%)
-        subtotal = Math.round((total_con_igv / 1.18) * 100) / 100; // Base sin IGV
-        igv = Math.round((total_con_igv - subtotal) * 100) / 100; // IGV calculado
-        total = total_con_igv; // Total es el precio con IGV incluido
+        const subtotal = total_con_igv - total_igv;
+        const igv = total_igv;
+        const total = total_con_igv;
 
         // Preparar datos para enviar
         const datosVenta = {
@@ -1436,6 +1455,7 @@
                 const productoParaTicket = {
                     id: `pub_${p.producto_id}_${Date.now()}`,
                     producto_id: p.producto_id,
+                    tipo_impuesto: p.tipo_impuesto || 'gravado',
                     producto_linea_id: p.product_linea_id || p.producto_linea_id || null,
                     nombre: p.nombre,
                     cantidad: 1,
@@ -1545,6 +1565,7 @@
             const nuevoProducto = {
                 id: producto.id,
                 producto_id: producto.producto_id,
+                tipo_impuesto: producto.tipo_impuesto || 'gravado',
                 producto_linea_id: producto.producto_linea_id,
                 nombre: producto.nombre,
                 cantidad: qtyToAdd,
@@ -1628,7 +1649,7 @@
                                placeholder="0% o S/0"
                                title="Ingrese porcentaje (ej: 12%) o monto fijo (ej: S/12)">
                     </td>
-                    <td>0.915</td>
+                    <td>${p.tipo_impuesto === 'exonerado' ? '0.00' : (p.importe - (p.importe / 1.18)).toFixed(3)}</td>
                     <td>${p.precio.toFixed(2)}</td>
                     <td>${p.importe.toFixed(2)}</td>
                 </tr>
@@ -1841,18 +1862,27 @@
     }
 
     function actualizarFooter(total) {
-        let gravada = total / 1.18;
-        let igv = total - gravada;
-        let icbper = 0.00; // Si tienes cálculo real ponlo aquí
+        let gravada = 0;
+        let exonerada = 0;
+        let igv = 0;
+        let icbper = 0.00;
+
+        ticket.forEach(item => {
+            if (item.tipo_impuesto === 'exonerado') {
+                exonerada += item.importe;
+            } else {
+                let mGravada = item.importe / 1.18;
+                gravada += mGravada;
+                igv += (item.importe - mGravada);
+            }
+        });
 
         // Calcular descuentos totales
         let totalDescuentos = 0;
         ticket.forEach(item => {
             if (item.descuentoFijo && item.descuentoFijo > 0) {
-                // Descuento fijo
                 totalDescuentos += item.descuentoFijo;
             } else if (item.descuento && item.descuento > 0) {
-                // Descuento porcentual
                 const subtotalSinDescuento = item.cantidad * item.precio;
                 const montoDescuento = subtotalSinDescuento * item.descuento / 100;
                 totalDescuentos += montoDescuento;
@@ -1861,14 +1891,19 @@
 
         let cantListado = ticket.length;
 
+        // Actualizar UI
         document.getElementById('footer-gravada').innerText = gravada.toFixed(2);
         document.getElementById('footer-igv').innerText = igv.toFixed(2);
         document.getElementById('footer-icbper').innerText = icbper.toFixed(2);
         document.getElementById('footer-dscto').innerText = totalDescuentos.toFixed(2);
         document.getElementById('footer-total').innerText = total.toFixed(2);
         document.getElementById('footer-productos-listados').innerText = cantListado;
-        // Si cambias tipo de cliente, actualiza así
-        // document.getElementById('footer-cliente').innerText = tipoCliente;
+
+        // Si hay monto exonerado, podríamos mostrar un aviso o campo adicional si existe en el HTML
+        const footerExonerada = document.getElementById('footer-exonerada');
+        if (footerExonerada) {
+            footerExonerada.innerText = exonerada.toFixed(2);
+        }
     }
 </script>
 @include('pos.partials.modals.context-menu-ticket')

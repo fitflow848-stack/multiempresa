@@ -14,6 +14,7 @@ class ProductRepository
         return DB::select("
             SELECT
                 p.id AS producto_id,
+                p.tipo_impuesto,
                 ad.producto_linea_id AS product_linea_id,
                 MAX(ad.id) AS id,
                 CONCAT_WS(' / ', 
@@ -54,7 +55,7 @@ class ProductRepository
             LEFT JOIN familias f ON f.id = p.familia_id
             LEFT JOIN unidades_medida um ON um.id = p.unidad_medida_id
             WHERE (p.nombre LIKE ? OR p.codigo_barras LIKE ?) AND ad.cantidad > 0
-            GROUP BY p.id, ad.producto_linea_id, p.nombre, pl.presentacion, pl.concentracion, ad.lote, ad.fecha_vencimiento, m.nombre
+            GROUP BY p.id, p.tipo_impuesto, ad.producto_linea_id, p.nombre, pl.presentacion, pl.concentracion, ad.lote, ad.fecha_vencimiento, m.nombre
             ORDER BY p.nombre ASC
         ", ["%{$q}%", "%{$q}%"]);
     }

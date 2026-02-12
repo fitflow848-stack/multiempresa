@@ -105,9 +105,9 @@ class VentaService
                     }
 
                     // Calcular según tipo
-                    if ($tipoImpuesto == 20) { // Exonerado - Operación Onerosa
+                    if ($tipoImpuesto == 20 || $tipoImpuesto === 'exonerado') { // Exonerado - Operación Onerosa
                         $op_exoneradas += $importe;
-                    } elseif ($tipoImpuesto == 30) { // Inafecto - Operación Onerosa
+                    } elseif ($tipoImpuesto == 30 || $tipoImpuesto === 'inafecto') { // Inafecto - Operación Onerosa
                         $op_inafectas += $importe;
                     } else { // Gravado (10 u otros por defecto)
                         // El precio unitario (PVP) incluye IGV
