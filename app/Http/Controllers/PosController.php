@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreVentaRequest;
+use App\Models\AlmacenIngresoDetalle;
 use App\Models\Cliente;
 use App\Models\TipoPago;
 use App\Models\Venta;
@@ -428,5 +429,51 @@ class PosController extends Controller
             Log::error("Error updating price: " . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Error al actualizar'], 500);
         }
+    }
+
+    public function getDescuentoProducto(Request $request)
+    {
+        $producto_id = $request->get('producto_id');
+        $almacen_detalle_id = $request->get('almacen_detalle_id');
+        $cantidad = (float) $request->get('cantidad', 1);
+        $precio = (float) $request->get('precio', 0);
+
+        $pvpd = null;
+
+        if ($almacen_detalle_id) {
+            $detalle = AlmacenIngresoDetalle::find($almacen_detalle_id);
+            if ($detalle)
+                $pvpd = $detalle->pvpd;
+        }
+
+        if ($pvpd === null && $producto_id) {
+            $detalle = AlmacenIngresoDetalle::where('producto_id', $producto_id)
+                ->whereNotNull('pvpd')
+                ->orderBy('id', 'desc')
+                ->first();
+            if ($detalle)
+                $pvpd = $detalle->pvpd;
+        }
+
+        $maxAmount = null;
+        if ($pvpd !== null) {
+            $pvpd = (float) $pvpd;
+            if ($pvpd <= 1) {
+                $maxAmount = $cantidad * $precio * $pvpd;
+            } else {
+                // El pvpd representa el precio mínimo permitido para el producto.
+                // El descuento máximo permitido es la diferencia entre el precio actual y el mínimo,
+                // multiplicado por la cantidad total de la línea.
+                $maxAmount = ($precio - $pvpd) * $cantidad;
+                if ($maxAmount < 0) {
+                    $maxAmount = 0;
+                }
+            }
+        }
+
+        return response()->json([
+            'pvpd' => $pvpd,
+            'maxAmount' => $maxAmount,
+        ]);
     }
 }

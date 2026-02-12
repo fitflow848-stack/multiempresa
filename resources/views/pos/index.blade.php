@@ -302,7 +302,10 @@
     document.querySelectorAll('.search-input')[0].addEventListener('keyup', function() {
         let q = this.value;
 
-        if (q.length < 2) return;
+        if (q.length < 2) {
+            document.getElementById('productos-tbody').innerHTML = '';
+            return;
+        }
 
         fetch(`{{ route('pos.buscar') }}?q=${q}`)
             .then(r => r.json())
@@ -312,7 +315,10 @@
     document.querySelectorAll('.search-input')[1].addEventListener('keyup', function() {
         let q = this.value;
 
-        if (q.length < 2) return;
+        if (q.length < 2) {
+            document.getElementById('productos-tbody').innerHTML = '';
+            return;
+        }
 
         fetch(`{{ route('pos.buscar') }}?q=${q}`)
             .then(r => r.json())

@@ -29,52 +29,13 @@ use App\Http\Controllers\PartidaController;
 use App\Http\Controllers\PdfController;
 use App\Http\Controllers\ProvinciaController;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Http\Request;
-use App\Models\AlmacenIngresoDetalle;
 
 Route::get('/', function () {
     return redirect('/login');
 });
 
 // Endpoint helper para obtener pvpd y monto máximo de descuento para POS
-Route::get('/pos/pvpd', function (Request $request) {
-    $producto_id = $request->get('producto_id');
-    $almacen_detalle_id = $request->get('almacen_detalle_id');
-    $cantidad = (float) $request->get('cantidad', 1);
-    $precio = (float) $request->get('precio', 0);
-
-    $pvpd = null;
-
-    if ($almacen_detalle_id) {
-        $detalle = AlmacenIngresoDetalle::find($almacen_detalle_id);
-        if ($detalle)
-            $pvpd = $detalle->pvpd;
-    }
-
-    if ($pvpd === null && $producto_id) {
-        $detalle = AlmacenIngresoDetalle::where('producto_id', $producto_id)
-            ->whereNotNull('pvpd')
-            ->orderBy('id', 'desc')
-            ->first();
-        if ($detalle)
-            $pvpd = $detalle->pvpd;
-    }
-
-    $maxAmount = null;
-    if ($pvpd !== null) {
-        $pvpd = (float) $pvpd;
-        if ($pvpd <= 1) {
-            $maxAmount = $cantidad * $precio * $pvpd;
-        } else {
-            $maxAmount = $pvpd;
-        }
-    }
-
-    return response()->json([
-        'pvpd' => $pvpd,
-        'maxAmount' => $maxAmount,
-    ]);
-});
+Route::get('/pos/pvpd', [PosController::class, 'getDescuentoProducto'])->name('pos.pvpd');
 
 // Rutas de autenticación
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
