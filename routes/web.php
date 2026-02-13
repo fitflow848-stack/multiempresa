@@ -1,6 +1,11 @@
 <?php
 
+use App\Http\Controllers\ActivoCorrienteController;
+use App\Http\Controllers\ActivoFijoController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BalanceController;
+use App\Http\Controllers\CajaSessionController;
+use App\Http\Controllers\PasivoController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\AlmacenController;
 use App\Http\Controllers\ApiDocumentosController;
@@ -17,6 +22,7 @@ use App\Http\Controllers\PrincipalController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\RecibirProductoController;
+use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\SubFamiliaController;
 use App\Http\Controllers\UnidadMedidaController;
 use App\Http\Controllers\CotizacionController;
@@ -41,9 +47,10 @@ Route::get('/pos/pvpd', [PosController::class, 'getDescuentoProducto'])->name('p
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::post('/caja/select', [CajaSessionController::class, 'select'])->name('caja.select');
 Route::post('/api/documento/ruc', [ApiDocumentosController::class, 'getRuc'])->name('apidocumento.ruc');
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'company.scope'])->group(function () {
     Route::get('/principal', [PrincipalController::class, 'index'])->name('principal.index');
 
     // Ruta para registrar arqueo de caja desde POS/UI
@@ -76,6 +83,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [DeudaController::class, 'index'])->name('index');
         Route::get('/cliente/{id}', [DeudaController::class, 'deudasPorCliente'])->name('cliente');
         Route::get('/{deuda}', [DeudaController::class, 'show'])->name('show');
+        Route::get('/{deuda}/historial', [DeudaController::class, 'historial'])->name('historial'); // Nueva ruta
+        Route::post('/pagar-acumulado', [DeudaController::class, 'aplicarPagoAcumulado'])->name('pagar-acumulado')->middleware('can:deudas.pagar');
         Route::post('/{deuda}/aplicar-pago', [DeudaController::class, 'aplicarPago'])->name('aplicar-pago')->middleware('can:deudas.pagar');
         Route::post('/{deuda}/marcar-pagada', [DeudaController::class, 'marcarComoPagada'])->name('marcar-pagada')->middleware('can:deudas.pagar');
         Route::get('/reportes/general', [DeudaController::class, 'reporteDeudas'])->name('reporte')->middleware('can:deudas.reporte');
@@ -264,39 +273,42 @@ Route::middleware(['auth'])->group(function () {
 
     // Reportes
     Route::prefix('reportes')->middleware('can:reportes.ver')->group(function () {
-        Route::get('/', [App\Http\Controllers\ReporteController::class, 'index'])->name('reportes.index');
-        Route::get('/buscar', [App\Http\Controllers\ReporteController::class, 'generate'])->name('reportes.busqueda');
-        Route::get('/pdf', [App\Http\Controllers\ReporteController::class, 'pdf'])->name('reportes.pdf');
-        Route::get('/export', [App\Http\Controllers\ReporteController::class, 'export'])->name('reportes.export')->middleware('can:reportes.exportar');
+        Route::get('/', [ReporteController::class, 'index'])->name('reportes.index');
+        Route::get('/buscar', [ReporteController::class, 'generate'])->name('reportes.busqueda');
+        Route::get('/pdf', [ReporteController::class, 'pdf'])->name('reportes.pdf');
+        Route::get('/export', [ReporteController::class, 'export'])->name('reportes.export')->middleware('can:reportes.exportar');
     });
 
     // Activos Corrientes
     Route::prefix('activos-corrientes')->middleware('can:contabilidad.gestionar_activos')->group(function () {
-        Route::get('/', [App\Http\Controllers\ActivoCorrienteController::class, 'index'])->name('activos_corrientes.index');
-        Route::post('/', [App\Http\Controllers\ActivoCorrienteController::class, 'store'])->name('activos_corrientes.store');
-        Route::post('/tipo', [App\Http\Controllers\ActivoCorrienteController::class, 'storeTipo'])->name('activos_corrientes.storeTipo');
-        Route::delete('/{id}', [App\Http\Controllers\ActivoCorrienteController::class, 'destroy'])->name('activos_corrientes.destroy');
+        Route::get('/', [ActivoCorrienteController::class, 'index'])->name('activos_corrientes.index');
+        Route::post('/', [ActivoCorrienteController::class, 'store'])->name('activos_corrientes.store');
+        Route::post('/tipo', [ActivoCorrienteController::class, 'storeTipo'])->name('activos_corrientes.storeTipo');
+        Route::delete('/{id}', [ActivoCorrienteController::class, 'destroy'])->name('activos_corrientes.destroy');
     });
 
     // Activos Fijos / No Corrientes
     Route::prefix('activos')->middleware('can:contabilidad.gestionar_activos')->group(function () {
-        Route::get('/', [App\Http\Controllers\ActivoFijoController::class, 'index'])->name('activos.index');
-        Route::post('/', [App\Http\Controllers\ActivoFijoController::class, 'store'])->name('activos.store');
-        Route::post('/tipo', [App\Http\Controllers\ActivoFijoController::class, 'storeTipo'])->name('activos.storeTipo');
-        Route::delete('/{id}', [App\Http\Controllers\ActivoFijoController::class, 'destroy'])->name('activos.destroy');
+        Route::get('/', [ActivoFijoController::class, 'index'])->name('activos.index');
+        Route::post('/', [ActivoFijoController::class, 'store'])->name('activos.store');
+        Route::post('/tipo', [ActivoFijoController::class, 'storeTipo'])->name('activos.storeTipo');
+        Route::delete('/{id}', [ActivoFijoController::class, 'destroy'])->name('activos.destroy');
     });
 
     // Pasivos Corrientes
     Route::prefix('pasivos')->middleware('can:contabilidad.gestionar_pasivos')->group(function () {
-        Route::get('/', [App\Http\Controllers\PasivoController::class, 'index'])->name('pasivos.index');
-        Route::post('/', [App\Http\Controllers\PasivoController::class, 'store'])->name('pasivos.store');
-        Route::post('/tipo', [App\Http\Controllers\PasivoController::class, 'storeTipo'])->name('pasivos.storeTipo');
-        Route::delete('/{id}', [App\Http\Controllers\PasivoController::class, 'destroy'])->name('pasivos.destroy');
+        Route::get('/', [PasivoController::class, 'index'])->name('pasivos.index');
+        Route::post('/', [PasivoController::class, 'store'])->name('pasivos.store');
+        Route::post('/tipo', [PasivoController::class, 'storeTipo'])->name('pasivos.storeTipo');
+        Route::post('/convertir-aporte/{id}', [PasivoController::class, 'convertirAporte'])->name('pasivos.convertir-aporte');
+        Route::post('/pagar/{id}', [PasivoController::class, 'registrarPago'])->name('pasivos.pagar');
+        Route::get('/ticket/{id}', [PasivoController::class, 'ticketPago'])->name('pasivos.ticket');
+        Route::delete('/{id}', [PasivoController::class, 'destroy'])->name('pasivos.destroy');
     });
 
     // Balance Route
     Route::prefix('balance')->middleware('can:contabilidad.ver')->group(function () {
-        Route::get('/', [App\Http\Controllers\BalanceController::class, 'index'])->name('balance.index');
-        Route::get('/graficos', [App\Http\Controllers\BalanceController::class, 'graficos'])->name('balance.graficos');
+        Route::get('/', [BalanceController::class, 'index'])->name('balance.index');
+        Route::get('/graficos', [BalanceController::class, 'graficos'])->name('balance.graficos');
     });
 });

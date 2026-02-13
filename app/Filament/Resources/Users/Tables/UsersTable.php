@@ -22,22 +22,32 @@ class UsersTable
                     ->label('Nombre')
                     ->searchable()
                     ->sortable(),
-                    
+
                 TextColumn::make('email')
                     ->label('Email')
                     ->searchable()
                     ->icon('heroicon-o-envelope'),
-                    
+
                 TextColumn::make('company.razon_social')
                     ->label('Empresa')
                     ->searchable()
                     ->sortable()
                     ->placeholder('Sin asignar'),
-                    
+
+                TextColumn::make('branch.nombre')
+                    ->label('Sucursal')
+                    ->searchable()
+                    ->sortable()
+                    ->badge()
+                    ->color('info')
+                    ->placeholder('Sin sucursal'),
+
                 TextColumn::make('roles.name')
                     ->label('Roles')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
+                    ->color(fn(string $state): string => match ($state) {
+                        'super_admin' => 'danger',
+                        'admin_empresa' => 'warning',
                         'admin' => 'danger',
                         'supervisor' => 'warning',
                         'vendedor' => 'success',
@@ -45,13 +55,22 @@ class UsersTable
                         default => 'gray',
                     })
                     ->placeholder('Sin roles'),
-                    
+
+                TextColumn::make('cajas.nombre')
+                    ->label('Cajas')
+                    ->badge()
+                    ->color('primary')
+                    ->separator(', ')
+                    ->placeholder('Sin cajas')
+                    ->toggleable(isToggledHiddenByDefault: false),
+
                 TextColumn::make('phone')
                     ->label('Teléfono')
                     ->searchable()
                     ->placeholder('No especificado')
-                    ->icon('heroicon-o-phone'),
-                    
+                    ->icon('heroicon-o-phone')
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 IconColumn::make('is_active')
                     ->label('Estado')
                     ->boolean()
@@ -59,7 +78,7 @@ class UsersTable
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
                     ->falseColor('danger'),
-                    
+
                 TextColumn::make('created_at')
                     ->label('Creado')
                     ->dateTime('d/m/Y H:i')
@@ -67,7 +86,7 @@ class UsersTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                // Company filter con fallback para labels null
+                // Company filter
                 SelectFilter::make('company_id')
                     ->label('Empresa')
                     ->options(function () {
@@ -76,7 +95,16 @@ class UsersTable
                             ->toArray();
                     }),
 
-                // Roles filter con fallback (usa id => name)
+                // Branch filter
+                SelectFilter::make('branch_id')
+                    ->label('Sucursal')
+                    ->options(function () {
+                        return \App\Models\Sucursal::all()
+                            ->mapWithKeys(fn($s) => [$s->id => $s->nombre ?? 'Sin nombre'])
+                            ->toArray();
+                    }),
+
+                // Roles filter
                 SelectFilter::make('roles')
                     ->label('Rol')
                     ->options(function () {
@@ -85,14 +113,18 @@ class UsersTable
                             ->toArray();
                     })
                     ->multiple(),
-                    
+
                 Filter::make('is_active')
                     ->label('Solo usuarios activos')
-                    ->query(fn ($query) => $query->where('is_active', true)),
-                    
+                    ->query(fn($query) => $query->where('is_active', true)),
+
                 Filter::make('has_company')
                     ->label('Con empresa asignada')
-                    ->query(fn ($query) => $query->whereNotNull('company_id')),
+                    ->query(fn($query) => $query->whereNotNull('company_id')),
+
+                Filter::make('has_cajas')
+                    ->label('Con cajas asignadas')
+                    ->query(fn($query) => $query->has('cajas')),
             ])
             ->recordActions([
                 ViewAction::make(),

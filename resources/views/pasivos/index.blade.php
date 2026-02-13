@@ -30,7 +30,7 @@
                         <form action="{{ route('pasivos.index') }}" method="GET" class="row g-3 mb-4 align-items-end">
                             <div class="col-md-3">
                                 <label class="form-label fw-bold small text-uppercase text-muted">Tipo de Pasivo</label>
-                                <select name="tipo_id" class="form-control form-select">
+                                <select name="tipo_id" id="selectTipoPasivo" class="form-control form-select">
                                     <option value="">Todos</option>
                                     @foreach ($tipos as $tipo)
                                         <option value="{{ $tipo->id }}"
@@ -81,6 +81,8 @@
                                         <th>Nombre</th>
                                         <th>Documento</th>
                                         <th class="text-right">Monto (S/)</th>
+                                        <th class="text-right">Saldo (S/)</th>
+                                        <th class="text-center">Estado</th>
                                         <th class="text-center">Acciones</th>
                                     </tr>
                                 </thead>
@@ -93,7 +95,36 @@
                                             <td>{{ $pasivo->documento ?? '-' }}</td>
                                             <td class="text-right font-weight-bold">S/
                                                 {{ number_format($pasivo->monto, 2) }}</td>
+                                            <td class="text-right text-danger font-weight-bold">S/
+                                                {{ number_format($pasivo->saldo, 2) }}</td>
                                             <td class="text-center">
+                                                @if($pasivo->estado == 'pagado')
+                                                    <span class="badge bg-success">PAGADO</span>
+                                                @elseif($pasivo->estado == 'parcial')
+                                                    <span class="badge bg-warning">PARCIAL</span>
+                                                @else
+                                                    <span class="badge bg-secondary">PENDIENTE</span>
+                                                @endif
+                                            </td>
+                                            <td class="text-center">
+                                                @if($pasivo->saldo > 0)
+                                                    <button type="button" class="btn btn-primary btn-circle btn-sm"
+                                                        onclick="abrirModalPagoPasivo({{ $pasivo->id }}, '{{ $pasivo->nombre }}', {{ $pasivo->saldo }})"
+                                                        title="Registrar Pago">
+                                                        <i class="bx bx-money"></i>
+                                                    </button>
+                                                @endif
+
+                                                @if (strtolower($pasivo->tipo->nombre) === 'beneficio')
+                                                    <form action="{{ route('pasivos.convertir-aporte', $pasivo->id) }}"
+                                                        method="POST" class="d-inline convert-form">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-success btn-circle btn-sm"
+                                                            title="Convertir a Aporte">
+                                                            <i class="bx bx-repost"></i>
+                                                        </button>
+                                                    </form>
+                                                @endif
                                                 <form action="{{ route('pasivos.destroy', $pasivo->id) }}" method="POST"
                                                     class="d-inline delete-form">
                                                     @csrf
@@ -192,9 +223,7 @@
                     @csrf
                     <div class="modal-header bg-info text-white">
                         <h5 class="modal-title">Nuevo Tipo Pasivo</h5>
-                        <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <div class="form-group">
@@ -217,58 +246,118 @@
     </div>
 @endsection
 
+<!-- Modal Registrar Pago Pasivo -->
+<div class="modal fade" id="modalPagoPasivo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="formPagoPasivo" method="POST">
+                @csrf
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Registrar Pago de Pasivo</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3"><strong>Concepto:</strong> <span id="pagoConcepto"></span></p>
+                    <div class="alert alert-info py-2">
+                        Saldo pendiente: <strong>S/ <span id="pagoSaldoMax"></span></strong>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="fw-bold small">Monto a Pagar <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">S/</span>
+                            <input type="number" step="0.01" name="monto" id="pagoMontoInput" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="fw-bold small">Fecha Pago <span class="text-danger">*</span></label>
+                            <input type="date" name="fecha_pago" class="form-control" value="{{ date('Y-m-d') }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="fw-bold small">Método de Pago <span class="text-danger">*</span></label>
+                            <select name="metodo_pago" class="form-select" required>
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Transferencia">Transferencia</option>
+                                <option value="Tarjeta">Tarjeta</option>
+                                <option value="Yape/Plin">Yape/Plin</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label class="fw-bold small">Nro. Operación / Documento</label>
+                        <input type="text" name="documento_pago" class="form-control" placeholder="Ej. OP-12345">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="fw-bold small">Observaciones</label>
+                        <textarea name="observaciones" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary px-4">Procesar Pago</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
     <script>
+        function abrirModalPagoPasivo(id, nombre, saldo) {
+            const form = document.getElementById('formPagoPasivo');
+            form.action = `{{ url('pasivos/pagar') }}/${id}`;
+            document.getElementById('pagoConcepto').textContent = nombre;
+            document.getElementById('pagoSaldoMax').textContent = saldo.toFixed(2);
+            document.getElementById('pagoMontoInput').value = saldo.toFixed(2);
+            document.getElementById('pagoMontoInput').max = saldo;
+            
+            new bootstrap.Modal(document.getElementById('modalPagoPasivo')).show();
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
-            // Script para guardar tipo via AJAX y actualizar el select
+            // Imprimir ticket si existe en sesión
+            @if(session('pago_id'))
+                const url = "{{ route('pasivos.ticket', session('pago_id')) }}";
+                window.open(url, '_blank', 'width=400,height=600');
+            @endif
+
+            // Script para guardar tipo via AJAX
             const formTipo = document.getElementById('formNuevoTipo');
             if (formTipo) {
                 formTipo.addEventListener('submit', function(e) {
                     e.preventDefault();
-
                     const btn = formTipo.querySelector('button[type="submit"]');
                     const originalText = btn.textContent;
                     btn.disabled = true;
                     btn.textContent = 'Guardando...';
 
-                    const formData = new FormData(formTipo);
-
                     fetch("{{ route('pasivos.storeTipo') }}", {
                             method: 'POST',
-                            body: formData,
+                            body: new FormData(formTipo),
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest',
                                 'Accept': 'application/json'
                             }
                         })
-                        .then(response => {
-                            if (!response.ok) throw new Error('Network response was not ok');
-                            return response.json();
-                        })
+                        .then(response => response.json())
                         .then(data => {
                             if (data.success) {
-                                // Agregar al select
                                 const select = document.getElementById('selectTipoPasivo');
                                 if (select) {
-                                    const option = new Option(data.tipo.nombre, data.tipo.id, true,
-                                        true);
+                                    const option = new Option(data.tipo.nombre, data.tipo.id, true, true);
                                     select.add(option);
                                     select.dispatchEvent(new Event('change'));
                                 }
-
-                                // Cerrar modal simulando click en dismiss
-                                const closeBtn = document.querySelector(
-                                    '#modalNuevoTipo [data-bs-dismiss="modal"]');
-                                if (closeBtn) closeBtn.click();
-
+                                bootstrap.Modal.getInstance(document.getElementById('modalNuevoTipo')).hide();
                                 formTipo.reset();
                                 alert('Tipo creado correctamente');
                             }
                         })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            alert('Error al crear tipo. Ver consola para detalles.');
-                        })
+                        .catch(error => alert('Error al crear tipo'))
                         .finally(() => {
                             btn.disabled = false;
                             btn.textContent = originalText;
@@ -276,12 +365,19 @@
                 });
             }
 
+            // Confirmación de conversión
+            document.querySelectorAll('.convert-form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    if (!confirm('¿Estás seguro de pasar este pasivo a APORTE? El monto dejará de ser una deuda y pasará a formar parte del capital de la empresa.')) {
+                        e.preventDefault();
+                    }
+                });
+            });
+
             // Confirmación de eliminación
             document.querySelectorAll('.delete-form').forEach(form => {
                 form.addEventListener('submit', function(e) {
-                    if (!confirm(
-                            '¿Estás seguro de eliminar este pasivo? esta acción afectará al balance general.'
-                        )) {
+                    if (!confirm('¿Estás seguro de eliminar este pasivo? Esta acción afectará al balance general.')) {
                         e.preventDefault();
                     }
                 });

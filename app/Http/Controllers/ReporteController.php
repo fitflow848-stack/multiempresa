@@ -19,6 +19,7 @@ use App\Models\CompraLinea;
 use App\Models\AlmacenIngresoDetalle;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\DynamicReportExport;
 
 class ReporteController extends Controller
 {
@@ -42,33 +43,82 @@ class ReporteController extends Controller
 
     public function generate(Request $request)
     {
-        // Handle search request -> Return HTML partial or JSON
         $reportId = $request->input('report_id');
-
         $report = DB::table('reports')->find($reportId);
 
         if ($report && $report->method && method_exists($this, $report->method)) {
-            // Some methods need specific args or we just pass request
-            // Special handling for legacy methods that needed args from the switch default, 
-            // though most just take $request.
-            // Arqueo caja params:
             if ($report->method === 'reporteArqueoCajaGeneral') {
-                return $this->reporteArqueoCaja($request, false);
-            }
-            if ($report->method === 'reporteArqueoCajaUsuario') {
-                return $this->reporteArqueoCaja($request, true);
-            }
-            // Suscripciones special case handled by a generic method, we can pass ID if needed 
-            // but the method name in DB is 'reporteSuscripcionesPlaceholder' so it will be called.
-            // However, that method expects an $id arg. Let's wrapper or adjust.
-            if ($report->method === 'reporteSuscripcionesPlaceholder') {
-                return $this->reporteSuscripcionesPlaceholder($request, $reportId);
+                $result = $this->reporteArqueoCaja($request, false);
+            } elseif ($report->method === 'reporteArqueoCajaUsuario') {
+                $result = $this->reporteArqueoCaja($request, true);
+            } elseif ($report->method === 'reporteSuscripcionesPlaceholder') {
+                $result = $this->reporteSuscripcionesPlaceholder($request, $reportId);
+            } else {
+                $result = $this->{$report->method}($request);
             }
 
-            return $this->{$report->method}($request);
+            if (is_array($result)) {
+                return view($result['view'], $result['data'])->render();
+            }
+            return $result;
         }
 
-        return response()->json(['html' => '<div class="alert alert-warning">Reporte no implementado o no encontrado</div>']);
+        return '<div class="alert alert-warning">Reporte no implementado o no encontrado</div>';
+    }
+
+    public function export(Request $request)
+    {
+        $reportId = $request->input('report_id');
+        $report = DB::table('reports')->find($reportId);
+        if (!$report)
+            return back()->with('error', 'Reporte no encontrado');
+
+        $result = $this->getReportResult($request, $report);
+        if (!is_array($result))
+            return back()->with('error', 'Este reporte no soporta exportación dinámica');
+
+        $filename = \Illuminate\Support\Str::slug($report->name) . '_' . date('YmdHis') . '.xlsx';
+
+        return Excel::download(
+            new DynamicReportExport($result['view'], $result['data']),
+            $filename
+        );
+    }
+
+    public function pdf(Request $request)
+    {
+        $reportId = $request->input('report_id');
+        $report = DB::table('reports')->find($reportId);
+        if (!$report)
+            return back()->with('error', 'Reporte no encontrado');
+
+        $result = $this->getReportResult($request, $report);
+        if (!is_array($result))
+            return back()->with('error', 'Este reporte no soporta impresión dinámica');
+
+        $data = $result['data'];
+        $data['pdf_mode'] = true;
+        $data['view'] = $result['view'];
+        $data['report_title'] = $report->name;
+
+        $pdf = Pdf::loadView('reportes.pdf_layout', $data)
+            ->setPaper('a4', 'landscape');
+
+        return $pdf->stream($report->name . '.pdf');
+    }
+
+    private function getReportResult(Request $request, $report)
+    {
+        if ($report->method === 'reporteArqueoCajaGeneral') {
+            return $this->reporteArqueoCaja($request, false);
+        }
+        if ($report->method === 'reporteArqueoCajaUsuario') {
+            return $this->reporteArqueoCaja($request, true);
+        }
+        if ($report->method === 'reporteSuscripcionesPlaceholder') {
+            return $this->reporteSuscripcionesPlaceholder($request, $report->id);
+        }
+        return $this->{$report->method}($request);
     }
 
     private function reportePorProducto(Request $request)
@@ -150,7 +200,10 @@ class ReporteController extends Controller
 
         $resultados = $agrupados;
 
-        return view('reportes.partials.por_producto', compact('resultados', 'totales'))->render();
+        return [
+            'view' => 'reportes.partials.por_producto',
+            'data' => compact('resultados', 'totales')
+        ];
     }
 
     private function reporteClientesFrecuentes(Request $request)
@@ -174,7 +227,10 @@ class ReporteController extends Controller
 
         $resultados = $query->with('cliente')->limit(100)->get();
 
-        return view('reportes.partials.clientes_frecuentes', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.clientes_frecuentes',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reporteComprobantes(Request $request)
@@ -194,7 +250,10 @@ class ReporteController extends Controller
         }
 
         $resultados = $query->limit(200)->get();
-        return view('reportes.partials.comprobantes', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.comprobantes',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reporteCostoMayor(Request $request)
@@ -206,7 +265,10 @@ class ReporteController extends Controller
             $query->where('familia_id', $request->input('familia_id'));
 
         $resultados = $query->limit(200)->get();
-        return view('reportes.partials.costo_mayor', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.costo_mayor',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reporteVentasUsuario(Request $request)
@@ -225,7 +287,10 @@ class ReporteController extends Controller
             $query->where('id_usuario', $request->input('vendedor_id'));
 
         $resultados = $query->limit(200)->get();
-        return view('reportes.partials.ventas_usuario', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.ventas_usuario',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reporteDevoluciones(Request $request)
@@ -242,7 +307,10 @@ class ReporteController extends Controller
             $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
 
         $resultados = $query->limit(200)->get();
-        return view('reportes.partials.devoluciones', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.devoluciones',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reportePedidos(Request $request)
@@ -257,7 +325,10 @@ class ReporteController extends Controller
             $query->whereDate('fecha', '<=', $request->input('hasta'));
 
         $resultados = $query->limit(200)->get();
-        return view('reportes.partials.pedidos', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.pedidos',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reportePorClientes(Request $request)
@@ -276,7 +347,10 @@ class ReporteController extends Controller
             $query->where('id_usuario', $request->input('vendedor_id'));
 
         $resultados = $query->limit(200)->get();
-        return view('reportes.partials.por_clientes', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.por_clientes',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reportePorClientesConsolidado(Request $request)
@@ -299,7 +373,10 @@ class ReporteController extends Controller
             $query->where('id_usuario', $request->input('vendedor_id'));
 
         $resultados = $query->with('cliente')->limit(200)->get();
-        return view('reportes.partials.por_clientes_consolidado', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.por_clientes_consolidado',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reportePorCobrar(Request $request)
@@ -316,7 +393,10 @@ class ReporteController extends Controller
             $query->whereDate('fecha_venta', '<=', $request->input('hasta'));
 
         $resultados = $query->limit(200)->get();
-        return view('reportes.partials.por_cobrar', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.por_cobrar',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reportePorCobrarConsolidado(Request $request)
@@ -338,7 +418,10 @@ class ReporteController extends Controller
         }
 
         $resultados = $query->with('cliente')->limit(200)->get();
-        return view('reportes.partials.por_cobrar_consolidado', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.por_cobrar_consolidado',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reportePorServicio(Request $request)
@@ -359,7 +442,10 @@ class ReporteController extends Controller
             });
 
         $resultados = $query->limit(200)->get();
-        return view('reportes.partials.por_servicio', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.por_servicio',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reportePorUsuario(Request $request)
@@ -380,7 +466,10 @@ class ReporteController extends Controller
             $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
 
         $resultados = $query->with('user')->get();
-        return view('reportes.partials.por_usuario', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.por_usuario',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reportePorVendedor(Request $request)
@@ -410,7 +499,10 @@ class ReporteController extends Controller
             ->orderByDesc('total_cantidad');
 
         $resultados = $query->with('producto')->limit(50)->get();
-        return view('reportes.partials.mayor_movimiento', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.mayor_movimiento',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reporteMayorUtilidad(Request $request)
@@ -450,7 +542,10 @@ class ReporteController extends Controller
             ->sortByDesc('utilidad_estimada')
             ->take(50); // Top 50
 
-        return view('reportes.partials.mayor_utilidad', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.mayor_utilidad',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reporteArqueoCaja(Request $request, $porUsuario = false)
@@ -472,7 +567,10 @@ class ReporteController extends Controller
         }
 
         $resultados = $query->limit(100)->get();
-        return view('reportes.partials.arqueo_caja', compact('resultados', 'porUsuario'))->render();
+        return [
+            'view' => 'reportes.partials.arqueo_caja',
+            'data' => compact('resultados', 'porUsuario')
+        ];
     }
 
     private function reportePagosCliente(Request $request)
@@ -489,7 +587,10 @@ class ReporteController extends Controller
             $query->where('user_id', $request->input('vendedor_id'));
 
         $resultados = $query->limit(200)->get();
-        return view('reportes.partials.pagos_cliente', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.pagos_cliente',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reporteSuscripcionesPlaceholder(Request $request, $id)
@@ -505,7 +606,10 @@ class ReporteController extends Controller
 
         $titulo = $titles[$id] ?? 'REPORTE DE SUSCRIPCIONES';
 
-        return view('reportes.partials.suscripciones_placeholder', compact('titulo'))->render();
+        return [
+            'view' => 'reportes.partials.suscripciones_placeholder',
+            'data' => compact('titulo')
+        ];
     }
 
     private function reportePromociones(Request $request)
@@ -519,7 +623,10 @@ class ReporteController extends Controller
             $query->where('familia_id', $request->input('familia_id'));
 
         $resultados = $query->limit(100)->get();
-        return view('reportes.partials.promociones', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.promociones',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reporteCondicionVenta(Request $request)
@@ -539,14 +646,11 @@ class ReporteController extends Controller
             });
         }
 
-        // Opcional: Solo stock > 0?
-        // $query->where('cantidad', '>', 0); // Asumiendo que AlmacenIngresoDetalle guarda el stock remanente o es un log de ingresos?
-        // AlmacenIngresoDetalle suele ser el registro de entrada. El stock actual suele estar en otra tabla o calculado.
-        // Si el usuario pide el precio de 'almacenDetalle', probablemente quiera el listado de ingresos disponibles o precios configurados ahi.
-        // Asumiremos listar los detalles disponibles o recientes.
-
         $resultados = $query->limit(200)->get();
-        return view('reportes.partials.productos_condicion', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.productos_condicion',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reporteRegistroSanitario(Request $request)
@@ -559,14 +663,20 @@ class ReporteController extends Controller
             $query->where('familia_id', $request->input('familia_id'));
 
         $resultados = $query->limit(100)->get();
-        return view('reportes.partials.productos_sanitario', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.productos_sanitario',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reporteClientesCambiadosPlaceholder(Request $request)
     {
         // TODO: Definir lógica "Clientes Cambiados"
         // Posiblemente ventas donde el nombre del cliente en la venta difiere del nombre en la tabla clientes
-        return view('reportes.partials.clientes_cambiados_placeholder')->render();
+        return [
+            'view' => 'reportes.partials.clientes_cambiados_placeholder',
+            'data' => []
+        ];
     }
 
     private function reporteFacturadosPorLote(Request $request)
@@ -589,7 +699,10 @@ class ReporteController extends Controller
             $query->whereDate('ventas.fecha_emision', '<=', $request->input('hasta'));
 
         $resultados = $query->with('producto')->limit(100)->get();
-        return view('reportes.partials.facturados_lote', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.facturados_lote',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reporteCompras(Request $request)
@@ -604,7 +717,10 @@ class ReporteController extends Controller
             $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
 
         $resultados = $query->limit(200)->get();
-        return view('reportes.partials.compras', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.compras',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reporteComprasPorProducto(Request $request)
@@ -625,38 +741,35 @@ class ReporteController extends Controller
             $query->whereDate('compras.fecha_emision', '<=', $request->input('hasta'));
 
         $resultados = $query->with('producto')->limit(100)->get();
-        return view('reportes.partials.compras_producto', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.compras_producto',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reporteBusquedaLoteCompras(Request $request)
     {
-        // Buscar compras por Lote (AlmacenIngresoDetalle)
-        // Se busca el texto en la columna 'lote'
-        // Join con producto e ingreso (compra)
-
         $search = $request->input('busqueda');
-
-        $query = AlmacenIngresoDetalle::with(['producto', 'ingreso']) // Asuming ingreso relation exists
+        $query = AlmacenIngresoDetalle::with(['producto', 'ingreso'])
             ->whereNotNull('lote')
             ->where('lote', '!=', '');
 
         if ($search) {
             $query->where('lote', 'LIKE', '%' . $search . '%');
         } else {
-            // Si no hay búsqueda, limitamos drásticamente o no mostramos nada para no saturar
-            // Mostramos últimos lotes
             $query->orderBy('id', 'desc');
         }
 
         $resultados = $query->limit(50)->get();
-        return view('reportes.partials.busqueda_lote_compras', compact('resultados', 'search'))->render();
+        return [
+            'view' => 'reportes.partials.busqueda_lote_compras',
+            'data' => compact('resultados', 'search')
+        ];
     }
 
     private function reporteBusquedaLoteVentas(Request $request)
     {
-        // Buscar ventas por Lote
         $search = $request->input('busqueda');
-
         $query = VentaDetalle::select(
             'venta_detalles.*',
             'almacen_ingreso_detalle.lote'
@@ -674,29 +787,31 @@ class ReporteController extends Controller
         }
 
         $resultados = $query->limit(50)->get();
-        return view('reportes.partials.busqueda_lote_ventas', compact('resultados', 'search'))->render();
+        return [
+            'view' => 'reportes.partials.busqueda_lote_ventas',
+            'data' => compact('resultados', 'search')
+        ];
     }
 
     private function reporteBusquedaSerieCompras(Request $request)
     {
-        // Placeholder for Serial Number Search in Purchases
-        // As no specific 'serial' column was found in details, we display a message or matches on 'lote' if used as serial.
-        // Or products with attr_numero_serie = 1
-
-        return view('reportes.partials.busqueda_serie_placeholder', ['tipo' => 'COMPRAS'])->render();
+        return [
+            'view' => 'reportes.partials.busqueda_serie_placeholder',
+            'data' => ['tipo' => 'COMPRAS']
+        ];
     }
 
     private function reporteBusquedaSerieVentas(Request $request)
     {
-        // Placeholder for Serial Number Search in Sales
-        return view('reportes.partials.busqueda_serie_placeholder', ['tipo' => 'VENTAS'])->render();
+        return [
+            'view' => 'reportes.partials.busqueda_serie_placeholder',
+            'data' => ['tipo' => 'VENTAS']
+        ];
     }
 
 
     private function reporteCapitalActualCompra(Request $request)
     {
-        // Capital invertido en stock actual (cantidad > 0)
-        // Valorizado al costo de compra
         $query = AlmacenIngresoDetalle::where('cantidad', '>', 0)
             ->join('almacen_ingresos', 'almacen_ingreso_detalle.ingreso_id', '=', 'almacen_ingresos.id')
             ->select(
@@ -705,7 +820,6 @@ class ReporteController extends Controller
 
         $total = $query->first()->total_capital ?? 0;
 
-        // Detalle por producto con más información
         $detalles = AlmacenIngresoDetalle::where('almacen_ingreso_detalle.cantidad', '>', 0)
             ->with(['producto.marca', 'producto.familia', 'producto.laboratorio'])
             ->select(
@@ -719,12 +833,14 @@ class ReporteController extends Controller
             ->limit(200)
             ->get();
 
-        return view('reportes.partials.capital_compra', compact('total', 'detalles'))->render();
+        return [
+            'view' => 'reportes.partials.capital_compra',
+            'data' => compact('total', 'detalles')
+        ];
     }
 
     private function reporteCapitalActualPromedio(Request $request)
     {
-        // Usar costo como proxy si no hay promedio explicito
         $query = AlmacenIngresoDetalle::where('cantidad', '>', 0)
             ->select(
                 DB::raw('SUM(cantidad * costo) as total_capital')
@@ -740,30 +856,36 @@ class ReporteController extends Controller
             ->limit(100)
             ->get();
 
-        return view('reportes.partials.capital_promedio', compact('total', 'detalles'))->render();
+        return [
+            'view' => 'reportes.partials.capital_promedio',
+            'data' => compact('total', 'detalles')
+        ];
     }
 
     private function reporteProductosCostoMayorPrecio(Request $request)
     {
-        // Productos donde Costo > PVP
         $resultados = AlmacenIngresoDetalle::where('cantidad', '>', 0)
             ->whereColumn('costo', '>', 'pvp')
             ->with(['producto', 'ingreso'])
             ->limit(100)
             ->get();
 
-        return view('reportes.partials.productos_costo_mayor', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.productos_costo_mayor',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reporteSaldosPorPedido(Request $request)
     {
-        // Placeholder
-        return view('reportes.partials.saldos_pedido_placeholder')->render();
+        return [
+            'view' => 'reportes.partials.saldos_pedido_placeholder',
+            'data' => []
+        ];
     }
 
     private function reporteStockConsolidado(Request $request)
     {
-        // Stock total por producto
         $query = AlmacenIngresoDetalle::where('cantidad', '>', 0)
             ->select('producto_id', DB::raw('SUM(cantidad) as stock_total'))
             ->groupBy('producto_id')
@@ -771,24 +893,28 @@ class ReporteController extends Controller
             ->with('producto');
 
         $resultados = $query->limit(200)->get();
-        return view('reportes.partials.stock_consolidado', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.stock_consolidado',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reporteStockPorLocal(Request $request)
     {
-        // Stock grouped by Local placeholder (default)
         $resultados = AlmacenIngresoDetalle::where('cantidad', '>', 0)
             ->select('producto_id', DB::raw('SUM(cantidad) as stock_total'))
             ->groupBy('producto_id')
             ->with('producto')
             ->limit(100)->get();
 
-        return view('reportes.partials.stock_local', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.stock_local',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reporteStockPorReferencia(Request $request)
     {
-        // Stock detail by Reference (Lote)
         $resultados = AlmacenIngresoDetalle::where('cantidad', '>', 0)
             ->with('producto')
             ->orderBy('producto_id')
@@ -796,12 +922,17 @@ class ReporteController extends Controller
             ->limit(200)
             ->get();
 
-        return view('reportes.partials.stock_referencia', compact('resultados'))->render();
+        return [
+            'view' => 'reportes.partials.stock_referencia',
+            'data' => compact('resultados')
+        ];
     }
 
     private function reporteTraslados(Request $request)
     {
-        // Placeholder
-        return view('reportes.partials.traslados_placeholder')->render();
+        return [
+            'view' => 'reportes.partials.traslados_placeholder',
+            'data' => []
+        ];
     }
 }

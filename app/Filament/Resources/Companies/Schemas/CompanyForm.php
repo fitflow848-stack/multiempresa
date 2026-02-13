@@ -10,6 +10,8 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Tabs;
+use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
 use Illuminate\Support\Facades\DB;
@@ -57,7 +59,7 @@ class CompanyForm
                                     ->label('Tipo Documento')
                                     ->options([
                                         'DNI' => 'DNI',
-                                        'CE'  => 'CE',
+                                        'CE' => 'CE',
                                     ]),
                                 TextInput::make('rep_document_number')->label('N° Documento'),
                                 TextInput::make('rep_cargo')->label('Cargo'),
@@ -131,48 +133,111 @@ class CompanyForm
                             ->relationship('sucursales')
                             ->label('Sucursales')
                             ->schema([
-                                TextInput::make('nombre')->required()->label('Nombre de Sucursal'),
-                                TextInput::make('direccion')->label('Dirección'),
-                                TextInput::make('telefono')->tel()->label('Teléfono'),
+                                Tabs::make('sucursal_tabs')
+                                    ->tabs([
+                                        Tab::make('Datos Básicos')
+                                            ->icon('heroicon-o-building-office')
+                                            ->schema([
+                                                TextInput::make('nombre')
+                                                    ->required()
+                                                    ->label('Nombre de Sucursal'),
+                                                TextInput::make('direccion')
+                                                    ->label('Dirección'),
+                                                TextInput::make('telefono')
+                                                    ->tel()
+                                                    ->label('Teléfono'),
+                                                FileUpload::make('logo')
+                                                    ->label('Logo de la Sucursal')
+                                                    ->image()
+                                                    ->directory('branch-logos')
+                                                    ->disk('public')
+                                                    ->visibility('public')
+                                                    ->acceptedFileTypes(['image/png', 'image/jpg', 'image/jpeg'])
+                                                    ->maxSize(2048)
+                                                    ->imageResizeMode('contain')
+                                                    ->helperText('Si no se sube, usará el logo de la empresa'),
+                                                Toggle::make('is_active')
+                                                    ->label('Sucursal Activa')
+                                                    ->default(true),
+                                            ])
+                                            ->columns(2),
 
-                                \Filament\Forms\Components\Repeater::make('documents')
-                                    ->relationship('documents')
-                                    ->label('Series de Documentos')
-                                    ->schema([
-                                        Select::make('sunat_document_id')
-                                            ->label('Tipo de Documento')
-                                            ->options(fn() => \Illuminate\Support\Facades\DB::table('documentos_sunat')->pluck('nombre', 'id_tido'))
-                                            ->required()
-                                            ->reactive()
-                                            ->afterStateUpdated(function ($state, callable $set) {
-                                                // Asignar serie por defecto según el tipo
-                                                $defaultSeries = match ($state) {
-                                                    '1' => 'B001', // Boleta
-                                                    '2' => 'F001', // Factura
-                                                    '3' => 'FC01', // Nota Credito
-                                                    '4' => 'FD01', // Nota Debito
-                                                    '11' => 'T001', // Guia Remision
-                                                    default => null,
-                                                };
-                                                if ($defaultSeries) {
-                                                    $set('series', $defaultSeries);
-                                                }
-                                                $set('number', 1);
-                                            }),
-                                        TextInput::make('series')
-                                            ->label('Serie')
-                                            ->required(),
-                                        TextInput::make('number')
-                                            ->label('Correlativo Inicial')
-                                            ->numeric()
-                                            ->default(1)
-                                            ->required(),
+                                        Tab::make('Cajas Registradoras')
+                                            ->icon('heroicon-o-calculator')
+                                            ->badge(fn($get) => count($get('cajas') ?? []))
+                                            ->schema([
+                                                Repeater::make('cajas')
+                                                    ->relationship('cajas')
+                                                    ->label('')
+                                                    ->schema([
+                                                        TextInput::make('nombre')
+                                                            ->label('Nombre de la Caja')
+                                                            ->required()
+                                                            ->maxLength(100)
+                                                            ->placeholder('Ej: Caja 1, Caja Principal'),
+                                                        TextInput::make('descripcion')
+                                                            ->label('Descripción')
+                                                            ->maxLength(255)
+                                                            ->placeholder('Descripción opcional'),
+                                                        Toggle::make('is_active')
+                                                            ->label('Activa')
+                                                            ->default(true)
+                                                            ->inline(false),
+                                                    ])
+                                                    ->columns(3)
+                                                    ->collapsible()
+                                                    ->defaultItems(1)
+                                                    ->addActionLabel('Agregar Caja')
+                                                    ->itemLabel(fn(array $state): ?string => $state['nombre'] ?? 'Nueva Caja'),
+                                            ]),
+
+                                        Tab::make('Series de Documentos')
+                                            ->icon('heroicon-o-document-text')
+                                            ->badge(fn($get) => count($get('documents') ?? []))
+                                            ->schema([
+                                                Repeater::make('documents')
+                                                    ->relationship('documents')
+                                                    ->label('')
+                                                    ->schema([
+                                                        Select::make('sunat_document_id')
+                                                            ->label('Tipo de Documento')
+                                                            ->options(fn() => DB::table('documentos_sunat')->pluck('nombre', 'id_tido'))
+                                                            ->required()
+                                                            ->reactive()
+                                                            ->afterStateUpdated(function ($state, callable $set) {
+                                                                $defaultSeries = match ($state) {
+                                                                    '1' => 'B001',
+                                                                    '2' => 'F001',
+                                                                    '3' => 'FC01',
+                                                                    '4' => 'FD01',
+                                                                    '11' => 'T001',
+                                                                    default => null,
+                                                                };
+                                                                if ($defaultSeries) {
+                                                                    $set('series', $defaultSeries);
+                                                                }
+                                                                $set('number', 1);
+                                                            }),
+                                                        TextInput::make('series')
+                                                            ->label('Serie')
+                                                            ->required(),
+                                                        TextInput::make('number')
+                                                            ->label('Correlativo Inicial')
+                                                            ->numeric()
+                                                            ->default(1)
+                                                            ->required(),
+                                                    ])
+                                                    ->columns(3)
+                                                    ->collapsible()
+                                                    ->addActionLabel('Agregar Serie')
+                                                    ->itemLabel(fn(array $state): ?string => $state['series'] ?? 'Nueva Serie'),
+                                            ]),
                                     ])
-                                    ->columns(3)
-                                    ->itemLabel(fn(array $state): ?string => $state['series'] ?? null),
+                                    ->columnSpanFull(),
                             ])
                             ->collapsible()
-                            ->itemLabel(fn(array $state): ?string => $state['nombre'] ?? null),
+                            ->addActionLabel('Agregar Sucursal')
+                            ->itemLabel(fn(array $state): ?string => $state['nombre'] ?? 'Nueva Sucursal'),
                     ]),
             ])
                 ->columnSpanFull()

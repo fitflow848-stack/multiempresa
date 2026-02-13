@@ -10,19 +10,57 @@ use Illuminate\Support\Facades\Auth;
 
 class CierreCajaController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $cierres = CierreCaja::latest()->paginate(20);
+        $user = auth()->user();
+        $selectedCajaId = session('selected_caja_id');
 
-        // Prefer explicit estado to detect open caja
-        $openCaja = CierreCaja::where('user_id', auth()->id())->where('fecha_cierre', null)->first();
+        $query = CierreCaja::with(['user', 'caja'])->latest();
+
+        // Filtro por empresa
+        $query->where('id_empresa', $user->company_id);
+
+        // Filtro por la caja seleccionada en la sesión (Separación de contextos)
+        if ($selectedCajaId) {
+            $query->where('caja_id', $selectedCajaId);
+        }
+
+        // Si no es admin/supervisor, solo ve sus propios cierres
+        if (!$user->hasAnyRole(['super_admin', 'admin_empresa', 'supervisor'])) {
+            $query->where('user_id', $user->id);
+        }
+
+        // Aplicar filtros
+        if ($request->filled('user_id') && $user->hasAnyRole(['super_admin', 'admin_empresa', 'supervisor'])) {
+            $query->where('user_id', $request->user_id);
+        }
+        if ($request->filled('fecha_desde')) {
+            $query->whereDate('created_at', '>=', $request->fecha_desde);
+        }
+        if ($request->filled('fecha_hasta')) {
+            $query->whereDate('created_at', '<=', $request->fecha_hasta);
+        }
+
+        $cierres = $query->paginate(20);
+
+        $openCaja = CierreCaja::where('user_id', $user->id)
+            ->where('caja_id', $selectedCajaId)
+            ->whereNull('fecha_cierre')
+            ->first();
+
         return view('cierres.index', compact('cierres', 'openCaja'));
     }
 
     public function create()
     {
-        // Obtener el último cierre del usuario actual que esté completado
-        $ultimoCierre = CierreCaja::where('user_id', auth()->id())
+        $selectedCajaId = session('selected_caja_id');
+
+        if (!$selectedCajaId) {
+            return redirect()->route('cierre-caja.index')->with('error', 'Debe seleccionar una caja activa en el menú superior antes de abrir una sesión.');
+        }
+
+        // Obtener el último cierre de la caja seleccionada
+        $ultimoCierre = CierreCaja::where('caja_id', $selectedCajaId)
             ->whereNotNull('fecha_cierre')
             ->orderBy('fecha_cierre', 'desc')
             ->first();
@@ -48,6 +86,11 @@ class CierreCajaController extends Controller
 
         $data['user_id'] = auth()->id();
         $data['id_empresa'] = auth()->user()->company_id;
+        $data['caja_id'] = session('selected_caja_id');
+
+        if (!$data['caja_id']) {
+            return back()->with('error', 'Error: No hay una caja activa seleccionada.');
+        }
 
         CierreCaja::create($data);
 
@@ -115,21 +158,25 @@ class CierreCajaController extends Controller
                 switch ($mov->tipo_movimiento) {
                     case 'ingreso':
                         $ingresosTotal += $importe;
-                        if ($esEfectivo) $ingresosEfectivo += $importe;
+                        if ($esEfectivo)
+                            $ingresosEfectivo += $importe;
                         break;
                     case 'gasto':
                         $egresosTotal += $importe;
-                        if ($esEfectivo) $egresosEfectivo += $importe;
+                        if ($esEfectivo)
+                            $egresosEfectivo += $importe;
                         break;
                     case 'aportacion':
                     case 'aporte':
                         $aportacionesTotal += $importe;
-                        if ($esEfectivo) $aportacionesEfectivo += $importe;
+                        if ($esEfectivo)
+                            $aportacionesEfectivo += $importe;
                         break;
                     case 'sustraccion':
                     case 'retiro':
                         $sustraccionesTotal += $importe;
-                        if ($esEfectivo) $sustraccionesEfectivo += $importe;
+                        if ($esEfectivo)
+                            $sustraccionesEfectivo += $importe;
                         break;
                 }
             }
@@ -179,7 +226,12 @@ class CierreCajaController extends Controller
     public function getOpenCaja(Request $request)
     {
         $user = Auth::user();
-        $openCaja = CierreCaja::where('user_id', $user->id)->whereNull('fecha_cierre')->first();
+        $selectedCajaId = session('selected_caja_id');
+
+        $openCaja = CierreCaja::where('user_id', $user->id)
+            ->where('caja_id', $selectedCajaId)
+            ->whereNull('fecha_cierre')
+            ->first();
 
         if ($openCaja) {
             // Obtener ventas asociadas a esta caja (si la columna existe)
@@ -194,13 +246,16 @@ class CierreCajaController extends Controller
                 $ventas = [];
             }
 
-            return response()->json(['open' => true, 'caja' => [
-                'id' => $openCaja->id,
-                'ingresos' => $openCaja->ingresos ?? 0,
-                'egresos' => $openCaja->egresos ?? 0,
-                'observaciones' => $openCaja->observaciones ?? '',
-                'ventas' => $ventas
-            ]]);
+            return response()->json([
+                'open' => true,
+                'caja' => [
+                    'id' => $openCaja->id,
+                    'ingresos' => $openCaja->ingresos ?? 0,
+                    'egresos' => $openCaja->egresos ?? 0,
+                    'observaciones' => $openCaja->observaciones ?? '',
+                    'ventas' => $ventas
+                ]
+            ]);
         }
 
         return response()->json(['open' => false, 'caja' => null]);

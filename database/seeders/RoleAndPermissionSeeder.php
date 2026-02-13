@@ -15,7 +15,11 @@ class RoleAndPermissionSeeder extends Seeder
      */
     public function run(): void
     {
-        // Crear permisos en español
+        // Resetear cache de roles/permisos
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        // ─── Crear permisos ─────────────────────────────────────
+
         $permissions = [
             // Administración
             'usuarios.ver',
@@ -78,10 +82,14 @@ class RoleAndPermissionSeeder extends Seeder
             'deudas.reporte',
 
             // Caja y Operaciones
-            'caja.ver',
+            'caja.ver',         // Operaciones de POS
             'caja.abrir_cerrar',
             'caja.ajustar',
             'caja.arquear',
+            'cajas.ver',        // Gestión de recurso Caja
+            'cajas.crear',
+            'cajas.editar',
+            'cajas.eliminar',
             'operaciones_caja.ver',
             'operaciones_caja.ver_todo',
             'operaciones_caja.crear',
@@ -117,62 +125,108 @@ class RoleAndPermissionSeeder extends Seeder
         ];
 
         foreach ($permissions as $permission) {
-            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+            Permission::firstOrCreate(['name' => $permission]);
         }
 
-        // Crear roles
-        $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
-        $supervisorRole = Role::firstOrCreate(['name' => 'supervisor', 'guard_name' => 'web']);
-        $vendedorRole = Role::firstOrCreate(['name' => 'vendedor', 'guard_name' => 'web']);
-        $cajeroRole = Role::firstOrCreate(['name' => 'cajero', 'guard_name' => 'web']);
+        // ─── Crear roles ────────────────────────────────────────
 
-        // Asignar permisos a roles
-        // Admin tiene todos los permisos
-        $adminRole->syncPermissions(Permission::all());
+        // Super Admin: administrador general del sistema (crea empresas, ve todo)
+        $superAdminRole = Role::firstOrCreate(['name' => 'super_admin']);
 
-        // Supervisor tiene la mayoría de permisos excepto algunos críticos
+        // Admin Empresa: administrador de una empresa específica
+        $adminEmpresaRole = Role::firstOrCreate(['name' => 'admin_empresa']);
+
+        // Roles operativos (ya existentes)
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
+        $vendedorRole = Role::firstOrCreate(['name' => 'vendedor']);
+        $cajeroRole = Role::firstOrCreate(['name' => 'cajero']);
+
+        // ─── Asignar permisos a roles ───────────────────────────
+
+        // Super Admin: TODOS los permisos
+        $allPermissions = Permission::all();
+        $superAdminRole->syncPermissions($allPermissions);
+
+        // Admin Empresa: gestiona su empresa completa PERO con restricciones de infraestructura (solo ver sucursales/cajas)
+        $adminEmpresaRole->syncPermissions($allPermissions->filter(function ($p) {
+            $restricted = [
+                'empresas.crear',
+                'empresas.editar',
+                'empresas.eliminar',
+                'sucursales.crear',
+                'sucursales.editar',
+                'sucursales.eliminar',
+                'cajas.crear',
+                'cajas.editar',
+                'cajas.eliminar',
+            ];
+            return !in_array($p->name, $restricted);
+        }));
+
+        // Admin ( legacy )
+        $adminRole->syncPermissions($allPermissions);
+
+        // Supervisor: supervisa operaciones en su sucursal
         $supervisorRole->syncPermissions([
             'usuarios.ver',
             'usuarios.crear',
             'usuarios.editar',
-            'empresas.ver',
             'sucursales.ver',
             'ventas.ver',
             'ventas.crear',
             'ventas.editar',
-            'productos.ver',
-            'productos.crear',
-            'productos.editar',
-            'reportes.ver',
-            'reportes.exportar',
+            'ventas.anular',
+            'pos.ver',
+            'comprobantes.ver',
+            'comprobantes.imprimir',
             'inventario.ver',
+            'productos.ver',
             'clientes.ver',
-            'proveedores.ver',
+            'clientes.crear',
+            'caja.ver',
+            'caja.abrir_cerrar',
+            'caja.arquear',
+            'operaciones_caja.ver',
+            'reportes.ver',
         ]);
 
-        // Vendedor puede ver y crear ventas
+        // Vendedor: puede ver y crear ventas
         $vendedorRole->syncPermissions([
             'ventas.ver',
             'ventas.crear',
             'ventas.editar',
-            'productos.ver',
             'pos.ver',
+            'comprobantes.ver',
+            'comprobantes.imprimir',
+            'productos.ver',
+            'clientes.ver',
+            'clientes.crear',
+            'caja.ver',
         ]);
 
-        // Cajero solo puede procesar ventas y ver caja
+        // Cajero: solo puede procesar ventas y manejar caja
         $cajeroRole->syncPermissions([
             'ventas.ver',
             'ventas.crear',
-            'productos.ver',
             'pos.ver',
+            'comprobantes.ver',
+            'comprobantes.imprimir',
+            'productos.ver',
             'caja.ver',
             'caja.abrir_cerrar',
+            'caja.arquear',
+            'operaciones_caja.ver',
+            'operaciones_caja.crear',
         ]);
 
-        // Asignar el rol de admin al primer usuario creado y asignar empresa
+        // ─── Asignar rol al primer usuario ──────────────────────
+
         $adminUser = User::first();
         if ($adminUser) {
-            $adminUser->assignRole('admin');
+            if (!$adminUser->hasAnyRole(['super_admin', 'admin', 'admin_empresa'])) {
+                $adminUser->assignRole('super_admin'); // Le damos super_admin por ser el primero
+            }
 
             // Si no tiene company_id, asignar la primera empresa
             if (!$adminUser->company_id) {

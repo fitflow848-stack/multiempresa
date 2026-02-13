@@ -190,13 +190,13 @@
                                 <table class="table align-middle mb-0">
                                     <tbody>
                                         <tr>
-                                            <td class="ps-4">Capital Social</td>
-                                            <td class="pe-4 text-end text-muted">S/ 0.00</td>
+                                            <td class="ps-4">Capital Social / Aportes</td>
+                                            <td class="pe-4 text-end text-dark">S/ {{ number_format($total_aportes, 2) }}</td>
                                         </tr>
                                         <tr>
-                                            <td class="ps-4">Resultados Acumulados</td>
+                                            <td class="ps-4">Utilidad / Pérdida (Calculada)</td>
                                             <td class="pe-4 text-end fw-bold text-dark">S/
-                                                {{ number_format($patrimonio_calculado, 2) }}</td>
+                                                {{ number_format($patrimonio_calculado - $total_aportes, 2) }}</td>
                                         </tr>
                                     </tbody>
                                     <tfoot class="bg-info bg-opacity-10">

@@ -5,9 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+use App\Traits\BelongsToCompany;
+
 class Cliente extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToCompany;
 
     protected $fillable = [
         'company_id',
@@ -54,7 +56,7 @@ class Cliente extends Model
                 ->whereIn('estado', ['pendiente', 'parcial'])
                 ->sum('monto_deuda');
         }
-        
+
         // De lo contrario, hacer la consulta directa
         return $this->deudas()->whereIn('estado', ['pendiente', 'parcial'])->sum('monto_deuda') ?: 0;
     }
@@ -73,7 +75,7 @@ class Cliente extends Model
     {
         return $query->where(function ($q) use ($termino) {
             $q->where('nombre', 'like', "%{$termino}%")
-              ->orWhere('numero_documento', 'like', "%{$termino}%");
+                ->orWhere('numero_documento', 'like', "%{$termino}%");
         });
     }
 }

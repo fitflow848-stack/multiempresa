@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Roles\Schemas;
 
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Schemas\Components\Section;
 use Spatie\Permission\Models\Permission;
 
@@ -32,15 +33,14 @@ class RoleForm
 
             Section::make('Permisos')
                 ->schema([
-                    Select::make('permissions')
-                        ->label('Permisos Asignados')
-                        ->multiple()
+                    CheckboxList::make('permissions')
+                        ->label('Accesos Disponibles')
                         ->relationship('permissions', 'name')
-                        ->options(Permission::all()->pluck('name', 'id')->toArray())
                         ->searchable()
-                        ->preload()
+                        ->bulkToggleable()
+                        ->columns(3)
+                        ->gridDirection('vertical')
                         ->helperText('Seleccione los permisos que tendrá este rol')
-                        ->native(false),
                 ]),
         ];
     }

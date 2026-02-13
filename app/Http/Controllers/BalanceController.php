@@ -76,9 +76,11 @@ class BalanceController extends Controller
             ->sum('monto_deuda');
 
         // ACTIVOS CORRIENTES (Desde el nuevo módulo: Bancos, CxC Extras, Anticipos, Otros)
-        $tiposActivosCorrientes = \App\Models\TipoActivoCorriente::withSum(['activos' => function ($q) use ($fecha) {
-            $q->whereDate('fecha_registro', '<=', $fecha);
-        }], 'monto')->get();
+        $tiposActivosCorrientes = \App\Models\TipoActivoCorriente::withSum([
+            'activos' => function ($q) use ($fecha) {
+                $q->whereDate('fecha_registro', '<=', $fecha);
+            }
+        ], 'monto')->get();
 
         // Integrar CxC Automático al tipo correspondiente
         $tipoCxC = $tiposActivosCorrientes->first(function ($item) {
@@ -100,9 +102,11 @@ class BalanceController extends Controller
         $total_activo_corriente = $caja + $inventario + $total_manual_y_cxc;
 
         // 2. ACTIVO NO CORRIENTE
-        $tiposActivosNoCorrientes = \App\Models\TipoActivo::withSum(['activos' => function ($q) use ($fecha) {
-            $q->whereDate('fecha_adquisicion', '<=', $fecha);
-        }], 'monto')->get();
+        $tiposActivosNoCorrientes = \App\Models\TipoActivo::withSum([
+            'activos' => function ($q) use ($fecha) {
+                $q->whereDate('fecha_adquisicion', '<=', $fecha);
+            }
+        ], 'monto')->get();
 
         $total_activo_no_corriente = $tiposActivosNoCorrientes->sum('activos_sum_monto');
 
@@ -122,10 +126,21 @@ class BalanceController extends Controller
             $compras_credito_auto = 0;
         }
 
-        // Obtener Pasivos Manuales desde el nuevo módulo
-        $tiposPasivosCorrientes = \App\Models\TipoPasivo::withSum(['pasivos' => function ($q) use ($fecha) {
-            $q->whereDate('fecha_registro', '<=', $fecha);
-        }], 'monto')->get();
+        // Obtener Pasivos Manuales
+        $tiposPasivosCorrientes = \App\Models\TipoPasivo::withSum([
+            'pasivos' => function ($q) use ($fecha) {
+                $q->whereDate('fecha_registro', '<=', $fecha);
+            }
+        ], 'monto')->withSum([
+                    'pasivos' => function ($q) use ($fecha) {
+                        $q->whereDate('fecha_registro', '<=', $fecha);
+                    }
+                ], 'monto_pagado')->get();
+
+        // Calcular el neto de cada tipo
+        foreach ($tiposPasivosCorrientes as $tipo) {
+            $tipo->pasivos_sum_monto = ($tipo->pasivos_sum_monto ?? 0) - ($tipo->pasivos_sum_monto_pagado ?? 0);
+        }
 
         // Integrar el cálculo automático a la categoría correspondiente (Compras a crédito)
         $tipoCC = $tiposPasivosCorrientes->first(function ($item) {
@@ -139,6 +154,20 @@ class BalanceController extends Controller
             $newType->nombre = 'Compras a crédito (Sistema)';
             $newType->pasivos_sum_monto = $compras_credito_auto;
             $tiposPasivosCorrientes->push($newType);
+        }
+
+        // Separar Aportes de Pasivos para el Balance
+        $tipoAporteObj = $tiposPasivosCorrientes->first(function ($item) {
+            return strtolower($item->nombre) === 'aporte';
+        });
+
+        $total_aportes = 0;
+        if ($tipoAporteObj) {
+            $total_aportes = $tipoAporteObj->pasivos_sum_monto ?? 0;
+            // Quitamos Aporte de la lista de Pasivos para que no sume doble y no aparezca en Pasivos
+            $tiposPasivosCorrientes = $tiposPasivosCorrientes->reject(function ($item) {
+                return strtolower($item->nombre) === 'aporte';
+            });
         }
 
         $total_pasivo_corriente = $tiposPasivosCorrientes->sum('pasivos_sum_monto');
@@ -165,6 +194,7 @@ class BalanceController extends Controller
             'otros_pasivos_no_corrientes' => $otros_pasivos_no_corrientes,
             'total_pasivo_no_corriente' => $total_pasivo_no_corriente,
             'total_pasivo' => $total_pasivo,
+            'total_aportes' => $total_aportes,
             'patrimonio_calculado' => $patrimonio_calculado
         ];
     }

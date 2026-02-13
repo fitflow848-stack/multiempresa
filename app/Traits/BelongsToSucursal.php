@@ -1,0 +1,76 @@
+<?php
+
+namespace App\Traits;
+
+use Illuminate\Database\Eloquent\Builder;
+
+/**
+ * Trait BelongsToSucursal
+ *
+ * Aplica un Global Scope para filtrar automáticamente los registros
+ * por la sucursal del usuario autenticado.
+ *
+ * Solo aplica a roles operativos (vendedor, cajero, supervisor).
+ * Los roles super_admin y admin_empresa ven todas las sucursales de su empresa.
+ *
+ * Requisito: El modelo debe tener una columna `sucursal_id` o `sucursal`.
+ *
+ * Uso:
+ *   use App\Traits\BelongsToSucursal;
+ *   class Venta extends Model { use BelongsToSucursal; }
+ */
+trait BelongsToSucursal
+{
+    /**
+     * Nombre de la columna que referencia a la sucursal.
+     * Sobreescribir en el modelo si usa otro nombre.
+     */
+    public function getSucursalForeignKey(): string
+    {
+        return property_exists($this, 'sucursalForeignKey')
+            ? $this->sucursalForeignKey
+            : 'sucursal_id';
+    }
+
+    protected static function bootBelongsToSucursal(): void
+    {
+        // Global Scope: filtrar por sucursal del usuario logueado
+        static::addGlobalScope('sucursal', function (Builder $query) {
+            $user = auth()->user();
+
+            if (!$user) {
+                return;
+            }
+
+            // super_admin y admin_empresa ven todas las sucursales
+            if ($user->hasAnyRole(['super_admin', 'admin_empresa'])) {
+                return;
+            }
+
+            // Roles operativos: filtrar por su sucursal
+            if ($user->branch_id) {
+                $instance = new static;
+                $column = $instance->getSucursalForeignKey();
+                $query->where($query->getModel()->getTable() . '.' . $column, $user->branch_id);
+            }
+        });
+
+        // Auto-asignar sucursal al crear
+        static::creating(function ($model) {
+            if (auth()->check()) {
+                $column = $model->getSucursalForeignKey();
+                if (empty($model->{$column}) && auth()->user()->branch_id) {
+                    $model->{$column} = auth()->user()->branch_id;
+                }
+            }
+        });
+    }
+
+    /**
+     * Scope para filtrar manualmente por sucursal
+     */
+    public function scopeDeSucursal(Builder $query, int $sucursalId): Builder
+    {
+        return $query->where($this->getSucursalForeignKey(), $sucursalId);
+    }
+}

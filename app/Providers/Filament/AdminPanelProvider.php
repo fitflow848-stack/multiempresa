@@ -28,7 +28,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            ->brandName('GenAck - Sistema de Ventas')
+            ->brandName('WOLVIX - Sistema de Ventas')
             ->favicon(asset('favicon.ico'))
             ->colors([
                 'primary' => Color::Blue,
@@ -40,8 +40,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
-                AccountWidget::class,
-                FilamentInfoWidget::class,
+                // Widgets personalizados se cargan automáticamente vía discoverWidgets
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -56,6 +55,8 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+                \App\Http\Middleware\EnsureCompanyScope::class,
+            ])
+            ->authGuard('admin');
     }
 }

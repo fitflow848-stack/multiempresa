@@ -16,4 +16,9 @@ class EditRole extends EditRecord
             DeleteAction::make(),
         ];
     }
+
+    public function getMaxContentWidth(): string
+    {
+        return 'full';
+    }
 }

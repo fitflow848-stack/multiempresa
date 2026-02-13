@@ -68,29 +68,44 @@ class UserForm
                         ->preload()
                         ->native(false)
                         ->reactive()
-                        ->afterStateUpdated(fn(callable $set) => $set('branch_id', null)),
+                        ->required()
+                        ->hidden(fn() => !auth()->user()->hasRole('super_admin'))
+                        ->default(fn() => auth()->user()->company_id)
+                        ->afterStateUpdated(function (callable $set) {
+                            $set('branch_id', null);
+                            $set('cajas', []);
+                        }),
 
                     Select::make('branch_id')
                         ->label('Sucursal')
                         ->relationship(
                             'branch',
                             'nombre',
-                            fn($query, $get) =>
-                            $query->where('company_id', $get('company_id'))
+                            function ($query, $get) {
+                                $companyId = $get('company_id') ?? auth()->user()->company_id;
+                                if ($companyId) {
+                                    $query->where('company_id', $companyId);
+                                }
+                                return $query;
+                            }
                         )
                         ->searchable()
                         ->preload()
                         ->native(false)
-                        ->required() // Optional, remove if user can be without branch
-                        ->placeholder('Seleccione una empresa primero')
-                        ->hidden(fn($get) => ! $get('company_id')),
+                        ->required()
+                        ->placeholder(fn($get) => $get('company_id') ? 'Seleccione una sucursal' : 'Seleccione una empresa primero')
+                        ->reactive()
+                        ->afterStateUpdated(fn(callable $set) => $set('cajas', [])),
 
                     Select::make('roles')
                         ->label('Roles')
-                        ->relationship('roles', 'name')
+                        ->relationship(
+                            'roles',
+                            'name',
+                            fn($query) => auth()->user()->hasRole('super_admin') ? $query : $query->where('name', '!=', 'super_admin')
+                        )
                         ->multiple()
                         ->preload()
-                        ->options(Role::all()->pluck('name', 'id'))
                         ->native(false),
 
                     Toggle::make('is_active')
@@ -99,6 +114,27 @@ class UserForm
                         ->helperText('Determina si el usuario puede acceder al sistema'),
                 ])
                 ->columns(2),
+
+            Section::make('Asignación de Cajas')
+                ->schema([
+                    Select::make('cajas')
+                        ->label('Cajas Asignadas')
+                        ->relationship(
+                            'cajas',
+                            'nombre',
+                            fn($query, $get) =>
+                            $query->where('sucursal_id', $get('branch_id'))
+                                ->where('is_active', true)
+                        )
+                        ->multiple()
+                        ->searchable()
+                        ->preload()
+                        ->native(false)
+                        ->helperText('Seleccione las cajas en las que este usuario puede operar. Solo se muestran cajas activas de la sucursal seleccionada.')
+                        ->placeholder('Seleccione una sucursal primero'),
+                ])
+                ->hidden(fn($get) => !$get('branch_id'))
+                ->description('Las cajas disponibles dependen de la sucursal asignada al usuario.'),
         ];
     }
 }

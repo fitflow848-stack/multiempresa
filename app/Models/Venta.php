@@ -5,11 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+use App\Traits\BelongsToCompany;
+
 class Venta extends Model
 {
-    use HasFactory;
+    use HasFactory, BelongsToCompany;
 
     protected $primaryKey = 'id_venta';
+
+    protected $companyForeignKey = 'id_empresa';
 
     protected $table = 'ventas';
 

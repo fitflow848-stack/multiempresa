@@ -14,6 +14,7 @@ class CierreCaja extends Model
 
     protected $fillable = [
         'user_id',
+        'caja_id',
         'id_empresa',
         'fecha_cierre',
         'monto_apertura', // Saldo Inicial
@@ -35,5 +36,13 @@ class CierreCaja extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Relación con la caja
+     */
+    public function caja()
+    {
+        return $this->belongsTo(Caja::class);
     }
 }

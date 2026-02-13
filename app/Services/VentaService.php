@@ -72,10 +72,31 @@ class VentaService
 
         DB::beginTransaction();
         try {
-            // Obtener caja abierta para asociar la venta
-            $openCaja = CierreCaja::where('user_id', $user->id)->whereNull('fecha_cierre')->first();
+            // 1. Priorizar caja seleccionada en sesión
+            $selectedCajaId = session('selected_caja_id');
+            $openCaja = null;
+
+            if ($selectedCajaId) {
+                $openCaja = CierreCaja::where('id_caja', $selectedCajaId)
+                    ->whereNull('fecha_cierre')
+                    ->first();
+            }
+
+            // 2. Si no hay seleccionada o no se encontró, buscar la abierta por el usuario
             if (!$openCaja) {
-                throw new Exception('No hay una caja abierta. Abra una caja antes de emitir ventas.');
+                $openCajas = CierreCaja::where('user_id', $user->id)
+                    ->whereNull('fecha_cierre')
+                    ->get();
+
+                if ($openCajas->count() === 1) {
+                    $openCaja = $openCajas->first();
+                } elseif ($openCajas->count() > 1) {
+                    throw new Exception('Tienes múltiples cajas abiertas. Por favor, selecciona una en la barra superior.');
+                }
+            }
+
+            if (!$openCaja) {
+                throw new Exception('No se encontró una caja abierta para realizar la venta. Por favor, abre una caja o selecciona la correcta.');
             }
 
             // Calcular totales considerando el tipo de impuesto de los productos

@@ -110,11 +110,11 @@
 
     @push('scripts')
         <script>
-            document.getElementById('reportSelector').addEventListener('change', function() {
+            document.getElementById('reportSelector').addEventListener('change', function () {
                 document.getElementById('btnSearch').click();
             });
 
-            document.getElementById('btnSearch').addEventListener('click', function() {
+            document.getElementById('btnSearch').addEventListener('click', function () {
                 // Show loading
                 document.getElementById('resultsContainer').innerHTML =
                     '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-3x text-primary"></i><br>Cargando...</div>';
@@ -132,6 +132,20 @@
                         document.getElementById('resultsContainer').innerHTML =
                             '<div class="alert alert-danger">Error al cargar reporte</div>';
                     });
+            });
+
+            document.getElementById('btnPrint').addEventListener('click', function () {
+                const form = document.getElementById('filterForm');
+                const formData = new FormData(form);
+                const params = new URLSearchParams(formData);
+                window.open("{{ route('reportes.pdf') }}?" + params.toString(), '_blank');
+            });
+
+            document.getElementById('btnExport').addEventListener('click', function () {
+                const form = document.getElementById('filterForm');
+                const formData = new FormData(form);
+                const params = new URLSearchParams(formData);
+                window.location.href = "{{ route('reportes.export') }}?" + params.toString();
             });
         </script>
     @endpush

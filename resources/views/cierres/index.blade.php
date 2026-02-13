@@ -25,16 +25,19 @@
         <div class="card mb-4">
             <div class="card-body">
                 <form method="GET" action="{{ route('cierre-caja.index') }}" class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label">Usuario</label>
-                        <select name="user_id" class="form-select">
-                            <option value="">Todos</option>
-                            @foreach (App\Models\User::orderBy('name')->get() as $u)
-                                <option value="{{ $u->id }}" {{ request('user_id') == $u->id ? 'selected' : '' }}>
-                                    {{ $u->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                    @if(auth()->user()->hasAnyRole(['super_admin', 'admin_empresa', 'supervisor']))
+                        <div class="col-md-3">
+                            <label class="form-label">Usuario</label>
+                            <select name="user_id" class="form-select">
+                                <option value="">Todos</option>
+                                @foreach (App\Models\User::orderBy('name')->get() as $u)
+                                    <option value="{{ $u->id }}" {{ request('user_id') == $u->id ? 'selected' : '' }}>
+                                        {{ $u->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
 
                     <div class="col-md-3">
                         <label class="form-label">Desde</label>
@@ -65,6 +68,7 @@
                                 <tr>
                                     <th>ID</th>
                                     <th>Usuario</th>
+                                    <th>Caja</th>
                                     <th>Fecha</th>
                                     <th>Apertura</th>
                                     <th>Cierre</th>
@@ -79,6 +83,11 @@
                                     <tr>
                                         <td class="fw-bold">#{{ $cierre->id }}</td>
                                         <td>{{ optional($cierre->user)->name }}</td>
+                                        <td>
+                                            <span class="badge bg-label-info text-info">
+                                                <i class="bx bx-box me-1"></i>{{ optional($cierre->caja)->nombre ?? '-' }}
+                                            </span>
+                                        </td>
                                         <td>{{ optional($cierre->fecha_cierre) ? \Carbon\Carbon::parse($cierre->fecha_cierre)->format('d/m/Y H:i') : '-' }}
                                         </td>
                                         <td>S/ {{ number_format($cierre->monto_apertura, 2) }}</td>
@@ -95,8 +104,7 @@
                                                 @endif
                                                 <div class="btn-group btn-group-sm">
                                                     <a href="{{ route('cierre-caja.show', $cierre->id) }}"
-                                                        class="btn btn-outline-primary" title="Ver"><i
-                                                            class="bx bx-show"></i></a>
+                                                        class="btn btn-outline-primary" title="Ver"><i class="bx bx-show"></i></a>
                                                 </div>
                                             </div>
                                         </td>

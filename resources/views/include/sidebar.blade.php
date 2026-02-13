@@ -50,8 +50,9 @@
         </a>
 
         <!-- Toggler Button -->
-        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavigation"
-            aria-controls="navbarNavigation" aria-expanded="false" aria-label="Toggle navigation">
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse"
+            data-bs-target="#navbarNavigation" aria-controls="navbarNavigation" aria-expanded="false"
+            aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
 
@@ -113,6 +114,25 @@
                             <i class="bx bx-collection me-1"></i> Ventas
                         </a>
                         <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="ventasDropdown">
+                            @if(isset($current_user_cajas) && $current_user_cajas->count() > 0)
+                                <li class="dropdown-header text-uppercase fs-tiny fw-bold">Caja Activa</li>
+                                @foreach($current_user_cajas as $caja)
+                                    <li>
+                                        <form action="{{ route('caja.select') }}" method="POST" id="form-caja-{{ $caja->id }}">
+                                            @csrf
+                                            <input type="hidden" name="caja_id" value="{{ $caja->id }}">
+                                            <button type="submit" class="dropdown-item d-flex justify-content-between align-items-center {{ session('selected_caja_id') == $caja->id ? 'bg-light fw-bold text-primary' : '' }}">
+                                                <span><i class="bx bx-box me-2"></i>{{ $caja->nombre }}</span>
+                                                @if(session('selected_caja_id') == $caja->id)
+                                                    <i class="bx bx-check text-primary"></i>
+                                                @endif
+                                            </button>
+                                        </form>
+                                    </li>
+                                @endforeach
+                                <li><hr class="dropdown-divider"></li>
+                            @endif
+
                             @can('pos.ver')
                                 <li>
                                     <a class="dropdown-item" href="{{ route('pos.index') }}">
@@ -228,12 +248,31 @@
             <!-- User Menu -->
             <ul class="navbar-nav ms-auto align-items-xl-center mt-3 mt-xl-0">
                 @auth
+                    @php
+                        $selectedCajaBadge = isset($current_user_cajas) ? $current_user_cajas->firstWhere('id', session('selected_caja_id')) : null;
+                        
+                        $roleName = Auth::user()->getRoleNames()->first() ?? 'Usuario';
+                        $roleLabel = match($roleName) {
+                            'super_admin' => 'Super Admin',
+                            'admin_empresa' => 'Administrador',
+                            'supervisor' => 'Supervisor',
+                            'vendedor' => 'Vendedor',
+                            default => ucfirst(str_replace('_', ' ', $roleName))
+                        };
+                    @endphp
+                    @if($selectedCajaBadge)
+                        <li class="nav-item me-3 d-none d-xl-block">
+                            <span class="badge bg-label-primary px-3 py-2">
+                                <i class="bx bx-box me-1"></i> {{ $selectedCajaBadge->nombre }}
+                            </span>
+                        </li>
+                    @endif
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown"
                             role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <div class="d-flex flex-column text-end me-2">
                                 <span class="fw-bold small lh-1">{{ Auth::user()->name }}</span>
-                                <small class="text-muted" style="font-size: 0.7rem;">Administrador</small>
+                                <small class="text-muted" style="font-size: 0.7rem;">{{ $roleLabel }}</small>
                             </div>
                             <i class="bx bx-user-circle fs-3"></i>
                         </a>
