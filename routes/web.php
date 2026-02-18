@@ -306,6 +306,10 @@ Route::middleware(['auth', 'company.scope'])->group(function () {
         Route::delete('/{id}', [PasivoController::class, 'destroy'])->name('pasivos.destroy');
     });
 
+    // Finanzas para Vendedores
+    Route::get('/finanzas-vendedor', [App\Http\Controllers\FinanzasVendedorController::class, 'index'])->name('finanzas_vendedor.index');
+    Route::post('/finanzas-vendedor', [App\Http\Controllers\FinanzasVendedorController::class, 'store'])->name('finanzas_vendedor.store');
+
     // Balance Route
     Route::prefix('balance')->middleware('can:contabilidad.ver')->group(function () {
         Route::get('/', [BalanceController::class, 'index'])->name('balance.index');

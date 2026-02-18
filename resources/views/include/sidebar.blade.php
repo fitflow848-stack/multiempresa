@@ -167,6 +167,15 @@
                     </li>
                 @endcan
 
+                @hasanyrole('vendedor|admin_empresa|super_admin')
+                    <li class="nav-item">
+                        <a href="{{ route('finanzas_vendedor.index') }}"
+                            class="nav-link {{ request()->routeIs('finanzas_vendedor.*') ? 'active fw-bold text-primary' : '' }}">
+                            <i class="bx bx-dollar-circle me-1"></i> Finanzas Vendedor
+                        </a>
+                    </li>
+                @endhasanyrole
+
                 @can('caja.ver')
                     <li class="nav-item">
                         <a href="{{ route('cierre-caja.index') }}"
