@@ -18,6 +18,8 @@ class OperacionCaja extends Model
         'partida',
         'concepto',
         'importe',
+        'es_efectivo',
+        'metodo_pago'
     ];
 
     public function cierre()

@@ -173,6 +173,10 @@ class DeudaController extends Controller
                 ->first();
 
             if ($cajaAbierta) {
+                $mP = $request->metodo_pago ?? 'Efectivo';
+                $tipoPago = \DB::table('tipos_pagos')->where('nombre', $mP)->first();
+                $esEfectivo = $tipoPago ? $tipoPago->es_efectivo : ($mP === 'Efectivo' ? 1 : 0);
+
                 $cajaAbierta->ingresos = floatval($cajaAbierta->ingresos ?? 0) + $montoPago;
                 $cajaAbierta->save();
 
@@ -183,6 +187,8 @@ class DeudaController extends Controller
                     'partida' => 'Cobro Deuda',
                     'concepto' => 'Pago de deuda - Ticket: ' . $deuda->numero_comprobante,
                     'importe' => $montoPago,
+                    'metodo_pago' => $mP,
+                    'es_efectivo' => $esEfectivo,
                     'fecha' => now(),
                 ]);
             }

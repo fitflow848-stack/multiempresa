@@ -105,8 +105,7 @@
                             </div>
                             <div class="col-6">
                                 <label class="label-custom text-danger">(-) Gastos</label>
-                                <input type="number" id="gastos"
-                                    class="form-control form-control-sm border-danger bg-light"
+                                <input type="number" id="gastos" class="form-control form-control-sm border-danger bg-light"
                                     value="{{ $cierre->egresos }}" readonly>
                             </div>
                             <div class="col-6">
@@ -159,8 +158,7 @@
                                 <h6 class="fw-bold mb-3 text-secondary">Otros Métodos de Pago (No Efectivo)</h6>
                                 <ul class="list-group list-group-flush border rounded shadow-sm">
                                     @foreach ($ingresosPorMetodo as $metodo => $totalMetodo)
-                                        <li
-                                            class="list-group-item d-flex justify-content-between align-items-center bg-light">
+                                        <li class="list-group-item d-flex justify-content-between align-items-center bg-light">
                                             <span class="label-custom fw-bold text-dark"><i
                                                     class="fas fa-wallet me-1 text-secondary"></i>
                                                 {{ $metodo }}</span>
@@ -223,15 +221,15 @@
                                                     $tipoOp = strtolower($movimiento->operacion);
                                                     $badgeClass = match (true) {
                                                         str_contains($tipoOp, 'ingreso') ||
-                                                            str_contains($tipoOp, 'venta')
-                                                            => 'bg-success',
+                                                        str_contains($tipoOp, 'venta')
+                                                        => 'bg-success',
                                                         str_contains($tipoOp, 'gasto') ||
-                                                            str_contains($tipoOp, 'compra')
-                                                            => 'bg-danger',
+                                                        str_contains($tipoOp, 'compra')
+                                                        => 'bg-danger',
                                                         str_contains($tipoOp, 'aporte') => 'bg-info',
                                                         str_contains($tipoOp, 'sustraccion') ||
-                                                            str_contains($tipoOp, 'retiro')
-                                                            => 'bg-warning text-dark',
+                                                        str_contains($tipoOp, 'retiro')
+                                                        => 'bg-warning text-dark',
                                                         default => 'bg-secondary',
                                                     };
                                                 @endphp
@@ -242,7 +240,8 @@
                                             </td>
                                             <td>
                                                 <div class="fw-bold mb-0" style="font-size: 0.85rem;">
-                                                    {{ $movimiento->concepto }}</div>
+                                                    {{ $movimiento->concepto }}
+                                                </div>
                                                 <div class="text-muted" style="font-size: 0.75rem;">
                                                     {{ $movimiento->cliente_nombre ?? '---' }} | <i
                                                         class="fas fa-user-circle"></i> {{ $movimiento->usuario }}
@@ -264,6 +263,7 @@
                                                             data-tipo="{{ $movimiento->tipo_movimiento }}"
                                                             data-partida="{{ $movimiento->operacion }}"
                                                             data-concepto="{{ $movimiento->concepto }}"
+                                                            data-metodo="{{ $movimiento->metodo_pago }}"
                                                             data-importe="{{ $movimiento->importe }}" title="Editar">
                                                             <i class="bx bx-edit"></i>
                                                         </button>
@@ -279,8 +279,8 @@
                                     @empty
                                         <tr>
                                             <td colspan="4" class="text-center py-5">
-                                                <img src="https://cdn-icons-png.flaticon.com/512/4076/4076403.png"
-                                                    width="50" class="opacity-25 mb-3"><br>
+                                                <img src="https://cdn-icons-png.flaticon.com/512/4076/4076403.png" width="50"
+                                                    class="opacity-25 mb-3"><br>
                                                 <span class="text-muted">No se encontraron movimientos el día de
                                                     hoy.</span>
                                             </td>
@@ -334,10 +334,19 @@
                             <input id="op_concepto" class="form-control form-control-sm"
                                 placeholder="Describa el motivo...">
                         </div>
-                        <div class="col-12">
+                        <div class="col-md-6">
+                            <label class="label-custom">Método de Pago</label>
+                            <select id="op_metodo" class="form-select form-select-sm">
+                                <option value="Efectivo">💵 Efectivo</option>
+                                <option value="Yape/Plin">📱 Yape / Plin</option>
+                                <option value="Transferencia">🏦 Transferencia</option>
+                                <option value="Tarjeta">💳 Tarjeta</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
                             <label class="label-custom">Importe (S/)</label>
                             <input id="op_importe" type="number" step="0.01"
-                                class="form-control form-control-lg text-center" value="0.00">
+                                class="form-control form-control-sm text-center fw-bold" value="0.00">
                         </div>
                     </div>
                 </div>
@@ -381,21 +390,21 @@
                                 value="0" min="0"></label>
                         <label> S/1.00: <input type="number" class="m-count form-control form-control-sm" data-value="1"
                                 value="0" min="0"></label>
-                        <label> S/0.50: <input type="number" class="m-count form-control form-control-sm"
-                                data-value="0.5" value="0" min="0"></label>
-                        <label> S/0.20: <input type="number" class="m-count form-control form-control-sm"
-                                data-value="0.2" value="0" min="0"></label>
-                        <label> S/0.10: <input type="number" class="m-count form-control form-control-sm"
-                                data-value="0.1" value="0" min="0"></label>
+                        <label> S/0.50: <input type="number" class="m-count form-control form-control-sm" data-value="0.5"
+                                value="0" min="0"></label>
+                        <label> S/0.20: <input type="number" class="m-count form-control form-control-sm" data-value="0.2"
+                                value="0" min="0"></label>
+                        <label> S/0.10: <input type="number" class="m-count form-control form-control-sm" data-value="0.1"
+                                value="0" min="0"></label>
                     </div>
                 </div>
                 <div style="flex:1;">
                     <h6>Billetes</h6>
                     <div>
-                        <label> S/200: <input type="number" class="b-count form-control form-control-sm"
-                                data-value="200" value="0" min="0"></label>
-                        <label> S/100: <input type="number" class="b-count form-control form-control-sm"
-                                data-value="100" value="0" min="0"></label>
+                        <label> S/200: <input type="number" class="b-count form-control form-control-sm" data-value="200"
+                                value="0" min="0"></label>
+                        <label> S/100: <input type="number" class="b-count form-control form-control-sm" data-value="100"
+                                value="0" min="0"></label>
                         <label> S/50: <input type="number" class="b-count form-control form-control-sm" data-value="50"
                                 value="0" min="0"></label>
                         <label> S/20: <input type="number" class="b-count form-control form-control-sm" data-value="20"
@@ -420,7 +429,8 @@
                     </div>
                     <div style="margin-top:12px;">
                         <label>Notas:<br>
-                            <textarea id="arqueo-notas" class="form-control form-control-sm" style="width:100%; height:80px;"></textarea>
+                            <textarea id="arqueo-notas" class="form-control form-control-sm"
+                                style="width:100%; height:80px;"></textarea>
                         </label>
                     </div>
                 </div>
@@ -497,6 +507,7 @@
             document.getElementById('op_tipo').value = 'ingreso';
             document.getElementById('op_partida').value = '';
             document.getElementById('op_concepto').value = '';
+            document.getElementById('op_metodo').value = 'Efectivo';
             document.getElementById('op_importe').value = '0.00';
             document.querySelector('#modal-operacion .modal-title').innerText = 'Registrar Operación Manual';
             document.getElementById('modal-operacion').style.display = 'block';
@@ -508,6 +519,7 @@
                 document.getElementById('op_id').value = btnEl.getAttribute('data-id');
                 document.getElementById('op_tipo').value = btnEl.getAttribute('data-tipo');
                 document.getElementById('op_concepto').value = btnEl.getAttribute('data-concepto');
+                document.getElementById('op_metodo').value = btnEl.getAttribute('data-metodo') || 'Efectivo';
                 document.getElementById('op_importe').value = parseFloat(btnEl.getAttribute('data-importe'))
                     .toFixed(2);
 
@@ -539,7 +551,7 @@
         document.querySelectorAll('.delete-operacion').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 if (!confirm(
-                        '¿Desea eliminar esta operación? Esta acción alterará los totales de la caja.'))
+                    '¿Desea eliminar esta operación? Esta acción alterará los totales de la caja.'))
                     return;
                 const id = e.currentTarget.getAttribute('data-id');
                 try {
@@ -569,6 +581,7 @@
                 tipo: document.getElementById('op_tipo').value,
                 partida: document.getElementById('op_partida').value,
                 concepto: document.getElementById('op_concepto').value,
+                metodo_pago: document.getElementById('op_metodo').value,
                 importe: parseFloat(document.getElementById('op_importe').value) || 0,
                 cierre_caja_id: cierreId
             };
@@ -642,7 +655,7 @@
                     opt.textContent = p.nombre;
                     select.appendChild(opt);
                 });
-            } catch (e) {}
+            } catch (e) { }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -713,7 +726,7 @@
             });
 
             // Inicializar handlers de Arqueo
-            (function() {
+            (function () {
                 const modal = document.getElementById('modal-arqueo');
                 const btnOpen = document.getElementById('btn-registrar-arqueo');
                 const btnClose = document.getElementById('btn-close-arqueo');
@@ -788,12 +801,12 @@
                             document.getElementById('total-caja').innerText = parseFloat(a.total ||
                                 0).toFixed(2);
                             document.getElementById('total-monedas').innerText = parseFloat(a
-                                    .monedas ? Object.keys(a.monedas).reduce((s, k) => s + (
-                                        parseFloat(k) * (parseFloat(a.monedas[k]) || 0)), 0) : 0)
+                                .monedas ? Object.keys(a.monedas).reduce((s, k) => s + (
+                                    parseFloat(k) * (parseFloat(a.monedas[k]) || 0)), 0) : 0)
                                 .toFixed(2);
                             document.getElementById('total-billetes').innerText = parseFloat(a
-                                    .billetes ? Object.keys(a.billetes).reduce((s, k) => s + (
-                                        parseFloat(k) * (parseFloat(a.billetes[k]) || 0)), 0) : 0)
+                                .billetes ? Object.keys(a.billetes).reduce((s, k) => s + (
+                                    parseFloat(k) * (parseFloat(a.billetes[k]) || 0)), 0) : 0)
                                 .toFixed(2);
                             document.getElementById('arqueo-notas').value = a.notas || '';
                         }
@@ -875,16 +888,16 @@
                                 const tr = document.createElement('tr');
                                 tr.setAttribute('data-arqueo-id', data.id || arqueo.id || '');
                                 tr.innerHTML = `
-                                        <td class="ps-3 py-3 small text-muted">${hora}</td>
-                                        <td>
-                                            <span class="badge bg-secondary font-monospace" style="font-size: 0.65rem;">ARQUEO</span>
-                                        </td>
-                                        <td>
-                                            <div class="fw-bold mb-0" style="font-size: 0.85rem;">${concepto}</div>
-                                            <div class="text-muted" style="font-size: 0.75rem;">${usuario}</div>
-                                        </td>
-                                        <td class="text-end pe-3 fw-bold text-dark">S/ ${parseFloat(importe).toFixed(2)}</td>
-                                    `;
+                                            <td class="ps-3 py-3 small text-muted">${hora}</td>
+                                            <td>
+                                                <span class="badge bg-secondary font-monospace" style="font-size: 0.65rem;">ARQUEO</span>
+                                            </td>
+                                            <td>
+                                                <div class="fw-bold mb-0" style="font-size: 0.85rem;">${concepto}</div>
+                                                <div class="text-muted" style="font-size: 0.75rem;">${usuario}</div>
+                                            </td>
+                                            <td class="text-end pe-3 fw-bold text-dark">S/ ${parseFloat(importe).toFixed(2)}</td>
+                                        `;
                                 if (tbody.firstChild) tbody.insertBefore(tr, tbody.firstChild);
                                 else tbody.appendChild(tr);
 
