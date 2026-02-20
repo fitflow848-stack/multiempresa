@@ -123,6 +123,8 @@ Route::middleware(['auth', 'company.scope'])->group(function () {
 
     // Operaciones de caja (aportes/ingresos/gastos/sustracciones)
     Route::post('/operaciones-caja', [OperacionCajaController::class, 'store'])->name('operaciones-caja.store');
+    Route::put('/operaciones-caja/{id}', [OperacionCajaController::class, 'update'])->name('operaciones-caja.update');
+    Route::delete('/operaciones-caja/{id}', [OperacionCajaController::class, 'destroy'])->name('operaciones-caja.destroy');
 
     // Partidas (API para listar y crear partidas usadas en operaciones)
     Route::get('/partidas', [PartidaController::class, 'index'])->name('partidas.index');

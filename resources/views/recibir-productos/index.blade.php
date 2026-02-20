@@ -182,10 +182,10 @@
                                 <td>{{ $compra->id }}</td>
                                 <td>{{ $compra->almacen ? $compra->almacen->nombre : $compra->local_destino }}</td>
                                 <td class="fw-bold">Z-{{ $compra->id }}</td>
-                                <td>{{ $compra->proveedor->nombre_comercial }}</td>
+                                <td>{{ $compra->proveedor->nombre_comercial ?? 'Sin Proveedor' }}</td>
                                 <td class="text-end fw-bold">{{ number_format($compra->total_bruto, 2) }}</td>
                                 <td>{{ $compra->created_at }}</td>
-                                <td>{{ $compra->usuario->name }}</td>
+                                <td>{{ $compra->usuario->name ?? '---' }}</td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -211,6 +211,8 @@
                             <th class="text-end text-primary">PA</th>
                             <th class="text-end">PVP/D</th>
                             <th class="text-end text-danger">PA/D</th>
+                            <th width="90">PVC</th>
+                            <th width="90">PVC/D</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -290,7 +292,7 @@
                 $tbody.empty();
 
                 if (detalles.length === 0) {
-                    $tbody.append('<tr><td colspan="11" class="text-center">No hay productos</td></tr>');
+                    $tbody.append('<tr><td colspan="13" class="text-center">No hay productos</td></tr>');
                     return;
                 }
 
@@ -306,6 +308,9 @@
                     const copVal = parseFloat(item.compra_costo ?? item.costo ?? 0) || 0;
                     const pvpVal = parseFloat(item.master_pvp ?? item.compra_pvp ?? item.pvp ?? 0) || 0;
                     const pvpDVal = parseFloat(item.master_pvp_dto ?? item.pvp_dto ?? 0) || 0;
+                    const pvcVal = parseFloat(item.master_pvc ?? item.compra_pvc ?? item.pvc ?? 0) || 0;
+                    const pvcDVal = parseFloat(item.master_pvc_dto ?? item.compra_pvc_dto ?? item.pvc_dto ??
+                        item.pvcd ?? 0) || 0;
 
                     // Si el PVP es igual al costo, forzamos un margen predeterminado para evitar MU=0
                     // a menos que el usuario lo haya definido así explícitamente en el catálogo.
@@ -340,6 +345,8 @@
                             <td class="pa text-end fw-bold text-primary">0.00</td>
                             <td class="pvp_d text-end">0.00</td>
                             <td class="pa_d text-end fw-bold text-danger">0.00</td>
+                            <td><input type="number" class="table-input pvc" value="${pvcVal.toFixed(2)}" step="0.01"></td>
+                            <td><input type="number" class="table-input pvcd" value="${pvcDVal.toFixed(2)}" step="0.01"></td>
                         </tr>
                     `);
                 });
@@ -353,7 +360,7 @@
                 $tbody.empty();
 
                 if (!Array.isArray(productos) || productos.length === 0) {
-                    $tbody.append('<tr><td colspan="11" class="text-center">No hay productos</td></tr>');
+                    $tbody.append('<tr><td colspan="13" class="text-center">No hay productos</td></tr>');
                     return;
                 }
 
@@ -368,6 +375,8 @@
                     const stock_max = p.stock_max || p.stockMax || 0;
                     const lote = p.lote || '';
                     const fecha_vencimiento = p.fecha_vencimiento || p.fecha_venc || '';
+                    const pvcVal = parseFloat(p.pvc || 0);
+                    const pvcDVal = parseFloat(p.pvc_dto || p.pvcd || 0);
 
                     $tbody.append(`
                         <tr data-producto-id="${p.producto_id || p.product_id || p.product_linea_id || ''}"
@@ -388,6 +397,8 @@
                             <td class="pa text-end fw-bold text-primary">0.00</td>
                             <td class="pvp_d text-end">0.00</td>
                             <td class="pa_d text-end fw-bold text-danger">0.00</td>
+                            <td><input type="number" class="table-input pvc" value="${pvcVal.toFixed(2)}" step="0.01"></td>
+                            <td><input type="number" class="table-input pvcd" value="${pvcDVal.toFixed(2)}" step="0.01"></td>
                             <!-- Campos editables extras -->
                             <input type="hidden" class="detalle-text" value="${detalle}">
                             <input type="hidden" class="original-costo" value="${costo}">
@@ -479,7 +490,10 @@
                         pa: parseFloat($tr.find('.pa').text()) || 0,
 
                         pvp_d: parseFloat($tr.find('.pvp_d').text()) || 0,
-                        pa_d: parseFloat($tr.find('.pa_d').text()) || 0
+                        pa_d: parseFloat($tr.find('.pa_d').text()) || 0,
+
+                        pvc: parseFloat($tr.find('.pvc').val()) || 0,
+                        pvcd: parseFloat($tr.find('.pvcd').val()) || 0
                     });
                 });
 
@@ -490,7 +504,6 @@
                     item.stock_max = parseFloat($tr.data('stock-max')) || 0;
                     item.lote = $tr.data('lote') || '';
                     item.fecha_vencimiento = $tr.data('fecha-vencimiento') || null;
-                    item.pvc = parseFloat($tr.data('pvc')) || 0;
                     return item;
                 });
 

@@ -83,29 +83,9 @@
         }
     </style>
 
-    <div class="container-fluid py-4">
-        <div class="row align-items-center mb-4">
-            <div class="col-md-5">
-                <h2 class="fw-bold text-dark mb-0">Gestión de Comprobantes</h2>
-                <p class="text-muted small">Visualiza, filtra y gestiona tus documentos electrónicos</p>
-            </div>
-            <div class="col-md-7 text-md-end">
-                <div class="btn-group shadow-sm">
-                    <button class="btn btn-white border px-3" id="btn-seleccionar-todo">
-                        <i class="bx bx-check-double me-1 text-primary"></i> Todo
-                    </button>
-                    <button class="btn btn-danger border px-3" id="btn-anular">
-                        <i class="bx bx-x-circle me-1"></i> Anular
-                    </button>
-                </div>
-                <a class="btn btn-dark ms-2 px-4 shadow-sm" href="{{ route('pos.index') }}">
-                    <i class="bx bx-plus-circle me-1"></i> volver
-                </a>
-            </div>
-        </div>
-
-        <div class="card mb-4 shadow-sm">
-            <div class="card-body p-3">
+    <div class="container-fluid py-2">
+        <div class="card mb-2 shadow-sm">
+            <div class="card-body p-2">
                 <form id="form-filtros" method="GET" action="{{ route('comprobantes.index') }}"
                     class="row g-2 align-items-end">
                     <div class="col-md-2">
@@ -126,7 +106,7 @@
                                 value="{{ $cliente }}" placeholder="Nombre o RUC...">
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label small fw-bold text-muted mb-1">Tipo Documento</label>
                         <select class="form-select border-0 bg-light" name="tipo_documento">
                             <option value="todos" {{ $tipoDocumento == 'todos' ? 'selected' : '' }}>📄 Todos los documentos
@@ -136,77 +116,135 @@
                             <option value="factura" {{ $tipoDocumento == 'factura' ? 'selected' : '' }}>🏢 Factura</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <!-- Botón de aplicar filtros eliminado; filtros se aplican automáticamente al cambiar -->
+                    <div class="col-md-3 text-end d-flex gap-2">
+                        <div class="btn-group shadow-sm w-100">
+                            <button type="button" class="btn btn-white border px-2 py-2 small" id="btn-seleccionar-todo"
+                                style="font-size: 0.8rem;">
+                                <i class="bx bx-check-double me-1 text-primary"></i> Todo
+                            </button>
+                            <button type="button" class="btn btn-danger border px-2 py-2 small" id="btn-anular"
+                                style="font-size: 0.8rem;">
+                                <i class="bx bx-x-circle me-1"></i> Anular
+                            </button>
+                        </div>
+                        <a class="btn btn-dark px-3 py-2 shadow-sm small d-flex align-items-center justify-content-center"
+                            href="{{ route('pos.index') }}" style="font-size: 0.8rem;">
+                            <i class="bx bx-plus-circle me-1"></i> volver
+                        </a>
                     </div>
                 </form>
             </div>
         </div>
 
         <div class="row">
-            <div class="col-lg-8">
-                <div class="table-container shadow-sm">
-                    <div class="table-responsive scroll-custom">
-                        <table class="table table-hover mb-0 align-middle">
-                            <thead>
+            <div class="col-12 mb-2">
+                <div class="table-container shadow-sm border rounded">
+                    <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+                        <table class="table table-hover mb-0 align-middle table-sm border-0" style="font-size: 0.8rem;">
+                            <thead class="bg-light sticky-top">
                                 <tr>
-                                    <th class="ps-3"><input type="checkbox" class="form-check-input" id="check-all"></th>
-                                    <th>Tipo</th>
-                                    <th>Serie-Número</th>
+                                    <th class="ps-3" style="width: 40px;"><input type="checkbox" class="form-check-input"
+                                            id="check-all"></th>
+                                    <th class="text-center" style="width: 30px;">#</th>
+                                    <th>Documento</th>
+                                    <th>Serie-Nro</th>
                                     <th>Cliente</th>
-                                    <th class="text-end">Total</th>
+                                    <th>Fecha Emisión</th>
+                                    <th class="text-end">Dscto Global</th>
+                                    <th class="text-end">Total Importe</th>
+                                    <th class="text-end">Importe Pendiente</th>
+                                    <th class="text-center">Estado Pago</th>
+                                    <th class="text-end">Deuda Total</th>
                                     <th class="text-center">SUNAT</th>
-                                    <th class="text-center">Estado</th>
+                                    <th class="text-start">Obs</th>
                                     <th class="text-end pe-3">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($ventas as $venta)
-                                    <tr class="comprobante-row {{ $comprobanteSeleccionado && $comprobanteSeleccionado->id_venta == $venta->id_venta ? 'table-active' : '' }} {{ isset($venta->estado) && $venta->estado == 0 ? 'comprobante-cancelado' : '' }}"
+                                @forelse($ventas as $index => $venta)
+                                    @php
+                                        $tipoDoc = strtolower($venta->tipo_documento ?? 'ticket');
+                                        $badgeClass = match ($tipoDoc) {
+                                            'factura' => 'bg-primary',
+                                            'boleta' => 'bg-success',
+                                            'nota-venta' => 'bg-warning text-dark',
+                                            default => 'bg-info text-white',
+                                        };
+                                        $isCancelado = isset($venta->estado) && $venta->estado == 0;
+
+                                        $pendiente = 0;
+                                        $deudaTotal = 0;
+                                        if ($venta->pagado) {
+                                            $pendiente = 0;
+                                            $deudaTotal = $venta->deuda ? $venta->deuda->monto_total : 0;
+                                            $estadoPago = 'PAGADA';
+                                        } else {
+                                            $pendiente = $venta->deuda ? $venta->deuda->monto_deuda : $venta->total;
+                                            $deudaTotal = $venta->deuda ? $venta->deuda->monto_total : $venta->total;
+                                            $estadoPago = 'PENDIENTE PAGO';
+                                        }
+                                        if ($isCancelado) {
+                                            $pendiente = 0;
+                                            $deudaTotal = 0;
+                                            $estadoPago = 'CANCELADO';
+                                        }
+                                    @endphp
+                                    <tr class="comprobante-row {{ $comprobanteSeleccionado && $comprobanteSeleccionado->id_venta == $venta->id_venta ? 'table-active' : '' }} {{ $isCancelado ? 'comprobante-cancelado' : '' }}"
                                         data-venta-id="{{ $venta->id_venta }}" data-total="{{ $venta->total }}"
                                         data-pagado="{{ $venta->pagado ? 1 : 0 }}"
                                         data-estado="{{ $venta->estado ?? 1 }}">
                                         <td class="ps-3">
                                             <input type="checkbox" class="form-check-input comprobante-check"
-                                                value="{{ $venta->id_venta }}"
-                                                {{ isset($venta->estado) && $venta->estado == 0 ? 'disabled' : '' }}>
+                                                value="{{ $venta->id_venta }}" {{ $isCancelado ? 'disabled' : '' }}>
+                                        </td>
+                                        <td class="text-center text-muted">
+                                            {{ $ventas->firstItem() + $index }}
                                         </td>
                                         <td>
-                                            @php
-                                                $tipoDoc = strtolower($venta->tipo_documento ?? 'ticket');
-                                                $badgeClass = match ($tipoDoc) {
-                                                    'factura' => 'bg-primary',
-                                                    'boleta' => 'bg-success',
-                                                    'nota-venta' => 'bg-warning text-dark',
-                                                    default => 'bg-info text-white',
-                                                };
-                                            @endphp
                                             <span
                                                 class="badge badge-pill {{ $badgeClass }}">{{ strtoupper($venta->tipo_documento ?? 'TIC') }}</span>
                                         </td>
                                         <td class="fw-bold text-dark">
-                                            {{ $venta->serie }}-{{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}</td>
+                                            {{ $venta->serie }}-{{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}
+                                        </td>
                                         <td>
-                                            <div class="text-dark small fw-bold">
+                                            <div class="text-dark fw-bold">
                                                 {{ $venta->cliente ? $venta->cliente->nombre : 'CLIENTE PARTICULAR' }}
                                             </div>
-                                            <div class="text-muted" style="font-size: 0.7rem;">
-                                                {{ $venta->fecha_emision->format('d/m/Y H:i') }}</div>
                                         </td>
-                                        <td class="text-end">
-                                            <span class="fw-bold text-dark">S/
-                                                {{ number_format($venta->total, 2) }}</span><br>
-                                            <small class="text-{{ $venta->pagado ? 'success' : 'danger' }}"
-                                                style="font-size: 0.65rem;">
-                                                {{ $venta->pagado ? 'PAGADO' : 'PENDIENTE' }}
-                                            </small>
+                                        <td class="text-muted">
+                                            {{ $venta->fecha_emision->format('d/m/Y H:i') }}
+                                        </td>
+                                        <td class="text-end text-muted">
+                                            S/ {{ number_format($venta->descuento_monto ?? 0, 2) }}
+                                        </td>
+                                        <td class="text-end fw-bold text-dark">
+                                            S/ {{ number_format($venta->total, 2) }}
+                                        </td>
+                                        <td class="text-end text-danger fw-bold">
+                                            S/ {{ number_format($pendiente, 2) }}
+                                        </td>
+                                        <td class="text-center">
+                                            @if ($isCancelado)
+                                                <span class="badge bg-danger">CANCELADA</span>
+                                            @elseif(isset($venta->estado) && $venta->estado == 3)
+                                                <span class="badge bg-warning text-dark">DEVUELTO</span>
+                                            @else
+                                                <small class="text-{{ $venta->pagado ? 'success' : 'danger' }} fw-bold"
+                                                    style="font-size: 0.70rem;">
+                                                    {{ $estadoPago }}
+                                                </small>
+                                            @endif
+                                        </td>
+                                        <td class="text-end text-muted">
+                                            S/ {{ number_format($deudaTotal, 2) }}
                                         </td>
                                         <td class="text-center">
                                             @if ($venta->enviado_sunat)
-                                                <i class="bx bxs-check-circle text-success fs-4"
+                                                <i class="bx bxs-check-circle text-success fs-5"
                                                     title="Enviado correctamente"></i>
                                             @elseif(strtolower($venta->tipo_documento) !== 'ticket')
-                                                <button class="btn btn-sm btn-light text-info btn-send-sunat"
+                                                <button class="btn btn-sm btn-light text-info btn-send-sunat p-1"
                                                     data-venta="{{ $venta->id_venta }}">
                                                     <i class="bx bx-send"></i>
                                                 </button>
@@ -214,14 +252,9 @@
                                                 <span class="text-muted small">-</span>
                                             @endif
                                         </td>
-                                        <td class="text-center align-middle">
-                                            @if (isset($venta->estado) && $venta->estado == 0)
-                                                <span class="badge bg-danger">CANCELADO</span>
-                                            @elseif(isset($venta->estado) && $venta->estado == 3)
-                                                <span class="badge bg-warning text-dark">DEVUELTO</span>
-                                            @else
-                                                <span class="badge bg-success">ACTIVO</span>
-                                            @endif
+                                        <td class="text-start small text-truncate" style="max-width: 100px;"
+                                            title="{{ $venta->observacion }}">
+                                            {{ $venta->observacion }}
                                         </td>
                                         <td class="text-end pe-3">
                                             <div class="d-flex justify-content-end gap-1">
@@ -260,7 +293,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="text-center py-5">
+                                        <td colspan="12" class="text-center py-5">
                                             <img src="https://illustrations.popsy.co/flat/paper-documents.svg"
                                                 style="width: 120px;" class="mb-3">
                                             <p class="text-muted">No se encontraron comprobantes registrados.</p>
@@ -273,43 +306,79 @@
                 </div>
             </div>
 
-            <div class="col-lg-4">
-                <div class="card mb-4">
-                    <div class="card-header bg-white py-3 border-0">
-                        <h6 class="fw-bold mb-0 text-primary">
-                            <i class="bx bx-list-ul me-2"></i>Contenido del Documento
-                        </h6>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive scroll-custom" style="max-height: 250px;">
-                            <table class="table table-sm mb-0" style="font-size: 0.8rem;">
-                                <thead class="bg-light">
+            <!-- Detalle Panel (Tab Style) -->
+            <div class="col-12 mb-2">
+                <ul class="nav nav-tabs tab-custom border-bottom" id="detalleTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active bg-white text-primary border-bottom-0 pb-2 px-4 shadow-sm"
+                            style="border-radius: 8px 8px 0 0;" id="detalle-tab" data-bs-toggle="tab"
+                            data-bs-target="#detalle-docs" type="button" role="tab">
+                            <i class="bx bx-list-ul me-1"></i> Detalle del Documento
+                        </button>
+                    </li>
+                </ul>
+                <div class="tab-content border border-top-0 bg-white p-0 shadow-sm" style="border-radius: 0 8px 8px 8px;"
+                    id="detalleTabsContent">
+                    <div class="tab-pane fade show active" id="detalle-docs" role="tabpanel">
+                        <div class="table-responsive" style="max-height: 160px; overflow-y: auto;">
+                            <table class="table table-sm table-hover mb-0" style="font-size: 0.70rem;">
+                                <thead class="bg-light sticky-top">
                                     <tr>
-                                        <th class="ps-3">Producto</th>
+                                        <th class="ps-2 text-center" style="width: 30px;">#</th>
+                                        <th class="text-center">CR</th>
+                                        <th class="text-center">CB</th>
+                                        <th class="ps-2">Producto</th>
+                                        <th class="text-center">Detalle</th>
                                         <th class="text-center">Cant.</th>
-                                        <th class="text-end pe-3">Subtotal</th>
+                                        <th class="text-end">Peso(KGM)</th>
+                                        <th class="text-end">PV/U</th>
+                                        <th class="text-end">Dscto</th>
+                                        <th class="text-end">IGV</th>
+                                        <th class="text-end">ICBPER</th>
+                                        <th class="text-end pe-3">Importe</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @if ($comprobanteSeleccionado)
-                                        @foreach ($detalleSeleccionado as $detalle)
+                                        @foreach ($detalleSeleccionado as $index => $detalle)
+                                            @php
+                                                $peso = ($detalle->producto->peso ?? 0) * $detalle->cantidad;
+                                                $descuento =
+                                                    $detalle->precio_unitario * $detalle->cantidad - $detalle->importe;
+                                                $lote = $detalle->almacenIngresoDetalle->lote ?? '';
+                                                $vencimiento = $detalle->almacenIngresoDetalle->fecha_vencimiento
+                                                    ? 'fv.' . $detalle->almacenIngresoDetalle->fecha_vencimiento
+                                                    : '';
+                                                $detalleTxt = $lote ? $lote . ' ' . $vencimiento : $vencimiento;
+                                            @endphp
                                             <tr>
-                                                <td class="ps-3">
+                                                <td class="ps-2 text-center text-muted">{{ $index + 1 }}</td>
+                                                <td class="text-center">{{ $detalle->servicio_id }}</td>
+                                                <td class="text-center">{{ $detalle->producto->codigo_barras ?? '' }}</td>
+                                                <td class="ps-2">
                                                     <div class="fw-bold">
-                                                        {{ $detalle->producto->nombre ?? $detalle->descripcion }}</div>
-                                                    <small
-                                                        class="text-muted">{{ $detalle->producto->codigo_barras ?? '' }}</small>
+                                                        {{ $detalle->producto->nombre ?? $detalle->nombre_servicio }}</div>
                                                 </td>
-                                                <td class="text-center">{{ number_format($detalle->cantidad, 0) }}</td>
-                                                <td class="text-end pe-3">S/
-                                                    {{ number_format($detalle->precio_total, 2) }}</td>
+                                                <td class="text-center small text-muted">{{ $detalleTxt }}</td>
+                                                <td class="text-center">{{ number_format($detalle->cantidad, 0) }}
+                                                    {{ $detalle->producto->unidadMedida->nombre ?? '' }}</td>
+                                                <td class="text-end">{{ number_format($peso, 3) }}</td>
+                                                <td class="text-end">{{ number_format($detalle->precio_unitario, 2) }}
+                                                </td>
+                                                <td class="text-end text-danger">
+                                                    {{ number_format(max(0, $descuento), 2) }}</td>
+                                                <td class="text-end">{{ number_format($detalle->igv ?? 0, 3) }}</td>
+                                                <td class="text-end">0.00</td>
+                                                <td class="text-end pe-3 fw-bold">S/
+                                                    {{ number_format($detalle->importe ?? ($detalle->precio_total ?? 0), 2) }}
+                                                </td>
                                             </tr>
                                         @endforeach
                                     @else
                                         <tr>
-                                            <td colspan="3" class="text-center py-4 text-muted small">
-                                                <i class="bx bx-pointer fs-4 mb-2 d-block"></i>
-                                                Selecciona una fila para ver detalles
+                                            <td colspan="15" class="text-center py-4 text-muted small">
+                                                <i class="bx bx-pointer fs-4 mb-2 d-block"></i> Selecciona una fila para
+                                                ver detalles
                                             </td>
                                         </tr>
                                     @endif
@@ -318,33 +387,53 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="card shadow-sm border-0 bg-dark text-white">
-                    <div class="card-body">
-                        <h6 class="fw-bold mb-3">Resumen del Periodo</h6>
-                        <div class="summary-item d-flex justify-content-between">
-                            <span class="text-white-50">Total Ventas:</span>
-                            <span class="fw-bold">S/ {{ number_format($resumen['total_ventas'], 2) }}</span>
-                        </div>
-                        <div class="summary-item d-flex justify-content-between">
-                            <span class="text-white-50">En Efectivo:</span>
-                            <span class="text-success fw-bold">S/
-                                {{ number_format($resumen['importe_efectivo'], 2) }}</span>
-                        </div>
-                        <div class="summary-item d-flex justify-content-between border-0">
-                            <span class="text-white-50">Por Cobrar:</span>
-                            <span class="text-warning fw-bold">S/
-                                {{ number_format($resumen['importe_cuotas'], 2) }}</span>
-                        </div>
-
-                        <div class="mt-3 p-3 bg-secondary rounded-3">
-                            <div class="d-flex justify-content-between mb-1">
-                                <small>Seleccionados:</small>
-                                <span class="fw-bold text-info" id="importe-seleccionados">S/ 0.00</span>
+            <!-- Footer Resumen -->
+            <div class="col-12">
+                <div class="card shadow-sm border-0"
+                    style="background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);">
+                    <div class="card-body py-1 px-4">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between mb-2">
+                            <div class="text-primary fw-bold text-uppercase" style="font-size: 0.75rem;">
+                                <i class="bx bx-bar-chart-alt-2"></i> Resumen Comprobantes
                             </div>
-                            <div class="d-flex justify-content-between">
-                                <small>Pendiente de éstos:</small>
-                                <span class="fw-bold text-danger" id="pendiente-seleccionados">S/ 0.00</span>
+                            <div class="d-flex flex-wrap gap-3" style="font-size: 0.75rem;">
+                                <div><span class="text-muted">Ventas:</span> <span
+                                        class="fw-bold text-dark">{{ $ventas->total() }}</span></div>
+                                <div><span class="text-muted">Facturas:</span> <span
+                                        class="fw-bold text-dark">{{ $resumen['facturas'] }}</span></div>
+                                <div><span class="text-muted">Boletas:</span> <span
+                                        class="fw-bold text-dark">{{ $resumen['boletas'] }}</span></div>
+                                <div><span class="text-muted">Tickets:</span> <span
+                                        class="fw-bold text-dark">{{ $resumen['tickets'] }}</span></div>
+                                <div><span class="text-muted">Nota Venta:</span> <span
+                                        class="fw-bold text-dark">{{ $resumen['nota_venta'] }}</span></div>
+                                <div class="border-start ps-3"><span class="text-muted">Importe:</span> <span
+                                        class="fw-bold text-primary">S/
+                                        {{ number_format($resumen['total_ventas'], 2) }}</span></div>
+                                <div><span class="text-muted">Pendiente:</span> <span class="fw-bold text-danger">S/
+                                        {{ number_format($resumen['importe_cuotas'], 2) }}</span></div>
+                                <div><span class="text-muted">Total:</span> <span class="fw-bold text-success">S/
+                                        {{ number_format($resumen['importe_efectivo'], 2) }}</span></div>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-wrap gap-4 align-items-center border-top pt-1"
+                            style="font-size: 0.75rem;">
+                            <div><span class="text-muted">Importe Efectivo:</span> <span
+                                    class="fw-bold text-success fs-6 ms-1">S/
+                                    {{ number_format($resumen['importe_efectivo'], 2) }}</span></div>
+                            <div><span class="text-muted">Importe Cuentas:</span> <span
+                                    class="fw-bold text-warning fs-6 ms-1">S/
+                                    {{ number_format($resumen['importe_cuotas'], 2) }}</span></div>
+
+                            <div class="border-start ps-4 ms-auto d-flex gap-4">
+                                <div><span class="text-muted">Importe Seleccionado:</span> <span
+                                        class="fw-bold text-info fs-6 ms-1" id="importe-seleccionados">S/ 0.00</span>
+                                </div>
+                                <div><span class="text-muted">Pendiente Seleccionado:</span> <span
+                                        class="fw-bold text-warning border-bottom border-warning fs-6 ms-1"
+                                        id="pendiente-seleccionados">S/ 0.00</span></div>
                             </div>
                         </div>
                     </div>
@@ -444,28 +533,49 @@
                         .done(function(resp) {
                             if (resp.success) {
                                 const detalles = resp.detalles || [];
-                                const $tbody = $('.col-lg-4 .card-body .table-responsive table tbody');
+                                const $tbody = $('#detalle-docs table tbody');
                                 let html = '';
 
                                 if (detalles.length > 0) {
-                                    detalles.forEach(function(d) {
+                                    detalles.forEach(function(d, index) {
                                         const nombre = (d.producto && d.producto.nombre) ? d.producto
-                                            .nombre : (d.descripcion || '');
-                                        const codigo = (d.producto && d.producto.codigo_barras) ? d.producto
+                                            .nombre : (d.nombre_servicio || '');
+                                        const cr = d.servicio_id || '';
+                                        const cb = (d.producto && d.producto.codigo_barras) ? d.producto
                                             .codigo_barras : '';
-                                        const cantidad = parseFloat(d.cantidad || 0).toFixed(0);
-                                        const subtotal = parseFloat(d.precio_total || d.subtotal || 0)
-                                            .toFixed(2);
+
+                                        const batch = d.almacen_ingreso_detalle || {};
+                                        const lote = batch.lote || '';
+                                        const fv = batch.fecha_vencimiento ? 'fv.' + batch
+                                            .fecha_vencimiento : '';
+                                        const detailTxt = lote ? lote + ' ' + fv : fv;
+
+                                        const cantidad = parseFloat(d.cantidad || 0);
+                                        const peso = (parseFloat(d.producto ? d.producto.peso : 0) *
+                                            cantidad).toFixed(3);
+                                        const pvu = parseFloat(d.precio_unitario || 0);
+                                        const importe = parseFloat(d.importe || d.precio_total || 0);
+                                        const dscto = Math.max(0, (pvu * cantidad) - importe).toFixed(2);
+                                        const igv = parseFloat(d.igv || 0).toFixed(3);
 
                                         html += `<tr>` +
-                                            `<td class="ps-3"><div class="fw-bold">${nombre}</div><small class="text-muted">${codigo}</small></td>` +
-                                            `<td class="text-center">${cantidad}</td>` +
-                                            `<td class="text-end pe-3">S/ ${subtotal}</td>` +
+                                            `<td class="ps-2 text-center text-muted">${index + 1}</td>` +
+                                            `<td class="text-center">${cr}</td>` +
+                                            `<td class="text-center">${cb}</td>` +
+                                            `<td class="ps-2"><div class="fw-bold">${nombre}</div></td>` +
+                                            `<td class="text-center small text-muted">${detailTxt}</td>` +
+                                            `<td class="text-center">${cantidad.toFixed(0)} ${(d.producto && d.producto.unidad_medida) ? d.producto.unidad_medida.nombre : ''}</td>` +
+                                            `<td class="text-end">${peso}</td>` +
+                                            `<td class="text-end">${pvu.toFixed(2)}</td>` +
+                                            `<td class="text-end text-danger">${dscto}</td>` +
+                                            `<td class="text-end">${igv}</td>` +
+                                            `<td class="text-end">0.00</td>` +
+                                            `<td class="text-end pe-3 fw-bold">S/ ${importe.toFixed(2)}</td>` +
                                             `</tr>`;
                                     });
                                 } else {
                                     html =
-                                        `<tr><td colspan="3" class="text-center py-4 text-muted small"><i class="bx bx-pointer fs-4 mb-2 d-block"></i> Selecciona una fila para ver detalles</td></tr>`;
+                                        `<tr><td colspan="15" class="text-center py-4 text-muted small"><i class="bx bx-pointer fs-4 mb-2 d-block"></i> Selecciona una fila para ver detalles</td></tr>`;
                                 }
 
                                 $tbody.html(html);
@@ -501,12 +611,37 @@
 
                 // Manejar selección individual de comprobantes
                 $('.comprobante-check').change(function() {
+                    const isChecked = $(this).is(':checked');
+                    const $row = $(this).closest('tr');
+
+                    if (!isChecked && $row.hasClass('table-active')) {
+                        $row.removeClass('table-active');
+                        $('#detalle-docs table tbody').html(
+                            '<tr><td colspan="15" class="text-center py-4 text-muted small"><i class="bx bx-pointer fs-4 mb-2 d-block"></i> Selecciona una fila para ver detalles</td></tr>'
+                            );
+                    } else if (isChecked) {
+                        const ventaId = $row.data('venta-id');
+                        // Cargar detalle pero NO limpiar otros checks si se hace manualmente
+                        fetchDetalleVenta(ventaId, false);
+                        $('.comprobante-row').removeClass('table-active');
+                        $row.addClass('table-active');
+                    }
+
                     actualizarSeleccionados();
                 });
 
                 // Seleccionar/deseleccionar todos
                 $('#check-all').change(function() {
-                    $('.comprobante-check:not(:disabled)').prop('checked', this.checked);
+                    const isChecked = this.checked;
+                    $('.comprobante-check:not(:disabled)').prop('checked', isChecked);
+
+                    if (!isChecked) {
+                        $('.comprobante-row').removeClass('table-active');
+                        $('#detalle-docs table tbody').html(
+                            '<tr><td colspan="15" class="text-center py-4 text-muted small"><i class="bx bx-pointer fs-4 mb-2 d-block"></i> Selecciona una fila para ver detalles</td></tr>'
+                            );
+                    }
+
                     actualizarSeleccionados();
                 });
 

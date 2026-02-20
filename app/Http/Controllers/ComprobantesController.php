@@ -40,7 +40,7 @@ class ComprobantesController extends Controller
         // Query base - excluir anulados
         $ventasQuery = Venta::where('id_empresa', $company->id)
             ->where('estado', '!=', 0) // No mostrar anulados
-            ->with(['cliente', 'detalles.producto', 'tipoPago', 'ventaSunat'])
+            ->with(['cliente', 'detalles.producto.unidadMedida', 'tipoPago', 'ventaSunat', 'deuda'])
             ->whereBetween('fecha_emision', [
                 Carbon::parse($fechaDesde)->startOfDay(),
                 Carbon::parse($fechaHasta)->endOfDay()
@@ -72,7 +72,7 @@ class ComprobantesController extends Controller
 
         $ventaSeleccionadaId = $request->get('venta_id');
         if ($ventaSeleccionadaId) {
-            $comprobanteSeleccionado = Venta::with(['cliente', 'detalles.producto', 'tipoPago', 'ventaSunat'])
+            $comprobanteSeleccionado = Venta::with(['cliente', 'detalles.producto.unidadMedida', 'tipoPago', 'ventaSunat'])
                 ->where('id_venta', $ventaSeleccionadaId)
                 ->where('id_empresa', $company->id)
                 ->first();
@@ -101,7 +101,7 @@ class ComprobantesController extends Controller
         $user = Auth::user();
         $company = $user->company;
 
-        $venta = Venta::with(['cliente', 'detalles.producto', 'tipoPago'])
+        $venta = Venta::with(['cliente', 'detalles.producto.unidadMedida', 'detalles.almacenIngresoDetalle', 'tipoPago'])
             ->where('id_venta', $id)
             ->where('id_empresa', $company->id)
             ->firstOrFail();

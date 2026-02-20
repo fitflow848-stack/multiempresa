@@ -28,7 +28,8 @@ class CompraLinea extends Model
         'fecha_vencimiento',
         'pvp',
         'pvp_dto',
-        'pvc'
+        'pvc',
+        'pvc_dto'
     ];
 
     protected $casts = [
@@ -45,5 +46,5 @@ class CompraLinea extends Model
     public function producto()
     {
         return $this->belongsTo(Producto::class, 'product_id');
-    }   
+    }
 }

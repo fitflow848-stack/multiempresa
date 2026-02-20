@@ -216,7 +216,7 @@
                                 <th colspan="4" class="text-center">Información del Producto</th>
                                 <th colspan="4" class="text-center bg-precios">Costos y Margen</th>
                                 <th colspan="3" class="text-center bg-precios">PVP Sugerido</th>
-                                <th colspan="3" class="text-center bg-precios">Venta con Desc.</th>
+                                <th colspan="4" class="text-center bg-precios">Venta con Desc.</th>
                                 <th colspan="2" class="text-center bg-stock">Inventario</th>
                                 <th colspan="2" class="text-center bg-lote">Trazabilidad</th>
                             </tr>
@@ -239,6 +239,7 @@
                                 <th width="80" class="bg-precios">PVP/D</th>
                                 <th width="80" class="bg-precios">PA</th>
                                 <th width="70" class="bg-precios">PVC</th>
+                                <th width="70" class="bg-precios">PVC/D</th>
 
                                 <th width="70" class="bg-stock">Min</th>
                                 <th width="70" class="bg-stock">Max</th>
@@ -274,10 +275,12 @@
 
                                     {{-- Venta Desc --}}
                                     <td class="bg-precios"><input type="number" class="table-input pvpd"
-                                            value="{{ $p['pvp'] ?? 0 }}"></td>
+                                            value="{{ $p['pvpd'] ?? ($p['pvp_d'] ?? 0) }}"></td>
                                     <td class="bg-precios"><span class="val-calc pa-pvpd text-pa">0.00</span></td>
                                     <td class="bg-precios"><input type="number" class="table-input pvc"
-                                            value="{{ $p['pvc'] ?? ($p['pvp'] ?? 0) }}"></td>
+                                            value="{{ $p['pvc'] ?? 0 }}"></td>
+                                    <td class="bg-precios"><input type="number" class="table-input pvcd"
+                                            value="{{ $p['pvcd'] ?? 0 }}"></td>
 
                                     {{-- Stock --}}
                                     <td class="bg-stock"><input type="number" class="table-input stock-min"
@@ -400,9 +403,10 @@
                         mu: parseFloat($tr.find('.mu').val()),
                         mud: parseFloat($tr.find('.mud').val()),
                         mup: parseFloat($tr.find('.mup').text()),
-                        pvp: parseFloat($tr.find('.pvp').val()),
-                        pvpd: parseFloat($tr.find('.pvpd').val()),
-                        pvc: parseFloat($tr.find('.pvc').val()),
+                        pvp: parseFloat($tr.find('.pvp').val()) || 0,
+                        pvpd: parseFloat($tr.find('.pvpd').val()) || 0,
+                        pvc: parseFloat($tr.find('.pvc').val()) || 0,
+                        pvcd: parseFloat($tr.find('.pvcd').val()) || 0,
                         // Nuevos campos
                         stock_min: parseFloat($tr.find('.stock-min').val()) || 0,
                         stock_max: parseFloat($tr.find('.stock-max').val()) || 0,

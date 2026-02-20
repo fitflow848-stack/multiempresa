@@ -266,6 +266,7 @@
 @include('pos.partials.js.cliente-venta')
 
 <script>
+    const isAdmin = @json($isAdmin ?? false);
     // Verificar si hay lotes seleccionados pendientes de agregar al ticket
     document.addEventListener('DOMContentLoaded', function() {
         inicializarSistemaVentaPersistente();
@@ -574,7 +575,7 @@
         let total_igv = 0;
 
         ticket.forEach(item => {
-            const itemTotal = parseFloat(item.precio) * parseInt(item.cantidad);
+            const itemTotal = parseFloat(item.importe || (parseFloat(item.precio) * parseInt(item.cantidad)));
             total_con_igv += itemTotal;
 
             if (item.tipo_impuesto !== 'exonerado') {
@@ -1730,7 +1731,7 @@
                 return;
             }
 
-            if (montoFijo >= subtotalSinDescuento) {
+            if (!isAdmin && montoFijo >= subtotalSinDescuento) {
                 alert('El descuento no puede ser mayor o igual al subtotal del producto');
                 renderTicket();
                 return;
@@ -1746,7 +1747,7 @@
             // Descuento porcentual
             const porcentaje = parseFloat(valor.replace('%', ''));
 
-            if (isNaN(porcentaje) || porcentaje < 0 || porcentaje > 100) {
+            if (!isAdmin && (isNaN(porcentaje) || porcentaje < 0 || porcentaje > 100)) {
                 alert('El descuento debe estar entre 0% y 100%');
                 renderTicket();
                 return;
@@ -1760,7 +1761,7 @@
         }
 
         // Aplicar descuento
-        producto.importe = subtotalSinDescuento - montoDescuento;
+        producto.importe = Math.max(0, subtotalSinDescuento - montoDescuento);
 
         renderTicket();
 
@@ -1813,7 +1814,7 @@
             ticket.forEach(producto => {
                 const subtotalSinDescuento = producto.cantidad * producto.precio;
 
-                if (montoFijo >= subtotalSinDescuento) {
+                if (!isAdmin && montoFijo >= subtotalSinDescuento) {
                     // Si el descuento es mayor al subtotal, aplicar máximo posible
                     const descuentoMaximo = subtotalSinDescuento - 0.01; // Dejar al menos 1 centavo
                     producto.descuentoFijo = descuentoMaximo;
@@ -1836,7 +1837,7 @@
             // Descuento porcentual
             const porcentaje = parseFloat(valor.replace('%', ''));
 
-            if (isNaN(porcentaje) || porcentaje < 0 || porcentaje > 100) {
+            if (!isAdmin && (isNaN(porcentaje) || porcentaje < 0 || porcentaje > 100)) {
                 alert('El descuento debe estar entre 0% y 100%');
                 return;
             }
@@ -1848,8 +1849,10 @@
                 producto.descuento = porcentaje;
                 producto.descuentoFijo = 0;
                 producto.descuentoTexto = `${porcentaje}%`;
-                producto.importe = subtotalSinDescuento - montoDescuento;
-                totalDescuentoAplicado += montoDescuento;
+
+                const prevImporte = subtotalSinDescuento;
+                producto.importe = Math.max(0, subtotalSinDescuento - montoDescuento);
+                totalDescuentoAplicado += (prevImporte - producto.importe);
             });
 
             tipoDescuento = `Descuento del ${porcentaje}%`;

@@ -173,7 +173,8 @@
                         <td>UNIDAD</td>
                         <td>{{ $item->cantidad }}</td>
                         <td style="text-align: right;">{{ number_format($item->precio_unitario, 2) }}</td>
-                        <td style="text-align: right;">{{ number_format(($item->precio_unitario * $item->cantidad), 2) }}</td>
+                        <td style="text-align: right;">
+                            {{ number_format($item->precio_unitario * $item->cantidad, 2) }}</td>
                     </tr>
                 @endforeach
             </tbody>
@@ -190,8 +191,17 @@
                 <tr>
                     <td>Sub Total</td>
                     <td align="right">S/</td>
-                    <td align="right">{{ number_format($venta->subtotal ?? $venta->total, 2) }}</td>
+                    <td align="right">
+                        {{ number_format(($venta->subtotal ?? $venta->total - $venta->igv) + ($venta->descuento_monto ?? 0), 2) }}
+                    </td>
                 </tr>
+                @if (($venta->descuento_monto ?? 0) > 0)
+                    <tr>
+                        <td>Descuento</td>
+                        <td align="right">S/</td>
+                        <td align="right">-{{ number_format($venta->descuento_monto, 2) }}</td>
+                    </tr>
+                @endif
                 <tr>
                     <td>IGV 18%</td>
                     <td align="right">S/</td>
@@ -202,6 +212,18 @@
                     <td align="right">S/</td>
                     <td align="right">{{ number_format($venta->total, 2) }}</td>
                 </tr>
+                @if (isset($venta->vuelto) && $venta->vuelto > 0)
+                    <tr>
+                        <td>Recibido</td>
+                        <td align="right">S/</td>
+                        <td align="right">{{ number_format($venta->monto_recibido, 2) }}</td>
+                    </tr>
+                    <tr>
+                        <td>Vuelto</td>
+                        <td align="right">S/</td>
+                        <td align="right">{{ number_format($venta->vuelto, 2) }}</td>
+                    </tr>
+                @endif
             </table>
             <div class="clear"></div>
         </div>

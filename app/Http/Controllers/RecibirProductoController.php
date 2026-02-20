@@ -31,6 +31,7 @@ class RecibirProductoController extends Controller
             cl.costo as compra_costo,
             cl.pvp as compra_pvp,
             cl.pvc as compra_pvc,
+            cl.pvc_dto as compra_pvc_dto,
             CONCAT(
                 'lt. ', cl.lote,
                 ' Fv. ',
@@ -42,6 +43,7 @@ class RecibirProductoController extends Controller
             pl.pvp as master_pvp,
             pl.pvp_dto as master_pvp_dto,
             pl.pvc as master_pvc,
+            pl.pvc_dto as master_pvc_dto,
             pl.precio_compra as master_costo
         FROM
             compras c
@@ -86,12 +88,13 @@ class RecibirProductoController extends Controller
                     'cantidad' => $item['cantidad'],
                     'costo' => $item['costo'],
                     'cop' => $item['cop'],
-                    'mu' => $item['mu'],
-                    'mud' => $item['mud'],
-                    'mup' => $item['mup'],
-                    'pvp' => $item['pvp'],
-                    'pvpd' => $item['pvpd'],
-                    'pvc' => $item['pvc'],
+                    'mu' => $item['mu'] ?? 0,
+                    'mud' => $item['mud'] ?? 0,
+                    'mup' => $item['mup'] ?? 0,
+                    'pvp' => $item['pvp'] ?? 0,
+                    'pvpd' => $item['pvpd'] ?? 0,
+                    'pvc' => $item['pvc'] ?? 0,
+                    'pvcd' => $item['pvcd'] ?? 0,
                     // Nuevos campos
                     'stock_min' => $item['stock_min'] ?? 0,
                     'stock_max' => $item['stock_max'] ?? 0,
@@ -115,9 +118,10 @@ class RecibirProductoController extends Controller
                         'stock_max' => $item['stock_max'] ?? 0,
                         'lote' => $item['lote'] ?? null,
                         'fecha_vencimiento' => $item['fecha_vencimiento'] ?? null,
-                        'pvp' => $item['pvp'],
-                        'pvp_dto' => $item['pvpd'],
-                        'pvc' => $item['pvc'],
+                        'pvp' => $item['pvp'] ?? 0,
+                        'pvp_dto' => $item['pvpd'] ?? 0,
+                        'pvc' => $item['pvc'] ?? 0,
+                        'pvc_dto' => $item['pvcd'] ?? 0,
                     ]);
                 }
             }

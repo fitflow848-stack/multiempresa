@@ -30,6 +30,8 @@ class Venta extends Model
         'numero',
         'id_cliente',
         'total',
+        'monto_recibido',
+        'vuelto',
         'descuento_porcentaje',
         'descuento_monto',
         'aplica_detraccion',
@@ -167,5 +169,13 @@ class Venta extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'id_usuario');
+    }
+
+    /**
+     * Relación con la Deuda
+     */
+    public function deuda()
+    {
+        return $this->hasOne(Deuda::class, 'venta_id', 'id_venta');
     }
 }

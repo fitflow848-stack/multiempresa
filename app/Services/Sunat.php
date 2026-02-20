@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Company;
-use Auth;
+use Illuminate\Support\Facades\Auth;
 use GuzzleHttp\Client;
 use Illuminate\Support\Facades\Log;
 
@@ -51,7 +51,7 @@ class Sunat
     }
 
     public function formatJsonFacturaBoleta($nombre_documento, $contenido_documento)
-    {   
+    {
         $empresa = Company::where('id', Auth::user()->company_id)->first();
         $data = [
             "endpoint" => "beta",
@@ -144,6 +144,10 @@ class Sunat
             $descripcion = $producto->nombre ?? ($producto->descripcion ?? $producto->nombre_servicio ?? '');
             $igv = 0;
             $costo = $producto->costo ?? $producto->precio_unitario ?? 0;
+            // Si hay un importe distinto al precio original, usamos el neto por unidad:
+            if (isset($producto->importe) && $producto->cantidad > 0) {
+                $costo = $producto->importe / $producto->cantidad;
+            }
             $precio = $costo + $igv;
             $descuento = isset($venta->descuento_porcentaje) ? round($precio * ($venta->descuento_porcentaje / 100), 2)  : 0;
             $precio -= $descuento;

@@ -76,7 +76,9 @@ class PosController extends Controller
             }
         }
 
-        return view('pos.index', compact('user', 'company', 'sucursales', 'cotizacionData', 'logo'));
+        $isAdmin = $user->hasAnyRole(['super_admin', 'admin_empresa', 'supervisor', 'Admin']);
+
+        return view('pos.index', compact('user', 'company', 'sucursales', 'cotizacionData', 'logo', 'isAdmin'));
     }
 
     public function buscar(Request $request)
@@ -190,6 +192,7 @@ class PosController extends Controller
                 'tipo_documento' => $request->tipo_documento,
                 'tipo_pago_id' => $request->tipo_pago_id,
                 'entrega' => $request->entrega,
+                'cambio' => $request->cambio ?? 0,
                 'deuda' => $request->deuda ?? 0,
                 'genera_deuda' => $request->genera_deuda ?? 0,
                 'observaciones' => $request->observaciones ?? '',

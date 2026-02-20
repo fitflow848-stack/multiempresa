@@ -262,6 +262,7 @@ class DeudaController extends Controller
 
         DB::beginTransaction();
         try {
+            $pagoIds = [];
             foreach ($deudas as $deuda) {
                 if ($montoRestante <= 0)
                     break;
@@ -278,6 +279,7 @@ class DeudaController extends Controller
                     'codigo_comprobante' => 'PAY-AC-' . strtoupper(Str::random(8)),
                     'observaciones' => $request->observaciones ? "Pago Acumulado: " . $request->observaciones : "Pago acumulado de cliente"
                 ]);
+                $pagoIds[] = $pago->id;
 
                 $nuevoMontoPagado = $deuda->monto_pagado + $pagoDeuda;
                 $nuevaDeudaVal = $deuda->monto_total - $nuevoMontoPagado;
@@ -323,7 +325,8 @@ class DeudaController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Pago acumulado aplicado correctamente distribuyéndose en ' . $deudas->count() . ' documentos.'
+                'message' => 'Pago acumulado aplicado correctamente distribuyéndose en ' . $deudas->count() . ' documentos.',
+                'pago_ids' => $pagoIds
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -368,13 +371,27 @@ class DeudaController extends Controller
     public function generarComprobantePago($pago_id)
     {
         $pago = DeudaPago::with(['deuda.cliente', 'user'])->findOrFail($pago_id);
+        $empresa = Company::first();
+
+        // Check for Logo
+        $logoPath = $empresa && $empresa->logo ? public_path('storage/' . $empresa->logo) : null;
+        $logo = null;
+        if ($logoPath && file_exists($logoPath)) {
+            $logoData = base64_encode(file_get_contents($logoPath));
+            $logoType = pathinfo($logoPath, PATHINFO_EXTENSION);
+            $logo = 'data:image/' . $logoType . ';base64,' . $logoData;
+        }
 
         $data = [
             'pago' => $pago,
-            'company' => Company::first(), // O el scope de empresa
+            'deuda' => $pago->deuda,
+            'cliente' => $pago->deuda->cliente,
+            'empresa' => $empresa,
+            'logo' => $logo
         ];
 
-        $pdf = Pdf::loadView('deudas.comprobante_pago_pdf', $data);
+        $pdf = Pdf::loadView('deudas.comprobante_pago', $data)
+            ->setPaper([0, 0, 226, 600], 'portrait');
         return $pdf->stream('recibo_pago_' . $pago->codigo_comprobante . '.pdf');
     }
 }

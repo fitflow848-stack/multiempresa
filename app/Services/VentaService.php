@@ -77,8 +77,9 @@ class VentaService
             $openCaja = null;
 
             if ($selectedCajaId) {
-                $openCaja = CierreCaja::where('id_caja', $selectedCajaId)
+                $openCaja = CierreCaja::where('caja_id', $selectedCajaId)
                     ->whereNull('fecha_cierre')
+                    ->latest()
                     ->first();
             }
 
@@ -89,7 +90,7 @@ class VentaService
                     ->get();
 
                 if ($openCajas->count() === 1) {
-                    $openCaja = $openCajas->first();
+                    $openCaja = $openCajas->latest()->first();
                 } elseif ($openCajas->count() > 1) {
                     throw new Exception('Tienes múltiples cajas abiertas. Por favor, selecciona una en la barra superior.');
                 }
@@ -102,6 +103,7 @@ class VentaService
             // Calcular totales considerando el tipo de impuesto de los productos
             $total = 0;
             $igv_total = 0;
+            $total_descuento = 0;
             // Variables para desglosar (aunque por ahora solo usamos total e igv para guardar)
             $op_gravadas = 0;
             $op_exoneradas = 0;
@@ -109,10 +111,14 @@ class VentaService
 
             foreach ($ticket as $item) {
                 if (isset($item['precio']) && isset($item['cantidad'])) {
-                    $precio = floatval($item['precio']);
+                    $precio_original = floatval($item['precio']);
                     $cantidad = intval($item['cantidad']);
-                    $importe = $precio * $cantidad;
-                    $total += $importe;
+                    $importe_pagado = floatval($item['importe'] ?? ($precio_original * $cantidad));
+
+                    $importe_original = $precio_original * $cantidad;
+                    $total_descuento += ($importe_original - $importe_pagado);
+
+                    $total += $importe_pagado;
 
                     // Determinar tipo de impuesto del producto
                     $tipoImpuesto = 10; // Por defecto Gravado - Operación Onerosa
@@ -127,13 +133,13 @@ class VentaService
 
                     // Calcular según tipo
                     if ($tipoImpuesto == 20 || $tipoImpuesto === 'exonerado') { // Exonerado - Operación Onerosa
-                        $op_exoneradas += $importe;
+                        $op_exoneradas += $importe_pagado;
                     } elseif ($tipoImpuesto == 30 || $tipoImpuesto === 'inafecto') { // Inafecto - Operación Onerosa
-                        $op_inafectas += $importe;
+                        $op_inafectas += $importe_pagado;
                     } else { // Gravado (10 u otros por defecto)
                         // El precio unitario (PVP) incluye IGV
-                        $base = $importe / 1.18;
-                        $igv_item = $importe - $base;
+                        $base = $importe_pagado / 1.18;
+                        $igv_item = $importe_pagado - $base;
                         $op_gravadas += $base;
                         $igv_total += $igv_item;
                     }
@@ -141,7 +147,7 @@ class VentaService
             }
 
             $igv = round($igv_total, 2);
-            $subtotal = round($total - $igv, 2); // Base total (gravada + exonerada + inafecta)
+            $subtotal_gravado = round($total - $igv, 2); // Base total (gravada + exonerada + inafecta)
 
             // Obtener siguiente número
             $siguienteNumero = $this->obtenerSiguienteNumeroSerie('', $tipoDocumento, true);
@@ -169,6 +175,8 @@ class VentaService
             $venta->serie = $serie;
             $venta->numero = $siguienteNumero;
             $venta->total = $total;
+            $venta->monto_recibido = $entrega;
+            $venta->vuelto = $meta['cambio'] ?? 0;
             $venta->igv = $igv;
             $venta->observacion = $observaciones;
             $venta->estado = 1;
@@ -181,6 +189,8 @@ class VentaService
             $venta->cierre_caja_id = $openCaja->id;
             $venta->id_usuario = $user->id;
             $venta->id_coti = $meta['id_coti'] ?? null;
+            $venta->descuento_monto = $total_descuento > 0 ? $total_descuento : 0;
+            $venta->descuento_porcentaje = ($total_descuento > 0 && ($total + $total_descuento) > 0) ? round(($total_descuento / ($total + $total_descuento)) * 100, 2) : 0;
             $venta->save();
 
             // Si hay una deuda (pago parcial), crear registro de deuda
@@ -211,17 +221,17 @@ class VentaService
             }
             // Crear detalles y actualizar stock
             foreach ($ticket as $index => $item) {
-                $precio_unitario = floatval($item['precio'] ?? 0);
                 $cantidad = intval($item['cantidad'] ?? 1);
-                $precio_total = $precio_unitario * $cantidad;
+                $precio_original = floatval($item['precio'] ?? 0);
+                $importe_pagado = floatval($item['importe'] ?? ($precio_original * $cantidad));
 
                 $detalle = new VentaDetalle();
                 $detalle->id_venta = $venta->id_venta;
                 $detalle->servicio_id = $item['producto_id'] ?? null;
                 $detalle->nombre_servicio = $item['nombre'] ?? 'Producto sin nombre';
                 $detalle->cantidad = $cantidad;
-                $detalle->precio_unitario = $precio_unitario;
-                $detalle->importe = $precio_total;
+                $detalle->precio_unitario = $precio_original;
+                $detalle->importe = $importe_pagado;
                 $detalle->orden = $index + 1;
                 $detalle->save();
 

@@ -154,6 +154,24 @@
                             </div>
                         </div>
 
+                        @if (!empty($ingresosPorMetodo))
+                            <div class="mb-4">
+                                <h6 class="fw-bold mb-3 text-secondary">Otros Métodos de Pago (No Efectivo)</h6>
+                                <ul class="list-group list-group-flush border rounded shadow-sm">
+                                    @foreach ($ingresosPorMetodo as $metodo => $totalMetodo)
+                                        <li
+                                            class="list-group-item d-flex justify-content-between align-items-center bg-light">
+                                            <span class="label-custom fw-bold text-dark"><i
+                                                    class="fas fa-wallet me-1 text-secondary"></i>
+                                                {{ $metodo }}</span>
+                                            <span class="fw-bold text-success">S/
+                                                {{ number_format($totalMetodo, 2) }}</span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
+
                         <div class="mb-0">
                             <label class="label-custom">Observaciones Finales</label>
                             <textarea name="observaciones" class="form-control form-control-sm" rows="3"
@@ -187,12 +205,16 @@
                                         <th style="width: 150px;">Operación</th>
                                         <th>Concepto / Referencia</th>
                                         <th style="width: 120px;">Método Pago</th>
-                                        <th class="text-end pe-3">Importe</th>
+                                        <th class="text-end" style="width: 100px;">Importe</th>
+                                        @if (!$cierre->fecha_cierre)
+                                            <th class="text-center" style="width: 80px;">Acciones</th>
+                                        @endif
                                     </tr>
                                 </thead>
                                 <tbody id="movimientos-tbody">
                                     @forelse ($movimientos as $movimiento)
-                                        <tr>
+                                        <tr data-id="{{ $movimiento->id_movimiento }}"
+                                            data-origen="{{ $movimiento->origen_movimiento ?? '' }}">
                                             <td class="ps-3 py-3 small text-muted">
                                                 {{ \Carbon\Carbon::parse($movimiento->fecha_emision)->format('H:i') }}
                                             </td>
@@ -230,9 +252,29 @@
                                                 <span
                                                     class="badge bg-light text-dark border">{{ $movimiento->metodo_pago ?? '---' }}</span>
                                             </td>
-                                            <td class="text-end pe-3 fw-bold text-dark">
+                                            <td class="text-end fw-bold text-dark">
                                                 S/ {{ number_format($movimiento->importe, 2) }}
                                             </td>
+                                            @if (!$cierre->fecha_cierre)
+                                                <td class="text-center">
+                                                    @if (isset($movimiento->origen_movimiento) && $movimiento->origen_movimiento === 'operacion')
+                                                        <button
+                                                            class="btn btn-sm btn-outline-primary px-2 py-0 border-0 fs-6 edit-operacion"
+                                                            data-id="{{ $movimiento->id_movimiento }}"
+                                                            data-tipo="{{ $movimiento->tipo_movimiento }}"
+                                                            data-partida="{{ $movimiento->operacion }}"
+                                                            data-concepto="{{ $movimiento->concepto }}"
+                                                            data-importe="{{ $movimiento->importe }}" title="Editar">
+                                                            <i class="bx bx-edit"></i>
+                                                        </button>
+                                                        <button
+                                                            class="btn btn-sm btn-outline-danger px-2 py-0 border-0 fs-6 delete-operacion"
+                                                            data-id="{{ $movimiento->id_movimiento }}" title="Eliminar">
+                                                            <i class="bx bx-trash"></i>
+                                                        </button>
+                                                    @endif
+                                                </td>
+                                            @endif
                                         </tr>
                                     @empty
                                         <tr>
@@ -268,6 +310,7 @@
                     <button type="button" class="btn-close btn-close-white" onclick="closeModals()"></button>
                 </div>
                 <div class="modal-body p-4">
+                    <input type="hidden" id="op_id">
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="label-custom">Tipo de Movimiento</label>
@@ -450,7 +493,69 @@
 
         // Event Listeners
         document.getElementById('fab-add-operacion')?.addEventListener('click', () => {
+            document.getElementById('op_id').value = '';
+            document.getElementById('op_tipo').value = 'ingreso';
+            document.getElementById('op_partida').value = '';
+            document.getElementById('op_concepto').value = '';
+            document.getElementById('op_importe').value = '0.00';
+            document.querySelector('#modal-operacion .modal-title').innerText = 'Registrar Operación Manual';
             document.getElementById('modal-operacion').style.display = 'block';
+        });
+
+        document.querySelectorAll('.edit-operacion').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const btnEl = e.currentTarget;
+                document.getElementById('op_id').value = btnEl.getAttribute('data-id');
+                document.getElementById('op_tipo').value = btnEl.getAttribute('data-tipo');
+                document.getElementById('op_concepto').value = btnEl.getAttribute('data-concepto');
+                document.getElementById('op_importe').value = parseFloat(btnEl.getAttribute('data-importe'))
+                    .toFixed(2);
+
+                // Need to correctly set 'op_partida' if it is in the select options or fetch them.
+                const partida = btnEl.getAttribute('data-partida');
+                const partidaSelect = document.getElementById('op_partida');
+                let found = false;
+                for (let i = 0; i < partidaSelect.options.length; i++) {
+                    if (partidaSelect.options[i].value === partida) {
+                        partidaSelect.selectedIndex = i;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found && partida) {
+                    const opt = document.createElement('option');
+                    opt.value = partida;
+                    opt.textContent = partida;
+                    partidaSelect.appendChild(opt);
+                    partidaSelect.value = partida;
+                }
+
+                document.querySelector('#modal-operacion .modal-title').innerText =
+                    'Editar Operación Manual';
+                document.getElementById('modal-operacion').style.display = 'block';
+            });
+        });
+
+        document.querySelectorAll('.delete-operacion').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                if (!confirm(
+                        '¿Desea eliminar esta operación? Esta acción alterará los totales de la caja.'))
+                    return;
+                const id = e.currentTarget.getAttribute('data-id');
+                try {
+                    const res = await fetch(`/operaciones-caja/${id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        }
+                    });
+                    if (res.ok) location.reload();
+                    else alert('Error al eliminar la operación.');
+                } catch (err) {
+                    console.error(err);
+                    alert('Error de red al intentar eliminar.');
+                }
+            });
         });
 
         document.querySelectorAll('input').forEach(input => {
@@ -459,6 +564,7 @@
 
         // Guardar Operación
         document.getElementById('op_save').addEventListener('click', async () => {
+            const opId = document.getElementById('op_id').value;
             const payload = {
                 tipo: document.getElementById('op_tipo').value,
                 partida: document.getElementById('op_partida').value,
@@ -472,8 +578,15 @@
                 return;
             }
 
-            const res = await fetch("{{ route('operaciones-caja.store') }}", {
-                method: 'POST',
+            let url = "{{ route('operaciones-caja.store') }}";
+            let method = 'POST';
+            if (opId) {
+                url = `/operaciones-caja/${opId}`;
+                method = 'PUT';
+            }
+
+            const res = await fetch(url, {
+                method: method,
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'

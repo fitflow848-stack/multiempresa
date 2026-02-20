@@ -188,7 +188,7 @@
             }
 
             // 3. VALIDACIÓN ESTRICTA contra el monto de la ruta
-            if (montoIngresado > (maxMontoPermitido + 0.01)) {
+            if (!isAdmin && montoIngresado > (maxMontoPermitido + 0.01)) {
                 return alert(
                     `¡Error! El descuento máximo para este producto es de S/ ${maxMontoPermitido.toFixed(2)}. No puede aplicar S/ ${montoIngresado.toFixed(2)}`
                 );

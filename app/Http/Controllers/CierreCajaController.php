@@ -12,7 +12,8 @@ class CierreCajaController extends Controller
 {
     public function index(Request $request)
     {
-        $user = auth()->user();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
         $selectedCajaId = session('selected_caja_id');
 
         $query = CierreCaja::with(['user', 'caja'])->latest();
@@ -43,10 +44,20 @@ class CierreCajaController extends Controller
 
         $cierres = $query->paginate(20);
 
-        $openCaja = CierreCaja::where('user_id', $user->id)
-            ->where('caja_id', $selectedCajaId)
-            ->whereNull('fecha_cierre')
-            ->first();
+        // Corregir lógica de openCaja para que coincida con lo que busca el POS y VentaService
+        $openCaja = null;
+        if ($selectedCajaId) {
+            $openCaja = CierreCaja::where('caja_id', $selectedCajaId)
+                ->whereNull('fecha_cierre')
+                ->latest()
+                ->first();
+        } else {
+            // Si no hay caja seleccionada, ver si tiene alguna abierta en general
+            $openCaja = CierreCaja::where('user_id', $user->id)
+                ->whereNull('fecha_cierre')
+                ->latest()
+                ->first();
+        }
 
         return view('cierres.index', compact('cierres', 'openCaja'));
     }
@@ -59,10 +70,20 @@ class CierreCajaController extends Controller
             return redirect()->route('cierre-caja.index')->with('error', 'Debe seleccionar una caja activa en el menú superior antes de abrir una sesión.');
         }
 
+        // Verificar si ya tiene una caja abierta para evitar duplicidad
+        $openCaja = CierreCaja::where('caja_id', $selectedCajaId)
+            ->whereNull('fecha_cierre')
+            ->first();
+
+        if ($openCaja) {
+            return redirect()->route('cierre-caja.show', $openCaja->id)
+                ->with('info', 'Ya tienes una sesión abierta para esta caja. Finaliza la sesión actual antes de abrir una nueva.');
+        }
+
         // Obtener el último cierre de la caja seleccionada
         $ultimoCierre = CierreCaja::where('caja_id', $selectedCajaId)
             ->whereNotNull('fecha_cierre')
-            ->orderBy('fecha_cierre', 'desc')
+            ->orderBy('created_at', 'desc')
             ->first();
 
         // El saldo inicial será el monto de cierre del último arqueo, o 0 si no hay cierres previos
@@ -84,8 +105,11 @@ class CierreCajaController extends Controller
             'observaciones' => 'nullable|string',
         ]);
 
-        $data['user_id'] = auth()->id();
-        $data['id_empresa'] = auth()->user()->company_id;
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        $data['user_id'] = $user->id;
+        $data['id_empresa'] = $user->company_id;
         $data['caja_id'] = session('selected_caja_id');
 
         if (!$data['caja_id']) {
@@ -111,7 +135,9 @@ class CierreCajaController extends Controller
                     WHEN d.id IS NULL THEN v.total
                     ELSE (v.total - (d.monto_deuda + COALESCE((SELECT SUM(monto) FROM deuda_pagos WHERE deuda_id = d.id), 0)))
                 END AS importe,
-                u.name AS usuario 
+                u.name AS usuario,
+                v.id_venta AS id_movimiento,
+                'venta' AS origen_movimiento
                 FROM
                     ventas v
                     INNER JOIN clientes c ON c.id = v.id_cliente
@@ -131,12 +157,28 @@ class CierreCajaController extends Controller
                     'Efectivo' AS metodo_pago,
                     1 AS es_efectivo,
                     o.importe,
-                    u.name AS usuario 
+                    u.name AS usuario,
+                    o.id AS id_movimiento,
+                    'operacion' AS origen_movimiento
                 FROM
                     operaciones_caja o
                 INNER JOIN users u ON u.id = o.user_id 
                 where o.cierre_caja_id = :cierre_id_2
-                ) ORDER BY fecha_emision ASC", ['cierre_id' => $cierre->id, 'cierre_id_2' => $cierre->id]);
+                ) ORDER BY fecha_emision DESC", ['cierre_id' => $cierre->id, 'cierre_id_2' => $cierre->id]);
+
+        $ingresosPorMetodo = [];
+        foreach ($movimientos as $mov) {
+            $importe = floatval($mov->importe);
+            $esEfectivo = (bool) ($mov->es_efectivo ?? false);
+            $metodoPago = $mov->metodo_pago ?? 'Sin método';
+
+            if ($mov->tipo_movimiento === 'ingreso' && !$esEfectivo) {
+                if (!isset($ingresosPorMetodo[$metodoPago])) {
+                    $ingresosPorMetodo[$metodoPago] = 0;
+                }
+                $ingresosPorMetodo[$metodoPago] += $importe;
+            }
+        }
 
         // Si el cierre está abierto, calculamos los totales dinámicamente
         if (!$cierre->fecha_cierre) {
@@ -192,7 +234,7 @@ class CierreCajaController extends Controller
             // pero por ahora priorizamos que el teórico cuadre con el efectivo.
         }
 
-        return view('cierres.show', ['cierre' => $cierre, 'movimientos' => $movimientos]);
+        return view('cierres.show', ['cierre' => $cierre, 'movimientos' => $movimientos, 'ingresosPorMetodo' => $ingresosPorMetodo]);
     }
 
     public function close(Request $request, CierreCaja $cierre)
@@ -239,7 +281,7 @@ class CierreCajaController extends Controller
             try {
                 $ventas = Venta::where('cierre_caja_id', $openCaja->id)
                     ->select('id_venta', 'serie', 'numero', 'total', 'fecha_emision')
-                    ->orderBy('fecha_emision', 'asc')
+                    ->orderBy('fecha_emision', 'desc')
                     ->get();
             } catch (\Throwable $e) {
                 // Si la columna no existe o hay error, simplemente ignorar

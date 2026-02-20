@@ -154,7 +154,7 @@
                                     <tr class="cliente-row" data-cliente-id="{{ $cliente->id }}">
                                         <td class="text-center">
                                             <button class="btn btn-sm btn-outline-secondary toggle-deudas" type="button">
-                                                <i class="fa fa-plus"></i>
+                                                <i class="bx bx-plus"></i>
                                             </button>
                                         </td>
                                         <td>
@@ -172,7 +172,7 @@
                                         </td>
                                         <td class="text-center">
                                             <div class="btn-group">
-                                                <button type="button" class="btn btn-success btn-sm" 
+                                                <button type="button" class="btn btn-success btn-sm"
                                                     onclick="abrirModalPagoAcumulado({{ $cliente->id }}, '{{ $cliente->nombre }}', {{ $cliente->deudas_sum_monto_deuda }})">
                                                     <i class="fa fa-money-bill-wave"></i> Pagar Acumulado
                                                 </button>
@@ -187,7 +187,9 @@
                                     <tr class="deudas-expand-row d-none" id="deudas-cliente-{{ $cliente->id }}">
                                         <td colspan="6" class="p-0 border-top-0">
                                             <div class="bg-light p-3 border-bottom shadow-sm">
-                                                <h6 class="font-weight-bold text-primary mb-3"><i class="fa fa-file-invoice"></i> Documentos Pendientes de {{ $cliente->nombre }}</h6>
+                                                <h6 class="font-weight-bold text-primary mb-3"><i
+                                                        class="fa fa-file-invoice"></i> Documentos Pendientes de
+                                                    {{ $cliente->nombre }}</h6>
                                                 <div class="table-responsive bg-white rounded">
                                                     <table class="table table-sm table-bordered mb-0">
                                                         <thead class="bg-dark text-white">
@@ -202,23 +204,30 @@
                                                             </tr>
                                                         </thead>
                                                         <tbody>
-                                                            @foreach($cliente->deudas as $deuda)
+                                                            @foreach ($cliente->deudas as $deuda)
                                                                 <tr>
                                                                     <td>{{ $deuda->fecha_venta->format('d/m/Y') }}</td>
-                                                                    <td><strong>{{ $deuda->numero_comprobante }}</strong></td>
-                                                                    <td class="text-end">S/ {{ number_format($deuda->monto_total, 2) }}</td>
-                                                                    <td class="text-end text-success">S/ {{ number_format($deuda->monto_pagado, 2) }}</td>
-                                                                    <td class="text-end font-weight-bold text-danger">S/ {{ number_format($deuda->monto_deuda, 2) }}</td>
+                                                                    <td><strong>{{ $deuda->numero_comprobante }}</strong>
+                                                                    </td>
+                                                                    <td class="text-end">S/
+                                                                        {{ number_format($deuda->monto_total, 2) }}</td>
+                                                                    <td class="text-end text-success">S/
+                                                                        {{ number_format($deuda->monto_pagado, 2) }}</td>
+                                                                    <td class="text-end font-weight-bold text-danger">S/
+                                                                        {{ number_format($deuda->monto_deuda, 2) }}</td>
                                                                     <td class="text-center">
-                                                                        <span class="badge badge-{{ $deuda->estado === 'vencida' ? 'danger' : ($deuda->estado === 'parcial' ? 'info' : 'warning') }}">
+                                                                        <span
+                                                                            class="badge badge-{{ $deuda->estado === 'vencida' ? 'danger' : ($deuda->estado === 'parcial' ? 'info' : 'warning') }}">
                                                                             {{ ucfirst($deuda->estado) }}
                                                                         </span>
                                                                     </td>
                                                                     <td class="text-center">
-                                                                        <button class="btn btn-xs btn-primary py-0" onclick="abrirModalPagoIndividual({{ $deuda->id }}, '{{ $deuda->numero_comprobante }}', {{ $deuda->monto_deuda }})">
+                                                                        <button class="btn btn-xs btn-primary py-0"
+                                                                            onclick="abrirModalPagoIndividual({{ $deuda->id }}, '{{ $deuda->numero_comprobante }}', {{ $deuda->monto_deuda }})">
                                                                             <i class="fa fa-dollar-sign"></i> Pagar
                                                                         </button>
-                                                                        <button class="btn btn-xs btn-info py-0" onclick="verHistorialPagos({{ $deuda->id }}, '{{ $deuda->numero_comprobante }}')">
+                                                                        <button class="btn btn-xs btn-info py-0"
+                                                                            onclick="verHistorialPagos({{ $deuda->id }}, '{{ $deuda->numero_comprobante }}')">
                                                                             <i class="fa fa-history"></i> Historial
                                                                         </button>
                                                                     </td>
@@ -267,11 +276,11 @@
                         </div>
                         <input type="hidden" id="tipoPago" value="individual">
                         <input type="hidden" id="targetId">
-                        
+
                         <div class="form-group">
                             <label class="font-weight-bold">Monto del Pago (S/)</label>
-                            <input type="number" step="0.01" min="0.01" id="montoPago" class="form-control form-control-lg text-primary font-weight-bold"
-                                required>
+                            <input type="number" step="0.01" min="0.01" id="montoPago"
+                                class="form-control form-control-lg text-primary font-weight-bold" required>
                             <small class="form-text text-muted">Deuda total pendiente: S/ <span
                                     id="deudaPendienteLabel">0.00</span></small>
                         </div>
@@ -308,7 +317,8 @@
         <div class="modal-dialog modal-lg border-0 shadow">
             <div class="modal-content">
                 <div class="modal-header bg-info text-white">
-                    <h5 class="modal-title"><i class="fa fa-history"></i> Historial de Pagos: <span id="historialComprobante"></span></h5>
+                    <h5 class="modal-title"><i class="fa fa-history"></i> Historial de Pagos: <span
+                            id="historialComprobante"></span></h5>
                     <button type="button" class="close text-white" data-dismiss="modal">
                         <span>&times;</span>
                     </button>
@@ -368,25 +378,27 @@
 
         function abrirModalPagoAcumulado(clienteId, nombreCliente, montoTotal) {
             document.getElementById('modalTitle').textContent = 'Pago Acumulado: ' + nombreCliente;
-            document.getElementById('infoPago').innerHTML = `<i class="fa fa-info-circle"></i> Se distribuirá el pago entre <strong>todas</strong> las deudas pendientes de este cliente.`;
+            document.getElementById('infoPago').innerHTML =
+                `<i class="fa fa-info-circle"></i> Se distribuirá el pago entre <strong>todas</strong> las deudas pendientes de este cliente.`;
             document.getElementById('tipoPago').value = 'acumulado';
             document.getElementById('targetId').value = clienteId;
             document.getElementById('deudaPendienteLabel').textContent = parseFloat(montoTotal).toFixed(2);
             document.getElementById('montoPago').value = parseFloat(montoTotal).toFixed(2);
             document.getElementById('montoPago').max = parseFloat(montoTotal).toFixed(2);
-            
+
             $('#modalAplicarPago').modal('show');
         }
 
         function abrirModalPagoIndividual(deudaId, comprobante, montoDeuda) {
             document.getElementById('modalTitle').textContent = 'Pago Individual: ' + comprobante;
-            document.getElementById('infoPago').innerHTML = `<i class="fa fa-file-invoice"></i> Aplicando pago específicamente al documento <strong>${comprobante}</strong>.`;
+            document.getElementById('infoPago').innerHTML =
+                `<i class="fa fa-file-invoice"></i> Aplicando pago específicamente al documento <strong>${comprobante}</strong>.`;
             document.getElementById('tipoPago').value = 'individual';
             document.getElementById('targetId').value = deudaId;
             document.getElementById('deudaPendienteLabel').textContent = parseFloat(montoDeuda).toFixed(2);
             document.getElementById('montoPago').value = parseFloat(montoDeuda).toFixed(2);
             document.getElementById('montoPago').max = parseFloat(montoDeuda).toFixed(2);
-            
+
             $('#modalAplicarPago').modal('show');
         }
 
@@ -399,9 +411,9 @@
             try {
                 const response = await fetch(`{{ url('deudas') }}/${deudaId}/historial`);
                 const data = await response.json();
-                
+
                 document.getElementById('loadingHistorial').classList.add('d-none');
-                
+
                 if (data.pagos && data.pagos.length > 0) {
                     data.pagos.forEach(pago => {
                         document.getElementById('historialBody').innerHTML += `
@@ -419,11 +431,13 @@
                         `;
                     });
                 } else {
-                    document.getElementById('historialBody').innerHTML = `<tr><td colspan="5" class="text-center py-4">No hay pagos registrados</td></tr>`;
+                    document.getElementById('historialBody').innerHTML =
+                        `<tr><td colspan="5" class="text-center py-4">No hay pagos registrados</td></tr>`;
                 }
             } catch (error) {
                 console.error(error);
-                document.getElementById('historialBody').innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">Error al cargar el historial</td></tr>`;
+                document.getElementById('historialBody').innerHTML =
+                    `<tr><td colspan="5" class="text-center text-danger py-4">Error al cargar el historial</td></tr>`;
             }
         }
 
@@ -441,13 +455,22 @@
                 return;
             }
 
-            const url = tipo === 'acumulado' 
-                ? `{{ route('deudas.pagar-acumulado') }}`
-                : `{{ url('deudas') }}/${targetId}/aplicar-pago`;
+            const url = tipo === 'acumulado' ?
+                `{{ route('deudas.pagar-acumulado') }}` :
+                `{{ url('deudas') }}/${targetId}/aplicar-pago`;
 
-            const body = tipo === 'acumulado'
-                ? { cliente_id: targetId, monto_pago: montoPago, metodo_pago, observaciones }
-                : { monto_pago: montoPago, metodo_pago, observaciones };
+            const body = tipo === 'acumulado' ?
+                {
+                    cliente_id: targetId,
+                    monto_pago: montoPago,
+                    metodo_pago,
+                    observaciones
+                } :
+                {
+                    monto_pago: montoPago,
+                    metodo_pago,
+                    observaciones
+                };
 
             if (!confirm(`¿Está seguro de aplicar un pago de S/ ${montoPago} vía ${metodo_pago}?`)) return;
 
@@ -462,9 +485,25 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        alert(data.message || 'Pago aplicado correctamente');
                         $('#modalAplicarPago').modal('hide');
-                        window.location.reload();
+                        if (confirm('Pago registrado correctamente. ¿Desea imprimir el comprobante?')) {
+                            if (data.pago_id) {
+                                window.open(`{{ url('deudas/pago') }}/${data.pago_id}/comprobante`, '_blank');
+                            } else if (data.pago_ids && data.pago_ids.length > 0) {
+                                data.pago_ids.forEach((id, index) => {
+                                    setTimeout(() => {
+                                        window.open(
+                                            `{{ url('deudas/pago') }}/${id}/comprobante`,
+                                            '_blank');
+                                    }, index * 500);
+                                });
+                            }
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
+                        } else {
+                            window.location.reload();
+                        }
                     } else {
                         alert('Error: ' + data.message);
                     }

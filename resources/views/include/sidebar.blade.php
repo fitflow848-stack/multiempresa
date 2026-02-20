@@ -1,7 +1,16 @@
 <style>
     /* Remover el CSS problemático y usar mejor approach */
+    .navbar {
+        z-index: 1070 !important;
+        /* Asegurar que esté por encima de headers pegajosos de tablas */
+    }
+
+    .dropdown-menu {
+        z-index: 1080 !important;
+    }
+
     .navbar-nav {
-        gap: 0.25rem;
+        gap: 0.15rem;
     }
 
     .nav-link {
@@ -10,22 +19,36 @@
         padding: 0.5rem 0.75rem !important;
     }
 
-    /* Ajustar para pantallas medianas */
-    @media (min-width: 1200px) and (max-width: 1400px) {
+    /* Ajustar para pantallas medianas-grandes (Laptops normales) */
+    @media (min-width: 1200px) and (max-width: 1550px) {
         .nav-link {
-            font-size: 0.85rem;
-            padding: 0.5rem 0.6rem !important;
+            font-size: 0.78rem;
+            padding: 0.5rem 0.35rem !important;
         }
 
         .nav-link i {
-            font-size: 0.9rem;
+            display: none;
+            /* Ocultar iconos en este rango para ganar mucho espacio */
+        }
+
+        .navbar-brand {
+            margin-right: 0.5rem !important;
+        }
+
+        .navbar-brand span {
+            font-size: 1.1rem !important;
+        }
+
+        .badge.bg-label-primary {
+            padding: 0.4rem 0.6rem !important;
+            font-size: 0.7rem !important;
         }
     }
 
     /* Para pantallas muy grandes */
-    @media (min-width: 1400px) {
+    @media (min-width: 1550px) {
         .navbar-nav {
-            gap: 0.5rem;
+            gap: 0.4rem;
         }
     }
 
@@ -50,9 +73,8 @@
         </a>
 
         <!-- Toggler Button -->
-        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse"
-            data-bs-target="#navbarNavigation" aria-controls="navbarNavigation" aria-expanded="false"
-            aria-label="Toggle navigation">
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavigation"
+            aria-controls="navbarNavigation" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
 
@@ -62,7 +84,7 @@
                 <li class="nav-item">
                     <a href="{{ route('principal.index') }}"
                         class="nav-link {{ request()->is('principal*') ? 'active fw-bold text-primary' : '' }}">
-                        <i class="bx bx-home-circle me-1"></i> Dashboard
+                        <i class="bx bx-home-circle me-1"></i> Inicio
                     </a>
                 </li>
 
@@ -114,23 +136,27 @@
                             <i class="bx bx-collection me-1"></i> Ventas
                         </a>
                         <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="ventasDropdown">
-                            @if(isset($current_user_cajas) && $current_user_cajas->count() > 0)
+                            @if (isset($current_user_cajas) && $current_user_cajas->count() > 0)
                                 <li class="dropdown-header text-uppercase fs-tiny fw-bold">Caja Activa</li>
-                                @foreach($current_user_cajas as $caja)
+                                @foreach ($current_user_cajas as $caja)
                                     <li>
-                                        <form action="{{ route('caja.select') }}" method="POST" id="form-caja-{{ $caja->id }}">
+                                        <form action="{{ route('caja.select') }}" method="POST"
+                                            id="form-caja-{{ $caja->id }}">
                                             @csrf
                                             <input type="hidden" name="caja_id" value="{{ $caja->id }}">
-                                            <button type="submit" class="dropdown-item d-flex justify-content-between align-items-center {{ session('selected_caja_id') == $caja->id ? 'bg-light fw-bold text-primary' : '' }}">
+                                            <button type="submit"
+                                                class="dropdown-item d-flex justify-content-between align-items-center {{ session('selected_caja_id') == $caja->id ? 'bg-light fw-bold text-primary' : '' }}">
                                                 <span><i class="bx bx-box me-2"></i>{{ $caja->nombre }}</span>
-                                                @if(session('selected_caja_id') == $caja->id)
+                                                @if (session('selected_caja_id') == $caja->id)
                                                     <i class="bx bx-check text-primary"></i>
                                                 @endif
                                             </button>
                                         </form>
                                     </li>
                                 @endforeach
-                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
                             @endif
 
                             @can('pos.ver')
@@ -171,7 +197,7 @@
                     <li class="nav-item">
                         <a href="{{ route('finanzas_vendedor.index') }}"
                             class="nav-link {{ request()->routeIs('finanzas_vendedor.*') ? 'active fw-bold text-primary' : '' }}">
-                            <i class="bx bx-dollar-circle me-1"></i> Finanzas Vendedor
+                            <i class="bx bx-dollar-circle me-1"></i> Finanzas
                         </a>
                     </li>
                 @endhasanyrole
@@ -190,7 +216,7 @@
                         <a href="#"
                             class="nav-link dropdown-toggle {{ request()->is('guia*') ? 'active fw-bold text-primary' : '' }}"
                             id="docsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bx bx-collection me-1"></i> Doc. Electrónico
+                            <i class="bx bx-collection me-1"></i> Documentos
                         </a>
                         <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="docsDropdown">
                             <li>
@@ -258,18 +284,20 @@
             <ul class="navbar-nav ms-auto align-items-xl-center mt-3 mt-xl-0">
                 @auth
                     @php
-                        $selectedCajaBadge = isset($current_user_cajas) ? $current_user_cajas->firstWhere('id', session('selected_caja_id')) : null;
-                        
+                        $selectedCajaBadge = isset($current_user_cajas)
+                            ? $current_user_cajas->firstWhere('id', session('selected_caja_id'))
+                            : null;
+
                         $roleName = Auth::user()->getRoleNames()->first() ?? 'Usuario';
-                        $roleLabel = match($roleName) {
+                        $roleLabel = match ($roleName) {
                             'super_admin' => 'Super Admin',
                             'admin_empresa' => 'Administrador',
                             'supervisor' => 'Supervisor',
                             'vendedor' => 'Vendedor',
-                            default => ucfirst(str_replace('_', ' ', $roleName))
+                            default => ucfirst(str_replace('_', ' ', $roleName)),
                         };
                     @endphp
-                    @if($selectedCajaBadge)
+                    @if ($selectedCajaBadge)
                         <li class="nav-item me-3 d-none d-xl-block">
                             <span class="badge bg-label-primary px-3 py-2">
                                 <i class="bx bx-box me-1"></i> {{ $selectedCajaBadge->nombre }}
@@ -281,7 +309,7 @@
                             role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <div class="d-flex flex-column text-end me-2">
                                 <span class="fw-bold small lh-1">{{ Auth::user()->name }}</span>
-                                <small class="text-muted" style="font-size: 0.7rem;">{{ $roleLabel }}</small>
+                                <small class="text-muted" style="font-size: 0.65rem;">{{ $roleLabel }}</small>
                             </div>
                             <i class="bx bx-user-circle fs-3"></i>
                         </a>
