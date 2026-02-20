@@ -45,6 +45,16 @@ class Sunat
         return $this->sendRequest('/enviar/documento/electronico', 'POST', $data);
     }
 
+    public function guardarCertificado($ruc, $password, $certContentBase64)
+    {
+        $data = json_encode([
+            'password' => $password,
+            'archivo' => $certContentBase64
+        ]);
+
+        return $this->sendRequest('/guardar/certificado/' . $ruc, 'POST', $data);
+    }
+
     public function generarNotaCredito($data)
     {
         return $this->sendRequest('/generar/nota/electronica', 'POST', $data);

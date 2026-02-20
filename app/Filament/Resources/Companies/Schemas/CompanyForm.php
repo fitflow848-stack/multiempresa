@@ -93,8 +93,7 @@ class CompanyForm
                                 TextInput::make('sol_user')->label('Usuario SOL'),
                                 TextInput::make('sol_password')
                                     ->label('Clave SOL')
-                                    ->password()
-                                    ->dehydrateStateUsing(fn($state) => $state ? encrypt($state) : null),
+                                    ->password(),
                                 TextInput::make('sunat_local_code')->label('Código Local')->default('0000'),
                                 FileUpload::make('cert_file')
                                     ->label('Archivo del Certificado')
