@@ -28,6 +28,13 @@ class AlmacenIngresoDetalle extends Model
         'fecha_vencimiento'
     ];
 
+    protected $casts = [
+        'fecha_vencimiento' => 'date',
+        'cantidad' => 'float',
+        'costo' => 'float',
+        'pvp' => 'float',
+    ];
+
     public function ingreso()
     {
         return $this->belongsTo(AlmacenIngreso::class, 'ingreso_id');

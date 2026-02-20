@@ -1,16 +1,7 @@
 <script>
     // Variables globales para clientes
-    let clienteActual = {
-        id: null,
-        tipo_documento: 'DNI',
-        numero_documento: '',
-        nombre: 'Cliente Contado',
-        direccion: '',
-        email: '',
-        telefono: ''
-    };
-    let clientesDisponibles = [];
-    let clienteSeleccionado = null;
+    clientesDisponibles = [];
+    clienteSeleccionado = null;
 
     // Funciones para manejo de clientes
     function mostrarBuscadorClientes() {

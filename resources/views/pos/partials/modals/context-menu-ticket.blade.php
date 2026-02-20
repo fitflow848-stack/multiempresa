@@ -155,7 +155,6 @@
         const idx = findTicketIndexFromCurrent();
         cerrarContextMenuTicket();
         if (idx === -1) return alert('No se encontró la línea del ticket');
-
         try {
             // 1. Obtener datos del servidor
             const q = new URLSearchParams({
@@ -163,6 +162,7 @@
                 almacen_detalle_id: ticket[idx].almacen_detalle_id || '',
                 cantidad: ticket[idx].cantidad || 1,
                 precio: ticket[idx].precio || 0,
+                tipo: ticket[idx].es_precio_corporativo ? 'corporativo' : 'publico'
             });
 
             const resp = await fetch(`{{ url('/pos/pvpd') }}?${q.toString()}`);
@@ -272,7 +272,7 @@
     }
 
     // Cerrar el menú ticket al hacer click fuera
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
         const menu = document.getElementById('context-menu-ticket');
         if (menu && menu.style.display === 'block' && !menu.contains(e.target)) {
             cerrarContextMenuTicket();

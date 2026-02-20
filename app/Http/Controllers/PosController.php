@@ -51,7 +51,7 @@ class PosController extends Controller
         $logo = $company->logo ? asset('storage/' . $company->logo) : asset('assets/img/logo.png');
         // Si se pasa una cotización, cargar sus datos
         if ($request->has('cotizacion_id')) {
-            $cotizacion = Cotizacion::with(['cliente', 'detalles'])
+            $cotizacion = Cotizacion::with(['cliente', 'detalles.producto.marca'])
                 ->where('id', $request->cotizacion_id)
                 ->where('company_id', $user->company_id)
                 ->first();
@@ -64,6 +64,7 @@ class PosController extends Controller
                         return [
                             'producto_id' => $detalle->producto_id,
                             'descripcion' => $detalle->descripcion,
+                            'marca' => $detalle->producto->marca->nombre ?? '',
                             'cantidad' => $detalle->cantidad,
                             'precio' => $detalle->precio_unitario,
                             'descuento' => $detalle->descuento,
@@ -122,6 +123,7 @@ class PosController extends Controller
                         NULLIF(NULLIF(TRIM(pl.concentracion), ''), '-- Ver --')
                     ), '')
                 ) AS nombre,
+                m.nombre AS marca,
                 CONCAT(
                     'lt. ', ad.lote, ' Fv. ', LPAD(DAY(ad.fecha_vencimiento), 2, '0'),
                     ' ', LOWER(LEFT(MONTHNAME(ad.fecha_vencimiento), 3)), ' ', RIGHT(YEAR(ad.fecha_vencimiento), 2)
@@ -134,8 +136,9 @@ class PosController extends Controller
             FROM almacen_ingreso_detalle ad
             INNER JOIN productos p ON p.id = ad.producto_id
             INNER JOIN producto_lineas pl ON pl.id = ad.producto_linea_id 
+            LEFT JOIN marcas m ON m.id = p.marca_id
             WHERE p.id = ? AND ad.cantidad > 0
-            GROUP BY p.id, ad.producto_linea_id, p.nombre, pl.presentacion, pl.concentracion, ad.lote, ad.fecha_vencimiento
+            GROUP BY p.id, ad.producto_linea_id, p.nombre, p.marca_id, m.nombre, pl.presentacion, pl.concentracion, ad.lote, ad.fecha_vencimiento
             ORDER BY p.nombre ASC", [$productoId]);
 
         if (!$producto) {
@@ -163,10 +166,12 @@ class PosController extends Controller
             $clienteData = $request->input('cliente');
             $tipoDocumento = $request->input('tipo_documento', 'boleta');
             $isProforma = $request->input('proforma', 0);
+            $metodoPagoInput = $request->input('metodo_pago', 'contado');
         } else {
             // Si viene por GET, intentar obtener de session o query params
             $total = $request->query('total', 0);
             $clienteData = null;
+            $metodoPagoInput = 'contado';
         }
 
         // Determinar la serie según el tipo de documento
@@ -175,7 +180,7 @@ class PosController extends Controller
 
         $idCoti = $request->input('id_coti');
 
-        return view('pos.emitir', compact('user', 'company', 'ticketData', 'total', 'clienteData', 'tipoDocumento', 'serieDocumento', 'metodos', 'isProforma', 'idCoti'));
+        return view('pos.emitir', compact('user', 'company', 'ticketData', 'total', 'clienteData', 'tipoDocumento', 'serieDocumento', 'metodos', 'isProforma', 'idCoti', 'metodoPagoInput'));
     }
 
     public function saveVenta(StoreVentaRequest $request)
@@ -313,7 +318,7 @@ class PosController extends Controller
                     $cdrBinary = base64_decode($cdrRaw);
                 } else {
                     // Si no es base64, usar utf8_decode para obtener binario
-                    $cdrBinary = utf8_decode((string)$cdrRaw);
+                    $cdrBinary = utf8_decode((string) $cdrRaw);
                 }
 
                 // Nombre de archivo (asegúrate incluye extensión .xml o .zip según proveedor)
@@ -392,7 +397,7 @@ class PosController extends Controller
         }
 
         $saveOnly = $request->query('saveOnly', false); // opcional
-        return $this->pdfVentaService->pdfVenta((int)$id, $format, (bool)$saveOnly);
+        return $this->pdfVentaService->pdfVenta((int) $id, $format, (bool) $saveOnly);
     }
 
     public function precios(Request $request)
@@ -440,22 +445,31 @@ class PosController extends Controller
         $almacen_detalle_id = $request->get('almacen_detalle_id');
         $cantidad = (float) $request->get('cantidad', 1);
         $precio = (float) $request->get('precio', 0);
+        $tipo = $request->get('tipo', 'publico'); // 'publico' o 'corporativo'
 
         $pvpd = null;
 
         if ($almacen_detalle_id) {
             $detalle = AlmacenIngresoDetalle::find($almacen_detalle_id);
-            if ($detalle)
-                $pvpd = $detalle->pvpd;
+            if ($detalle) {
+                $pvpd = ($tipo === 'corporativo') ? $detalle->pvcd : $detalle->pvpd;
+            }
         }
 
         if ($pvpd === null && $producto_id) {
-            $detalle = AlmacenIngresoDetalle::where('producto_id', $producto_id)
-                ->whereNotNull('pvpd')
-                ->orderBy('id', 'desc')
-                ->first();
-            if ($detalle)
-                $pvpd = $detalle->pvpd;
+            $detalleQuery = AlmacenIngresoDetalle::where('producto_id', $producto_id);
+
+            if ($tipo === 'corporativo') {
+                $detalleQuery->whereNotNull('pvcd');
+            } else {
+                $detalleQuery->whereNotNull('pvpd');
+            }
+
+            $detalle = $detalleQuery->orderBy('id', 'desc')->first();
+
+            if ($detalle) {
+                $pvpd = ($tipo === 'corporativo') ? $detalle->pvcd : $detalle->pvpd;
+            }
         }
 
         $maxAmount = null;

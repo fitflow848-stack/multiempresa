@@ -935,4 +935,85 @@ class ReporteController extends Controller
             'data' => []
         ];
     }
+
+    private function reportePorVencer(Request $request)
+    {
+        // Productos próximos a vencer (3 meses por defecto)
+        $meses = $request->input('meses', 3);
+        $fechaLimite = now()->addMonths($meses);
+
+        $query = AlmacenIngresoDetalle::with(['producto.familia', 'ingreso'])
+            ->where('cantidad', '>', 0)
+            ->whereNotNull('fecha_vencimiento')
+            ->whereDate('fecha_vencimiento', '<=', $fechaLimite)
+            ->orderBy('fecha_vencimiento', 'asc');
+
+        if ($request->input('familia_id')) {
+            $query->whereHas('producto', function ($q) use ($request) {
+                $q->where('familia_id', $request->input('familia_id'));
+            });
+        }
+
+        $resultados = $query->limit(500)->get();
+        return [
+            'view' => 'reportes.partials.por_vencer',
+            'data' => compact('resultados', 'meses')
+        ];
+    }
+
+    private function reporteMovimientosCaja(Request $request)
+    {
+        // Consolidar ventas y operaciones de caja
+        $queryVentas = DB::table('ventas as v')
+            ->select(
+                'v.created_at as fecha',
+                DB::raw("'Ingreso - Venta' as operacion"),
+                DB::raw("'ingreso' as tipo"),
+                'c.nombre as detalle',
+                DB::raw("CONCAT(v.serie, ' ', v.numero) as concepto"),
+                'tp.nombre as metodo_pago',
+                'v.total as importe',
+                'u.name as usuario'
+            )
+            ->join('clientes as c', 'c.id', '=', 'v.id_cliente')
+            ->join('users as u', 'u.id', '=', 'v.id_usuario')
+            ->leftJoin('tipos_pagos as tp', 'tp.id', '=', 'v.id_tipo_pago')
+            ->where('v.estado', '!=', '0');
+
+        $queryOperaciones = DB::table('operaciones_caja as o')
+            ->select(
+                'o.created_at as fecha',
+                'o.partida as operacion',
+                'o.tipo as tipo',
+                DB::raw("o.tipo as detalle"),
+                'o.concepto',
+                DB::raw("'Efectivo' as metodo_pago"),
+                'o.importe',
+                'u.name as usuario'
+            )
+            ->join('users as u', 'u.id', '=', 'o.user_id');
+
+        if ($request->input('desde')) {
+            $queryVentas->whereDate('v.fecha_emision', '>=', $request->input('desde'));
+            $queryOperaciones->whereDate('o.created_at', '>=', $request->input('desde'));
+        }
+        if ($request->input('hasta')) {
+            $queryVentas->whereDate('v.fecha_emision', '<=', $request->input('hasta'));
+            $queryOperaciones->whereDate('o.created_at', '<=', $request->input('hasta'));
+        }
+        if ($request->input('vendedor_id')) {
+            $queryVentas->where('v.id_usuario', $request->input('vendedor_id'));
+            $queryOperaciones->where('o.user_id', $request->input('vendedor_id'));
+        }
+
+        $resultados = $queryVentas->union($queryOperaciones)
+            ->orderBy('fecha', 'desc')
+            ->limit(1000)
+            ->get();
+
+        return [
+            'view' => 'reportes.partials.movimientos_caja',
+            'data' => compact('resultados')
+        ];
+    }
 }

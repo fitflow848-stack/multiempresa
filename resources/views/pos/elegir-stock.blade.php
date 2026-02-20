@@ -207,6 +207,7 @@
                 @if ($detalles)
                     <div class="product-name">{{ $detalles }}</div>
                 @endif
+                <div style="font-size: 13px; color: #3498db; margin-top: 5px;">Marca: {{ $producto->marca ?? '-' }}</div>
             </div>
 
             <!-- Stock Table -->
@@ -235,9 +236,9 @@
                             <td>{{ $lote->unidades }}</td>
                             <td>
                                 @if ($lote->cantidad > 0)
-                                    <input type="number" class="cantidad-input" min="0" max="{{ $lote->cantidad }}"
-                                        value="0" data-lote-id="{{ $lote->id }}"
-                                        data-precio="{{ $lote->pvp }}" onchange="actualizarCantidad(this)">
+                                    <input type="number" class="cantidad-input" min="0" max="{{ $lote->cantidad }}" value="0"
+                                        data-lote-id="{{ $lote->id }}" data-precio="{{ $lote->pvp }}"
+                                        onchange="actualizarCantidad(this)">
                                 @else
                                     <span class="stock-cero">0</span>
                                 @endif
@@ -286,7 +287,7 @@
 
     <script>
         // Calcular totales iniciales
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             calcularTotales();
         });
 
@@ -332,9 +333,10 @@
             const producto = {
                 id: {{ $producto->id }},
                 nombre: '{{ $producto->nombre }}',
+                marca: '{{ $producto->marca ?? '' }}',
                 codigo: '{{ $producto->codigo_ref ?? 'COD-PROD' }}',
                 producto_linea_id: {{ $lotes[0]->producto_linea_id ?? 'null' }}
-            };
+                };
 
             // Recopilar todas las cantidades seleccionadas
             document.querySelectorAll('.cantidad-input').forEach(input => {
@@ -356,10 +358,10 @@
                                 fecha_vencimiento: '{{ $lote->fecha_vencimiento }}',
                                 importe: cantidad * precio,
                                 producto_linea_id: {{ $lote->producto_linea_id ?? 'null' }}
-                            });
+                                    });
                         }
                     @endforeach
-                }
+                    }
             });
 
             if (lotesSeleccionados.length === 0) {

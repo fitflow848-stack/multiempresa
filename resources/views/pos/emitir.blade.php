@@ -84,7 +84,8 @@
                                     <td style="text-align: center;">{{ $item->cantidad }}</td>
                                     <td style="text-align: right;">S/ {{ number_format($item->precio, 2) }}</td>
                                     <td style="text-align: right;">S/
-                                        {{ number_format($item->precio * $item->cantidad, 2) }}</td>
+                                        {{ number_format($item->precio * $item->cantidad, 2) }}
+                                    </td>
                                 </tr>
                             @endforeach
                         @endif
@@ -101,6 +102,17 @@
         <!-- COLUMNA DERECHA: PAGO Y DOCUMENTO -->
         <div
             style="width: 400px; display: flex; flex-direction: column; background: #fff; border-radius: 8px; border: 1px solid #ddd; padding: 15px; overflow-y: auto;">
+
+            <!-- SECCIÓN RESUMEN TOTAL -->
+            <div
+                style="background: #2d3436; color: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+                <div
+                    style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; opacity: 0.8;">
+                    Total a Pagar</div>
+                <div style="font-size: 32px; font-weight: 800; color: #00d2d3;">
+                    S/ {{ number_format($total, 2) }}
+                </div>
+            </div>
 
             <!-- SECCIÓN PAGO -->
             <div style="margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
@@ -123,7 +135,8 @@
                             CON (ENTREGA)</label>
                         <div style="position: relative;">
                             <span style="position: absolute; left: 8px; top: 8px; color: #666;">S/</span>
-                            <input id="entrega" type="number" step="0.01" value="{{ $total ?? '0.00' }}"
+                            <input id="entrega" type="number" step="0.01"
+                                value="{{ ($metodoPagoInput ?? 'contado') === 'credito' ? '0.00' : ($total ?? '0.00') }}"
                                 style="width:100%; padding:8px 8px 8px 30px; border:1px solid #ccc; border-radius:4px; font-weight: bold;"
                                 onkeyup="calcularCambio()">
                         </div>
@@ -157,8 +170,7 @@
                 <div style="display:flex; gap:10px; margin-bottom: 12px;">
                     <div style="flex: 1;">
                         <label style="font-size: 11px; color: #666;">Serie</label>
-                        <input type="text" id="serie"
-                            value="{{ $serieDocumento ?? ($company->serie_boleta ?? 'B001') }}"
+                        <input type="text" id="serie" value="{{ $serieDocumento ?? ($company->serie_boleta ?? 'B001') }}"
                             style="width:100%; padding:6px; border:1px solid #ddd; background: #f9f9f9;" readonly>
                     </div>
                     <div style="flex: 1;">
@@ -246,7 +258,7 @@
                     } else {
                         alert(
                             `Para generar una venta a crédito (con deuda de S/ ${deuda.toFixed(2)}), debe seleccionar un cliente válido.\n\nPor favor, seleccione un cliente antes de continuar.`
-                            );
+                        );
                     }
                     return;
                 }
@@ -290,13 +302,13 @@
                 '{{ route('pos.save-venta') }}';
 
             fetch(urlSave, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify(datosEmision)
-                })
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(datosEmision)
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -322,17 +334,17 @@
                             }
 
                             const mensajeDeuda = `
-                                <div style="text-align: left; padding: 10px;">
-                                    <p><strong>✅ Venta guardada exitosamente</strong></p>
-                                    <p>Número: <strong>${data.data.numero_completo}</strong></p>
-                                    <p>Total: <strong>S/ ${data.data.total}</strong></p>
-                                    <hr style="margin: 15px 0;">
-                                    <p style="color: #dc3545; font-size: 18px;"><strong>⚠️ DEUDA GENERADA</strong></p>
-                                    <p>Monto de deuda: <strong style="color: #dc3545; font-size: 20px;">S/ ${datosEmision.deuda.toFixed(2)}</strong></p>
-                                    <p>Pago recibido: S/ ${datosEmision.entrega.toFixed(2)}</p>
-                                    <p>Cliente: ${clienteData ? JSON.parse(clienteData).nombre : 'Cliente Contado'}</p>
-                                </div>
-                            `;
+                                    <div style="text-align: left; padding: 10px;">
+                                        <p><strong>✅ Venta guardada exitosamente</strong></p>
+                                        <p>Número: <strong>${data.data.numero_completo}</strong></p>
+                                        <p>Total: <strong>S/ ${data.data.total}</strong></p>
+                                        <hr style="margin: 15px 0;">
+                                        <p style="color: #dc3545; font-size: 18px;"><strong>⚠️ DEUDA GENERADA</strong></p>
+                                        <p>Monto de deuda: <strong style="color: #dc3545; font-size: 20px;">S/ ${datosEmision.deuda.toFixed(2)}</strong></p>
+                                        <p>Pago recibido: S/ ${datosEmision.entrega.toFixed(2)}</p>
+                                        <p>Cliente: ${clienteData ? JSON.parse(clienteData).nombre : 'Cliente Contado'}</p>
+                                    </div>
+                                `;
 
                             if (typeof Swal !== 'undefined') {
                                 Swal.fire({
@@ -437,7 +449,7 @@
         }
 
         // Calcular cambio inicial
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             calcularCambio();
 
             // Obtener el siguiente número de serie
@@ -449,16 +461,16 @@
             const serie = document.getElementById('serie').value;
 
             fetch('{{ route('pos.obtener-siguiente-numero') }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({
-                        serie: serie,
-                        tipo_documento: tipoDocumentoSeleccionado
-                    })
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    serie: serie,
+                    tipo_documento: tipoDocumentoSeleccionado
                 })
+            })
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('numero').value = data.numero;

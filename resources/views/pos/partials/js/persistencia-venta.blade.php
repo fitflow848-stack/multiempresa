@@ -1,7 +1,5 @@
 <script>
-    let ticket = [];
-    let currentProduct = null;
-    let autoSaveInterval = null;
+    autoSaveInterval = null;
     const AUTOSAVE_KEY = 'ventaPersistentePOS';
     const CLIENTE_KEY = 'clientePersistentePOS';
 
@@ -289,6 +287,7 @@
                                 .producto_linea_id || null,
                             almacen_detalle_id: lote.lote_id,
                             nombre: datos.producto.nombre,
+                            marca: datos.producto.marca || '',
                             lote: lote.lote,
                             cantidad: lote.cantidad,
                             cantidad_disponible: lote.cantidad + 100,

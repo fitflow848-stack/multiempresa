@@ -227,8 +227,25 @@ class VentaService
 
                 $detalle = new VentaDetalle();
                 $detalle->id_venta = $venta->id_venta;
-                $detalle->servicio_id = $item['producto_id'] ?? null;
-                $detalle->nombre_servicio = $item['nombre'] ?? 'Producto sin nombre';
+                $prodId = $item['producto_id'] ?? ($item['id'] ?? null);
+                $detalle->servicio_id = $prodId;
+
+                $nombreServicio = $item['nombre'] ?? 'Producto sin nombre';
+                $marca = $item['marca'] ?? null;
+
+                // Si no viene marca del frontend, intentar buscarla en DB
+                if (empty($marca) && $prodId) {
+                    $productoModel = \App\Models\Producto::with('marca')->find($prodId);
+                    if ($productoModel && $productoModel->marca) {
+                        $marca = $productoModel->marca->nombre;
+                    }
+                }
+
+                if (!empty($marca) && $marca !== '-' && !str_contains($marca, 'Sin marca')) {
+                    $nombreServicio .= " (Marca: {$marca})";
+                }
+
+                $detalle->nombre_servicio = $nombreServicio;
                 $detalle->cantidad = $cantidad;
                 $detalle->precio_unitario = $precio_original;
                 $detalle->importe = $importe_pagado;

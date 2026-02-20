@@ -45,4 +45,12 @@ class CierreCaja extends Model
     {
         return $this->belongsTo(Caja::class);
     }
+
+    /**
+     * Relación con el desglose del arqueo físico
+     */
+    public function arqueo()
+    {
+        return $this->hasOne(ArqueoCaja::class, 'cierre_id');
+    }
 }
