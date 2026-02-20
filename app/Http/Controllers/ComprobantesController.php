@@ -505,11 +505,16 @@ class ComprobantesController extends Controller
 
             $resumen['total_ventas'] += $venta->total;
 
-            // Importe por tipo de pago
-            if ($venta->pagado) {
-                $resumen['importe_efectivo'] += $venta->total;
+            // Importe por tipo de pago - Usar deudas si existen
+            if ($venta->deuda) {
+                $resumen['importe_efectivo'] += $venta->deuda->monto_pagado;
+                $resumen['importe_cuotas'] += $venta->deuda->monto_deuda;
             } else {
-                $resumen['importe_cuotas'] += $venta->total;
+                if ($venta->pagado) {
+                    $resumen['importe_efectivo'] += $venta->total;
+                } else {
+                    $resumen['importe_cuotas'] += $venta->total;
+                }
             }
         }
 

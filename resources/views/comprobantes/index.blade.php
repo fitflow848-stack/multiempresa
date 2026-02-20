@@ -191,7 +191,9 @@
                                     @endphp
                                     <tr class="comprobante-row {{ $comprobanteSeleccionado && $comprobanteSeleccionado->id_venta == $venta->id_venta ? 'table-active' : '' }} {{ $isCancelado ? 'comprobante-cancelado' : '' }}"
                                         data-venta-id="{{ $venta->id_venta }}" data-total="{{ $venta->total }}"
-                                        data-pagado="{{ $venta->pagado ? 1 : 0 }}"
+                                        data-pagado_monto="{{ $venta->deuda ? $venta->deuda->monto_pagado : ($venta->pagado ? $venta->total : 0) }}"
+                                        data-pendiente_monto="{{ $isCancelado ? 0 : ($venta->deuda ? $venta->deuda->monto_deuda : ($venta->pagado ? 0 : $venta->total)) }}"
+                                        data-deuda_total_cliente="{{ $venta->cliente ? $venta->cliente->debe : 0 }}"
                                         data-estado="{{ $venta->estado ?? 1 }}">
                                         <td class="ps-3">
                                             <input type="checkbox" class="form-check-input comprobante-check"
@@ -236,8 +238,8 @@
                                                 </small>
                                             @endif
                                         </td>
-                                        <td class="text-end text-muted">
-                                            S/ {{ number_format($deudaTotal, 2) }}
+                                        <td class="text-end text-muted fw-bold text-danger bg-light">
+                                            S/ {{ number_format($venta->cliente ? $venta->cliente->debe : 0, 2) }}
                                         </td>
                                         <td class="text-center">
                                             @if ($venta->enviado_sunat)
@@ -260,9 +262,18 @@
                                             <div class="d-flex justify-content-end gap-1">
                                                 <button type="button"
                                                     class="btn btn-action-icon btn-light text-primary btn-detalle"
-                                                    data-venta-id="{{ $venta->id_venta }}">
+                                                    data-venta-id="{{ $venta->id_venta }}" title="Ver Detalle">
                                                     <i class="bx bx-search-alt"></i>
                                                 </button>
+                                                @if (!$isCancelado && $pendiente > 0)
+                                                    <button type="button"
+                                                        class="btn btn-action-icon btn-light text-success btn-pagar-doc"
+                                                        data-deuda-id="{{ $venta->deuda ? $venta->deuda->id : 0 }}"
+                                                        data-comprobante="{{ $venta->serie }}-{{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}"
+                                                        data-pendiente="{{ $pendiente }}" title="Cobrar Deuda">
+                                                        <i class="bx bx-money"></i>
+                                                    </button>
+                                                @endif
                                                 <button class="btn btn-action-icon btn-light text-secondary btn-imprimir"
                                                     type="button" data-venta-id="{{ $venta->id_venta }}"
                                                     data-tipo="{{ strtolower($venta->tipo_documento ?? 'ticket') }}"
@@ -441,6 +452,64 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal para aplicar pago -->
+    <div class="modal fade" id="modalAplicarPago" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title font-weight-bold"><i class="bx bx-money me-1"></i> Registrar Pago</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <form id="formAplicarPago">
+                    <div class="modal-body">
+                        <input type="hidden" id="pagoDeudaId">
+
+                        <div class="alert alert-info py-2" id="infoPago">
+                            <small class="d-block mb-1">Comprobante:</small>
+                            <h6 class="mb-0 fw-bold" id="pagoComprobante"></h6>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="font-weight-bold small text-muted mb-1">Monto a Pagar (S/)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light fw-bold border-0">S/</span>
+                                <input type="number" step="0.01" min="0.01" id="montoPago"
+                                    class="form-control form-control-lg fw-bold text-primary border-0 bg-light" required>
+                            </div>
+                            <div class="text-end mt-1">
+                                <small class="text-danger fw-bold" id="textoDeudaPendiente"></small>
+                            </div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="font-weight-bold small text-muted mb-1">Método de Pago</label>
+                            <select class="form-select border-0 bg-light" id="metodoPago" name="metodo_pago">
+                                <option value="Efectivo">💵 Efectivo</option>
+                                <option value="Transferencia">🏦 Transferencia</option>
+                                <option value="Yape/Plin">📱 Yape / Plin</option>
+                                <option value="Tarjeta">💳 Tarjeta</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group mb-0">
+                            <label class="font-weight-bold small text-muted mb-1">Observaciones / Referencia</label>
+                            <textarea id="observaciones" class="form-control border-0 bg-light" rows="2"
+                                placeholder="Nro de operación, banco, etc."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light border-0">
+                        <button type="button" class="btn btn-link text-muted" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success px-4 fw-bold" id="btnConfirmarPago">
+                            <i class="bx bx-check-circle me-1"></i> Confirmar Pago
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- JS dependencies -->
 
     @push('scripts')
@@ -650,16 +719,21 @@
                     seleccionados = [];
                     let importeTotal = 0;
                     let pendienteTotal = 0;
+                    let deudaTotalCliente = 0;
 
                     $('.comprobante-check:checked').each(function() {
                         const row = $(this).closest('tr');
                         const ventaId = $(this).val();
                         const total = parseFloat(row.data('total') || 0);
-                        const pagado = parseInt(row.data('pagado') || 0);
+                        const pendienteP = parseFloat(row.data('pendiente_monto') || 0);
+                        const deudaC = parseFloat(row.data('deuda_total_cliente') || 0);
 
                         seleccionados.push(ventaId);
                         importeTotal += isNaN(total) ? 0 : total;
-                        pendienteTotal += isNaN(total) ? 0 : (pagado ? 0 : total);
+                        pendienteTotal += isNaN(pendienteP) ? 0 : pendienteP;
+                        if (row.hasClass('table-active')) {
+                            deudaTotalCliente = deudaC;
+                        }
                     });
 
                     $('#importe-seleccionados').text('S/ ' + importeTotal.toFixed(2));
@@ -761,6 +835,79 @@
                     });
                 });
 
+                // --- Lógica de Pago Individual ---
+                let deudaActualMax = 0;
+                $(document).on('click', '.btn-pagar-doc', function(e) {
+                    e.stopPropagation();
+                    const $btn = $(this);
+                    const deudaId = $btn.data('deuda-id');
+                    const comprobante = $btn.data('comprobante');
+                    const pendiente = parseFloat($btn.data('pendiente') || 0);
+
+                    if (!deudaId || deudaId == 0) {
+                        Swal.fire('Error', 'No se encontró una deuda asociada a este comprobante.', 'error');
+                        return;
+                    }
+
+                    $('#pagoDeudaId').val(deudaId);
+                    $('#pagoComprobante').text(comprobante);
+                    $('#montoPago').val(pendiente.toFixed(2));
+                    $('#montoPago').attr('max', pendiente.toFixed(2));
+                    deudaActualMax = pendiente;
+                    $('#textoDeudaPendiente').text('Pnd: S/ ' + pendiente.toFixed(2));
+
+                    const modalPago = new bootstrap.Modal(document.getElementById('modalAplicarPago'));
+                    modalPago.show();
+                    setTimeout(() => $('#montoPago').focus().select(), 500);
+                });
+
+                $('#formAplicarPago').on('submit', function(e) {
+                    e.preventDefault();
+                    const deudaId = $('#pagoDeudaId').val();
+                    const monto = parseFloat($('#montoPago').val());
+                    const metodo = $('#metodoPago').val();
+                    const obs = $('#observaciones').val();
+                    const $btn = $('#btnConfirmarPago');
+
+                    if (monto > (deudaActualMax + 0.01)) {
+                        Swal.fire('Atención', 'El monto no puede superar la deuda pendiente (S/ ' + deudaActualMax.toFixed(2) + ')', 'warning');
+                        return;
+                    }
+
+                    $btn.prop('disabled', true).html('<i class="bx bx-loader-alt bx-spin me-1"></i> Procesando...');
+
+                    $.ajax({
+                        url: `{{ url('deudas') }}/${deudaId}/aplicar-pago`,
+                        type: 'POST',
+                        data: {
+                            _token: '{{ csrf_token() }}',
+                            monto_pago: monto,
+                            metodo_pago: metodo,
+                            observaciones: obs
+                        },
+                        success: function(resp) {
+                            if (resp.success) {
+                                bootstrap.Modal.getInstance(document.getElementById('modalAplicarPago')).hide();
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Pago Registrado',
+                                    text: resp.message || 'El pago se aplicó correctamente.',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error', resp.message || 'Error al procesar el pago', 'error');
+                                $btn.prop('disabled', false).html('<i class="bx bx-check-circle me-1"></i> Confirmar Pago');
+                            }
+                        },
+                        error: function() {
+                            Swal.fire('Error', 'Error de conexión al procesar el pago', 'error');
+                            $btn.prop('disabled', false).html('<i class="bx bx-check-circle me-1"></i> Confirmar Pago');
+                        }
+                    });
+                });
             });
 
             /**

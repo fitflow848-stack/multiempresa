@@ -235,7 +235,7 @@ class ReporteController extends Controller
 
     private function reporteComprobantes(Request $request)
     {
-        $query = Venta::with(['cliente', 'user', 'tipoPago'])
+        $query = Venta::with(['cliente.deudas', 'user', 'tipoPago', 'deuda'])
             ->where('estado', '!=', '0')
             ->orderByDesc('fecha_emision');
 
@@ -245,11 +245,33 @@ class ReporteController extends Controller
             $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
         if ($request->input('vendedor_id'))
             $query->where('id_usuario', $request->input('vendedor_id'));
+
+        // El filtro de tipo_comprobante no estaba implementado, vamos a añadirlo si es posible
         if ($request->input('tipo_comprobante')) {
-            // Logic to filter by doc type if needed, utilizing the accessor or specific series
+            $tipo = $request->input('tipo_comprobante');
+            if ($tipo == 'boleta')
+                $query->where('serie', 'LIKE', 'B%');
+            elseif ($tipo == 'factura')
+                $query->where('serie', 'LIKE', 'F%');
+            elseif ($tipo == 'ticket')
+                $query->where('serie', 'NOT LIKE', 'B%')->where('serie', 'NOT LIKE', 'F%');
         }
 
-        $resultados = $query->limit(200)->get();
+        $resultados = $query->limit(500)->get();
+
+        // Procesar datos para la vista
+        $resultados->each(function ($v) {
+            if ($v->deuda) {
+                $v->monto_pagado_doc = $v->deuda->monto_pagado;
+                $v->monto_pendiente_doc = $v->deuda->monto_deuda;
+            } else {
+                $v->monto_pagado_doc = $v->total;
+                $v->monto_pendiente_doc = 0;
+            }
+            // Deuda total del cliente (atributo calculado en Cliente.php)
+            $v->deuda_total_cliente = $v->cliente->debe ?? 0;
+        });
+
         return [
             'view' => 'reportes.partials.comprobantes',
             'data' => compact('resultados')
