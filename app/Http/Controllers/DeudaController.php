@@ -372,6 +372,10 @@ class DeudaController extends Controller
     {
         $pago = DeudaPago::with(['deuda.cliente', 'user'])->findOrFail($pago_id);
         $empresa = Company::first();
+        $cliente = $pago->deuda->cliente;
+
+        // Calcular el saldo total del cliente DESPUÉS del pago (ya está restado en la BD)
+        $saldoTotal = $cliente->debe;
 
         // Check for Logo
         $logoPath = $empresa && $empresa->logo ? public_path('storage/' . $empresa->logo) : null;
@@ -385,9 +389,10 @@ class DeudaController extends Controller
         $data = [
             'pago' => $pago,
             'deuda' => $pago->deuda,
-            'cliente' => $pago->deuda->cliente,
+            'cliente' => $cliente,
             'empresa' => $empresa,
-            'logo' => $logo
+            'logo' => $logo,
+            'saldoTotal' => $saldoTotal
         ];
 
         $pdf = Pdf::loadView('deudas.comprobante_pago', $data)

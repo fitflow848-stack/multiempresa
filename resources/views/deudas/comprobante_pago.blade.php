@@ -107,13 +107,11 @@
 
     <div style="margin-top: 10px; border-top: 1px dashed #000; padding-top: 5px;">
         <div class="info-row">
-            Deuda Total Inicial: <span style="float:right;">S/ {{ number_format($deuda->monto_total, 2) }}</span>
+            Saldo Documento Actual: <span style="float:right;">S/ {{ number_format($deuda->monto_deuda, 2) }}</span>
         </div>
-        <div class="info-row">
-            Total Abonado: <span style="float:right;">S/ {{ number_format($deuda->monto_pagado, 2) }}</span>
-        </div>
-        <div class="info-row" style="font-weight: bold;">
-            Deuda Restante: <span style="float:right;">S/ {{ number_format($deuda->monto_deuda, 2) }}</span>
+        <div class="info-row"
+            style="margin-top: 5px; border-top: 1px solid #eee; padding-top: 5px; font-weight: bold; font-size: 12px;">
+            SALDO TOTAL PENDIENTE: <span style="float:right;">S/ {{ number_format($saldoTotal, 2) }}</span>
         </div>
     </div>
 
