@@ -16,16 +16,36 @@ use Illuminate\Support\Facades\DB;
 
 class FinanzasVendedorController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // Obtener los IDs de los tipos de pasivos relevantes
-        $nombresTipos = ['Compras a credito', 'Adelanto clientes', 'Adelantos personal'];
+        $tipoMap = [
+            'compras_credito'   => 'Compras a crédito',
+            'adelanto_clientes' => 'Adelanto clientes',
+            'adelanto_personal' => 'Adelantos personal',
+        ];
 
-        $operaciones = Pasivo::whereHas('tipo', function ($q) use ($nombresTipos) {
-            $q->whereIn('nombre', $nombresTipos);
-        })->with(['tipo', 'pagos'])->orderBy('fecha_registro', 'desc')->paginate(20);
+        $tipoFiltro = $request->get('tipo');
+        $nombresTipos = ['Compras a crédito', 'Adelanto clientes', 'Adelantos personal'];
 
-        return view('finanzas_vendedor.index', compact('operaciones'));
+        $query = Pasivo::whereHas('tipo', function ($q) use ($nombresTipos, $tipoFiltro, $tipoMap) {
+            if ($tipoFiltro && isset($tipoMap[$tipoFiltro])) {
+                $q->where('nombre', $tipoMap[$tipoFiltro]);
+            } else {
+                $q->whereIn('nombre', $nombresTipos);
+            }
+        })->with(['tipo', 'pagos'])->orderBy('fecha_registro', 'desc');
+
+        $operaciones = $query->paginate(20)->appends($request->query());
+
+        $tipoActivo = $tipoFiltro;
+        $titulos = [
+            'adelanto_personal' => 'Adelantos a Personal',
+            'compras_credito'   => 'Compras a Crédito',
+            'adelanto_clientes' => 'Adelanto de Clientes',
+        ];
+        $tituloSeccion = $titulos[$tipoFiltro] ?? 'Todas las Operaciones';
+
+        return view('finanzas_vendedor.index', compact('operaciones', 'tipoActivo', 'tituloSeccion'));
     }
 
     public function store(Request $request)
@@ -33,6 +53,7 @@ class FinanzasVendedorController extends Controller
         $request->validate([
             'tipo_operacion' => 'required|in:compras_credito,adelanto_clientes,adelanto_personal',
             'monto' => 'required|numeric|min:0.01',
+            'empresa_persona' => 'required|string|max:255',
             'nombre' => 'required|string|max:255',
             'fecha_registro' => 'required|date',
             'documento' => 'nullable|string|max:255',
@@ -41,6 +62,7 @@ class FinanzasVendedorController extends Controller
 
         $tipoOperacion = $request->input('tipo_operacion');
         $monto = $request->input('monto');
+        $empresaPersona = $request->input('empresa_persona');
         $nombre = $request->input('nombre');
         $fecha = $request->input('fecha_registro');
         $documento = $request->input('documento');
@@ -51,24 +73,29 @@ class FinanzasVendedorController extends Controller
 
             $nombreTipo = '';
             if ($tipoOperacion === 'compras_credito') {
-                $nombreTipo = 'Compras a credito';
+                $nombreTipo = 'Compras a crédito';
             } elseif ($tipoOperacion === 'adelanto_clientes') {
                 $nombreTipo = 'Adelanto clientes';
             } elseif ($tipoOperacion === 'adelanto_personal') {
                 $nombreTipo = 'Adelantos personal';
             }
 
-            $tipoPasivo = TipoPasivo::firstOrCreate(
-                ['nombre' => $nombreTipo],
-                ['descripcion' => 'Registrado por vendedor']
-            );
+            // Buscar sin scope de empresa (TipoPasivo es compartido)
+            $tipoPasivo = TipoPasivo::where('nombre', $nombreTipo)->first();
+            if (!$tipoPasivo) {
+                $tipoPasivo = TipoPasivo::create([
+                    'nombre'     => $nombreTipo,
+                    'descripcion'=> 'Registrado por vendedor'
+                ]);
+            }
 
             $pasivo = Pasivo::create([
                 'tipo_pasivo_id' => $tipoPasivo->id,
                 'nombre' => $nombre,
+                'empresa_persona' => $empresaPersona,
                 'monto' => $monto,
                 'monto_pagado' => 0,
-                'estado' => 'pendiente',
+                'estado' => 'aprobado',
                 'fecha_registro' => $fecha,
                 'documento' => $documento,
                 'observaciones' => $observaciones

@@ -38,7 +38,7 @@ class CajaPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return $user->hasRole('admin_empresa');
     }
 
     /**
@@ -46,7 +46,7 @@ class CajaPolicy
      */
     public function update(User $user, Caja $caja): bool
     {
-        return false;
+        return $user->hasRole('admin_empresa') && $user->company_id === $caja->company_id;
     }
 
     /**
@@ -54,6 +54,6 @@ class CajaPolicy
      */
     public function delete(User $user, Caja $caja): bool
     {
-        return false;
+        return $user->hasRole('admin_empresa') && $user->company_id === $caja->company_id;
     }
 }

@@ -5,126 +5,223 @@
     <meta charset="utf-8">
     <title>Comprobante de Pago</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 11px;
+        * {
             margin: 0;
-            padding: 5px;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            width: 72mm;
+            padding: 4px 6px;
+            color: #000;
+        }
+
+        .center {
+            text-align: center;
+        }
+
+        .bold {
+            font-weight: bold;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 5px;
+            margin-bottom: 6px;
         }
 
-        .logo {
-            max-width: 150px;
-            max-height: 60px;
-            margin-bottom: 5px;
-        }
-
-        .company-name {
-            font-weight: bold;
-            font-size: 14px;
-        }
-
-        .info-row {
-            margin-bottom: 3px;
-        }
-
-        .title {
-            text-align: center;
+        .header .company-name {
             font-weight: bold;
             font-size: 13px;
-            margin: 8px 0;
+            text-transform: uppercase;
+        }
+
+        .header .company-sub {
+            font-size: 10px;
+            margin-top: 2px;
+        }
+
+        .divider {
             border-top: 1px dashed #000;
-            border-bottom: 1px dashed #000;
+            margin: 5px 0;
+        }
+
+        .section-title {
+            text-align: center;
+            font-weight: bold;
+            font-size: 12px;
             padding: 3px 0;
+            text-transform: uppercase;
         }
 
-        .details {
+        .row {
+            display: table;
             width: 100%;
-            margin-bottom: 10px;
+            margin-bottom: 2px;
         }
 
-        .total-section {
+        .row .label {
+            display: table-cell;
+            width: 50%;
+        }
+
+        .row .value {
+            display: table-cell;
+            width: 50%;
             text-align: right;
-            border-top: 1px dashed #000;
-            padding-top: 5px;
-            margin-top: 5px;
+        }
+
+        .info-block {
+            margin-bottom: 4px;
+        }
+
+        .info-block .info-label {
+            font-weight: bold;
+        }
+
+        /* Sección Debe / Abonado / Pendiente */
+        .deuda-resumen {
+            margin: 6px 0;
+        }
+
+        .deuda-resumen .deuda-row {
+            display: table;
+            width: 100%;
+            padding: 1px 0;
+        }
+
+        .deuda-resumen .deuda-row .dl {
+            display: table-cell;
+            width: 55%;
+            font-weight: bold;
+        }
+
+        .deuda-resumen .deuda-row .dv {
+            display: table-cell;
+            width: 45%;
+            text-align: right;
+        }
+
+        .deuda-resumen .deuda-row.pendiente-row .dl,
+        .deuda-resumen .deuda-row.pendiente-row .dv {
+            border-top: 1px solid #000;
+            padding-top: 3px;
+            margin-top: 3px;
         }
 
         .footer {
             text-align: center;
             font-size: 10px;
-            margin-top: 15px;
+            margin-top: 10px;
+        }
+
+        .footer p {
+            margin: 2px 0;
         }
     </style>
 </head>
 
 <body>
+
+    {{-- ENCABEZADO EMPRESA --}}
     <div class="header">
         @if ($logo)
-            <img src="{{ $logo }}" class="logo">
+            <img src="{{ $logo }}" style="max-width:110px; max-height:50px; margin-bottom:4px;">
         @endif
         <div class="company-name">{{ $empresa->razon_social ?? 'EMPRESA' }}</div>
-        <div>RUC: {{ $empresa->ruc ?? '00000000000' }}</div>
-        <div>{{ $empresa->direccion ?? '' }}</div>
+        @if ($empresa && $empresa->descripcion)
+            <div class="company-sub">{{ $empresa->descripcion }}</div>
+        @endif
+        @if ($empresa && $empresa->direccion)
+            <div>{{ $empresa->direccion }}</div>
+        @endif
+        @if ($empresa && ($empresa->telefono || $empresa->celular))
+            <div>Telf.: {{ implode(' – ', array_filter([$empresa->telefono ?? null, $empresa->celular ?? null])) }}</div>
+        @endif
     </div>
 
-    <div class="title">COMPROBANTE DE PAGO</div>
+    <div class="divider"></div>
 
-    <div class="info-row">
-        <strong>N° Comprobante:</strong> {{ $pago->codigo_comprobante }}
-    </div>
-    <div class="info-row">
-        <strong>Fecha:</strong> {{ $pago->fecha_pago->format('d/m/Y H:i A') }}
-    </div>
-    <div class="info-row">
-        <strong>Cliente:</strong> {{ $cliente->nombre }}
-    </div>
-    <div class="info-row">
-        <strong>Doc. Cliente:</strong> {{ $cliente->numero_documento }}
+    {{-- TÍTULO --}}
+    <div class="section-title">COMPROBANTE DE ABONO</div>
+
+    {{-- DATOS VENTA ORIGINAL --}}
+    <div class="divider"></div>
+    <div class="info-block">
+        <div><span class="info-label">Comprobante:</span> {{ $deuda->numero_comprobante }}</div>
+        <div><span class="info-label">Tipo:</span> {{ strtoupper($deuda->tipo_documento ?? 'VENTA') }}</div>
     </div>
 
-    <div style="margin-top: 10px; margin-bottom: 5px; font-weight: bold;">
-        Detalle del Pago:
+    <div class="divider"></div>
+
+    {{-- DATOS CLIENTE --}}
+    <div class="info-block">
+        <div><span class="info-label">Cliente:</span> {{ $cliente->nombre }}</div>
+        @if ($cliente->numero_documento)
+            <div><span class="info-label">RUC/DNI:</span> {{ $cliente->numero_documento }}</div>
+        @endif
     </div>
 
-    <table class="details" cellspacing="0" cellpadding="0">
-        <tr>
-            <td colspan="2">Abono a deuda:</td>
-        </tr>
-        <tr>
-            <td style="padding-left: 10px;">{{ $deuda->numero_comprobante }}</td>
-            <td style="text-align: right;">{{ number_format($pago->monto, 2) }}</td>
-        </tr>
-    </table>
+    <div class="divider"></div>
 
-    <div class="total-section">
-        <div><strong>Total Pagado: S/ {{ number_format($pago->monto, 2) }}</strong></div>
-    </div>
-
-    <div style="margin-top: 10px; border-top: 1px dashed #000; padding-top: 5px;">
-        <div class="info-row">
-            Saldo Documento Actual: <span style="float:right;">S/ {{ number_format($deuda->monto_deuda, 2) }}</span>
+    {{-- DEBE / ABONADO / PENDIENTE --}}
+    <div class="deuda-resumen">
+        <div class="deuda-row">
+            <div class="dl">Debe:</div>
+            <div class="dv">{{ number_format($deuda->monto_total, 2) }}</div>
         </div>
-        <div class="info-row"
-            style="margin-top: 5px; border-top: 1px solid #eee; padding-top: 5px; font-weight: bold; font-size: 12px;">
-            SALDO TOTAL PENDIENTE: <span style="float:right;">S/ {{ number_format($saldoTotal, 2) }}</span>
+        <div class="deuda-row">
+            <div class="dl">Abonado:</div>
+            <div class="dv">{{ number_format($pago->monto, 2) }}</div>
+        </div>
+        <div class="deuda-row pendiente-row">
+            <div class="dl">Pendiente:</div>
+            <div class="dv">{{ number_format($deuda->monto_deuda, 2) }}</div>
         </div>
     </div>
 
-    @if ($pago->observaciones)
-        <div style="margin-top: 10px; font-style: italic;">
-            Obs: {{ $pago->observaciones }}
+    <div class="divider"></div>
+
+    {{-- DATOS DEL PAGO --}}
+    <div class="info-block">
+        <div><span class="info-label">Le atendió:</span> {{ $pago->user->name ?? 'Sistema' }}</div>
+        <div>
+            <span class="info-label">Fecha Emisión:</span>
+            {{ $pago->fecha_pago->format('Y-m-d') }}&nbsp;&nbsp;{{ $pago->fecha_pago->format('H:i') }}
+        </div>
+        @if ($pago->metodo_pago)
+            <div><span class="info-label">Método Pago:</span> {{ $pago->metodo_pago }}</div>
+        @endif
+        @if ($pago->codigo_comprobante)
+            <div><span class="info-label">Recibo N°:</span> {{ $pago->codigo_comprobante }}</div>
+        @endif
+    </div>
+
+    @if ($saldoTotal > 0)
+        <div class="divider"></div>
+        <div class="info-block">
+            <div class="row">
+                <div class="label bold">SALDO TOTAL CLIENTE:</div>
+                <div class="value bold">S/ {{ number_format($saldoTotal, 2) }}</div>
+            </div>
         </div>
     @endif
 
+    @if ($pago->observaciones)
+        <div class="divider"></div>
+        <div><em>{{ $pago->observaciones }}</em></div>
+    @endif
+
+    <div class="divider"></div>
+
+    {{-- PIE --}}
     <div class="footer">
-        <p>Usuario: {{ $pago->user->name ?? 'Sistema' }}</p>
+        <p>No se admiten devoluciones.</p>
         <p>¡Gracias por su pago!</p>
     </div>
+
 </body>
 
 </html>

@@ -2,22 +2,45 @@
 
 @section('content')
     <div class="container-xxl flex-grow-1 container-p-y">
-        <h4 class="fw-bold py-3 mb-4"><span class="text-muted fw-light">Finanzas /</span> Registro de Operaciones</h4>
+        <h4 class="fw-bold py-3 mb-4">
+            <span class="text-muted fw-light">Finanzas /</span> {{ $tituloSeccion }}
+        </h4>
 
-        <!-- Alerts -->
+        {{-- Alerts --}}
         @if(session('success'))
             <div class="alert alert-success alert-dismissible" role="alert">
                 {{ session('success') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
-
         @if(session('error'))
             <div class="alert alert-danger alert-dismissible" role="alert">
                 {{ session('error') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
+
+        {{-- Tabs de filtro rápido --}}
+        <div class="mb-3">
+            <div class="btn-group" role="group">
+                <a href="{{ route('finanzas_vendedor.index') }}"
+                   class="btn btn-sm {{ !$tipoActivo ? 'btn-primary' : 'btn-outline-secondary' }}">
+                    <i class="bx bx-list-ul me-1"></i> Todos
+                </a>
+                <a href="{{ route('finanzas_vendedor.index', ['tipo' => 'adelanto_personal']) }}"
+                   class="btn btn-sm {{ $tipoActivo == 'adelanto_personal' ? 'btn-info' : 'btn-outline-secondary' }}">
+                    <i class="bx bx-user me-1"></i> Adelantos Personal
+                </a>
+                <a href="{{ route('finanzas_vendedor.index', ['tipo' => 'compras_credito']) }}"
+                   class="btn btn-sm {{ $tipoActivo == 'compras_credito' ? 'btn-primary' : 'btn-outline-secondary' }}">
+                    <i class="bx bx-cart me-1"></i> Compras a Crédito
+                </a>
+                <a href="{{ route('finanzas_vendedor.index', ['tipo' => 'adelanto_clientes']) }}"
+                   class="btn btn-sm {{ $tipoActivo == 'adelanto_clientes' ? 'btn-success' : 'btn-outline-secondary' }}">
+                    <i class="bx bx-money me-1"></i> Adelanto Clientes
+                </a>
+            </div>
+        </div>
 
         <div class="col-md-12">
             <div class="card">
@@ -33,6 +56,7 @@
                             <tr>
                                 <th>Fecha</th>
                                 <th>Tipo de Operación</th>
+                                <th>Empresa / Persona</th>
                                 <th>Descripción</th>
                                 <th>Documento</th>
                                 <th>Monto</th>
@@ -57,6 +81,10 @@
                                         @endphp
                                         <span class="badge {{ $badgeColor }} me-1">{{ $op->tipo->nombre }}</span>
                                     </td>
+                                    <td class="fw-semibold">
+                                        <i class="bx bx-building-house me-1 text-muted"></i>
+                                        {{ $op->empresa_persona ?? '-' }}
+                                    </td>
                                     <td>{{ $op->nombre }}</td>
                                     <td>{{ $op->documento ?? '-' }}</td>
                                     <td class="fw-bold">S/ {{ number_format($op->monto, 2) }}</td>
@@ -65,6 +93,8 @@
                                     <td>
                                         @if($op->estado == 'pendiente')
                                             <span class="badge bg-label-warning">Pendiente</span>
+                                        @elseif($op->estado == 'aprobado')
+                                            <span class="badge bg-label-primary">Aprobado</span>
                                         @elseif($op->estado == 'parcial')
                                             <span class="badge bg-label-info">Parcial</span>
                                         @elseif($op->estado == 'pagado')
@@ -72,13 +102,13 @@
                                         @endif
                                     </td>
                                     <td>
-                                        @if($op->tipo->nombre === 'Compras a credito' && $op->saldo > 0)
+                                        @if($op->tipo->nombre === 'Compras a crédito' && $op->saldo > 0)
                                             <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
                                                 data-bs-target="#modalPagar{{ $op->id }}">
                                                 <i class="bx bx-dollar-circle"></i> Pagar
                                             </button>
 
-                                            <!-- Modal Pagar -->
+                                            {{-- Modal Pagar --}}
                                             <div class="modal fade" id="modalPagar{{ $op->id }}" tabindex="-1" aria-hidden="true">
                                                 <div class="modal-dialog modal-dialog-centered" role="document">
                                                     <div class="modal-content">
@@ -96,21 +126,19 @@
                                                                             {{ $op->saldo }})</label>
                                                                         <input type="number" step="0.01" name="monto"
                                                                             class="form-control" value="{{ $op->saldo }}"
-                                                                            max="{{ $op->saldo }}" requried>
+                                                                            max="{{ $op->saldo }}" required>
                                                                     </div>
                                                                 </div>
                                                                 <div class="row">
                                                                     <div class="col mb-3">
-                                                                        <label for="fecha_pago" class="form-label">Fecha
-                                                                            Pago</label>
+                                                                        <label for="fecha_pago" class="form-label">Fecha Pago</label>
                                                                         <input type="date" name="fecha_pago" class="form-control"
                                                                             value="{{ date('Y-m-d') }}" required>
                                                                     </div>
                                                                 </div>
                                                                 <div class="row">
                                                                     <div class="col mb-3">
-                                                                        <label for="metodo_pago" class="form-label">Método de
-                                                                            Pago</label>
+                                                                        <label for="metodo_pago" class="form-label">Método de Pago</label>
                                                                         <select name="metodo_pago" class="form-select" required>
                                                                             <option value="Efectivo">Efectivo</option>
                                                                             <option value="Transferencia">Transferencia</option>
@@ -121,10 +149,8 @@
                                                                 </div>
                                                                 <div class="row">
                                                                     <div class="col mb-3">
-                                                                        <label for="observaciones"
-                                                                            class="form-label">Observaciones</label>
-                                                                        <textarea name="observaciones" class="form-control"
-                                                                            rows="2"></textarea>
+                                                                        <label for="observaciones" class="form-label">Observaciones</label>
+                                                                        <textarea name="observaciones" class="form-control" rows="2"></textarea>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -139,7 +165,7 @@
                                             </div>
                                         @endif
 
-                                        @if($op->monto_pagado > 0)
+                                        @if($op->tipo->nombre === 'Compras a crédito' && $op->monto_pagado > 0)
                                             <div class="dropdown d-inline-block">
                                                 <button class="btn btn-sm btn-icon" type="button" data-bs-toggle="dropdown">
                                                     <i class="bx bx-dots-vertical-rounded"></i>
@@ -161,7 +187,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="text-center">No hay operaciones registradas.</td>
+                                    <td colspan="10" class="text-center">No hay operaciones registradas.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -175,7 +201,7 @@
         </div>
     </div>
 
-    <!-- Modal Registro -->
+    {{-- Modal Registro --}}
     <div class="modal fade" id="modalRegistro" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
             <div class="modal-content">
@@ -186,29 +212,51 @@
                 <form method="POST" action="{{ route('finanzas_vendedor.store') }}">
                     @csrf
                     <div class="modal-body">
+
+                        {{-- Tipo de operación --}}
                         <div class="row mb-3">
-                            <label for="tipo_operacion" class="col-sm-2 col-form-label">Tipo</label>
-                            <div class="col-sm-10">
+                            <label for="tipo_operacion" class="col-sm-3 col-form-label fw-semibold">Tipo</label>
+                            <div class="col-sm-9">
                                 <select class="form-select" id="tipo_operacion" name="tipo_operacion" required>
                                     <option value="" selected disabled>Seleccione...</option>
-                                    <option value="compras_credito">Compras a Crédito</option>
-                                    <option value="adelanto_clientes">Adelanto Clientes</option>
-                                    <option value="adelanto_personal">Adelantos Personal</option>
+                                    <option value="compras_credito" {{ $tipoActivo == 'compras_credito' ? 'selected' : '' }}>
+                                        Compras a Crédito
+                                    </option>
+                                    <option value="adelanto_clientes" {{ $tipoActivo == 'adelanto_clientes' ? 'selected' : '' }}>
+                                        Adelanto Clientes
+                                    </option>
+                                    <option value="adelanto_personal" {{ $tipoActivo == 'adelanto_personal' ? 'selected' : '' }}>
+                                        Adelantos Personal
+                                    </option>
                                 </select>
                             </div>
                         </div>
 
+                        {{-- Empresa / Persona --}}
                         <div class="row mb-3">
-                            <label for="nombre" class="col-sm-2 col-form-label">Descripción</label>
-                            <div class="col-sm-10">
-                                <input type="text" class="form-control" id="nombre" name="nombre"
-                                    placeholder="Concepto o Descripción" required>
+                            <label for="empresa_persona" class="col-sm-3 col-form-label fw-semibold">
+                                <i class="bx bx-building-house me-1"></i>Empresa / Persona
+                            </label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="empresa_persona" name="empresa_persona"
+                                    placeholder="Nombre de empresa o persona" required>
+                                <div class="form-text">Ej: Proveedor ABC, Juan Pérez, etc.</div>
                             </div>
                         </div>
 
+                        {{-- Descripción --}}
                         <div class="row mb-3">
-                            <label for="monto" class="col-sm-2 col-form-label">Monto</label>
-                            <div class="col-sm-10">
+                            <label for="nombre" class="col-sm-3 col-form-label fw-semibold">Descripción</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="nombre" name="nombre"
+                                    placeholder="Concepto o descripción del registro" required>
+                            </div>
+                        </div>
+
+                        {{-- Monto --}}
+                        <div class="row mb-3">
+                            <label for="monto" class="col-sm-3 col-form-label fw-semibold">Monto</label>
+                            <div class="col-sm-9">
                                 <div class="input-group">
                                     <span class="input-group-text">S/</span>
                                     <input type="number" step="0.01" class="form-control" id="monto" name="monto"
@@ -217,32 +265,37 @@
                             </div>
                         </div>
 
+                        {{-- Fecha --}}
                         <div class="row mb-3">
-                            <label for="fecha_registro" class="col-sm-2 col-form-label">Fecha</label>
-                            <div class="col-sm-10">
+                            <label for="fecha_registro" class="col-sm-3 col-form-label fw-semibold">Fecha</label>
+                            <div class="col-sm-9">
                                 <input type="date" class="form-control" id="fecha_registro" name="fecha_registro"
                                     value="{{ date('Y-m-d') }}" required>
                             </div>
                         </div>
 
+                        {{-- Documento --}}
                         <div class="row mb-3">
-                            <label for="documento" class="col-sm-2 col-form-label">Documento</label>
-                            <div class="col-sm-10">
+                            <label for="documento" class="col-sm-3 col-form-label fw-semibold">Documento</label>
+                            <div class="col-sm-9">
                                 <input type="text" class="form-control" id="documento" name="documento"
                                     placeholder="N° Comprobante o Referencia (Opcional)">
                             </div>
                         </div>
 
+                        {{-- Observaciones --}}
                         <div class="row mb-3">
-                            <label for="observaciones" class="col-sm-2 col-form-label">Observaciones</label>
-                            <div class="col-sm-10">
+                            <label for="observaciones" class="col-sm-3 col-form-label fw-semibold">Observaciones</label>
+                            <div class="col-sm-9">
                                 <textarea class="form-control" id="observaciones" name="observaciones" rows="3"></textarea>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Registrar Operación</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bx bx-save me-1"></i> Registrar Operación
+                        </button>
                     </div>
                 </form>
             </div>

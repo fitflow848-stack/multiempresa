@@ -208,11 +208,39 @@
                 @endcan
 
                 @hasanyrole('vendedor|admin_empresa|super_admin')
-                    <li class="nav-item">
-                        <a href="{{ route('finanzas_vendedor.index') }}"
-                            class="nav-link {{ request()->routeIs('finanzas_vendedor.*') ? 'active fw-bold text-primary' : '' }}">
+                    <li class="nav-item dropdown">
+                        <a href="#"
+                            class="nav-link dropdown-toggle {{ request()->routeIs('finanzas_vendedor.*') ? 'active fw-bold text-primary' : '' }}"
+                            id="finanzasDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bx bx-dollar-circle me-1"></i> Finanzas
                         </a>
+                        <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="finanzasDropdown">
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('finanzas_vendedor.*') && request()->get('tipo') == 'adelanto_personal' ? 'active' : '' }}"
+                                    href="{{ route('finanzas_vendedor.index', ['tipo' => 'adelanto_personal']) }}">
+                                    <i class="bx bx-user me-2"></i> Adelantos a Personal
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('finanzas_vendedor.*') && request()->get('tipo') == 'compras_credito' ? 'active' : '' }}"
+                                    href="{{ route('finanzas_vendedor.index', ['tipo' => 'compras_credito']) }}">
+                                    <i class="bx bx-cart me-2"></i> Compras a Crédito
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('finanzas_vendedor.*') && request()->get('tipo') == 'adelanto_clientes' ? 'active' : '' }}"
+                                    href="{{ route('finanzas_vendedor.index', ['tipo' => 'adelanto_clientes']) }}">
+                                    <i class="bx bx-money me-2"></i> Adelanto de Clientes
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item {{ request()->routeIs('finanzas_vendedor.*') && !request()->get('tipo') ? 'active' : '' }}"
+                                    href="{{ route('finanzas_vendedor.index') }}">
+                                    <i class="bx bx-list-ul me-2"></i> Ver Todo
+                                </a>
+                            </li>
+                        </ul>
                     </li>
                 @endhasanyrole
 

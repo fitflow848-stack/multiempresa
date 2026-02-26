@@ -10,12 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
  * Aplica un Global Scope para filtrar automáticamente los registros
  * por la empresa (company) del usuario autenticado.
  *
- * Requisito: El modelo debe tener una columna `id_empresa` o `company_id`.
- * Por defecto usa `id_empresa` (compatible con el proyecto actual).
- *
- * Uso:
- *   use App\Traits\BelongsToCompany;
- *   class Venta extends Model { use BelongsToCompany; }
+ * Requisito: El modelo debe tener una columna `company_id`.
  */
 trait BelongsToCompany
 {
@@ -30,23 +25,44 @@ trait BelongsToCompany
             : 'company_id';
     }
 
+    /**
+     * Resuelve el usuario autenticado sin importar el guard activo.
+     * Filament usa el guard 'admin', el resto de la app usa 'web'.
+     */
+    protected static function resolveAuthUser(): ?\App\Models\User
+    {
+        // Intentar con el guard de Filament primero
+        if (auth()->guard('admin')->check()) {
+            return auth()->guard('admin')->user();
+        }
+        // Luego el guard web estándar
+        if (auth()->guard('web')->check()) {
+            return auth()->guard('web')->user();
+        }
+        return null;
+    }
+
     protected static function bootBelongsToCompany(): void
     {
         // Global Scope: filtrar por empresa del usuario logueado
         static::addGlobalScope('company', function (Builder $query) {
-            if (auth()->check() && !auth()->user()->hasRole('super_admin')) {
+            $user = static::resolveAuthUser();
+
+            if ($user && !$user->hasRole('super_admin')) {
                 $instance = new static;
                 $column = $instance->getCompanyForeignKey();
-                $query->where($query->getModel()->getTable() . '.' . $column, auth()->user()->company_id);
+                $query->where($query->getModel()->getTable() . '.' . $column, $user->company_id);
             }
         });
 
         // Auto-asignar empresa al crear un registro
         static::creating(function ($model) {
-            if (auth()->check()) {
+            $user = static::resolveAuthUser();
+
+            if ($user) {
                 $column = $model->getCompanyForeignKey();
                 if (empty($model->{$column})) {
-                    $model->{$column} = auth()->user()->company_id;
+                    $model->{$column} = $user->company_id;
                 }
             }
         });

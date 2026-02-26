@@ -15,6 +15,7 @@ class Pasivo extends Model
         'company_id',
         'tipo_pasivo_id',
         'nombre',
+        'empresa_persona',
         'monto',
         'monto_pagado',
         'estado',

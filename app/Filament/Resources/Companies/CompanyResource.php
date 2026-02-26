@@ -60,8 +60,20 @@ class CompanyResource extends Resource
     //     ];
     // }
 
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = auth()->guard('admin')->user() ?? auth()->guard('web')->user();
+
+        if ($user && !$user->hasRole('super_admin')) {
+            $query->where('id', $user->company_id);
+        }
+
+        return $query;
+    }
+
     public static function getNavigationBadge(): ?string
     {
-        return (string) static::getModel()::count();
+        return (string) static::getEloquentQuery()->count();
     }
 }

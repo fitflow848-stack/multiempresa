@@ -17,7 +17,17 @@ class CajaForm
                 ->schema([
                     Select::make('sucursal_id')
                         ->label('Sucursal')
-                        ->relationship('sucursal', 'nombre')
+                        ->relationship(
+                            'sucursal',
+                            'nombre',
+                            function ($query) {
+                                $user = auth()->guard('admin')->user() ?? auth()->guard('web')->user();
+                                if ($user && !$user->hasRole('super_admin')) {
+                                    $query->where('company_id', $user->company_id);
+                                }
+                                return $query;
+                            }
+                        )
                         ->required()
                         ->searchable()
                         ->preload()
@@ -45,7 +55,17 @@ class CajaForm
                 ->schema([
                     Select::make('users')
                         ->label('Usuarios que operan esta caja')
-                        ->relationship('users', 'name')
+                        ->relationship(
+                            'users',
+                            'name',
+                            function ($query) {
+                                $user = auth()->guard('admin')->user() ?? auth()->guard('web')->user();
+                                if ($user && !$user->hasRole('super_admin')) {
+                                    $query->where('company_id', $user->company_id);
+                                }
+                                return $query;
+                            }
+                        )
                         ->multiple()
                         ->searchable()
                         ->preload()

@@ -38,7 +38,7 @@ class SucursalPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return $user->hasRole('admin_empresa');
     }
 
     /**
@@ -46,7 +46,7 @@ class SucursalPolicy
      */
     public function update(User $user, Sucursal $sucursal): bool
     {
-        return false;
+        return $user->hasRole('admin_empresa') && $user->company_id === $sucursal->company_id;
     }
 
     /**
@@ -54,6 +54,6 @@ class SucursalPolicy
      */
     public function delete(User $user, Sucursal $sucursal): bool
     {
-        return false;
+        return $user->hasRole('admin_empresa') && $user->company_id === $sucursal->company_id;
     }
 }

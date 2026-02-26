@@ -46,7 +46,7 @@ class CompanyPolicy
      */
     public function update(User $user, Company $company): bool
     {
-        return false; // Solo super_admin via before()
+        return $user->hasRole('admin_empresa') && $user->company_id === $company->id;
     }
 
     /**

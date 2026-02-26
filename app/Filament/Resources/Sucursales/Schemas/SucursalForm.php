@@ -19,11 +19,23 @@ class SucursalForm
                 ->schema([
                     Select::make('company_id')
                         ->label('Empresa')
-                        ->relationship('company', 'razon_social')
+                        ->relationship(
+                            'company',
+                            'razon_social',
+                            fn($query) => auth()->guard('admin')->user()?->hasRole('super_admin')
+                                ? $query
+                                : $query->where('id', auth()->guard('admin')->user()?->company_id
+                                    ?? auth()->guard('web')->user()?->company_id)
+                        )
                         ->required()
                         ->searchable()
                         ->preload()
-                        ->native(false),
+                        ->native(false)
+                        ->default(fn() => auth()->guard('admin')->user()?->company_id
+                            ?? auth()->guard('web')->user()?->company_id)
+                        ->disabled(fn() => !( auth()->guard('admin')->user()?->hasRole('super_admin')
+                            ?? auth()->guard('web')->user()?->hasRole('super_admin')))
+                        ->dehydrated(),
                     TextInput::make('nombre')
                         ->label('Nombre')
                         ->required()
