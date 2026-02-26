@@ -2,11 +2,17 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+use App\Traits\BelongsToCompany;
+
 use Illuminate\Database\Eloquent\Model;
 
 class Pasivo extends Model
 {
+    use HasFactory, BelongsToCompany;
     protected $fillable = [
+        'company_id',
         'tipo_pasivo_id',
         'nombre',
         'monto',

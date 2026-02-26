@@ -119,14 +119,16 @@ class User extends Authenticatable implements FilamentUser
             return Caja::activas()->get();
         }
 
-        if ($this->isAdminEmpresa()) {
-            return Caja::activas()->get();
-        }
-
-        if ($this->hasRole('supervisor')) {
+        // Si el usuario tiene una sucursal asignada, filtramos por esa sucursal
+        // independientemente de si es admin_empresa o supervisor.
+        if ($this->branch_id) {
             return Caja::activas()
                 ->where('sucursal_id', $this->branch_id)
                 ->get();
+        }
+
+        if ($this->isAdminEmpresa()) {
+            return Caja::activas()->get();
         }
 
         // vendedor / cajero → solo las asignadas

@@ -2,13 +2,19 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+use App\Traits\BelongsToCompany;
+
 use Illuminate\Database\Eloquent\Model;
 
 class ArqueoCaja extends Model
 {
+    use HasFactory, BelongsToCompany;
     protected $table = 'arqueo_cajas';
 
     protected $fillable = [
+        'company_id',
         'user_id',
         'cierre_id',
         'fecha',

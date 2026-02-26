@@ -2,14 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToCompany;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Compra extends Model
 {
-    use HasFactory;
-
+    use HasFactory, BelongsToCompany;
+    
     protected $fillable = [
+        'company_id',
         'proveedor_id','fecha_emision','fecha_pago','moneda','credito','percepcion','inc_impuesto',
         'total_bruto','total_descuento','bruto_neto','total_impuesto','total_neto','flete','total_pagar',
         'tipo','presupuesto','local_destino','received_at', 'recibido', 'id_usuario'

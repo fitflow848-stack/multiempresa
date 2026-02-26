@@ -2,16 +2,20 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToCompany;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class OperacionCaja extends Model
 {
+    use HasFactory, BelongsToCompany;
     use HasFactory;
 
     protected $table = 'operaciones_caja';
 
     protected $fillable = [
+        'company_id',
         'cierre_caja_id',
         'user_id',
         'tipo',

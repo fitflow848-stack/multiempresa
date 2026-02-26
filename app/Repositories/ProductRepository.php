@@ -9,8 +9,17 @@ class ProductRepository
     /**
      * Buscar productos (reemplaza el DB::select del controller).
      */
-    public function buscar(string $q): array
+    /**
+     * Buscar productos (reemplaza el DB::select del controller).
+     */
+    public function buscar(string $q, ?int $sucursalId = null): array
     {
+        $joinIngresos = $sucursalId ? "INNER JOIN almacen_ingresos ai ON ai.id = ad.ingreso_id AND ai.sucursal_id = ?" : "";
+        $params = ["%{$q}%", "%{$q}%"];
+        if ($sucursalId) {
+            array_unshift($params, $sucursalId); // Goes into the join
+        }
+
         return DB::select("
             SELECT
                 p.id AS producto_id,
@@ -49,6 +58,7 @@ class ProductRepository
                     ELSE 0 
                 END AS stock_bajo
             FROM almacen_ingreso_detalle ad
+            $joinIngresos
             INNER JOIN productos p ON p.id = ad.producto_id
             INNER JOIN producto_lineas pl ON pl.id = ad.producto_linea_id 
             LEFT JOIN marcas m ON m.id = p.marca_id
@@ -57,11 +67,14 @@ class ProductRepository
             WHERE (p.nombre LIKE ? OR p.codigo_barras LIKE ?) AND ad.cantidad > 0
             GROUP BY p.id, p.tipo_impuesto, ad.producto_linea_id, p.nombre, pl.presentacion, pl.concentracion, ad.lote, ad.fecha_vencimiento, m.nombre
             ORDER BY p.nombre ASC
-        ", ["%{$q}%", "%{$q}%"]);
+        ", $params);
     }
 
-    public function obtenerLotes(int $productoId): array
+    public function obtenerLotes(int $productoId, ?int $sucursalId = null): array
     {
+        $joinIngresos = $sucursalId ? "INNER JOIN almacen_ingresos ai ON ai.id = ad.ingreso_id AND ai.sucursal_id = ?" : "";
+        $params = $sucursalId ? [$sucursalId, $productoId] : [$productoId];
+        
         return DB::select("SELECT
                     ad.id,
                     CONCAT('LOTE-', ad.id) as lote,
@@ -71,8 +84,9 @@ class ProductRepository
                     ad.pvc,
                     CONCAT('Stock: ', ad.cantidad) as descripcion_lote
                 FROM almacen_ingreso_detalle ad
+                $joinIngresos
                 WHERE ad.producto_id = ? AND ad.cantidad > 0
-                ORDER BY ad.id ASC", [$productoId]);
+                ORDER BY ad.id ASC", $params);
     }
 
     public function obtenerProductoConLotes(int $productoId)
@@ -81,8 +95,11 @@ class ProductRepository
     }
 
 
-    public function elegirStock(int $productoId): array
+    public function elegirStock(int $productoId, ?int $sucursalId = null): array
     {
+        $joinIngresos = $sucursalId ? "INNER JOIN almacen_ingresos ai ON ai.id = ad.ingreso_id AND ai.sucursal_id = ?" : "";
+        $params = $sucursalId ? [$sucursalId, $productoId] : [$productoId];
+
         return DB::select("SELECT
                     ad.id,
                     ad.producto_linea_id,
@@ -96,7 +113,8 @@ class ProductRepository
                     ad.cantidad as unidades
                 FROM
                     almacen_ingreso_detalle ad
+                $joinIngresos
                 WHERE ad.producto_id = ? AND ad.cantidad > 0
-                ORDER BY ad.id ASC", [$productoId]);
+                ORDER BY ad.id ASC", $params);
     }
 }

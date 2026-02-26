@@ -2,11 +2,17 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+use App\Traits\BelongsToCompany;
+
 use Illuminate\Database\Eloquent\Model;
 
 class TipoActivoCorriente extends Model
 {
-    protected $fillable = ['nombre', 'descripcion'];
+    use HasFactory, BelongsToCompany;
+    protected $fillable = [
+        'company_id','nombre', 'descripcion'];
 
     public function activos()
     {

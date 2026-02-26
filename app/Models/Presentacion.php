@@ -2,16 +2,20 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToCompany;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Presentacion extends Model
 {
+    use HasFactory, BelongsToCompany;
     use HasFactory;
 
     protected $table = 'presentaciones';
 
     protected $fillable = [
+        'company_id',
         'nombre',
         'descripcion',
         'activo'

@@ -85,9 +85,10 @@ class PosController extends Controller
     public function buscar(Request $request)
     {
         $q = $request->get('q', '');
+        $sucursalId = Auth::user()->branch_id;
 
         // Usamos el método buscar del repositorio
-        $productos = $this->productRepo->buscar($q);
+        $productos = $this->productRepo->buscar($q, $sucursalId);
 
         return response()->json($productos);
     }
@@ -100,8 +101,9 @@ class PosController extends Controller
             return response()->json(['error' => 'ID de producto requerido'], 400);
         }
 
+        $sucursalId = Auth::user()->branch_id;
         // Usamos el método obtenerLotes del repositorio
-        $lotes = $this->productRepo->obtenerLotes((int) $productoId);
+        $lotes = $this->productRepo->obtenerLotes((int) $productoId, $sucursalId);
 
         return response()->json($lotes);
     }
@@ -111,6 +113,10 @@ class PosController extends Controller
         $user = Auth::user();
         $company = $user->company;
         $productoId = $request->get('producto_id');
+        $sucursalId = $user->branch_id;
+
+        $joinIngresos = $sucursalId ? "INNER JOIN almacen_ingresos ai ON ai.id = ad.ingreso_id AND ai.sucursal_id = ?" : "";
+        $params = $sucursalId ? [$sucursalId, $productoId] : [$productoId];
 
         // Obtener información del producto
         $producto = DB::selectOne("SELECT
@@ -134,19 +140,20 @@ class PosController extends Controller
                 COUNT(ad.id) AS total_lotes,
                 ad.fecha_vencimiento
             FROM almacen_ingreso_detalle ad
+            $joinIngresos
             INNER JOIN productos p ON p.id = ad.producto_id
             INNER JOIN producto_lineas pl ON pl.id = ad.producto_linea_id 
             LEFT JOIN marcas m ON m.id = p.marca_id
             WHERE p.id = ? AND ad.cantidad > 0
             GROUP BY p.id, ad.producto_linea_id, p.nombre, p.marca_id, m.nombre, pl.presentacion, pl.concentracion, ad.lote, ad.fecha_vencimiento
-            ORDER BY p.nombre ASC", [$productoId]);
+            ORDER BY p.nombre ASC", $params);
 
         if (!$producto) {
             return redirect()->route('pos.index')->with('error', 'Producto no encontrado');
         }
 
         // Obtener lotes disponibles del producto
-        $lotes = $this->productRepo->elegirStock((int) $productoId);
+        $lotes = $this->productRepo->elegirStock((int) $productoId, $sucursalId);
 
         return view('pos.elegir-stock', compact('user', 'company', 'producto', 'lotes'));
     }

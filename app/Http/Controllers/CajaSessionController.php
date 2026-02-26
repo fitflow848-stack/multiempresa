@@ -34,6 +34,6 @@ class CajaSessionController extends Controller
         // Guardar el ID de la caja en la sesión
         session(['selected_caja_id' => $request->caja_id]);
 
-        return back()->with('success', 'Caja seleccionada correctamente.');
+        return redirect()->route('pos.index')->with('success', 'Caja seleccionada correctamente.');
     }
 }

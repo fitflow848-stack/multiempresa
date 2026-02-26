@@ -2,13 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToCompany;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class GuiaRemision extends Model
 {
-    use HasFactory;
-
+    use HasFactory, BelongsToCompany;
+    
     protected $table = 'guia_remision';
 
     protected $fillable = [

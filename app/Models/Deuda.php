@@ -2,16 +2,19 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToCompany;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Deuda extends Model
 {
-    use HasFactory;
-
+    use HasFactory, BelongsToCompany;
+    
     protected $table = 'deudas';
 
     protected $fillable = [
+        'company_id',
         'cliente_id',
         'venta_id',
         'numero_comprobante',
