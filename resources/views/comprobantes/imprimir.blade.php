@@ -67,7 +67,7 @@
             <div class="col-4">
                 <div class="d-flex justify-content-between">
                     <span>Total a pagar:</span>
-                    <span>S/ {{ number_format(($venta->total - $venta->igv + ($venta->descuento_monto ?? 0)) + $venta->igv, 2) }}</span>
+                    <span>S/ {{ number_format($venta->total, 2) }}</span>
                 </div>
                 <div class="d-flex justify-content-between">
                     <span>Total Descuento:</span>

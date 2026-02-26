@@ -154,7 +154,7 @@
         <tr>
             <td class="text-right">Total a pagar:</td>
             <td class="text-right">S/
-                {{ number_format(($venta->total - $venta->igv + ($venta->descuento_monto ?? 0)) + $venta->igv, 2) }}</td>
+                 {{ number_format($venta->total, 2) }}</td>
         </tr>
         <tr>
             <td class="text-right">Total Descuento:</td>

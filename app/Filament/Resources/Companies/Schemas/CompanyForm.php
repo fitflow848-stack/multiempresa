@@ -145,11 +145,14 @@ class CompanyForm
                         Repeater::make('sucursales')
                             ->relationship('sucursales')
                             ->label('Sucursales')
+                            ->addable(fn ($get) => ! $isNotSuperAdmin())
+                            ->deletable(fn ($get) => ! $isNotSuperAdmin())
                             ->schema([
                                 Tabs::make('sucursal_tabs')
                                     ->tabs([
                                         Tab::make('Datos Básicos')
                                             ->icon('heroicon-o-building-office')
+                                            ->disabled($isNotSuperAdmin)
                                             ->schema([
                                                 TextInput::make('nombre')
                                                     ->required()

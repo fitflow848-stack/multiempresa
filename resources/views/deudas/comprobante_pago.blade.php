@@ -170,7 +170,7 @@
     <div class="deuda-resumen">
         <div class="deuda-row">
             <div class="dl">Debe:</div>
-            <div class="dv">{{ number_format($deuda->monto_total, 2) }}</div>
+            <div class="dv">{{ number_format($saldoTotal + $pago->monto, 2) }}</div>
         </div>
         <div class="deuda-row">
             <div class="dl">Abonado:</div>
@@ -178,7 +178,7 @@
         </div>
         <div class="deuda-row pendiente-row">
             <div class="dl">Pendiente:</div>
-            <div class="dv">{{ number_format($deuda->monto_deuda, 2) }}</div>
+            <div class="dv">{{ number_format($saldoTotal, 2) }}</div>
         </div>
     </div>
 
@@ -203,7 +203,7 @@
         <div class="divider"></div>
         <div class="info-block">
             <div class="row">
-                <div class="label bold">SALDO TOTAL CLIENTE:</div>
+                <div class="label bold">SALDO DEUDOR:</div>
                 <div class="value bold">S/ {{ number_format($saldoTotal, 2) }}</div>
             </div>
         </div>
@@ -218,6 +218,9 @@
 
     {{-- PIE --}}
     <div class="footer">
+        @if ($empresa && $empresa->ticket_footer_message)
+            <p style="margin-bottom: 8px;"><strong>{{ $empresa->ticket_footer_message }}</strong></p>
+        @endif
         <p>No se admiten devoluciones.</p>
         <p>¡Gracias por su pago!</p>
     </div>

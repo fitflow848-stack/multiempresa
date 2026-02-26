@@ -214,7 +214,7 @@
                     <td>Total a pagar</td>
                     <td align="right">S/</td>
                     <td align="right">
-                        {{ number_format(($venta->subtotal ?? $venta->total - $venta->igv) + ($venta->descuento_monto ?? 0) + $venta->igv, 2) }}
+                         {{ number_format($venta->total, 2) }}
                     </td>
                 </tr>
                 <tr>
