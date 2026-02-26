@@ -68,7 +68,7 @@ Route::middleware(['auth', 'company.scope'])->group(function () {
         Route::post('/obtener-siguiente-numero', [PosController::class, 'obtenerSiguienteNumeroSerie'])->name('obtener-siguiente-numero');
         Route::get('/pdf/{id}', [PosController::class, 'pdfVenta'])->name('pdfVenta');
         Route::post('/sendDocumentoSunat/{id}', [PosController::class, 'sendDocumentoSunat'])->name('sendDocumentoSunat');
-        Route::get('{id}/pdf/{format?}', [PosController::class, 'pdfVenta'])->where('format', '8cm|default')->name('pdf');
+        Route::get('{id}/pdf/{format?}', [PosController::class, 'pdfVenta'])->where('format', '8cm|5.8cm|media-a4|default')->name('pdf');
     });
 
     Route::get('/pos/buscar-productos', [PosController::class, 'buscar'])->name('pos.buscar');

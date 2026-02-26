@@ -168,6 +168,16 @@
             <td class="text-right">Importe total:</td>
             <td class="text-right">S/ {{ number_format($venta->total, 2) }}</td>
         </tr>
+        @if ($venta->deuda)
+            <tr>
+                <td class="text-right">Abonado:</td>
+                <td class="text-right">S/ {{ number_format($venta->deuda->monto_pagado, 2) }}</td>
+            </tr>
+            <tr class="bold">
+                <td class="text-right">Pendiente:</td>
+                <td class="text-right">S/ {{ number_format($venta->deuda->monto_deuda, 2) }}</td>
+            </tr>
+        @endif
         @if (isset($venta->vuelto) && $venta->vuelto > 0)
             <tr>
                 <td class="text-right">Recibido:</td>

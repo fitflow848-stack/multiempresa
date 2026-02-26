@@ -216,6 +216,18 @@
                     <td align="right">S/</td>
                     <td align="right">{{ number_format($venta->total, 2) }}</td>
                 </tr>
+                @if ($venta->deuda)
+                    <tr>
+                        <td>Abonado</td>
+                        <td align="right">S/</td>
+                        <td align="right">{{ number_format($venta->deuda->monto_pagado, 2) }}</td>
+                    </tr>
+                    <tr style="font-weight: bold;">
+                        <td>Pendiente</td>
+                        <td align="right">S/</td>
+                        <td align="right">{{ number_format($venta->deuda->monto_deuda, 2) }}</td>
+                    </tr>
+                @endif
                 @if (isset($venta->vuelto) && $venta->vuelto > 0)
                     <tr>
                         <td>Recibido</td>

@@ -21,7 +21,7 @@ class PdfVentaService
      */
     private function prepareVentaData(int $id, int $qrSize = 200): ?array
     {
-        $venta = Venta::where('id_venta', $id)->first();
+        $venta = Venta::with(['deuda', 'user'])->where('id_venta', $id)->first();
         if (!$venta) return null;
 
         $servicios = VentaDetalle::where('id_venta', $id)->ordenado()->get();
@@ -125,14 +125,14 @@ class PdfVentaService
      */
     public function pdfVenta(int $id, string $format = 'default', bool $saveOnly = false)
     {
-        $qrSize = $format === '8cm' ? 150 : 200;
+        $qrSize = in_array($format, ['8cm', '5.8cm']) ? 150 : 200;
         $data = $this->prepareVentaData($id, $qrSize);
 
         if (!$data || !$data['venta']) {
             abort(404, 'Venta no encontrada');
         }
 
-        if ($format === '8cm') {
+        if ($format === '8cm' || $format === '5.8cm') {
             $viewData = [
                 'empresa' => $data['empresa'],
                 'venta' => $data['venta'],
@@ -144,12 +144,15 @@ class PdfVentaService
 
             $cantidadItems = count($data['servicios']);
             $altoCalculado = 550 + ($cantidadItems * 30);
-            $customPaper = [0, 0, 226.77, $altoCalculado];
+            
+            // 80mm = 226.77pt, 58mm = 164.4pt
+            $width = ($format === '5.8cm') ? 164.4 : 226.77;
+            $customPaper = [0, 0, $width, $altoCalculado];
 
             $pdf = Pdf::loadView('pos.pdf_8cm', $viewData)
                 ->setPaper($customPaper, 'portrait');
 
-            $fileName = 'ticket-' . $data['serie_numero'] . '.pdf';
+            $fileName = ($format === '5.8cm' ? 'ticket-58mm-' : 'ticket-80mm-') . $data['serie_numero'] . '.pdf';
         } else {
             $viewData = [
                 'title' => 'Boleta de Pago',
@@ -165,7 +168,15 @@ class PdfVentaService
             ];
 
             $pdf = Pdf::loadView('template.documentoventa', $viewData);
-            $fileName = 'boleta-pago.pdf';
+            
+            if ($format === 'media-a4') {
+                // Media hoja A4 = A5 landscape (210mm x 148.5mm)
+                $pdf->setPaper([0, 0, 595.28, 420.94], 'portrait');
+                $fileName = 'comprobante-media-a4-' . $data['serie_numero'] . '.pdf';
+            } else {
+                $pdf->setPaper('a4', 'portrait');
+                $fileName = 'comprobante-a4-' . $data['serie_numero'] . '.pdf';
+            }
         }
 
         if ($saveOnly) {

@@ -152,6 +152,7 @@
                                     <th>Fecha Emisión</th>
                                     <th class="text-end">Dscto Global</th>
                                     <th class="text-end">Total Importe</th>
+                                    <th class="text-end">Pagado</th>
                                     <th class="text-end">Importe Pendiente</th>
                                     <th class="text-center">Estado Pago</th>
                                     <th class="text-end">Deuda Total</th>
@@ -174,18 +175,24 @@
 
                                         $pendiente = 0;
                                         $deudaTotal = 0;
+                                        $pagado = 0;
+
                                         if ($venta->pagado) {
                                             $pendiente = 0;
                                             $deudaTotal = $venta->deuda ? $venta->deuda->monto_total : 0;
+                                            $pagado = $venta->total;
                                             $estadoPago = 'PAGADA';
                                         } else {
                                             $pendiente = $venta->deuda ? $venta->deuda->monto_deuda : $venta->total;
                                             $deudaTotal = $venta->deuda ? $venta->deuda->monto_total : $venta->total;
+                                            $pagado = $venta->deuda ? $venta->deuda->monto_pagado : ($venta->monto_recibido ?? 0);
                                             $estadoPago = 'PENDIENTE PAGO';
                                         }
+
                                         if ($isCancelado) {
                                             $pendiente = 0;
                                             $deudaTotal = 0;
+                                            $pagado = 0;
                                             $estadoPago = 'CANCELADO';
                                         }
                                     @endphp
@@ -222,6 +229,9 @@
                                         </td>
                                         <td class="text-end fw-bold text-dark">
                                             S/ {{ number_format($venta->total, 2) }}
+                                        </td>
+                                        <td class="text-end text-success fw-bold">
+                                            S/ {{ number_format($pagado, 2) }}
                                         </td>
                                         <td class="text-end text-danger fw-bold">
                                             S/ {{ number_format($pendiente, 2) }}
@@ -510,6 +520,42 @@
         </div>
     </div>
 
+    <!-- Modal para seleccionar formato de impresión -->
+    <div class="modal fade" id="modalFormatosImpresion" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold"><i class="bx bx-printer me-1"></i> Imprimir Comprobante</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <input type="hidden" id="imprimirVentaId">
+                    <div class="d-flex flex-wrap justify-content-center gap-3">
+                        <button type="button" class="btn btn-primary d-flex flex-column align-items-center p-3 btn-print-format shadow-sm" data-format="default" style="width: 120px; transition: transform 0.2s;">
+                            <i class="bx bxs-file-pdf fs-1 mb-2"></i>
+                            <span class="small fw-bold">Hoja A4</span>
+                        </button>
+                        <button type="button" class="btn btn-secondary d-flex flex-column align-items-center p-3 btn-print-format shadow-sm" data-format="media-a4" style="width: 120px; transition: transform 0.2s;">
+                            <i class="bx bxs-file-pdf fs-1 mb-2"></i>
+                            <span class="small fw-bold">Media Hoja A4</span>
+                        </button>
+                        <button type="button" class="btn btn-info text-white d-flex flex-column align-items-center p-3 btn-print-format shadow-sm" data-format="8cm" style="width: 120px; transition: transform 0.2s;">
+                            <i class="bx bx-receipt fs-1 mb-2"></i>
+                            <span class="small fw-bold">Voucher 8cm</span>
+                        </button>
+                        <button type="button" class="btn btn-info text-white d-flex flex-column align-items-center p-3 btn-print-format shadow-sm" data-format="5.8cm" style="width: 120px; filter: brightness(0.9); transition: transform 0.2s;">
+                            <i class="bx bx-receipt fs-1 mb-2"></i>
+                            <span class="small fw-bold">Voucher 5.8cm</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- JS dependencies -->
 
     @push('scripts')
@@ -747,21 +793,27 @@
                     fetchDetalleVenta(ventaId, true);
                 });
 
-                // Imprimir (A4 o 8cm para tickets)
-                $('.btn-imprimir').click(function(e) {
+                // Imprimir (Abre modal de formatos)
+                $(document).on('click', '.btn-imprimir', function(e) {
                     e.stopPropagation();
-                    const $btn = $(this);
-                    const ventaId = $btn.data('venta-id');
-                    const tipo = ($btn.data('tipo') || '').toString().toLowerCase();
+                    const ventaId = $(this).data('venta-id');
+                    $('#imprimirVentaId').val(ventaId);
 
-                    // Genero las URLs con placeholders usando route() y luego reemplazo :id por el id real
-                    const urlA4 = '{{ route('pos.pdf', ['id' => ':id', 'format' => 'default']) }}'.replace(
-                        ':id', ventaId);
-                    const url8cm = '{{ route('pos.pdf', ['id' => ':id', 'format' => '8cm']) }}'.replace(
-                        ':id', ventaId);
+                    const modalImprimir = new bootstrap.Modal(document.getElementById('modalFormatosImpresion'));
+                    modalImprimir.show();
+                });
 
-                    const openUrl = (tipo === 'ticket') ? url8cm : urlA4;
-                    window.open(openUrl, '_blank');
+                // Handler para los botones de formato
+                $(document).on('click', '.btn-print-format', function() {
+                    const ventaId = $('#imprimirVentaId').val();
+                    const format = $(this).data('format');
+
+                    const url = '{{ route('pos.pdf', ['id' => ':id', 'format' => ':format']) }}'
+                        .replace(':id', ventaId)
+                        .replace(':format', format);
+
+                    window.open(url, '_blank');
+                    bootstrap.Modal.getInstance(document.getElementById('modalFormatosImpresion')).hide();
                 });
 
                 // Seleccionar todo

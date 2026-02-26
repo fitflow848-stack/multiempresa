@@ -311,9 +311,17 @@
                             default => ucfirst(str_replace('_', ' ', $roleName)),
                         };
                     @endphp
+                    @if (isset($current_branch) && $current_branch)
+                        <li class="nav-item me-2 d-none d-xl-block">
+                            <span class="badge bg-label-secondary shadow-sm px-3 py-2">
+                                <i class="bx bx-map-pin me-1"></i> SUCT: {{ $current_branch->nombre }}
+                            </span>
+                        </li>
+                    @endif
+
                     @if ($selectedCajaBadge)
                         <li class="nav-item me-3 d-none d-xl-block">
-                            <span class="badge bg-label-primary px-3 py-2">
+                            <span class="badge bg-label-primary shadow-sm px-3 py-2">
                                 <i class="bx bx-box me-1"></i> {{ $selectedCajaBadge->nombre }}
                             </span>
                         </li>
