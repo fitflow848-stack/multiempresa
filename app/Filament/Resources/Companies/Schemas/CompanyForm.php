@@ -20,6 +20,8 @@ class CompanyForm
 {
     public static function schema(): array
     {
+        $isNotSuperAdmin = fn () => ! (auth()->user())?->hasRole('super_admin');
+
         return [
             Wizard::make([
                 Step::make('Datos Generales')
@@ -29,17 +31,21 @@ class CompanyForm
                                 TextInput::make('ruc')
                                     ->label('RUC')
                                     ->required()
-                                    ->length(11),
+                                    ->length(11)
+                                    ->disabled($isNotSuperAdmin),
                                 TextInput::make('razon_social')
                                     ->label('Razón Social')
                                     ->required()
-                                    ->maxLength(255),
+                                    ->maxLength(255)
+                                    ->disabled($isNotSuperAdmin),
                                 TextInput::make('nombre_comercial')
                                     ->label('Nombre Comercial')
-                                    ->maxLength(255),
+                                    ->maxLength(255)
+                                    ->disabled($isNotSuperAdmin),
                                 TextInput::make('tipo_contribuyente')
                                     ->label('Tipo de Contribuyente')
-                                    ->maxLength(100),
+                                    ->maxLength(100)
+                                    ->disabled($isNotSuperAdmin),
                                 FileUpload::make('logo')
                                     ->label('Logo de la Empresa')
                                     ->image()
@@ -49,10 +55,12 @@ class CompanyForm
                                     ->acceptedFileTypes(['image/png', 'image/jpg', 'image/jpeg'])
                                     ->maxSize(2048)
                                     ->imageResizeMode('contain')
-                                    ->columnSpanFull(),
+                                    ->columnSpanFull()
+                                    ->disabled($isNotSuperAdmin),
                             ])->columns(2),
 
                         Section::make('Representante Legal')
+                            ->disabled($isNotSuperAdmin)
                             ->schema([
                                 TextInput::make('rep_nombre')->label('Nombre'),
                                 Select::make('rep_document_type')
@@ -68,6 +76,7 @@ class CompanyForm
                             ])->columns(2),
 
                         Section::make('Datos de Contacto')
+                            ->disabled($isNotSuperAdmin)
                             ->schema([
                                 TextInput::make('email')->email()->label('Email'),
                                 TextInput::make('phone')->tel()->label('Teléfono'),
@@ -78,6 +87,7 @@ class CompanyForm
                 Step::make('Configuración')
                     ->schema([
                         Section::make('Ubicación Fiscal')
+                            ->disabled($isNotSuperAdmin)
                             ->schema([
                                 TextInput::make('department')->label('Departamento'),
                                 TextInput::make('province')->label('Provincia'),
@@ -120,9 +130,13 @@ class CompanyForm
 
                         Section::make('Control Interno')
                             ->schema([
-                                Toggle::make('is_active')->default(true),
-                                DatePicker::make('fecha_alta'),
-                                Textarea::make('observations')->label('Observaciones')->columnSpanFull(),
+                                Toggle::make('is_active')->default(true)->disabled($isNotSuperAdmin),
+                                DatePicker::make('fecha_alta')->disabled($isNotSuperAdmin),
+                                Textarea::make('observations')->label('Observaciones')->columnSpanFull()->disabled($isNotSuperAdmin),
+                                Textarea::make('ticket_footer_message')
+                                    ->label('Frase de pie de página (Tickets/Facturas)')
+                                    ->placeholder('Ej: Gracias por su compra. Vuelva pronto.')
+                                    ->columnSpanFull(),
                             ])->columns(2),
                     ]),
 

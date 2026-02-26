@@ -106,10 +106,26 @@
         .clear {
             clear: both;
         }
+
+        /* Pie de página absoluto */
+        .page-footer {
+            position: fixed;
+            bottom: 0px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 8px;
+            color: #333;
+            border-top: 0.5px solid #ccc;
+            padding-top: 5px;
+        }
     </style>
 </head>
 
 <body>
+    <div class="page-footer">
+        {{ $empresa->ticket_footer_message ?? 'Gracias por su preferencia' }}
+    </div>
     <div class="container">
         <table class="header-box">
             <tr>
@@ -243,6 +259,7 @@
             </table>
             <div class="clear"></div>
         </div>
+
 
         <div style="text-align: center; margin-top: 20px;">
             @if (isset($qr_image))

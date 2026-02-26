@@ -224,7 +224,7 @@
         @if (!empty($qr_image))
             <img src="{{ $qr_image }}">
         @endif
-        <div class="small">Gracias por su preferencia...</div>
+        <div class="small">{{ $empresa->ticket_footer_message ?? 'Gracias por su preferencia...' }}</div>
     </div>
 </body>
 

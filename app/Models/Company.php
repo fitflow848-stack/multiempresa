@@ -63,6 +63,7 @@ class Company extends Model
         'is_active',
         'fecha_alta',
         'observations',
+        'ticket_footer_message',
     ];
 
     protected $casts = [

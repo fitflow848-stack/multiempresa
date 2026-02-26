@@ -98,6 +98,7 @@
                 {{ $venta->pagado ? 'PAGADO' : 'PENDIENTE' }}
             </span>
         </p>
+        <p class="mb-1 mt-2"><strong>{{ $company->ticket_footer_message ?? 'Gracias por su preferencia' }}</strong></p>
         <small class="text-muted">Documento generado el {{ now()->format('d/m/Y H:i') }}</small>
     </div>
 </div>
