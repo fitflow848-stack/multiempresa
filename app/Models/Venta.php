@@ -178,4 +178,12 @@ class Venta extends Model
     {
         return $this->hasOne(Deuda::class, 'venta_id', 'id_venta');
     }
+
+    /**
+     * Relación con el cierre de caja
+     */
+    public function cierreCaja()
+    {
+        return $this->belongsTo(CierreCaja::class, 'cierre_caja_id');
+    }
 }

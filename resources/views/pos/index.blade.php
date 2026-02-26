@@ -1442,8 +1442,8 @@
                 const tr = document.createElement('tr');
                 tr.style.cursor = 'pointer';
 
-                // Clic izquierdo: agregar directamente 1 unidad a precio público
-                tr.addEventListener('click', async (ev) => {
+                // Doble clic: agregar directamente 1 unidad a precio público
+                tr.addEventListener('dblclick', async (ev) => {
                     ev.preventDefault();
 
                     const precioPublico = parseFloat(p.pvp || 0);
@@ -1661,7 +1661,7 @@
                                             NIU
                                         </td>
                                         <td>
-                                            <input type="text" value="${p.descuentoTexto || (p.descuento || 0) + '%'}" 
+                                            <input type="text" value="S/ ${((p.precio * p.cantidad) - p.importe).toFixed(2)}" 
                                                    style="width: 80px; border: none; background: transparent; text-align: center; color: #d63384; font-size: 11px;"
                                                    onchange="actualizarDescuento(${idx}, this.value)"
                                                    onclick="event.stopPropagation()"

@@ -54,6 +54,13 @@ class OperacionCajaController extends Controller
     {
         $operacion = OperacionCaja::findOrFail($id);
 
+        if ($operacion->partida === 'Cobro Deuda') {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se puede editar una operación que provenga de un cobro de deuda.'
+            ], 400);
+        }
+
         $data = $request->validate([
             'tipo' => 'required|in:aportacion,sustraccion,ingreso,gasto',
             'partida' => 'nullable|string|max:255',
@@ -115,6 +122,13 @@ class OperacionCajaController extends Controller
     public function destroy($id)
     {
         $operacion = OperacionCaja::findOrFail($id);
+
+        if ($operacion->partida === 'Cobro Deuda') {
+            return response()->json([
+                'success' => false,
+                'message' => 'No se puede eliminar una operación que provenga de un cobro de deuda.'
+            ], 400);
+        }
 
         if ($operacion->cierre_caja_id) {
             $cierre = CierreCaja::find($operacion->cierre_caja_id);

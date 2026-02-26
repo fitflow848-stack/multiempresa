@@ -73,6 +73,7 @@
                             <th>Producto</th>
                             <th style="width: 60px; text-align: center;">Cant.</th>
                             <th style="width: 80px; text-align: right;">P.U.</th>
+                            <th style="width: 80px; text-align: right;">Desc.</th>
                             <th style="width: 80px; text-align: right;">Total</th>
                         </tr>
                     </thead>
@@ -83,8 +84,11 @@
                                     <td>{{ $item->nombre }}</td>
                                     <td style="text-align: center;">{{ $item->cantidad }}</td>
                                     <td style="text-align: right;">S/ {{ number_format($item->precio, 2) }}</td>
-                                    <td style="text-align: right;">S/
-                                        {{ number_format($item->precio * $item->cantidad, 2) }}
+                                    <td style="text-align: right; color: #d63384;">
+                                        S/ {{ number_format(($item->precio * $item->cantidad) - ($item->importe ?? ($item->precio * $item->cantidad)), 2) }}
+                                    </td>
+                                    <td style="text-align: right; font-weight: bold;">
+                                        S/ {{ number_format($item->importe ?? ($item->precio * $item->cantidad), 2) }}
                                     </td>
                                 </tr>
                             @endforeach

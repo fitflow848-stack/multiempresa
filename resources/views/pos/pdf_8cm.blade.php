@@ -130,8 +130,9 @@
         <thead>
             <tr class="bold">
                 <td width="10%">CNT</td>
-                <td width="50%">DESCRIPCION</td>
-                <td width="20%" class="text-right">P.U.</td>
+                <td width="40%">DESCRIPCION</td>
+                <td width="15%" class="text-right">DESC.</td>
+                <td width="15%" class="text-right">P.U.</td>
                 <td width="20%" class="text-right">IMPR.</td>
             </tr>
         </thead>
@@ -139,7 +140,8 @@
             @foreach ($servicios as $item)
                 <tr>
                     <td>{{ number_format($item->cantidad, 0) }}</td>
-                    <td class="uppercase">{{ $item->nombre_servicio }}</td>
+                    <td class="uppercase">{{ str_replace('(Marca: ', '/ ', str_replace(')', '', $item->nombre_servicio ?? $item->descripcion)) }}</td>
+                    <td class="text-right">{{ number_format(($item->precio_unitario * $item->cantidad) - $item->importe, 2) }}</td>
                     <td class="text-right">{{ number_format($item->precio_unitario, 2) }}</td>
                     <td class="text-right">{{ number_format($item->importe, 2) }}</td>
                 </tr>
@@ -150,22 +152,20 @@
     <div class="hr"></div>
     <table style="margin-left: auto; width: 70%;">
         <tr>
-            <td class="text-right">Sub Total:</td>
+            <td class="text-right">Total a pagar:</td>
             <td class="text-right">S/
-                {{ number_format($venta->total - $venta->igv + ($venta->descuento_monto ?? 0), 2) }}</td>
+                {{ number_format(($venta->total - $venta->igv + ($venta->descuento_monto ?? 0)) + $venta->igv, 2) }}</td>
         </tr>
-        @if (($venta->descuento_monto ?? 0) > 0)
-            <tr>
-                <td class="text-right">Descuento:</td>
-                <td class="text-right">-S/ {{ number_format($venta->descuento_monto, 2) }}</td>
-            </tr>
-        @endif
+        <tr>
+            <td class="text-right">Total Descuento:</td>
+            <td class="text-right">S/ {{ number_format($venta->descuento_monto ?? 0, 2) }}</td>
+        </tr>
         <tr>
             <td class="text-right">IGV:</td>
             <td class="text-right">S/ {{ number_format($venta->igv ?? $venta->total * 0.18, 2) }}</td>
         </tr>
         <tr class="bold">
-            <td class="text-right">Total:</td>
+            <td class="text-right">Importe total:</td>
             <td class="text-right">S/ {{ number_format($venta->total, 2) }}</td>
         </tr>
         @if (isset($venta->vuelto) && $venta->vuelto > 0)

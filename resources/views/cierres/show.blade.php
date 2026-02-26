@@ -256,7 +256,7 @@
                                             </td>
                                             @if (!$cierre->fecha_cierre)
                                                 <td class="text-center">
-                                                    @if (isset($movimiento->origen_movimiento) && $movimiento->origen_movimiento === 'operacion')
+                                                    @if (isset($movimiento->origen_movimiento) && $movimiento->origen_movimiento === 'operacion' && ($movimiento->operacion ?? '') !== 'Cobro Deuda')
                                                         <button
                                                             class="btn btn-sm btn-outline-primary px-2 py-0 border-0 fs-6 edit-operacion"
                                                             data-id="{{ $movimiento->id_movimiento }}"

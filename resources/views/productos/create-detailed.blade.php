@@ -49,16 +49,40 @@
                                     <label class="form-label">Código de Barras</label>
                                     <div class="input-group">
                                         <span class="input-group-text bg-light text-primary border-end-0"><i
-                                                class="fas fa-barcode"></i></span>
+                                                class="bx bx-barcode"></i></span>
                                         <input type="text" id="cb"
                                             class="form-control border-start-0 border-end-0"
                                             placeholder="Escanear o ingresar...">
                                         <button type="button" class="btn btn-outline-success" id="btn-generar-cb"
                                             title="Generar código automáticamente">
-                                            <i class="fas fa-magic"></i> Auto
+                                            <i class="bx bx-magic-wand"></i> Auto
                                         </button>
                                     </div>
-                                    <small class="text-muted">Click en "Auto" para generar código automático</small>
+                                    <div id="barcode-container" class="mt-2 text-center p-3 border rounded bg-white shadow-sm d-none">
+                                        <div class="d-flex justify-content-center gap-2 mb-3">
+                                            <div class="input-group input-group-sm" style="width: 90px;">
+                                                <span class="input-group-text p-1"><i class="bx bx-arrow-to-bottom"></i></span>
+                                                <input type="number" id="bc-width" class="form-control" value="2" min="1" max="4" title="Grosor de barras">
+                                            </div>
+                                            <div class="input-group input-group-sm" style="width: 90px;">
+                                                <span class="input-group-text p-1"><i class="bx bx-arrow-to-bottom"></i></span>
+                                                <input type="number" id="bc-height" class="form-control" value="60" min="20" max="150" title="Altura en px">
+                                            </div>
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-print-bc" title="Imprimir etiqueta">
+                                                    <i class="bx bx-printer"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-success" id="btn-download-bc" title="Descargar PNG">
+                                                    <i class="bx bx-download"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="barcode-wrapper bg-white py-2">
+                                            <svg id="barcode-svg" style="max-width: 100%; height: auto;"></svg>
+                                        </div>
+                                        <canvas id="barcode-canvas" class="d-none"></canvas>
+                                    </div>
+                                    <small class="text-muted">Click en "Auto" para generar código...</small>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Cantidad</label>
@@ -288,6 +312,7 @@
     <!-- Dependencias JS -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
 
     <script>
         (function($) {
@@ -387,10 +412,99 @@
                 return codigo12 + verificador;
             }
 
+            function updateBarcode() {
+                const code = $('#cb').val().trim();
+                const $container = $('#barcode-container');
+                const bWidth = parseInt($('#bc-width').val()) || 2;
+                const bHeight = parseInt($('#bc-height').val()) || 60;
+
+                if (code.length >= 4) {
+                    $container.removeClass('d-none');
+                    try {
+                        JsBarcode("#barcode-svg", code, {
+                            format: code.length === 13 ? "EAN13" : "CODE128",
+                            lineColor: "#000",
+                            width: bWidth,
+                            height: bHeight,
+                            displayValue: true,
+                            fontSize: 14,
+                            background: "#ffffff",
+                            margin: 10
+                        });
+                    } catch (e) {
+                        console.warn('Barcode preview error:', e);
+                        $container.addClass('d-none');
+                    }
+                } else {
+                    $container.addClass('d-none');
+                }
+            }
+
+            // Descargar código de barras
+            $('#btn-download-bc').on('click', function() {
+                const svg = document.querySelector("#barcode-svg");
+                const svgData = new XMLSerializer().serializeToString(svg);
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+                const img = new Image();
+
+                const svgSize = svg.getBBox();
+                canvas.width = svgSize.width + 20;
+                canvas.height = svgSize.height + 20;
+
+                img.onload = function() {
+                    ctx.fillStyle = "white";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 10, 10);
+                    const pngFile = canvas.toDataURL("image/png");
+                    const downloadLink = document.createElement("a");
+                    downloadLink.download = `barcode-${$('#cb').val().trim()}.png`;
+                    downloadLink.href = pngFile;
+                    downloadLink.click();
+                };
+
+                img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+            });
+
+            // Imprimir código de barras
+            $('#btn-print-bc').on('click', function() {
+                const code = $('#cb').val().trim();
+                const svgContent = document.getElementById('barcode-svg').outerHTML;
+                const printWindow = window.open('', '_blank', 'width=600,height=400');
+                
+                printWindow.document.write(`
+                    <html>
+                        <head>
+                            <title>Imprimir Código de Barras - ${code}</title>
+                            <style>
+                                body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+                                .print-container { text-align: center; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="print-container">
+                                ${svgContent}
+                            </div>
+                            <script>
+                                window.onload = function() {
+                                    window.print();
+                                    setTimeout(function() { window.close(); }, 500);
+                                };
+                            <\/script>
+                        </body>
+                    </html>
+                `);
+                printWindow.document.close();
+            });
+
+            // Detectar cambios manuales y de tamaño
+            $('#cb, #bc-width, #bc-height').on('input change', updateBarcode);
+
             // Handler para generar código de barras automáticamente
             $('#btn-generar-cb').on('click', function() {
                 const nuevoCodigo = generarCodigoBarras();
                 $('#cb').val(nuevoCodigo);
+                updateBarcode();
 
                 // Efecto visual de éxito
                 const $input = $('#cb');

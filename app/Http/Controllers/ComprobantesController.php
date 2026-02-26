@@ -46,6 +46,14 @@ class ComprobantesController extends Controller
                 Carbon::parse($fechaHasta)->endOfDay()
             ]);
 
+        // Filtrar por caja seleccionada en la sesión
+        $selectedCajaId = session('selected_caja_id');
+        if ($selectedCajaId) {
+            $ventasQuery->whereHas('cierreCaja', function ($q) use ($selectedCajaId) {
+                $q->where('caja_id', $selectedCajaId);
+            });
+        }
+
         // Aplicar filtro de cliente
         if (!empty($cliente)) {
             $ventasQuery->whereHas('cliente', function ($q) use ($cliente) {

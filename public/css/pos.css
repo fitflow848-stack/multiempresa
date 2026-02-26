@@ -53,7 +53,7 @@ html {
     font-size: 11px;
 }
 
-.nav-item {
+/* .nav-item {
     cursor: pointer;
     color: #555;
     font-weight: 500;
@@ -76,7 +76,7 @@ html {
 .nav-item:hover {
     background: #f0f0f0;
     color: #000;
-}
+} */
 
 .nav-info {
     color: #888;

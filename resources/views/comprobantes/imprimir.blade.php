@@ -41,6 +41,7 @@
                     <th>Item</th>
                     <th>Descripción</th>
                     <th class="text-center">Cant.</th>
+                    <th class="text-end">Desc.</th>
                     <th class="text-end">P.Unit</th>
                     <th class="text-end">Total</th>
                 </tr>
@@ -48,11 +49,12 @@
             <tbody>
                 @foreach($venta->detalles as $detalle)
                 <tr>
-                    <td>{{ $detalle->item }}</td>
-                    <td>{{ $detalle->descripcion }}</td>
+                    <td>{{ $loop->iteration }}</td>
+                    <td>{{ str_replace('(Marca: ', '/ ', str_replace(')', '', $detalle->nombre_servicio ?? ($detalle->producto->nombre ?? '-'))) }}</td>
                     <td class="text-center">{{ $detalle->cantidad }}</td>
+                    <td class="text-end">{{ number_format(($detalle->precio_unitario * $detalle->cantidad) - $detalle->importe, 2) }}</td>
                     <td class="text-end">{{ number_format($detalle->precio_unitario, 2) }}</td>
-                    <td class="text-end">{{ number_format($detalle->precio_total, 2) }}</td>
+                    <td class="text-end">{{ number_format($detalle->importe ?? ($detalle->precio_unitario * $detalle->cantidad), 2) }}</td>
                 </tr>
                 @endforeach
             </tbody>
@@ -64,15 +66,19 @@
             <div class="col-8"></div>
             <div class="col-4">
                 <div class="d-flex justify-content-between">
-                    <span>Subtotal:</span>
-                    <span>S/ {{ number_format($venta->total - $venta->igv, 2) }}</span>
+                    <span>Total a pagar:</span>
+                    <span>S/ {{ number_format(($venta->total - $venta->igv + ($venta->descuento_monto ?? 0)) + $venta->igv, 2) }}</span>
                 </div>
                 <div class="d-flex justify-content-between">
-                    <span>IGV (18%):</span>
+                    <span>Total Descuento:</span>
+                    <span>S/ {{ number_format($venta->descuento_monto ?? 0, 2) }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>IGV:</span>
                     <span>S/ {{ number_format($venta->igv, 2) }}</span>
                 </div>
                 <div class="d-flex justify-content-between border-top pt-2">
-                    <strong>Total:</strong>
+                    <strong>Importe total:</strong>
                     <strong>S/ {{ number_format($venta->total, 2) }}</strong>
                 </div>
             </div>

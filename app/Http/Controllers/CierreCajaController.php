@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CierreCaja;
 use App\Models\Venta;
+use App\Models\Caja;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -70,14 +71,21 @@ class CierreCajaController extends Controller
             return redirect()->route('cierre-caja.index')->with('error', 'Debe seleccionar una caja activa en el menú superior antes de abrir una sesión.');
         }
 
-        // Verificar si ya tiene una caja abierta para evitar duplicidad
+        // Verificar si la caja ya está abierta
         $openCaja = CierreCaja::where('caja_id', $selectedCajaId)
             ->whereNull('fecha_cierre')
             ->first();
 
         if ($openCaja) {
-            return redirect()->route('cierre-caja.show', $openCaja->id)
-                ->with('info', 'Ya tienes una sesión abierta para esta caja. Finaliza la sesión actual antes de abrir una nueva.');
+            // Si el usuario actual es quien la tiene abierta, redirigir al detalle
+            if ($openCaja->user_id == Auth::id()) {
+                return redirect()->route('cierre-caja.show', $openCaja->id)
+                    ->with('info', 'Ya tienes una sesión abierta para esta caja.');
+            }
+
+            // Si es otro usuario
+            $msg = "La caja '" . $openCaja->caja->nombre . "' ya está siendo utilizada por el usuario " . $openCaja->user->name . ". Debe esperar a que cierre su sesión.";
+            return redirect()->route('cierre-caja.index')->with('error', $msg);
         }
 
         // Obtener el último cierre de la caja seleccionada
@@ -116,6 +124,15 @@ class CierreCajaController extends Controller
             return back()->with('error', 'Error: No hay una caja activa seleccionada.');
         }
 
+        // Validación final de seguridad: Solo una sesión abierta por Caja ID
+        $exists = CierreCaja::where('caja_id', $data['caja_id'])
+            ->whereNull('fecha_cierre')
+            ->exists();
+
+        if ($exists) {
+            return back()->with('error', 'No se puede abrir la caja: Esta caja ya tiene una sesión activa.');
+        }
+
         CierreCaja::create($data);
 
         return redirect()->route('cierre-caja.index')->with('success', 'Arqueo de caja registrado correctamente.');
@@ -123,6 +140,17 @@ class CierreCajaController extends Controller
 
     public function show(CierreCaja $cierre)
     {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        // Seguridad: Solo el dueño de la sesión abierta o un admin/supervisor puede acceder
+        if (!$cierre->fecha_cierre && $cierre->user_id !== $user->id) {
+            if (!$user->hasAnyRole(['super_admin', 'admin_empresa', 'supervisor'])) {
+                return redirect()->route('cierre-caja.index')
+                    ->with('error', 'No tienes permiso para acceder a esta sesión de caja abierta por otro usuario.');
+            }
+        }
+
         $movimientos = DB::select("( SELECT
                 v.created_at AS fecha_emision,
                 'Ingreso - Venta' AS operacion,
@@ -172,7 +200,7 @@ class CierreCajaController extends Controller
             $esEfectivo = (bool) ($mov->es_efectivo ?? false);
             $metodoPago = $mov->metodo_pago ?? 'Sin método';
 
-            if ($mov->tipo_movimiento === 'ingreso' && !$esEfectivo) {
+            if (strtolower($mov->tipo_movimiento ?? '') === 'ingreso' && !$esEfectivo) {
                 if (!isset($ingresosPorMetodo[$metodoPago])) {
                     $ingresosPorMetodo[$metodoPago] = 0;
                 }
@@ -196,8 +224,9 @@ class CierreCajaController extends Controller
             foreach ($movimientos as $mov) {
                 $importe = floatval($mov->importe);
                 $esEfectivo = (bool) ($mov->es_efectivo ?? false);
+                $tipoMov = strtolower($mov->tipo_movimiento ?? '');
 
-                switch ($mov->tipo_movimiento) {
+                switch ($tipoMov) {
                     case 'ingreso':
                         $ingresosTotal += $importe;
                         if ($esEfectivo)

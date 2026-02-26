@@ -157,9 +157,26 @@ class DeudaController extends Controller
 
         DB::beginTransaction();
         try {
+            $selectedCajaId = session('selected_caja_id');
+            $cajaAbierta = null;
+
+            if ($selectedCajaId) {
+                $cajaAbierta = \App\Models\CierreCaja::where('caja_id', $selectedCajaId)
+                    ->whereNull('fecha_cierre')
+                    ->first();
+            }
+
+            if (!$cajaAbierta) {
+                $cajaAbierta = \App\Models\CierreCaja::where('user_id', Auth::id())
+                    ->whereNull('fecha_cierre')
+                    ->first();
+            }
+
             $pago = DeudaPago::create([
                 'deuda_id' => $deuda->id,
                 'user_id' => Auth::id(),
+                'cierre_caja_id' => $cajaAbierta ? $cajaAbierta->id : null,
+                'caja_id' => $cajaAbierta ? $cajaAbierta->caja_id : null,
                 'monto' => $montoPago,
                 'fecha_pago' => now(),
                 'metodo_pago' => $request->metodo_pago ?? 'Efectivo',
@@ -167,10 +184,6 @@ class DeudaController extends Controller
                 'codigo_comprobante' => 'PAY-' . strtoupper(Str::random(8)),
                 'observaciones' => $request->observaciones
             ]);
-
-            $cajaAbierta = \App\Models\CierreCaja::where('user_id', Auth::id())
-                ->whereNull('fecha_cierre')
-                ->first();
 
             if ($cajaAbierta) {
                 $mP = $request->metodo_pago ?? 'Efectivo';
@@ -183,7 +196,7 @@ class DeudaController extends Controller
                 \App\Models\OperacionCaja::create([
                     'cierre_caja_id' => $cajaAbierta->id,
                     'user_id' => Auth::id(),
-                    'tipo' => 'Ingreso',
+                    'tipo' => 'ingreso',
                     'partida' => 'Cobro Deuda',
                     'concepto' => 'Pago de deuda - Ticket: ' . $deuda->numero_comprobante,
                     'importe' => $montoPago,
@@ -268,6 +281,21 @@ class DeudaController extends Controller
 
         DB::beginTransaction();
         try {
+            $selectedCajaId = session('selected_caja_id');
+            $cajaAbierta = null;
+
+            if ($selectedCajaId) {
+                $cajaAbierta = \App\Models\CierreCaja::where('caja_id', $selectedCajaId)
+                    ->whereNull('fecha_cierre')
+                    ->first();
+            }
+
+            if (!$cajaAbierta) {
+                $cajaAbierta = \App\Models\CierreCaja::where('user_id', Auth::id())
+                    ->whereNull('fecha_cierre')
+                    ->first();
+            }
+
             $pagoIds = [];
             foreach ($deudas as $deuda) {
                 if ($montoRestante <= 0)
@@ -278,6 +306,8 @@ class DeudaController extends Controller
                 $pago = DeudaPago::create([
                     'deuda_id' => $deuda->id,
                     'user_id' => Auth::id(),
+                    'cierre_caja_id' => $cajaAbierta ? $cajaAbierta->id : null,
+                    'caja_id' => $cajaAbierta ? $cajaAbierta->caja_id : null,
                     'monto' => $pagoDeuda,
                     'fecha_pago' => now(),
                     'metodo_pago' => $request->metodo_pago ?? 'Efectivo',
@@ -308,10 +338,6 @@ class DeudaController extends Controller
                 $montoRestante -= $pagoDeuda;
             }
 
-            $cajaAbierta = \App\Models\CierreCaja::where('user_id', Auth::id())
-                ->whereNull('fecha_cierre')
-                ->first();
-
             if ($cajaAbierta) {
                 $cajaAbierta->ingresos = floatval($cajaAbierta->ingresos ?? 0) + $montoInicial;
                 $cajaAbierta->save();
@@ -319,7 +345,7 @@ class DeudaController extends Controller
                 \App\Models\OperacionCaja::create([
                     'cierre_caja_id' => $cajaAbierta->id,
                     'user_id' => Auth::id(),
-                    'tipo' => 'Ingreso',
+                    'tipo' => 'ingreso',
                     'partida' => 'Cobro Deuda',
                     'concepto' => 'Pago acumulado cliente: ' . $cliente->nombre,
                     'importe' => $montoInicial,

@@ -14,6 +14,8 @@ class DeudaPago extends Model
     protected $fillable = [
         'deuda_id',
         'user_id',
+        'cierre_caja_id',
+        'caja_id',
         'monto',
         'fecha_pago',
         'metodo_pago',
