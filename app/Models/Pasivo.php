@@ -1,18 +1,21 @@
 <?php
 
 namespace App\Models;
+use App\Traits\BelongsToCompany;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-use App\Traits\BelongsToCompany;
-
 use Illuminate\Database\Eloquent\Model;
+
+use App\Traits\BelongsToSucursal;
 
 class Pasivo extends Model
 {
-    use HasFactory, BelongsToCompany;
+    use HasFactory, BelongsToCompany, BelongsToSucursal;
+    
     protected $fillable = [
         'company_id',
+        'sucursal_id',
         'tipo_pasivo_id',
         'nombre',
         'empresa_persona',

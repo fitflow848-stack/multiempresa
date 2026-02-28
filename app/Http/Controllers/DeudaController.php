@@ -190,8 +190,10 @@ class DeudaController extends Controller
                 $tipoPago = \DB::table('tipos_pagos')->where('nombre', $mP)->first();
                 $esEfectivo = $tipoPago ? $tipoPago->es_efectivo : ($mP === 'Efectivo' ? 1 : 0);
 
-                $cajaAbierta->ingresos = floatval($cajaAbierta->ingresos ?? 0) + $montoPago;
-                $cajaAbierta->save();
+                if ($esEfectivo) {
+                    $cajaAbierta->ingresos = floatval($cajaAbierta->ingresos ?? 0) + $montoPago;
+                    $cajaAbierta->save();
+                }
 
                 \App\Models\OperacionCaja::create([
                     'cierre_caja_id' => $cajaAbierta->id,
@@ -339,8 +341,14 @@ class DeudaController extends Controller
             }
 
             if ($cajaAbierta) {
-                $cajaAbierta->ingresos = floatval($cajaAbierta->ingresos ?? 0) + $montoInicial;
-                $cajaAbierta->save();
+                $mP = $request->metodo_pago ?? 'Efectivo';
+                $tipoPago = \DB::table('tipos_pagos')->where('nombre', $mP)->first();
+                $esEfectivo = $tipoPago ? $tipoPago->es_efectivo : ($mP === 'Efectivo' ? 1 : 0);
+
+                if ($esEfectivo) {
+                    $cajaAbierta->ingresos = floatval($cajaAbierta->ingresos ?? 0) + $montoInicial;
+                    $cajaAbierta->save();
+                }
 
                 \App\Models\OperacionCaja::create([
                     'cierre_caja_id' => $cajaAbierta->id,
@@ -349,6 +357,8 @@ class DeudaController extends Controller
                     'partida' => 'Cobro Deuda',
                     'concepto' => 'Pago acumulado cliente: ' . $cliente->nombre,
                     'importe' => $montoInicial,
+                    'metodo_pago' => $mP,
+                    'es_efectivo' => $esEfectivo,
                     'fecha' => now(),
                 ]);
             }

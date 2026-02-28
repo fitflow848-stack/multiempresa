@@ -176,7 +176,8 @@
                             <select class="form-control" id="metodoPago" name="metodo_pago">
                                 <option value="Efectivo">Efectivo</option>
                                 <option value="Transferencia">Transferencia</option>
-                                <option value="Yape/Plin">Yape / Plin</option>
+                                <option value="Yape">Yape</option>
+                                <option value="Plin">Plin</option>
                                 <option value="Tarjeta">Tarjeta</option>
                             </select>
                         </div>
@@ -372,10 +373,31 @@
                                 timer: 2000,
                                 showConfirmButton: false
                             }).then(() => {
-                                location.reload();
+                                if (confirm('¿Desea imprimir el recibo de pago?')) {
+                                    if (data.pago_id) {
+                                        window.open(`{{ url('deudas/pago') }}/${data.pago_id}/comprobante`, '_blank');
+                                    } else if (data.pago_ids && data.pago_ids.length > 0) {
+                                        data.pago_ids.forEach((id, index) => {
+                                            setTimeout(() => {
+                                                window.open(`{{ url('deudas/pago') }}/${id}/comprobante`, '_blank');
+                                            }, index * 500);
+                                        });
+                                    }
+                                }
+                                setTimeout(() => location.reload(), 500);
                             });
                         } else {
-                            alert(data.message || 'Pago registrado correctamente');
+                            if (confirm(data.message + '. ¿Desea imprimir el recibo?')) {
+                                if (data.pago_id) {
+                                    window.open(`{{ url('deudas/pago') }}/${data.pago_id}/comprobante`, '_blank');
+                                } else if (data.pago_ids && data.pago_ids.length > 0) {
+                                    data.pago_ids.forEach((id, index) => {
+                                        setTimeout(() => {
+                                            window.open(`{{ url('deudas/pago') }}/${id}/comprobante`, '_blank');
+                                        }, index * 500);
+                                    });
+                                }
+                            }
                             location.reload();
                         }
                     } else {

@@ -1,21 +1,22 @@
 <?php
 
 namespace App\Models;
-
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-
-use App\Traits\BelongsToCompany;
-
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Traits\BelongsToCompany;
+use App\Traits\BelongsToSucursal;
 
 class AlmacenIngreso extends Model
 {
-    use HasFactory, BelongsToCompany;
+    protected $companyForeignKey = 'empresa_id';
+    use HasFactory, BelongsToCompany, BelongsToSucursal;
+    
     protected $table = 'almacen_ingresos';
 
     protected $fillable = [
         'company_id',
         'empresa_id',
+        'sucursal_id',
         'user_id',
         'fecha',
         'observacion'

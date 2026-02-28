@@ -22,8 +22,8 @@ class PrincipalController extends Controller
         $companyId = $user->company_id;
 
         // --- PEDIDOS VENTAS ---
-        $proformas_pendientes_cnt = Cotizacion::where('company_id', $companyId)->count();
-        $proformas_pendientes_monto = Cotizacion::where('company_id', $companyId)->sum('total');
+        $proformas_pendientes_cnt = Cotizacion::count();
+        $proformas_pendientes_monto = Cotizacion::sum('total');
 
         $preventas_pendientes_cnt = 0;
         $preventas_pendientes_monto = 0;
@@ -32,19 +32,17 @@ class PrincipalController extends Controller
         $reservas_entregar_cnt = 0;
 
         // --- VENTAS ---
-        $creditos_pendientes_cnt = Deuda::where('sucursal_id', $companyId)->where('monto_deuda', '>', 0)->count();
-        $creditos_pendientes_monto = Deuda::where('sucursal_id', $companyId)->where('monto_deuda', '>', 0)->sum('monto_deuda');
+        $creditos_pendientes_cnt = Deuda::where('monto_deuda', '>', 0)->count();
+        $creditos_pendientes_monto = Deuda::where('monto_deuda', '>', 0)->sum('monto_deuda');
 
         // --- TESORERIA ---
         $cobros_pendientes_cnt = $creditos_pendientes_cnt;
         $cobros_pendientes_monto = $creditos_pendientes_monto;
 
-        $cobros_vencidos_cnt = Deuda::where('sucursal_id', $companyId)
-            ->where('monto_deuda', '>', 0)
+        $cobros_vencidos_cnt = Deuda::where('monto_deuda', '>', 0)
             ->where('fecha_vencimiento', '<', now())
             ->count();
-        $cobros_vencidos_monto = Deuda::where('sucursal_id', $companyId)
-            ->where('monto_deuda', '>', 0)
+        $cobros_vencidos_monto = Deuda::where('monto_deuda', '>', 0)
             ->where('fecha_vencimiento', '<', now())
             ->sum('monto_deuda');
 
@@ -54,29 +52,31 @@ class PrincipalController extends Controller
         $pagos_vencidos_monto = 0;
 
         // --- COMPRAS ---
-        $comprobantes_pendientes_cnt = Compra::whereHas('usuario', function ($q) use ($companyId) {
-            $q->where('company_id', $companyId);
-        })->where('recibido', 0)->count();
+        $comprobantes_pendientes_cnt = Compra::where('recibido', 0)->count();
 
         $comprobantes_borrador_cnt = 0;
 
         // --- ALMACEN ---
-        $productos_stock_cnt = Producto::where('id_empresa', $companyId)->where('cantidad', '>', 0)->count();
-        $productos_sin_stock_cnt = Producto::where('id_empresa', $companyId)->where('cantidad', '<=', 0)->count();
+        $productos_stock_cnt = Producto::where('cantidad', '>', 0)->count();
+        $productos_sin_stock_cnt = Producto::where('cantidad', '<=', 0)->count();
+
+        // Stock counts should be branch-scoped if possible. 
+        // For now, these are global product counts. 
+        // If the user wants branch-specific stock counts, we'd need to join.
 
         // Productos en stock mínimo (cantidad <= stock_min)
-        $productos_stock_minimo_cnt = AlmacenIngresoDetalle::whereHas('producto', function ($q) use ($companyId) {
-            $q->where('id_empresa', $companyId);
-        })
+        $productos_stock_minimo_cnt = AlmacenIngresoDetalle::whereHas('ingreso', function($q) {
+                // BelongsToSucursal on AlmacenIngreso will handle this
+            })
             ->where('cantidad', '>', 0)
             ->whereColumn('cantidad', '<=', 'stock_min')
             ->where('stock_min', '>', 0)
             ->count();
 
         // --- CAPITAL ACTUAL ---
-        $stock_valuations = AlmacenIngresoDetalle::whereHas('producto', function ($q) use ($companyId) {
-            $q->where('id_empresa', $companyId);
-        })
+        $stock_valuations = AlmacenIngresoDetalle::whereHas('ingreso', function($q) {
+                // BelongsToSucursal on AlmacenIngreso will handle this
+            })
             ->where('cantidad', '>', 0)
             ->select(
                 DB::raw('SUM(cantidad * costo) as total_costo'),

@@ -60,11 +60,14 @@
 </style>
 @stack('styles')
 
-<body class="bg-body"> @include('include.sidebar')
+<body class="bg-body {{ View::hasSection('hideSidebar') ? 'p-0' : '' }}"> 
+    @if (!View::hasSection('hideSidebar'))
+        @include('include.sidebar')
+    @endif
 
-    <div class="layout-wrapper">
-        <div class="content-wrapper">
-            <div class="flex-grow-1">
+    <div class="layout-wrapper {{ View::hasSection('hideSidebar') ? 'layout-without-menu' : '' }}">
+        <div class="content-wrapper {{ View::hasSection('hideSidebar') ? 'w-100 p-0' : '' }}">
+            <div class="{{ View::hasSection('hideSidebar') ? 'min-vh-100' : 'flex-grow-1' }}">
                 @yield('content')
             </div>
         </div>
@@ -100,6 +103,15 @@
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
 
+    <script>
+        document.addEventListener('keydown', function(event) {
+            // Atajo F2 para ingresar a Caja
+            if (event.key === 'F2') {
+                event.preventDefault();
+                window.location.href = "{{ route('cierre-caja.index') }}";
+            }
+        });
+    </script>
     @stack('scripts')
 </body>
 

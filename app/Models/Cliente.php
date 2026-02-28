@@ -2,17 +2,18 @@
 
 namespace App\Models;
 
+use App\Traits\BelongsToCompany;
+use App\Traits\BelongsToSucursal;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-use App\Traits\BelongsToCompany;
-
 class Cliente extends Model
 {
-    use HasFactory, BelongsToCompany;
+    use HasFactory, BelongsToCompany, BelongsToSucursal;
 
     protected $fillable = [
         'company_id',
+        'sucursal_id',
         'tipo_cliente',
         'tipo_documento',
         'numero_documento',
@@ -40,24 +41,22 @@ class Cliente extends Model
 
     public function ventas()
     {
-        return $this->hasMany('App\Models\Venta');
+        return $this->hasMany(Venta::class, 'id_cliente');
     }
 
     public function deudas()
     {
-        return $this->hasMany('App\Models\Deuda');
+        return $this->hasMany(Deuda::class, 'cliente_id');
     }
 
     public function getDebeAttribute()
     {
-        // Si ya existe la relación cargada con eager loading, usarla
         if ($this->relationLoaded('deudas')) {
             return $this->deudas
                 ->whereIn('estado', ['pendiente', 'parcial'])
                 ->sum('monto_deuda');
         }
 
-        // De lo contrario, hacer la consulta directa
         return $this->deudas()->whereIn('estado', ['pendiente', 'parcial'])->sum('monto_deuda') ?: 0;
     }
 

@@ -26,13 +26,24 @@
             <div class="card-body">
                 <form method="GET" action="{{ route('cierre-caja.index') }}" class="row g-3">
                     @if(auth()->user()->hasAnyRole(['super_admin', 'admin_empresa', 'supervisor']))
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label">Usuario</label>
                             <select name="user_id" class="form-select">
                                 <option value="">Todos</option>
                                 @foreach (App\Models\User::orderBy('name')->get() as $u)
                                     <option value="{{ $u->id }}" {{ request('user_id') == $u->id ? 'selected' : '' }}>
                                         {{ $u->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Caja</label>
+                            <select name="caja_id" class="form-select">
+                                <option value="">Todas</option>
+                                @foreach (auth()->user()->cajasDisponibles() as $c)
+                                    <option value="{{ $c->id }}" {{ request('caja_id') == $c->id ? 'selected' : '' }}>
+                                        {{ $c->nombre }}
                                     </option>
                                 @endforeach
                             </select>

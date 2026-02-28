@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Models;
-
 use App\Traits\BelongsToCompany;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 class Producto extends Model
 {
     use HasFactory, BelongsToCompany;
+    
 
     protected $companyForeignKey = 'id_empresa';
     
@@ -115,6 +115,6 @@ class Producto extends Model
 
     public function laboratorio()
     {
-        return $this->belongsTo(\App\Models\Laboratorio::class, 'laboratorio_id');
+        return $this->belongsTo(\App\Models\Laboratorio::class, 'laboratorio');
     }
 }

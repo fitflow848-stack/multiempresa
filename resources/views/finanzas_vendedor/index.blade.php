@@ -183,6 +183,11 @@
                                                 </ul>
                                             </div>
                                         @endif
+
+                                        <button type="button" class="btn btn-sm btn-icon btn-edit-operacion shadow-none" 
+                                                data-id="{{ $op->id }}" title="Editar Operación">
+                                            <i class="bx bx-edit text-warning fs-4"></i>
+                                        </button>
                                     </td>
                                 </tr>
                             @empty
@@ -301,5 +306,121 @@
             </div>
         </div>
     </div>
+
+    {{-- Modal Editar --}}
+    <div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Operación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="formEditar" method="POST">
+                    @csrf
+                    <div class="modal-body">
+                        <div class="row mb-3">
+                            <label for="edit_tipo_operacion" class="col-sm-3 col-form-label fw-semibold">Tipo</label>
+                            <div class="col-sm-9">
+                                <select class="form-select" id="edit_tipo_operacion" name="tipo_operacion" required>
+                                    <option value="compras_credito">Compras a Crédito</option>
+                                    <option value="adelanto_clientes">Adelanto Clientes</option>
+                                    <option value="adelanto_personal">Adelantos Personal</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label for="edit_empresa_persona" class="col-sm-3 col-form-label fw-semibold">Empresa / Persona</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="edit_empresa_persona" name="empresa_persona" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label for="edit_nombre" class="col-sm-3 col-form-label fw-semibold">Descripción</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="edit_nombre" name="nombre" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label for="edit_monto" class="col-sm-3 col-form-label fw-semibold">Monto</label>
+                            <div class="col-sm-9">
+                                <div class="input-group">
+                                    <span class="input-group-text">S/</span>
+                                    <input type="number" step="0.01" class="form-control" id="edit_monto" name="monto" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label for="edit_fecha_registro" class="col-sm-3 col-form-label fw-semibold">Fecha</label>
+                            <div class="col-sm-9">
+                                <input type="date" class="form-control" id="edit_fecha_registro" name="fecha_registro" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label for="edit_documento" class="col-sm-3 col-form-label fw-semibold">Documento</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="edit_documento" name="documento">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <label for="edit_observaciones" class="col-sm-3 col-form-label fw-semibold">Observaciones</label>
+                            <div class="col-sm-9">
+                                <textarea class="form-control" id="edit_observaciones" name="observaciones" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bx bx-save me-1"></i> Actualizar Operación
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    @push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const modalEditar = new bootstrap.Modal(document.getElementById('modalEditar'));
+            const formEditar = document.getElementById('formEditar');
+
+            document.querySelectorAll('.btn-edit-operacion').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = this.getAttribute('data-id');
+                    
+                    fetch(`{{ url('finanzas-vendedor') }}/${id}/edit`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                const op = data.operacion;
+                                formEditar.action = `{{ url('finanzas-vendedor') }}/${id}/update`;
+                                
+                                document.getElementById('edit_tipo_operacion').value = data.tipo_operacion;
+                                document.getElementById('edit_empresa_persona').value = op.empresa_persona;
+                                document.getElementById('edit_nombre').value = op.nombre;
+                                document.getElementById('edit_monto').value = op.monto;
+                                document.getElementById('edit_fecha_registro').value = op.fecha_registro.substring(0, 10);
+                                document.getElementById('edit_documento').value = op.documento || '';
+                                document.getElementById('edit_observaciones').value = op.observaciones || '';
+                                
+                                modalEditar.show();
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert('Error al cargar datos de la operación');
+                        });
+                });
+            });
+        });
+    </script>
+    @endpush
 
 @endsection

@@ -20,7 +20,7 @@
                     <div class="card mb-4">
                         <div class="card-body">
                             <div class="row g-3">
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="form-label-custom">Proveedor</label>
                                     <div class="input-group">
                                         <select id="proveedor_select" name="proveedor_id" class="form-select select2"
@@ -45,6 +45,14 @@
                                         <option value="Factura">Factura</option>
                                         <option value="Boleta">Boleta</option>
                                     </select>
+                                </div>
+                                <div class="col-md-1">
+                                    <label class="form-label-custom">Serie</label>
+                                    <input type="text" name="serie_comprobante" class="form-control" placeholder="F001">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label-custom">Número</label>
+                                    <input type="text" name="numero_comprobante" class="form-control" placeholder="000000">
                                 </div>
                                 <div class="col-md-2">
                                     <label class="form-label-custom">Emisión</label>
@@ -453,6 +461,8 @@
                     proveedor_text: $('#proveedor_select').find('option:selected').text(),
                     presupuesto: $('select[name="presupuesto"]').val(),
                     tipo: $('select[name="tipo"]').val(),
+                    serie_comprobante: $('input[name="serie_comprobante"]').val(),
+                    numero_comprobante: $('input[name="numero_comprobante"]').val(),
                     fecha_emision: $('input[name="fecha_emision"]').val(),
                     fecha_pago: $('input[name="fecha_pago"]').val(),
                     moneda: $('input[name="moneda"]:checked').val(),
@@ -473,7 +483,7 @@
             // Configurar auto-guardado en tiempo real
             function setupAutoSave() {
                 // Auto-guardar cuando cambien los campos del formulario
-                $('#proveedor_select, select[name="presupuesto"], select[name="tipo"], input[name="fecha_emision"], input[name="fecha_pago"]')
+                $('#proveedor_select, select[name="presupuesto"], select[name="tipo"], input[name="serie_comprobante"], input[name="numero_comprobante"], input[name="fecha_emision"], input[name="fecha_pago"]')
                     .on('change', debounce(autoSaveCompraData, 500));
 
                 // Auto-guardar cuando cambien las opciones
@@ -612,6 +622,8 @@
 
                         $('select[name="presupuesto"]').val(data.presupuesto);
                         $('select[name="tipo"]').val(data.tipo);
+                        $('input[name="serie_comprobante"]').val(data.serie_comprobante);
+                        $('input[name="numero_comprobante"]').val(data.numero_comprobante);
                         $('input[name="fecha_emision"]').val(data.fecha_emision);
                         $('input[name="fecha_pago"]').val(data.fecha_pago);
                         $('input[name="moneda"][value="' + data.moneda + '"]').prop('checked', true);

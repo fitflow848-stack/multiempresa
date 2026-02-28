@@ -219,4 +219,27 @@ class PasivoController extends Controller
 
         return $pdf->stream('ticket_pago_pasivo_' . $pago->id . '.pdf');
     }
+
+    public function edit($id)
+    {
+        $pasivo = Pasivo::with('tipo')->findOrFail($id);
+        return response()->json($pasivo);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'tipo_pasivo_id' => 'required|exists:tipo_pasivos,id',
+            'nombre' => 'required|string|max:255',
+            'monto' => 'required|numeric|min:0',
+            'fecha_registro' => 'required|date',
+            'documento' => 'nullable|string|max:255',
+            'observaciones' => 'nullable|string'
+        ]);
+
+        $pasivo = Pasivo::findOrFail($id);
+        $pasivo->update($request->all());
+
+        return redirect()->route('pasivos.index')->with('success', 'Pasivo actualizado correctamente');
+    }
 }

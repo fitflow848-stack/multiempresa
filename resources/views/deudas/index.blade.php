@@ -486,7 +486,8 @@
                 .then(data => {
                     if (data.success) {
                         $('#modalAplicarPago').modal('hide');
-                        if (confirm('Pago registrado correctamente. ¿Desea imprimir el comprobante?')) {
+                        let msg = data.message || 'Pago registrado correctamente';
+                        if (confirm(msg + '. ¿Desea imprimir el comprobante de pago ahora?')) {
                             if (data.pago_id) {
                                 window.open(`{{ url('deudas/pago') }}/${data.pago_id}/comprobante`, '_blank');
                             } else if (data.pago_ids && data.pago_ids.length > 0) {

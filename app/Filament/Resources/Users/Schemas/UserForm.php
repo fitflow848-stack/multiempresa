@@ -76,10 +76,10 @@ class UserForm
                             $set('cajas', []);
                         }),
 
-                    Select::make('branch_id')
-                        ->label('Sucursal')
+                    Select::make('branches')
+                        ->label('Sucursales Asignadas')
                         ->relationship(
-                            'branch',
+                            'branches',
                             'nombre',
                             function ($query, $get) {
                                 $companyId = $get('company_id') ?? auth()->user()->company_id;
@@ -89,11 +89,12 @@ class UserForm
                                 return $query;
                             }
                         )
+                        ->multiple()
                         ->searchable()
                         ->preload()
                         ->native(false)
                         ->required()
-                        ->placeholder(fn($get) => $get('company_id') ? 'Seleccione una sucursal' : 'Seleccione una empresa primero')
+                        ->placeholder(fn($get) => $get('company_id') ? 'Seleccione sucursales' : 'Seleccione una empresa primero')
                         ->reactive()
                         ->afterStateUpdated(fn(callable $set) => $set('cajas', [])),
 
@@ -123,18 +124,19 @@ class UserForm
                             'cajas',
                             'nombre',
                             fn($query, $get) =>
-                            $query->where('sucursal_id', $get('branch_id'))
+                            $query->withoutGlobalScope('sucursal')
+                                ->whereIn('sucursal_id', $get('branches') ?? [])
                                 ->where('is_active', true)
                         )
                         ->multiple()
                         ->searchable()
                         ->preload()
                         ->native(false)
-                        ->helperText('Seleccione las cajas en las que este usuario puede operar. Solo se muestran cajas activas de la sucursal seleccionada.')
-                        ->placeholder('Seleccione una sucursal primero'),
+                        ->helperText('Seleccione las cajas en las que este usuario puede operar. Solo se muestran cajas activas de las sucursales seleccionadas.')
+                        ->placeholder('Seleccione sucursales primero'),
                 ])
-                ->hidden(fn($get) => !$get('branch_id'))
-                ->description('Las cajas disponibles dependen de la sucursal asignada al usuario.'),
+                ->hidden(fn($get) => empty($get('branches')))
+                ->description('Las cajas disponibles dependen de las sucursales asignadas al usuario.'),
         ];
     }
 }

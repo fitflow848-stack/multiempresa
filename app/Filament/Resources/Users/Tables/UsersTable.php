@@ -34,12 +34,13 @@ class UsersTable
                     ->sortable()
                     ->placeholder('Sin asignar'),
 
-                TextColumn::make('branch.nombre')
-                    ->label('Sucursal')
+                TextColumn::make('branches.nombre')
+                    ->label('Sucursales')
                     ->searchable()
                     ->sortable()
                     ->badge()
                     ->color('info')
+                    ->separator(', ')
                     ->placeholder('Sin sucursal'),
 
                 TextColumn::make('roles.name')

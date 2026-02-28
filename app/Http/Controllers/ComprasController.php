@@ -41,6 +41,9 @@ class ComprasController extends Controller
             ->select(
                 'compras.id',
                 'compras.fecha_emision',
+                'compras.tipo',
+                'compras.serie_comprobante',
+                'compras.numero_comprobante',
                 'proveedores.nombre_comercial as proveedor',
                 'compras.total_neto',
                 'compras.received_at'
@@ -78,6 +81,7 @@ class ComprasController extends Controller
             return [
                 'id' => $r->id,
                 'fecha' => $r->fecha_emision ? date('Y-m-d', strtotime($r->fecha_emision)) : null,
+                'documento' => $r->tipo . ' ' . $r->serie_comprobante . '-' . $r->numero_comprobante,
                 'proveedor' => $r->proveedor,
                 'total' => (float) $r->total_neto,
                 'estado' => $estado,
@@ -112,6 +116,8 @@ class ComprasController extends Controller
             'percepcion' => ['nullable'],
             'inc_impuesto' => ['nullable'],
             'tipo' => ['nullable', 'string'],
+            'serie_comprobante' => ['nullable', 'string'],
+            'numero_comprobante' => ['nullable', 'string'],
             'presupuesto' => ['nullable', 'string'],
             'local_destino' => ['nullable', 'string'],
 
@@ -147,6 +153,8 @@ class ComprasController extends Controller
                 'percepcion' => $request->has('percepcion') ? 1 : 0,
                 'inc_impuesto' => $request->has('inc_impuesto') ? 1 : 0,
                 'tipo' => $data['tipo'] ?? null,
+                'serie_comprobante' => $data['serie_comprobante'] ?? null,
+                'numero_comprobante' => $data['numero_comprobante'] ?? null,
                 'presupuesto' => $data['presupuesto'] ?? null,
                 'local_destino' => $data['local_destino'] ?? null,
                 'total_bruto' => $data['total_bruto'] ?? 0,

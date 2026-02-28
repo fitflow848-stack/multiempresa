@@ -78,7 +78,6 @@ class Company extends Model
         // 'cert_password' => 'encrypted',
     ];
 
-
     /**
      * Usuarios que pertenecen a esta empresa
      */

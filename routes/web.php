@@ -4,6 +4,7 @@ use App\Http\Controllers\ActivoCorrienteController;
 use App\Http\Controllers\ActivoFijoController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BalanceController;
+use App\Http\Controllers\BranchSelectionController;
 use App\Http\Controllers\CajaSessionController;
 use App\Http\Controllers\PasivoController;
 use App\Http\Controllers\PosController;
@@ -49,8 +50,13 @@ Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::post('/caja/select', [CajaSessionController::class, 'select'])->name('caja.select');
 Route::post('/api/documento/ruc', [ApiDocumentosController::class, 'getRuc'])->name('apidocumento.ruc');
+// Rutas de selección de sucursal
+Route::middleware(['auth'])->group(function () {
+    Route::get('/select-branch', [BranchSelectionController::class, 'index'])->name('branch.select');
+    Route::post('/select-branch', [BranchSelectionController::class, 'select'])->name('branch.select.post');
+});
 
-Route::middleware(['auth', 'company.scope'])->group(function () {
+Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function () {
     Route::get('/principal', [PrincipalController::class, 'index'])->name('principal.index');
 
     // Ruta para registrar arqueo de caja desde POS/UI
@@ -255,6 +261,8 @@ Route::middleware(['auth', 'company.scope'])->group(function () {
         Route::get('/transferir', [AlmacenController::class, 'transferir'])->name('transferir')->middleware('can:inventario.transferir');
         Route::post('/transferir', [AlmacenController::class, 'storeTransferencia'])->name('transferir.store')->middleware('can:inventario.transferir');
         Route::get('/api/lotes', [AlmacenController::class, 'getLotesAvailable'])->name('api.lotes');
+        Route::get('/edit/{id}', [AlmacenController::class, 'edit'])->name('edit')->middleware('can:inventario.ajustar');
+        Route::post('/update/{id}', [AlmacenController::class, 'update'])->name('update')->middleware('can:inventario.ajustar');
     });
 
     Route::prefix('guia')->middleware('can:guias_remision.ver')->group(function () {
@@ -286,6 +294,8 @@ Route::middleware(['auth', 'company.scope'])->group(function () {
         Route::get('/', [ActivoCorrienteController::class, 'index'])->name('activos_corrientes.index');
         Route::post('/', [ActivoCorrienteController::class, 'store'])->name('activos_corrientes.store');
         Route::post('/tipo', [ActivoCorrienteController::class, 'storeTipo'])->name('activos_corrientes.storeTipo');
+        Route::get('/{id}/edit', [ActivoCorrienteController::class, 'edit'])->name('activos_corrientes.edit');
+        Route::post('/{id}/update', [ActivoCorrienteController::class, 'update'])->name('activos_corrientes.update');
         Route::delete('/{id}', [ActivoCorrienteController::class, 'destroy'])->name('activos_corrientes.destroy');
     });
 
@@ -305,12 +315,16 @@ Route::middleware(['auth', 'company.scope'])->group(function () {
         Route::post('/convertir-aporte/{id}', [PasivoController::class, 'convertirAporte'])->name('pasivos.convertir-aporte');
         Route::post('/pagar/{id}', [PasivoController::class, 'registrarPago'])->name('pasivos.pagar');
         Route::get('/ticket/{id}', [PasivoController::class, 'ticketPago'])->name('pasivos.ticket');
+        Route::get('/{id}/edit', [PasivoController::class, 'edit'])->name('pasivos.edit');
+        Route::post('/{id}/update', [PasivoController::class, 'update'])->name('pasivos.update');
         Route::delete('/{id}', [PasivoController::class, 'destroy'])->name('pasivos.destroy');
     });
 
     // Finanzas para Vendedores
     Route::get('/finanzas-vendedor', [App\Http\Controllers\FinanzasVendedorController::class, 'index'])->name('finanzas_vendedor.index');
     Route::post('/finanzas-vendedor', [App\Http\Controllers\FinanzasVendedorController::class, 'store'])->name('finanzas_vendedor.store');
+    Route::get('/finanzas-vendedor/{id}/edit', [App\Http\Controllers\FinanzasVendedorController::class, 'edit'])->name('finanzas_vendedor.edit');
+    Route::post('/finanzas-vendedor/{id}/update', [App\Http\Controllers\FinanzasVendedorController::class, 'update'])->name('finanzas_vendedor.update');
 
     // Balance Route
     Route::prefix('balance')->middleware('can:contabilidad.ver')->group(function () {

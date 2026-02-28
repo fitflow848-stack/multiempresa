@@ -1,15 +1,16 @@
 <?php
 
 namespace App\Models;
-
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Traits\BelongsToCompany;
+use App\Traits\BelongsToSucursal;
 
 class Venta extends Model
 {
-    use HasFactory, BelongsToCompany;
+    protected $sucursalForeignKey = 'sucursal';
+    use HasFactory, BelongsToCompany, BelongsToSucursal;
+    
 
     protected $primaryKey = 'id_venta';
 

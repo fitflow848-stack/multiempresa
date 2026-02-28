@@ -349,9 +349,9 @@
 
                     @if ($selectedCajaBadge)
                         <li class="nav-item me-3 d-none d-xl-block">
-                            <span class="badge bg-label-primary shadow-sm px-3 py-2">
-                                <i class="bx bx-box me-1"></i> {{ $selectedCajaBadge->nombre }}
-                            </span>
+                            <a href="{{ route('cierre-caja.index') }}" class="btn btn-primary btn-sm px-3 shadow-sm d-flex align-items-center">
+                                <i class="bx bx-box me-1"></i> CAJA (F2)
+                            </a>
                         </li>
                     @endif
                     <li class="nav-item dropdown">

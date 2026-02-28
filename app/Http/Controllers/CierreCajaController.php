@@ -22,8 +22,8 @@ class CierreCajaController extends Controller
         // Filtro por empresa
         $query->where('id_empresa', $user->company_id);
 
-        // Filtro por la caja seleccionada en la sesión (Separación de contextos)
-        if ($selectedCajaId) {
+        // Filtro por la caja seleccionada en la sesión (Solo para usuarios sin rol administrativo)
+        if ($selectedCajaId && !$user->hasAnyRole(['super_admin', 'admin_empresa', 'supervisor'])) {
             $query->where('caja_id', $selectedCajaId);
         }
 
@@ -41,6 +41,10 @@ class CierreCajaController extends Controller
         }
         if ($request->filled('fecha_hasta')) {
             $query->whereDate('created_at', '<=', $request->fecha_hasta);
+        }
+
+        if ($request->filled('caja_id') && $user->hasAnyRole(['super_admin', 'admin_empresa', 'supervisor'])) {
+            $query->where('caja_id', $request->caja_id);
         }
 
         $cierres = $query->paginate(20);

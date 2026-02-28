@@ -1,16 +1,15 @@
 <?php
 
 namespace App\Models;
-
-use App\Models\Company;
-use App\Models\Sucursal;
 use Illuminate\Database\Eloquent\Model;
-
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Traits\BelongsToCompany;
+use App\Traits\BelongsToSucursal;
 
 class CompanyDocument extends Model
 {
-    use BelongsToCompany;
+    use HasFactory, BelongsToCompany, BelongsToSucursal;
+    
 
     protected $fillable = [
         'company_id',

@@ -1,11 +1,13 @@
 <?php
 
 namespace App\Models;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 use Illuminate\Database\Eloquent\Model;
 
 class AlmacenIngresoDetalle extends Model
 {
+    use HasFactory;
     protected $table = 'almacen_ingreso_detalle';
 
     protected $fillable = [

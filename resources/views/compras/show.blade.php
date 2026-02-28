@@ -30,7 +30,7 @@
                         </div>
                         <div class="col-md-3">
                             <strong>Tipo</strong>
-                            <div>{{ $compra->tipo ?? '—' }}</div>
+                            <div>{{ $compra->tipo ?? '—' }} ({{ $compra->serie_comprobante }}-{{ $compra->numero_comprobante }})</div>
                         </div>
                     </div>
 

@@ -34,6 +34,16 @@ class CajaSessionController extends Controller
         // Guardar el ID de la caja en la sesión
         session(['selected_caja_id' => $request->caja_id]);
 
+        // Si el usuario es admin o superadmin y la caja pertenece a otra sucursal,
+        // actualizar la sucursal activa para mantener la consistencia del sistema.
+        $caja = \App\Models\Caja::withoutGlobalScope('sucursal')->find($request->caja_id);
+        if ($caja && ($user->isAdminEmpresa() || $user->isSuperAdmin())) {
+            if (session('active_branch_id') != $caja->sucursal_id) {
+                session(['active_branch_id' => $caja->sucursal_id]);
+                // No redirigir todavía, que siga el flujo normal
+            }
+        }
+
         return redirect()->route('pos.index')->with('success', 'Caja seleccionada correctamente.');
     }
 }

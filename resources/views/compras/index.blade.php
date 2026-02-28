@@ -125,6 +125,7 @@
                         <tr>
                             <th class="border-0">ID</th>
                             <th class="border-0">FECHA EMISIÓN</th>
+                            <th class="border-0">DOCUMENTO</th>
                             <th class="border-0">PROVEEDOR</th>
                             <th class="border-0 text-center">TOTAL</th>
                             <th class="border-0 text-center">ESTADO</th>
@@ -178,6 +179,13 @@
                                     return '<small>' + fecha.toLocaleDateString('es-ES') + '</small>';
                                 }
                                 return '-';
+                            }
+                        },
+                        {
+                            data: 'documento',
+                            name: 'documento',
+                            render: function(data) {
+                                return data ? '<small class="text-muted">' + data + '</small>' : '-';
                             }
                         },
                         {

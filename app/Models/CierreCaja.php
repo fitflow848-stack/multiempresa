@@ -1,18 +1,21 @@
 <?php
 
 namespace App\Models;
-
 use App\Traits\BelongsToCompany;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
 
+use App\Traits\BelongsToSucursal;
+
 class CierreCaja extends Model
 {
-    use HasFactory, BelongsToCompany;
+    use HasFactory, BelongsToCompany, BelongsToSucursal;
+    
 
     protected $companyForeignKey = 'id_empresa';
+    protected $sucursalForeignKey = 'sucursal_id';
     
     protected $table = 'cierre_cajas';
 
@@ -20,6 +23,7 @@ class CierreCaja extends Model
         'user_id',
         'caja_id',
         'id_empresa',
+        'sucursal_id',
         'fecha_cierre',
         'monto_apertura', // Saldo Inicial
         'monto_cierre',   // Cierre Caja (Efectivo Real)

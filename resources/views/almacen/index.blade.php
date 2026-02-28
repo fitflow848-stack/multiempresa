@@ -140,6 +140,7 @@
                                 <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">VENTA (PVP)</th>
                                 <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">STOCK ACTUAL
                                 </th>
+                                <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">CÓDIGO</th>
                                 <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">OPERACIONES
                                 </th>
                             </tr>
@@ -171,10 +172,22 @@
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        <a href="{{ route('almacen.ajustar-existencias', $p->id ?? $p->id) }}"
-                                            class="btn btn-sm btn-white border shadow-sm px-3 rounded-pill text-primary fw-bold">
-                                            <i class="fas fa-sliders-h me-1"></i> Ajustar
-                                        </a>
+                                        <button type="button" class="btn btn-sm btn-light border btn-show-barcode" 
+                                                data-barcode="{{ $p->codigo }}" data-name="{{ $p->producto }}">
+                                            <i class="bx bx-barcode"></i>
+                                        </button>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex gap-1 justify-content-center">
+                                            <a href="{{ route('almacen.edit', $p->id) }}"
+                                                class="btn btn-sm btn-white border shadow-sm px-2 rounded-pill text-warning fw-bold">
+                                                <i class="bx bx-edit"></i>
+                                            </a>
+                                            <a href="{{ route('almacen.ajustar-existencias', $p->id) }}"
+                                                class="btn btn-sm btn-white border shadow-sm px-2 rounded-pill text-primary fw-bold">
+                                                <i class="bx bx-slider"></i>
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach
@@ -204,5 +217,94 @@
     </div>
 
  
+
+    <!-- Modal para ver Código de Barras -->
+    <div class="modal fade" id="barcodeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0" style="border-radius: 1.5rem;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="barcodeModalLabel">Código de Barras</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center p-4">
+                    <h6 id="barcodeProductName" class="text-muted mb-4 small"></h6>
+                    <div class="barcode-container p-4 bg-white border rounded-3 mb-4 d-inline-block">
+                        <svg id="barcode-svg"></svg>
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-primary" id="btn-print-barcode">
+                            <i class="fas fa-print me-2"></i>Imprimir Etiqueta
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const barcodeModal = new bootstrap.Modal(document.getElementById('barcodeModal'));
+            const barcodeSvg = document.getElementById('barcode-svg');
+            const productNameEl = document.getElementById('barcodeProductName');
+            const printBtn = document.getElementById('btn-print-barcode');
+            let currentBarcode = '';
+
+            document.querySelectorAll('.btn-show-barcode').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    currentBarcode = this.getAttribute('data-barcode');
+                    const name = this.getAttribute('data-name');
+                    
+                    productNameEl.textContent = name;
+                    
+                    if (currentBarcode) {
+                        JsBarcode("#barcode-svg", currentBarcode, {
+                            format: currentBarcode.length === 13 ? "EAN13" : "CODE128",
+                            width: 2,
+                            height: 80,
+                            displayValue: true
+                        });
+                        barcodeModal.show();
+                    } else {
+                        Swal.fire('Atención', 'Este producto no tiene código de barras asignado.', 'warning');
+                    }
+                });
+            });
+
+            printBtn.addEventListener('click', function() {
+                const svgContent = barcodeSvg.outerHTML;
+                const name = productNameEl.textContent;
+                const printWindow = window.open('', '_blank', 'width=600,height=400');
+                
+                printWindow.document.write(`
+                    <html>
+                        <head>
+                            <title>Etiqueta - ${name}</title>
+                            <style>
+                                body { display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; font-family: sans-serif; }
+                                .label { text-align: center; padding: 20px; border: 1px dashed #ccc; }
+                                .name { font-size: 14px; margin-bottom: 10px; font-weight: bold; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="label">
+                                <div class="name">${name}</div>
+                                ${svgContent}
+                            </div>
+                            <script>
+                                window.onload = function() {
+                                    window.print();
+                                    setTimeout(function() { window.close(); }, 500);
+                                };
+                            <\/script>
+                        </body>
+                    </html>
+                `);
+                printWindow.document.close();
+            });
+        });
+    </script>
+    @endpush
 
 @endsection

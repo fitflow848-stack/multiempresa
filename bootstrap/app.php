@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Alias para usar en rutas específicas si se necesita
         $middleware->alias([
             'company.scope' => \App\Http\Middleware\EnsureCompanyScope::class,
+            'branch.selected' => \App\Http\Middleware\EnsureBranchSelected::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

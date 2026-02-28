@@ -1,15 +1,15 @@
 <?php
 
 namespace App\Models;
-
-use App\Traits\BelongsToCompany;
-
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Traits\BelongsToCompany;
+use App\Traits\BelongsToSucursal;
 
 class Deuda extends Model
 {
-    use HasFactory, BelongsToCompany;
+    use HasFactory, BelongsToCompany, BelongsToSucursal;
+    
     
     protected $table = 'deudas';
 

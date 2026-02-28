@@ -104,6 +104,10 @@
                                                         <i class="bx bx-trash"></i>
                                                     </button>
                                                 </form>
+                                                <button type="button" class="btn btn-warning btn-circle btn-sm btn-edit-activo"
+                                                    data-id="{{ $activo->id }}" title="Editar">
+                                                    <i class="bx bx-edit"></i>
+                                                </button>
                                             </td>
                                         </tr>
                                     @empty
@@ -287,6 +291,92 @@
                     }
                 });
             });
+        });
+    </script>
+    <!-- Modal Editar Activo -->
+    <div class="modal fade" id="modalEditarActivo" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <form id="formEditarActivo" method="POST">
+                    @csrf
+                    <div class="modal-header bg-warning text-white">
+                        <h5 class="modal-title">Editar Activo Corriente</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group mb-3">
+                            <label>Tipo <span class="text-danger">*</span></label>
+                            <select name="tipo_activo_corriente_id" id="edit_tipo_activo_corriente_id" class="form-control" required>
+                                @foreach ($tipos as $tipo)
+                                    <option value="{{ $tipo->id }}">{{ $tipo->nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label>Nombre / Descripción Corta <span class="text-danger">*</span></label>
+                            <input type="text" name="nombre" id="edit_nombre" class="form-control" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="col-md-6 mb-3">
+                                <label>Monto (Valor) <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend">
+                                        <span class="input-group-text">S/</span>
+                                    </div>
+                                    <input type="number" step="0.01" min="0" name="monto" id="edit_monto" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label>Fecha Registro <span class="text-danger">*</span></label>
+                                <input type="date" name="fecha_registro" id="edit_fecha_registro" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label>Documento Referencia</label>
+                            <input type="text" name="documento" id="edit_documento" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Observaciones</label>
+                            <textarea name="observaciones" id="edit_observaciones" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning">Actualizar Registro</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const modalEditarActivo = new bootstrap.Modal(document.getElementById('modalEditarActivo'));
+            const formEditarActivo = document.getElementById('formEditarActivo');
+
+            document.querySelectorAll('.btn-edit-activo').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = this.getAttribute('data-id');
+                    
+                    fetch(`{{ url('activos-corrientes') }}/${id}/edit`)
+                        .then(response => response.json())
+                        .then(data => {
+                            formEditarActivo.action = `{{ url('activos-corrientes') }}/${id}/update`;
+                            
+                            document.getElementById('edit_tipo_activo_corriente_id').value = data.tipo_activo_corriente_id;
+                            document.getElementById('edit_nombre').value = data.nombre;
+                            document.getElementById('edit_monto').value = data.monto;
+                            document.getElementById('edit_fecha_registro').value = data.fecha_registro.substring(0, 10);
+                            document.getElementById('edit_documento').value = data.documento || '';
+                            document.getElementById('edit_observaciones').value = data.observaciones || '';
+                            
+                            modalEditarActivo.show();
+                        })
+                        .catch(error => alert('Error al cargar datos'));
+                });
+            });
+
+            // ... your existing code ...
         });
     </script>
 @endpush

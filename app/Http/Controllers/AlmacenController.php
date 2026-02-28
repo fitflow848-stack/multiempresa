@@ -24,14 +24,14 @@ class AlmacenController extends Controller
         // Query base
         $query = DB::table('almacen_ingreso_detalle as d')
             ->join('productos as p', 'p.id', 'd.producto_id')
+            ->join('producto_lineas as pl', 'pl.producto_id', 'p.id')
             ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
-            ->leftJoin('users as u', 'u.id', '=', 'i.user_id')
-            ->leftJoin('sucursales as s', 's.id', '=', 'u.branch_id') // Asumiendo que el stock pertenece a la sucursal del usuario creador
+            ->leftJoin('sucursales as s', 's.id', '=', 'i.sucursal_id')
             ->select(
                 'd.id',
                 'd.producto_id',
                 'p.nombre as producto',
-                'p.codigo_barras as codigo', // Alias para consistencia
+                'pl.cb as codigo',
                 's.nombre as almacen_nombre',
                 DB::raw('SUM(d.cantidad) as existencias'),
                 DB::raw('AVG(d.costo) as costo'),
@@ -40,12 +40,20 @@ class AlmacenController extends Controller
                 DB::raw('AVG(d.pvc) as pvc')
             );
 
+        // Seguridad: Filtro por Empresa
+        $query->where('i.company_id', $user->company_id);
+
+        // Seguridad: Filtro por Sucursal (excepto super_admin)
+        if (!$user->hasRole('super_admin')) {
+            $query->where('i.sucursal_id', $user->branch_id);
+        }
+
         // Filtros
         if ($request->has('producto') && $request->get('producto')) {
             $term = $request->get('producto');
             $query->where(function ($q) use ($term) {
                 $q->where('p.nombre', 'LIKE', '%' . $term . '%')
-                    ->orWhere('p.codigo_barras', 'LIKE', '%' . $term . '%');
+                    ->orWhere('pl.cb', 'LIKE', '%' . $term . '%');
             });
         }
 
@@ -54,7 +62,7 @@ class AlmacenController extends Controller
         }
 
         if ($request->has('codigo') && $request->get('codigo')) {
-            $query->where('p.codigo_barras', 'LIKE', '%' . $request->get('codigo') . '%');
+            $query->where('pl.cb', 'LIKE', '%' . $request->get('codigo') . '%');
         }
 
         // El filtro de existencias es un agregado, por lo que usamos having
@@ -66,7 +74,7 @@ class AlmacenController extends Controller
             }
         }
 
-        $stocks = $query->groupBy('d.id', 'd.producto_id', 'p.nombre', 'p.codigo_barras', 's.nombre')
+        $stocks = $query->groupBy('d.id', 'd.producto_id', 'p.nombre', 'pl.cb', 's.nombre')
             ->paginate(20);
 
         $productos = $stocks;
@@ -114,12 +122,40 @@ class AlmacenController extends Controller
 
     public function buscar(Request $request)
     {
-        $termino = $request->get('producto');
-        $local = $request->get('local');
-        $existencias = $request->get('existencias');
+        $user = Auth::user();
+        $query = DB::table('almacen_ingreso_detalle as d')
+            ->join('productos as p', 'p.id', 'd.producto_id')
+            ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
+            ->leftJoin('sucursales as s', 's.id', '=', 'i.sucursal_id')
+            ->select(
+                'd.id',
+                'p.nombre as producto',
+                'p.codigo_barras as codigo',
+                's.nombre as almacen_nombre',
+                DB::raw('SUM(d.cantidad) as existencias'),
+                DB::raw('AVG(d.costo) as costo'),
+                DB::raw('AVG(d.pvp) as pvp'),
+                DB::raw('AVG(d.pvpd) as pvpd'),
+                DB::raw('AVG(d.pvc) as pvc')
+            );
 
-        // TODO: Implementar búsqueda real
-        $productos = $this->getMockProducts();
+        // Filtro por Empresa y Sucursal
+        $query->where('i.company_id', $user->company_id);
+        if (!$user->hasRole('super_admin')) {
+            $query->where('i.sucursal_id', $user->branch_id);
+        }
+
+        // Búsqueda
+        if ($request->has('producto') && $request->get('producto')) {
+            $term = $request->get('producto');
+            $query->where(function ($q) use ($term) {
+                $q->where('p.nombre', 'LIKE', '%' . $term . '%')
+                    ->orWhere('p.codigo_barras', 'LIKE', '%' . $term . '%');
+            });
+        }
+
+        $productos = $query->groupBy('d.id', 'd.producto_id', 'p.nombre', 'p.codigo_barras', 's.nombre')
+            ->get();
 
         return response()->json($productos);
     }
@@ -410,17 +446,13 @@ class AlmacenController extends Controller
             $loteOrigen->save();
 
             // 2. Crear Ingreso en Destino
-            // Necesitamos un usuario asociado a la sucursal de destino para que el stock "pertenezca" allí.
-            // Si no hay, asignamos al usuario actual pero con una nota, o buscamos el primer usuario de esa sucursal.
-            $usuarioDestino = \App\Models\User::where('branch_id', $request->sucursal_destino_id)->first();
-            $userIdDestino = $usuarioDestino ? $usuarioDestino->id : Auth::id(); // Fallback al usuario actual
-
             $nuevoIngreso = \App\Models\AlmacenIngreso::create([
+                'company_id' => Auth::user()->company_id,
                 'empresa_id' => Auth::user()->company_id,
-                'user_id' => $userIdDestino,
+                'user_id' => Auth::id(),
+                'sucursal_id' => $request->sucursal_destino_id,
                 'fecha' => now(),
                 'observacion' => 'Transferencia desde Lote #' . $loteOrigen->id . '. ' . ($request->observaciones ?? ''),
-                // Si tuviéramos campo sucursal_id directo en ingreso, lo usaríamos aquí.
             ]);
 
             // Crear Detalle destino (copia del origen pero con nueva cantidad)
@@ -449,5 +481,78 @@ class AlmacenController extends Controller
             DB::rollBack();
             return back()->withErrors('Error en transferencia: ' . $e->getMessage())->withInput();
         }
+    }
+    public function edit($id)
+    {
+        $detalle = AlmacenIngresoDetalle::with(['producto.laboratorio', 'producto.marca', 'producto.unidadMedida', 'ingreso'])->findOrFail($id);
+        $user = Auth::user();
+
+        // Seguridad: Filtro por Sucursal (excepto super_admin)
+        if (!$user->hasRole('super_admin') && $detalle->ingreso->sucursal_id != $user->branch_id) {
+            abort(403, 'No tienes permiso para editar este registro.');
+        }
+
+        $producto = $detalle->producto;
+        
+        // Obtener datos para los combos
+        $laboratorios = DB::table('laboratorios')->get();
+        $marcas = DB::table('marcas')->get();
+        $unidades = DB::table('unidades_medida')->get();
+        $presentaciones = DB::table('presentaciones')->get();
+        $concentraciones = DB::table('concentraciones')->get();
+
+        return view('almacen.edit', compact('detalle', 'producto', 'user', 'laboratorios', 'marcas', 'unidades', 'presentaciones', 'concentraciones'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $detalle = AlmacenIngresoDetalle::findOrFail($id);
+        $producto = $detalle->producto;
+        
+        $request->validate([
+            // Datos del Producto
+            'nombre' => 'required|string|max:1000',
+            'laboratorio_id' => 'nullable|integer',
+            'marca_id' => 'nullable|integer',
+            'unidad_medida_id' => 'nullable|integer',
+            
+            // Datos del Detalle
+            'cantidad' => 'required|numeric',
+            'costo' => 'required|numeric',
+            'pvp' => 'required|numeric',
+            'pvpd' => 'nullable|numeric',
+            'pvc' => 'nullable|numeric',
+            'pvcd' => 'nullable|numeric',
+            'lote' => 'nullable|string',
+            'fecha_vencimiento' => 'nullable|date',
+            'stock_min' => 'nullable|numeric',
+            'stock_max' => 'nullable|numeric',
+            'peso' => 'nullable|numeric',
+        ]);
+
+        // Actualizar Producto
+        $producto->update([
+            'nombre' => $request->nombre,
+            'laboratorio' => $request->laboratorio_id,
+            'marca_id' => $request->marca_id,
+            'unidad_medida_id' => $request->unidad_medida_id,
+            'peso' => $request->peso,
+        ]);
+
+        // Actualizar Detalle
+        $detalle->update([
+            'cantidad' => $request->cantidad,
+            'costo' => $request->costo,
+            'pvp' => $request->pvp,
+            'pvpd' => $request->pvpd,
+            'pvc' => $request->pvc,
+            'pvcd' => $request->pvcd,
+            'lote' => $request->lote,
+            'fecha_vencimiento' => $request->fecha_vencimiento,
+            'stock_min' => $request->stock_min,
+            'stock_max' => $request->stock_max,
+        ]);
+
+        return redirect()->route('almacen.index')->with('success', 'Producto e inventario actualizados correctamente.');
     }
 }

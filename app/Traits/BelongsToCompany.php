@@ -25,28 +25,11 @@ trait BelongsToCompany
             : 'company_id';
     }
 
-    /**
-     * Resuelve el usuario autenticado sin importar el guard activo.
-     * Filament usa el guard 'admin', el resto de la app usa 'web'.
-     */
-    protected static function resolveAuthUser(): ?\App\Models\User
-    {
-        // Intentar con el guard de Filament primero
-        if (auth()->guard('admin')->check()) {
-            return auth()->guard('admin')->user();
-        }
-        // Luego el guard web estándar
-        if (auth()->guard('web')->check()) {
-            return auth()->guard('web')->user();
-        }
-        return null;
-    }
-
     protected static function bootBelongsToCompany(): void
     {
         // Global Scope: filtrar por empresa del usuario logueado
         static::addGlobalScope('company', function (Builder $query) {
-            $user = static::resolveAuthUser();
+            $user = \App\Helpers\AuthHelper::resolveAuthenticatedUser();
 
             if ($user && !$user->hasRole('super_admin')) {
                 $instance = new static;
@@ -57,7 +40,7 @@ trait BelongsToCompany
 
         // Auto-asignar empresa al crear un registro
         static::creating(function ($model) {
-            $user = static::resolveAuthUser();
+            $user = \App\Helpers\AuthHelper::resolveAuthenticatedUser();
 
             if ($user) {
                 $column = $model->getCompanyForeignKey();

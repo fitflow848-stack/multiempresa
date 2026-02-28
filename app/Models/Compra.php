@@ -1,21 +1,22 @@
 <?php
 
 namespace App\Models;
-
-use App\Traits\BelongsToCompany;
-
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Traits\BelongsToCompany;
+use App\Traits\BelongsToSucursal;
 
 class Compra extends Model
 {
-    use HasFactory, BelongsToCompany;
+    protected $sucursalForeignKey = 'local_destino';
+    use HasFactory, BelongsToCompany, BelongsToSucursal;
+    
     
     protected $fillable = [
         'company_id',
-        'proveedor_id','fecha_emision','fecha_pago','moneda','credito','percepcion','inc_impuesto',
-        'total_bruto','total_descuento','bruto_neto','total_impuesto','total_neto','flete','total_pagar',
-        'tipo','presupuesto','local_destino','received_at', 'recibido', 'id_usuario'
+        'proveedor_id', 'fecha_emision', 'fecha_pago', 'moneda', 'credito', 'percepcion', 'inc_impuesto',
+        'total_bruto', 'total_descuento', 'bruto_neto', 'total_impuesto', 'total_neto', 'flete', 'total_pagar',
+        'tipo', 'serie_comprobante', 'numero_comprobante', 'presupuesto', 'local_destino', 'received_at', 'recibido', 'id_usuario'
     ];
 
     protected $casts = [

@@ -1,7 +1,6 @@
 <?php
 
 namespace App\Models;
-
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -9,7 +8,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Spatie\Permission\Traits\HasRoles;
-use App\Traits\BelongsToCompany;
+
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 
@@ -60,6 +59,18 @@ class User extends Authenticatable implements FilamentUser
         ];
     }
 
+    /**
+     * Accessor para obtener la sucursal activa desde la sesión si es el usuario autenticado.
+     */
+    public function getBranchIdAttribute($value)
+    {
+        // Solo sobreescribir para el usuario autenticado en su propia sesión
+        if (auth()->check() && auth()->id() === $this->id) {
+            return session('active_branch_id', $value);
+        }
+        return $value;
+    }
+
     // ─── Relaciones ─────────────────────────────────────────────
 
     /**
@@ -71,11 +82,20 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
-     * Sucursal asignada al usuario
+     * Sucursal activa del usuario (la elegida para la sesión actual)
      */
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Sucursal::class, 'branch_id');
+    }
+
+    /**
+     * Sucursales asignadas al usuario (muchos a muchos)
+     */
+    public function branches(): BelongsToMany
+    {
+        return $this->belongsToMany(Sucursal::class, 'branch_user', 'user_id', 'sucursal_id')
+            ->withTimestamps();
     }
 
     /**
@@ -119,8 +139,14 @@ class User extends Authenticatable implements FilamentUser
             return Caja::activas()->get();
         }
 
-        // Si el usuario tiene una sucursal asignada, filtramos por esa sucursal
-        // independientemente de si es admin_empresa o supervisor.
+        if ($this->isAdminEmpresa()) {
+            // El administrador de la empresa debe poder ver todas las cajas de su empresa
+            // ignorando la sucursal activa actual.
+            return Caja::withoutGlobalScope('sucursal')
+                ->where('is_active', true)
+                ->get();
+        }
+
         if ($this->branch_id) {
             return Caja::activas()
                 ->where('sucursal_id', $this->branch_id)
@@ -145,7 +171,8 @@ class User extends Authenticatable implements FilamentUser
         }
 
         if ($this->isAdminEmpresa()) {
-            return Caja::where('id', $cajaId)
+            return Caja::withoutGlobalScope('sucursal')
+                ->where('id', $cajaId)
                 ->whereHas('sucursal', fn($q) => $q->where('company_id', $this->company_id))
                 ->exists();
         }

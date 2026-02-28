@@ -36,31 +36,37 @@ trait BelongsToSucursal
     {
         // Global Scope: filtrar por sucursal del usuario logueado
         static::addGlobalScope('sucursal', function (Builder $query) {
-            $user = auth()->user();
+            $user = \App\Helpers\AuthHelper::resolveAuthenticatedUser();
 
             if (!$user) {
+                logger()->info("Trait: No user found for scope");
                 return;
             }
 
-            // super_admin y admin_empresa ven todas las sucursales
-            if ($user->hasAnyRole(['super_admin', 'admin_empresa'])) {
+            // Solo super_admin ve todas las sucursales
+            if ($user->hasRole('super_admin')) {
+                logger()->info("Trait: User is super_admin, no scope");
                 return;
             }
 
-            // Roles operativos: filtrar por su sucursal
+            // Roles operativos y admin_empresa: filtrar por su sucursal asignada
             if ($user->branch_id) {
                 $instance = new static;
                 $column = $instance->getSucursalForeignKey();
+                logger()->info("Trait: Applying scope to " . $query->getModel()->getTable() . " column $column value " . $user->branch_id);
                 $query->where($query->getModel()->getTable() . '.' . $column, $user->branch_id);
+            } else {
+                logger()->info("Trait: User found but no branch_id");
             }
         });
 
         // Auto-asignar sucursal al crear
         static::creating(function ($model) {
-            if (auth()->check()) {
+            $user = \App\Helpers\AuthHelper::resolveAuthenticatedUser();
+            if ($user) {
                 $column = $model->getSucursalForeignKey();
-                if (empty($model->{$column}) && auth()->user()->branch_id) {
-                    $model->{$column} = auth()->user()->branch_id;
+                if (empty($model->{$column}) && $user->branch_id) {
+                    $model->{$column} = $user->branch_id;
                 }
             }
         });

@@ -1,20 +1,23 @@
 <?php
 
 namespace App\Models;
-
 use App\Traits\BelongsToCompany;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+use App\Traits\BelongsToSucursal;
+
 class Cotizacion extends Model
 {
-    use HasFactory, BelongsToCompany;
+    use HasFactory, BelongsToCompany, BelongsToSucursal;
+    
     
     protected $table = 'cotizaciones';
 
     protected $fillable = [
         'company_id',
+        'sucursal_id',
         'cliente_id',
         'usuario_id',
         'numero',

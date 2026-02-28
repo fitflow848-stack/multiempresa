@@ -152,4 +152,73 @@ class FinanzasVendedorController extends Controller
             return back()->with('error', 'Error al registrar la operación: ' . $e->getMessage());
         }
     }
+    public function edit($id)
+    {
+        $operacion = Pasivo::with('tipo')->findOrFail($id);
+        
+        // Determinar el tipo_operacion para el select
+        $tipoOperacion = '';
+        if ($operacion->tipo->nombre === 'Compras a crédito') {
+            $tipoOperacion = 'compras_credito';
+        } elseif ($operacion->tipo->nombre === 'Adelanto clientes') {
+            $tipoOperacion = 'adelanto_clientes';
+        } elseif ($operacion->tipo->nombre === 'Adelantos personal') {
+            $tipoOperacion = 'adelanto_personal';
+        }
+
+        return response()->json([
+            'success' => true,
+            'operacion' => $operacion,
+            'tipo_operacion' => $tipoOperacion
+        ]);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'tipo_operacion' => 'required|in:compras_credito,adelanto_clientes,adelanto_personal',
+            'monto' => 'required|numeric|min:0.01',
+            'empresa_persona' => 'required|string|max:255',
+            'nombre' => 'required|string|max:255',
+            'fecha_registro' => 'required|date',
+            'documento' => 'nullable|string|max:255',
+            'observaciones' => 'nullable|string'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $operacion = Pasivo::findOrFail($id);
+            
+            $nombreTipo = '';
+            if ($request->tipo_operacion === 'compras_credito') {
+                $nombreTipo = 'Compras a crédito';
+            } elseif ($request->tipo_operacion === 'adelanto_clientes') {
+                $nombreTipo = 'Adelanto clientes';
+            } elseif ($request->tipo_operacion === 'adelanto_personal') {
+                $nombreTipo = 'Adelantos personal';
+            }
+
+            $tipoPasivo = TipoPasivo::where('nombre', $nombreTipo)->first();
+            
+            $operacion->update([
+                'tipo_pasivo_id' => $tipoPasivo->id,
+                'nombre' => $request->nombre,
+                'empresa_persona' => $request->empresa_persona,
+                'monto' => $request->monto,
+                'fecha_registro' => $request->fecha_registro,
+                'documento' => $request->documento,
+                'observaciones' => $request->observaciones
+            ]);
+
+            DB::commit();
+
+            return redirect()->route('finanzas_vendedor.index')
+                ->with('success', 'Operación actualizada correctamente.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Error al actualizar la operación: ' . $e->getMessage());
+        }
+    }
 }

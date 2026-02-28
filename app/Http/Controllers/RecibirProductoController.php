@@ -72,9 +72,14 @@ class RecibirProductoController extends Controller
     public function guardar(Request $request)
     {
         DB::beginTransaction();
+        $compra = Compra::find($request->compraId);
+        $sucursalId = $compra ? $compra->local_destino : Auth::user()->branch_id;
+
         try {
             $ingreso = AlmacenIngreso::create([
+                'company_id' => Auth::user()->company_id,
                 'empresa_id' => Auth::user()->company_id,
+                'sucursal_id' => $sucursalId,
                 'user_id' => Auth::id(),
                 'fecha' => now(),
                 'observacion' => $request->observacion

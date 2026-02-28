@@ -17,7 +17,6 @@ class ProveedorController extends Controller
                 'nullable',
                 'string',
                 'max:11',
-                Rule::unique('proveedores', 'ruc')->ignore($request->input('id'))
             ],
             'nombre_comercial' => ['nullable', 'string', 'max:255'],
             'nombre_legal' => ['nullable', 'string', 'max:255'],

@@ -75,4 +75,27 @@ class ActivoCorrienteController extends Controller
 
         return redirect()->route('activos_corrientes.index')->with('success', 'Eliminado correctamente');
     }
+
+    public function edit($id)
+    {
+        $activo = ActivoCorriente::findOrFail($id);
+        return response()->json($activo);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'tipo_activo_corriente_id' => 'required|exists:tipo_activo_corrientes,id',
+            'nombre' => 'required|string|max:255',
+            'monto' => 'required|numeric|min:0',
+            'fecha_registro' => 'required|date',
+            'documento' => 'nullable|string|max:255',
+            'observaciones' => 'nullable|string'
+        ]);
+
+        $activo = ActivoCorriente::findOrFail($id);
+        $activo->update($request->all());
+
+        return redirect()->route('activos_corrientes.index')->with('success', 'Activo actualizado correctamente');
+    }
 }
