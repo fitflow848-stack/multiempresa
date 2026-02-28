@@ -14,7 +14,7 @@
                 style="display: flex; align-items: center; padding: 12px 15px; margin: 8px 0; background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
                 <div
                     style="background: #6f42c1; color: white; padding: 8px 12px; border-radius: 4px; margin-right: 12px; font-weight: bold; min-width: 60px; text-align: center;">
-                    📄</div>
+                    📄 [1]</div>
                 <div>
                     <div style="font-weight: 600; color: #495057;">Ticket</div>
                     <div style="font-size: 12px; color: #6c757d;">Comprobante interno</div>
@@ -25,7 +25,7 @@
                 style="display: flex; align-items: center; padding: 12px 15px; margin: 8px 0; background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
                 <div
                     style="background: #17a2b8; color: white; padding: 8px 12px; border-radius: 4px; margin-right: 12px; font-weight: bold; min-width: 60px; text-align: center;">
-                    🧾</div>
+                    🧾 [2]</div>
                 <div>
                     <div style="font-weight: 600; color: #495057;">Boleta</div>
                     <div style="font-size: 12px; color: #6c757d;">Para personas naturales</div>
@@ -36,7 +36,7 @@
                 style="display: flex; align-items: center; padding: 12px 15px; margin: 8px 0; background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
                 <div
                     style="background: #28a745; color: white; padding: 8px 12px; border-radius: 4px; margin-right: 12px; font-weight: bold; min-width: 60px; text-align: center;">
-                    📊</div>
+                    📊 [3]</div>
                 <div>
                     <div style="font-weight: 600; color: #495057;">Factura</div>
                     <div style="font-size: 12px; color: #6c757d;">Para empresas con RUC</div>
@@ -47,7 +47,7 @@
                 style="display: flex; align-items: center; padding: 12px 15px; margin: 8px 0; background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
                 <div
                     style="background: #20c997; color: white; padding: 8px 12px; border-radius: 4px; margin-right: 12px; font-weight: bold; min-width: 60px; text-align: center;">
-                    📝</div>
+                    📝 [4]</div>
                 <div>
                     <div style="font-weight: 600; color: #495057;">Nota Venta</div>
                     <div style="font-size: 12px; color: #6c757d;">Documento informativo</div>
@@ -62,3 +62,15 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('keydown', function(e) {
+        const modal = document.getElementById('modal-tipo-documento');
+        if (modal && modal.style.display === 'flex') {
+            if (e.key === '1') seleccionarTipoDocumento('ticket');
+            else if (e.key === '2') seleccionarTipoDocumento('boleta');
+            else if (e.key === '3') seleccionarTipoDocumento('factura');
+            else if (e.key === '4') seleccionarTipoDocumento('nota-venta');
+        }
+    });
+</script>

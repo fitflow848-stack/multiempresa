@@ -3,6 +3,70 @@
 @section('content')
 @section('title', 'Punto de Venta (POS)')
     <link rel="stylesheet" href="{{ asset('css/pos.css') }}">
+    <style>
+        /* Ajustar el alto del POS dinámicamente según el estado del menú principal */
+        .pos-container {
+            height: calc(100vh - 65px) !important;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Cuando el menú principal (navbar) está oculto */
+        .nav-is-hidden .pos-container {
+            height: 100vh !important;
+        }
+
+        /* Distribución inteligente del contenido */
+        .main-content-split {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #f8f9fa;
+            padding: 5px;
+            gap: 5px;
+        }
+
+        /* Ocultar área de resultados si no hay registros */
+        .results-area {
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: flex 0.3s ease;
+        }
+
+        .results-area:has(tbody:empty) {
+            display: none !important;
+        }
+
+        .results-area:not(:has(tbody:empty)) {
+            display: block !important;
+            flex: 0 0 40%; /* Toma el 40% si hay resultados */
+            max-height: 50%;
+            overflow-y: auto;
+        }
+
+        .ticket-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            min-height: 0;
+        }
+
+        .ticket-table {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* Animación suave para el cambio */
+        .pos-header, .action-bar {
+            flex-shrink: 0;
+        }
+    </style>
 
     <div class="pos-container">
         <div class="pos-header">
@@ -15,6 +79,7 @@
                 </select>
             </div>
             <div class="header-right">
+                <div class="nav-item" onclick="mostrarModalAtajos()"><i class="fa-solid fa-keyboard"></i> Atajos</div>
                 <div class="nav-item" onclick="navegarAClientes()"><i class="fa-solid fa-user-group"></i> Clientes</div>
                 <div class="nav-item"><a href="{{ route('comprobantes.index') }}"><i class="fa-solid fa-book-open"></i>
                         Comprobantes</a></div>
@@ -179,6 +244,72 @@
         </div>
     </div>
 
+    <!-- Modal de Atajos de Teclado -->
+    <div id="modal-atajos"
+        style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; display: none; justify-content: center; align-items: center;">
+        <div
+            style="background: white; padding: 0; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-width: 500px; width: 90%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden;">
+            <!-- Header -->
+            <div
+                style="background: #6b2e51; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 18px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-keyboard"></i> Atajos de Teclado (POS)
+                </h3>
+                <span onclick="cerrarModalAtajos()" style="cursor: pointer; font-size: 20px;">&times;</span>
+            </div>
+
+            <!-- Body -->
+            <div style="padding: 20px; max-height: 70vh; overflow-y: auto;">
+                <div style="margin-bottom: 20px;">
+                    <h4
+                        style="color: #6b2e51; border-bottom: 2px solid #f0f0f0; padding-bottom: 5px; margin-bottom: 12px; font-size: 15px;">
+                        Operaciones de Venta</h4>
+                    <div style="display: grid; grid-template-columns: 100px 1fr; gap: 10px; font-size: 14px;">
+                        <span style="font-weight: bold; background: #f8f9fa; padding: 2px 6px; border-radius: 4px; border: 1px solid #ddd; text-align: center;">F1</span>
+                        <span>Buscar Producto</span>
+
+                        <span style="font-weight: bold; background: #f8f9fa; padding: 2px 6px; border-radius: 4px; border: 1px solid #ddd; text-align: center;">F3</span>
+                        <span>Buscar Cliente</span>
+
+                        <span style="font-weight: bold; background: #f8f9fa; padding: 2px 6px; border-radius: 4px; border: 1px solid #ddd; text-align: center;">F4</span>
+                        <span>Seleccionar Tipo Documento</span>
+
+                        <span style="font-weight: bold; background: #f8f9fa; padding: 2px 6px; border-radius: 4px; border: 1px solid #ddd; text-align: center;">F8</span>
+                        <span>Aplicar Descuento Global</span>
+
+                        <span style="font-weight: bold; background: #f8f9fa; padding: 2px 6px; border-radius: 4px; border: 1px solid #ddd; text-align: center;">F10</span>
+                        <span>Guardar Ticket</span>
+
+                        <span style="font-weight: bold; background: #f8f9fa; padding: 2px 6px; border-radius: 4px; border: 1px solid #ddd; text-align: center;">F12</span>
+                        <span>Emitir / Finalizar Cobro</span>
+                    </div>
+                </div>
+
+                <div>
+                    <h4
+                        style="color: #d63384; border-bottom: 2px solid #f0f0f0; padding-bottom: 5px; margin-bottom: 12px; font-size: 15px;">
+                        Gestión y Navegación</h4>
+                    <div style="display: grid; grid-template-columns: 100px 1fr; gap: 10px; font-size: 14px;">
+                        <span style="font-weight: bold; background: #fff1f0; color: #cf1322; padding: 2px 6px; border-radius: 4px; border: 1px solid #ffa39e; text-align: center;">Supr</span>
+                        <span>Eliminar Línea Seleccionada</span>
+
+                        <span style="font-weight: bold; background: #f8f9fa; padding: 2px 6px; border-radius: 4px; border: 1px solid #ddd; text-align: center;">Esc</span>
+                        <span>Cancelar / Limpiar Venta</span>
+
+                        <span style="font-weight: bold; background: #f8f9fa; padding: 2px 6px; border-radius: 4px; border: 1px solid #ddd; text-align: center;">Ctrl + P</span>
+                        <span>Imprimir Último Comprobante</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div style="padding: 15px 20px; background: #f8f9fa; text-align: right; border-top: 1px solid #eee;">
+                <button onclick="cerrarModalAtajos()"
+                    style="background: #6b2e51; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-weight: 600;">Entendido</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Menú contextual para opciones de producto -->
     @include('pos.partials.modals.context-menu')
 
@@ -208,6 +339,7 @@
         };
         window.currentProduct = null;
         window.cotizacionId = null;
+        window.selectedIndex = -1;
     </script>
 
     <script src="{{ asset('assets/js/helpers.js') }}"></script>
@@ -1645,8 +1777,11 @@
                     bgColor = idx % 2 === 0 ? '#f8fdff' : '#fff'; // Azul claro para productos normales
                 }
 
+                // Resaltar si está seleccionada
+                let borderStyle = (idx === window.selectedIndex) ? 'border: 2px solid #6b2e51; box-shadow: inset 0 0 8px rgba(107, 46, 81, 0.2);' : '';
+
                 tbody.innerHTML += `
-                                    <tr style="background:${bgColor};" onclick="editarLinea(${idx})" oncontextmenu='mostrarMenuTicket(event, ${JSON.stringify(p)})'>
+                                    <tr style="background:${bgColor}; ${borderStyle} cursor: pointer;" onclick="editarLinea(${idx})" oncontextmenu='mostrarMenuTicket(event, ${JSON.stringify(p)})'>
                                         <td>${idx + 1}</td>
                                         <td title="${p.nombre}${titleLote}">
                                             <div style="font-weight: 600;">${p.nombre.length > 100 ? p.nombre.substring(0, 25) + '...' : p.nombre}</div>
@@ -1718,10 +1853,122 @@
             renderTicket();
         }
 
-        // Función para editar línea (placeholder para futuras funcionalidades)
+        // Función para editar línea (ahora también maneja la selección)
         function editarLinea(index) {
-            // Aquí se puede agregar funcionalidad para editar precios, descuentos, etc.
-            console.log('Editando línea:', index, ticket[index]);
+            window.selectedIndex = index;
+            // Guardar el producto seleccionado para el menú contextual si se quiere
+            window.currentProduct = ticket[index];
+            renderTicket();
+            console.log('Línea seleccionada:', index, ticket[index]);
+        }
+
+        // Guía de Atajos
+        function mostrarModalAtajos() {
+            document.getElementById('modal-atajos').style.display = 'flex';
+        }
+
+        function cerrarModalAtajos() {
+            document.getElementById('modal-atajos').style.display = 'none';
+        }
+
+        // Lógica de Atajos de Teclado
+        document.addEventListener('keydown', function (e) {
+            // No interferir si el usuario está en un input (excepto para F1 que es foco)
+            const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+
+            // F1: Buscar Producto
+            if (e.key === 'F1') {
+                e.preventDefault();
+                const mainSearch = document.querySelector('.main-search');
+                if (mainSearch) {
+                    mainSearch.focus();
+                    mainSearch.select();
+                }
+            }
+
+            // F3: Buscar Cliente
+            if (e.key === 'F3') {
+                e.preventDefault();
+                mostrarBuscadorClientes();
+            }
+
+            // F4: Tipo de Documento
+            if (e.key === 'F4') {
+                e.preventDefault();
+                mostrarSeleccionTipoDocumento();
+            }
+
+            // F8: Descuento Global
+            if (e.key === 'F8') {
+                e.preventDefault();
+                aplicarDescuentoGlobal();
+            }
+
+            // F10: Guardar Ticket
+            if (e.key === 'F10') {
+                e.preventDefault();
+                guardarTicket();
+            }
+
+            // F12 or Enter: Emitir (Finalizar)
+            if (e.key === 'F12' || (e.key === 'Enter' && !isInput)) {
+                e.preventDefault();
+                mostrarSeleccionTipoDocumento();
+            }
+
+            // Esc: Cancelar / Limpiar
+            if (e.key === 'Escape') {
+                // Solo si no hay modales abiertos (o cerrar modales)
+                const modalAtajos = document.getElementById('modal-atajos');
+                if (modalAtajos && modalAtajos.style.display === 'flex') {
+                    cerrarModalAtajos();
+                    return;
+                }
+                
+                const modalTipo = document.getElementById('modal-tipo-documento');
+                if (modalTipo && modalTipo.style.display === 'flex') {
+                    cerrarModalTipoDocumento();
+                    return;
+                }
+
+                if (!isInput) {
+                    cancelarVentaConSweetAlert();
+                }
+            }
+
+            // Supr (Delete): Eliminar Línea
+            if (e.key === 'Delete') {
+                if (window.selectedIndex !== -1 && !isInput) {
+                    const producto = ticket[window.selectedIndex];
+                    if (confirm(`¿Quitar "${producto.nombre}" del ticket?`)) {
+                        ticket.splice(window.selectedIndex, 1);
+                        window.selectedIndex = -1;
+                        renderTicket();
+                        guardarVentaPersistente();
+                    }
+                }
+            }
+
+            // Ctrl + P: Imprimir Último Comprobante
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                imprimirUltimoComprobante();
+            }
+        });
+
+        function imprimirUltimoComprobante() {
+            const ultimoId = localStorage.getItem('ultimoVentaId');
+            if (ultimoId) {
+                // Por defecto intentamos A4 o el que sea estándar
+                const url = '{{ route('pos.pdf', ['id' => ':id', 'format' => 'default']) }}'.replace(':id', ultimoId);
+                window.open(url, '_blank');
+            } else {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'No hay registros',
+                    text: 'No se encontró el ID de la última venta en esta sesión corporativa.'
+                });
+            }
         }
 
         // Función para actualizar descuento (porcentaje o monto fijo)

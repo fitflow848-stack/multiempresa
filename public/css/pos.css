@@ -53,30 +53,41 @@ html {
     font-size: 11px;
 }
 
-/* .nav-item {
+.pos-header .nav-item {
     cursor: pointer;
-    color: #555;
+    color: #444;
     font-weight: 500;
     display: flex;
     align-items: center;
-    gap: 5px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    transition: background 0.2s;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
 }
 
-.nav-item a {
+.pos-header .nav-item a {
     text-decoration: none;
     color: inherit;
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
 }
 
-.nav-item:hover {
-    background: #f0f0f0;
-    color: #000;
-} */
+.pos-header .nav-item:hover {
+    background-color: #f0f2f5;
+    color: #696cff;
+    border-color: #e7e7ff;
+}
+
+.pos-header .nav-item i {
+    font-size: 1.1rem;
+    opacity: 0.8;
+}
+
+.pos-header .nav-item:hover i {
+    opacity: 1;
+}
 
 .nav-info {
     color: #888;

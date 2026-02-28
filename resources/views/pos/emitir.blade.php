@@ -329,6 +329,7 @@
                         }
 
                         const openUrl = (tipoDocumentoSeleccionado === 'ticket') ? url8cm : urlA4;
+                        localStorage.setItem('ultimoVentaId', ventaId);
 
                         // Si hay deuda, mostrar información detallada primero
                         if (datosEmision.deuda > 0) {

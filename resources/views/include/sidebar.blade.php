@@ -1,8 +1,7 @@
 <style>
-    /* Remover el CSS problemático y usar mejor approach */
+    /* Estilos base del Navbar */
     .navbar {
         z-index: 1070 !important;
-        /* Asegurar que esté por encima de headers pegajosos de tablas */
     }
 
     .dropdown-menu {
@@ -19,58 +18,109 @@
         padding: 0.5rem 0.75rem !important;
     }
 
-    /* Ajustar para pantallas medianas-grandes (Laptops normales) */
-    @media (min-width: 1200px) and (max-width: 1550px) {
-        .nav-link {
-            font-size: 0.78rem;
-            padding: 0.5rem 0.35rem !important;
-        }
-
-        .nav-link i {
-            display: none;
-            /* Ocultar iconos en este rango para ganar mucho espacio */
-        }
-
-        .navbar-brand {
-            margin-right: 0.5rem !important;
-        }
-
-        .navbar-brand span {
-            font-size: 1.1rem !important;
-        }
-
-        .badge.bg-label-primary {
-            padding: 0.4rem 0.6rem !important;
-            font-size: 0.7rem !important;
-        }
-    }
-
-    /* Para pantallas muy grandes */
-    @media (min-width: 1550px) {
-        .navbar-nav {
-            gap: 0.4rem;
-        }
-    }
-
     /* Mobile styles */
     @media (max-width: 1199px) {
         .navbar-nav .nav-link {
             padding: 0.75rem 1rem !important;
             border-bottom: 1px solid #f0f0f0;
         }
-
         .navbar-nav .nav-link:hover {
             background-color: #f8f9fa;
         }
     }
+
+    /* Estilos para el modo oculto / slim */
+    .navbar-hidden {
+        display: none !important;
+    }
+
+    .navbar-slim {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        min-height: auto !important;
+    }
+
+    .navbar-slim .navbar-brand {
+        margin-right: 1rem !important;
+    }
+
+    .navbar-slim .navbar-brand span {
+        font-size: 1rem !important;
+    }
+
+    .navbar-slim .nav-link {
+        padding: 0.3rem 0.5rem !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* Activador flotante cuando está oculto */
+    #navbar-restore-trigger {
+        position: fixed;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 2000;
+        background: #566a7f;
+        color: white;
+        padding: 0 20px;
+        border-radius: 0 0 10px 10px;
+        cursor: pointer;
+        display: none;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        opacity: 0.6;
+        transition: all 0.2s;
+        height: 12px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #navbar-restore-trigger:hover {
+        opacity: 1;
+        height: 25px;
+    }
+
+    body.nav-is-hidden #navbar-restore-trigger {
+        display: flex;
+    }
+
+    #btn-sidebar-toggle i {
+        transition: transform 0.3s;
+    }
+
+    @media (max-width: 1199px) {
+        #btn-sidebar-toggle, #navbar-restore-trigger {
+            display: none !important;
+        }
+    }
 </style>
 
-<nav class="navbar navbar-expand-xl navbar-light bg-white border-bottom sticky-top">
+<script>
+    // Aplicar estado inicial antes de que se cargue el DOM para evitar parpadeo
+    (function() {
+        const isHidden = localStorage.getItem('navbarHidden') === 'true';
+        if (isHidden) {
+            document.documentElement.classList.add('nav-is-hidden');
+        }
+    })();
+</script>
+
+<!-- Activador flotante -->
+<div id="navbar-restore-trigger" onclick="toggleNavbarVisibility()" title="Mostrar Menú Principal">
+    <i class="bx bx-chevron-down"></i>
+</div>
+
+<nav id="main-navbar" class="navbar navbar-expand-xl navbar-light bg-white border-bottom sticky-top">
     <div class="container-fluid px-3 px-xl-4">
         <!-- Logo -->
-        <a href="{{ route('principal.index') }}" class="navbar-brand d-flex align-items-center me-2 me-xl-4">
-            <span class="fw-bolder" style="color: #566a7f; font-size: 1.2rem;">Wolvix</span>
-        </a>
+        <div class="d-flex align-items-center me-2 me-xl-4 text-nowrap">
+            <button class="btn btn-icon btn-sm btn-outline-secondary me-2 d-none d-xl-inline-flex" 
+                id="btn-sidebar-toggle" onclick="toggleNavbarVisibility()" title="Ocultar Menú">
+                <i class="bx bx-chevron-up"></i>
+            </button>
+            <a href="{{ route('principal.index') }}" class="navbar-brand d-flex align-items-center">
+                <span class="fw-bolder" style="color: #566a7f; font-size: 1.2rem;">Wolvix</span>
+            </a>
+        </div>
 
         <!-- Toggler Button -->
         <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavigation"
@@ -387,3 +437,35 @@
         </div>
     </div>
 </nav>
+
+<script>
+    function toggleNavbarVisibility() {
+        const navbar = document.getElementById('main-navbar');
+        const body = document.body;
+        const isHidden = !navbar.classList.contains('navbar-hidden');
+        
+        if (isHidden) {
+            navbar.classList.add('navbar-hidden');
+            body.classList.add('nav-is-hidden');
+            document.documentElement.classList.add('nav-is-hidden');
+        } else {
+            navbar.classList.remove('navbar-hidden');
+            body.classList.remove('nav-is-hidden');
+            document.documentElement.classList.remove('nav-is-hidden');
+        }
+        
+        localStorage.setItem('navbarHidden', isHidden);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const navbar = document.getElementById('main-navbar');
+        const body = document.body;
+        
+        // Cargar estado inicial
+        if (localStorage.getItem('navbarHidden') === 'true') {
+            navbar.classList.add('navbar-hidden');
+            body.classList.add('nav-is-hidden');
+            document.documentElement.classList.add('nav-is-hidden');
+        }
+    });
+</script>
