@@ -1,196 +1,275 @@
 @extends('layout.app')
 
-@section('title', 'Editar Inventario')
-@section('page-title', 'Editar Registro de Inventario')
+@section('title', 'Editar Registro de Almacén')
+@section('page-title', 'Editar Registro de Almacén')
+
+@push('styles')
+<style>
+    .nav-tabs { border-bottom: 2px solid #dee2e6; }
+    .nav-link { border: none; font-weight: 500; color: #6c757d; }
+    .nav-link.active { color: #007bff; border-bottom: 2px solid #007bff; background: transparent !important; }
+    .card-outline { border-top-width: 3px !important; }
+    .tab-pane { padding-top: 20px; }
+</style>
+@endpush
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('almacen.index') }}">Almacén</a></li>
-    <li class="breadcrumb-item active">Editar</li>
+    <li class="breadcrumb-item active">Editar Producto</li>
 @endsection
 
 @section('content')
-<div class="container-fluid py-3">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="container-fluid py-2">
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <h1 class="h4 mb-0 text-gray-800">
-                <span class="badge bg-primary me-2">{{ $producto->nombre }}</span>
-                Editar Registro
+            <h1 class="h4 mb-1">
+                <i class="fas fa-edit text-primary me-2"></i>
+                Editar Producto: {{ $producto->nombre }}
             </h1>
+            <p class="text-muted mb-0 small">Modifique la información del producto en las diferentes secciones</p>
         </div>
-        <button type="button" class="btn btn-light btn-sm shadow-sm" onclick="history.back()">
-            <i class="fas fa-arrow-left me-1"></i> Regresar
-        </button>
+        <div>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="history.back()">
+                <i class="fas fa-arrow-left me-1"></i> Volver
+            </button>
+        </div>
     </div>
 
-    <form method="POST" action="{{ route('almacen.update', $detalle->id) }}" id="edit-inventory-form">
+    <!-- Nav tabs -->
+    <ul class="nav nav-tabs mb-4" id="productTabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#datos-basicos">
+                <i class="fas fa-cube me-1"></i> Datos Básicos
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#caracteristicas">
+                <i class="fas fa-cogs me-1"></i> Características
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#ficha-tecnica">
+                <i class="fas fa-file-alt me-1"></i> Ficha Técnica
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#imagenes">
+                <i class="fas fa-images me-1"></i> Imágenes
+            </button>
+        </li>
+    </ul>
+
+    <form action="{{ route('almacen.edit-detailed', $detalle->id) }}" method="POST" enctype="multipart/form-data">
         @csrf
         
-        <div class="row g-4">
-            <div class="col-lg-12">
-                <div class="card card-primary card-outline shadow-sm border-0">
-                    <div class="card-header bg-white py-3 border-bottom">
-                        <h6 class="m-0 font-weight-bold text-primary">
-                            <i class="fas fa-cube me-2"></i>Datos Básicos del Producto
-                        </h6>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="row g-3">
-                            <div class="col-md-12">
-                                <label class="form-label fw-bold small text-muted">Nombre del Producto</label>
-                                <textarea name="nombre" class="form-control" rows="2" required>{{ $producto->nombre }}</textarea>
+        <div class="tab-content">
+            <!-- TAB 1: Datos Básicos -->
+            <div class="tab-pane fade show active" id="datos-basicos">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-lg-8">
+                                <div class="card card-primary card-outline">
+                                    <div class="card-header">
+                                        <h3 class="card-title"><i class="fas fa-cube me-2"></i>Datos del Producto</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Laboratorio</label>
+                                                <select name="laboratorio_id" class="form-select">
+                                                    <option value="">-- Seleccionar --</option>
+                                                    @foreach($laboratorios as $lab)
+                                                        <option value="{{ $lab->id }}" {{ $producto->laboratorio == $lab->id ? 'selected' : '' }}>{{ $lab->nombre }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Marca</label>
+                                                <select name="marca_id" class="form-select">
+                                                    <option value="">-- Seleccionar --</option>
+                                                    @foreach($marcas as $mar)
+                                                        <option value="{{ $mar->id }}" {{ $producto->marca_id == $mar->id ? 'selected' : '' }}>{{ $mar->nombre }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Nombre del Producto <span class="text-danger">*</span></label>
+                                            <textarea name="nombre" class="form-control" rows="2" required>{{ $producto->nombre }}</textarea>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Unidad de Medida</label>
+                                                <select name="unidades_medida_id" class="form-select">
+                                                    <option value="">-- Seleccionar --</option>
+                                                    @foreach($unidades as $un)
+                                                        <option value="{{ $un->id }}" {{ $producto->unidad_medida_id == $un->id ? 'selected' : '' }}>{{ $un->nombre }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Tipo de Impuesto</label>
+                                                <select name="tipo_impuesto" class="form-select">
+                                                    <option value="gravado" {{ $producto->tipo_impuesto == 'gravado' ? 'selected' : '' }}>Gravado</option>
+                                                    <option value="exonerado" {{ $producto->tipo_impuesto == 'exonerado' ? 'selected' : '' }}>Exonerado</option>
+                                                    <option value="inafecto" {{ $producto->tipo_impuesto == 'inafecto' ? 'selected' : '' }}>Inafecto</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold small text-muted">Laboratorio</label>
-                                <select name="laboratorio_id" class="form-select">
-                                    <option value="">-- Seleccionar --</option>
-                                    @foreach($laboratorios as $lab)
-                                        <option value="{{ $lab->id }}" {{ $producto->laboratorio == $lab->id ? 'selected' : '' }}>{{ $lab->nombre }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold small text-muted">Marca</label>
-                                <select name="marca_id" class="form-select">
-                                    <option value="">-- Seleccionar --</option>
-                                    @foreach($marcas as $mar)
-                                        <option value="{{ $mar->id }}" {{ $producto->marca_id == $mar->id ? 'selected' : '' }}>{{ $mar->nombre }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold small text-muted">Unidad de Medida</label>
-                                <select name="unidad_medida_id" class="form-select">
-                                    <option value="">-- Seleccionar --</option>
-                                    @foreach($unidades as $un)
-                                        <option value="{{ $un->id }}" {{ $producto->unidad_medida_id == $un->id ? 'selected' : '' }}>{{ $un->nombre }}</option>
-                                    @endforeach
-                                </select>
+                            <div class="col-lg-4">
+                                <div class="card card-info card-outline">
+                                    <div class="card-header">
+                                        <h3 class="card-title"><i class="bx bx-cog me-2"></i>Opciones</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="attr_numero_serie" id="check-serie" {{ $producto->attr_numero_serie ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="check-serie">Número Serie</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="attr_fecha_vencimiento" id="check-venc" {{ $producto->attr_fecha_vencimiento ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="check-venc">Fecha Vencimiento</label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="attr_lote_produccion" id="check-lote" {{ $producto->attr_lote_produccion ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="check-lote">Lote Producción</label>
+                                        </div>
+                                        <hr>
+                                        <button type="submit" class="btn btn-success w-100">
+                                            Siguiente <i class="fas fa-arrow-right ms-1"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="col-lg-8">
-                <div class="card card-info card-outline h-100 shadow-sm border-0">
-                    <div class="card-header bg-white py-3 border-bottom">
-                        <h6 class="m-0 font-weight-bold text-info">
-                            <i class="fas fa-clipboard-list me-2"></i>Especificaciones del Registro
-                        </h6>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold small text-muted">Lote</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-box"></i></span>
-                                    <input type="text" name="lote" class="form-control border-start-0" value="{{ $detalle->lote }}">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold small text-muted">Fecha Vencimiento</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-calendar-alt"></i></span>
-                                    <input type="date" name="fecha_vencimiento" class="form-control border-start-0" value="{{ $detalle->fecha_vencimiento ? $detalle->fecha_vencimiento->format('Y-m-d') : '' }}">
-                                </div>
-                            </div>
-
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold small text-muted">Cantidad Actual</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-hashtag"></i></span>
-                                    <input type="number" step="0.01" name="cantidad" class="form-control border-start-0 bg-light-info" value="{{ $detalle->cantidad }}" required>
-                                </div>
-                            </div>
-
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold small text-muted text-success">Costo de Compra (S/)</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light-success text-success border-end-0"><i class="fas fa-dollar-sign"></i></span>
-                                    <input type="number" step="0.01" name="costo" class="form-control border-start-0" value="{{ $detalle->costo }}" required>
-                                </div>
-                            </div>
-
-                            <div class="col-md-4">
-                                <label class="form-label fw-bold small text-muted">Peso (KG)</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-weight"></i></span>
-                                    <input type="number" step="0.01" name="peso" class="form-control border-start-0" value="{{ $detalle->peso ?? 0 }}">
-                                </div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold small text-muted">Stock Mínimo</label>
-                                <input type="number" name="stock_min" class="form-control" value="{{ $detalle->stock_min ?? 0 }}">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold small text-muted">Stock Máximo</label>
-                                <input type="number" name="stock_max" class="form-control" value="{{ $detalle->stock_max ?? 0 }}">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-4">
-                <div class="card card-success card-outline h-100 shadow-sm border-0">
-                    <div class="card-header bg-white py-3 border-bottom">
-                        <h6 class="m-0 font-weight-bold text-success">
-                            <i class="fas fa-tag me-2"></i>Estrategia de Precios (S/)
-                        </h6>
-                    </div>
-                    <div class="card-body p-4">
-                        <div class="row g-3">
+            <!-- TAB 2: Características -->
+            <div class="tab-pane fade" id="caracteristicas">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="row">
                             <div class="col-12">
-                                <label class="form-label fw-bold small text-muted">PVP (Público)</label>
-                                <input type="number" step="0.01" name="pvp" class="form-control form-control-lg fw-bold text-primary" value="{{ $detalle->pvp }}" required>
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label fw-bold small text-muted">PVP con Descuento</label>
-                                <input type="number" step="0.01" name="pvpd" class="form-control" value="{{ $detalle->pvpd }}">
-                            </div>
-
-                            <div class="col-6">
-                                <label class="form-label fw-bold small text-muted">PVC (Corporativo)</label>
-                                <input type="number" step="0.01" name="pvc" class="form-control" value="{{ $detalle->pvc }}">
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label fw-bold small text-muted">PVC Descuento</label>
-                                <input type="number" step="0.01" name="pvcd" class="form-control" value="{{ $detalle->pvcd }}">
-                            </div>
-
-                            <div class="col-12 mt-4">
-                                <div class="alert alert-info border-0 small mb-0">
-                                    <i class="fas fa-info-circle me-1"></i>
-                                    Los cambios afectarán únicamente a este lote/registro de ingreso.
+                                <div class="card card-primary card-outline">
+                                    <div class="card-header">
+                                        <h3 class="card-title">Propiedades Físicas</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row mb-3">
+                                            @php 
+                                                $props = $producto->caracteristicas['propiedades'] ?? [];
+                                                $almacenamiento = $producto->caracteristicas['almacenamiento'] ?? [];
+                                                $seguridad = $producto->caracteristicas['seguridad'] ?? [];
+                                            @endphp
+                                            <div class="col-md-4">
+                                                <label class="form-label small">Color</label>
+                                                <input type="text" class="form-control" name="caracteristicas[color]" value="{{ $props['color'] ?? '' }}">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small">Textura</label>
+                                                <input type="text" class="form-control" name="caracteristicas[textura]" value="{{ $props['textura'] ?? '' }}">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small">pH</label>
+                                                <input type="number" step="0.1" class="form-control" name="caracteristicas[ph]" value="{{ $props['ph'] ?? '' }}">
+                                            </div>
+                                        </div>
+                                        <hr>
+                                        <h5>Condiciones de Almacenamiento</h5>
+                                        <div class="row mb-3">
+                                            <div class="col-md-4">
+                                                <label class="form-label small">Temp. Mín. (°C)</label>
+                                                <input type="number" class="form-control" name="almacenamiento[temp_min]" value="{{ $almacenamiento['temp_min'] ?? '' }}">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small">Temp. Máx. (°C)</label>
+                                                <input type="number" class="form-control" name="almacenamiento[temp_max]" value="{{ $almacenamiento['temp_max'] ?? '' }}">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label small">Humedad (%)</label>
+                                                <input type="number" class="form-control" name="almacenamiento[humedad]" value="{{ $almacenamiento['humedad'] ?? '' }}">
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="row mt-4">
-            <div class="col-12 text-end">
-                <hr>
-                <a href="{{ route('almacen.index') }}" class="btn btn-light px-4 border me-2">
-                    Cancelar
-                </a>
-                <button type="submit" class="btn btn-primary px-5 shadow-sm">
-                    <i class="fas fa-save me-2"></i> Guardar Cambios
-                </button>
+            <!-- TAB 3: Ficha Técnica -->
+            <div class="tab-pane fade" id="ficha-tecnica">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="card card-primary card-outline">
+                            <div class="card-header">
+                                <h3 class="card-title">Información Técnica Detallada</h3>
+                            </div>
+                            <div class="card-body">
+                                @php $ficha = $producto->ficha_tecnica ?? []; @endphp
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Composición</label>
+                                        <textarea class="form-control" name="ficha_tecnica[composicion]" rows="4">{{ $ficha['composicion'] ?? '' }}</textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Mecanismo de Acción</label>
+                                        <textarea class="form-control" name="ficha_tecnica[mecanismo_accion]" rows="4">{{ $ficha['mecanismo_accion'] ?? '' }}</textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Indicaciones de Uso</label>
+                                        <textarea class="form-control" name="ficha_tecnica[indicaciones]" rows="4">{{ $ficha['indicaciones'] ?? '' }}</textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Contraindicaciones</label>
+                                        <textarea class="form-control" name="ficha_tecnica[contraindicaciones]" rows="4">{{ $ficha['contraindicaciones'] ?? '' }}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: Imágenes -->
+            <div class="tab-pane fade" id="imagenes">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="card card-primary card-outline">
+                            <div class="card-header">
+                                <h3 class="card-title">Galería de Imágenes</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Imagen Principal</label>
+                                        @if($producto->imagen_principal)
+                                            <div class="mb-2">
+                                                <img src="{{ Storage::url($producto->imagen_principal) }}" style="max-width: 200px;" class="img-thumbnail">
+                                            </div>
+                                        @endif
+                                        <input type="file" name="imagen_principal" class="form-control" accept="image/*">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Imágenes Adicionales</label>
+                                        <input type="file" name="imagenes_adicionales[]" class="form-control" multiple accept="image/*">
+                                        <small class="text-muted">Puede seleccionar varias imágenes</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </form>
 </div>
 @endsection
-
-@push('styles')
-<style>
-    .bg-light-info { background-color: #f0f9ff !important; }
-    .bg-light-success { background-color: #f0fff4 !important; }
-    .card-outline { border-top-width: 3px !important; }
-</style>
-@endpush

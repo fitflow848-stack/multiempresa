@@ -10,6 +10,8 @@ use App\Models\ProductoLinea;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class AlmacenController extends Controller
 {
@@ -504,9 +506,71 @@ class AlmacenController extends Controller
         return view('almacen.edit', compact('detalle', 'producto', 'user', 'laboratorios', 'marcas', 'unidades', 'presentaciones', 'concentraciones'));
     }
 
+    public function editDetailed(Request $request, $id)
+    {
+        $detalle = AlmacenIngresoDetalle::with(['producto', 'ingreso'])->findOrFail($id);
+        $producto = $detalle->producto;
+
+        // Validación de campos del producto (similar a ProductoController@step2)
+        $data = $request->validate([
+            'laboratorio_id' => ['nullable', 'integer'],
+            'familia_id' => ['nullable', 'integer'],
+            'subfamilia_id' => ['nullable', 'integer'],
+            'nombre' => ['required', 'string', 'max:1000'],
+            'marca_id' => ['nullable', 'integer'],
+            'unidad_medida_id' => ['nullable', 'integer'],
+            'tipo_impuesto' => ['nullable', 'string'],
+            'condicion_venta' => ['nullable', 'string'],
+            'codigo_personalizado' => ['nullable', 'string'],
+            'notas' => ['nullable', 'string'],
+            'caracteristicas' => ['nullable', 'array'],
+            'almacenamiento' => ['nullable', 'array'],
+            'seguridad' => ['nullable', 'array'],
+            'ficha_tecnica' => ['nullable', 'array'],
+            'imagen_alt' => ['nullable', 'string'],
+            'imagen_titulo' => ['nullable', 'string'],
+            'imagen_fuente' => ['nullable', 'string'],
+            // Las imágenes se manejan si se suben nuevas
+        ]);
+
+        // Procesar boleans
+        foreach (['opciones_avanzadas', 'attr_numero_serie', 'attr_fecha_vencimiento', 'attr_lote_produccion', 'attr_venta_menudeo'] as $b) {
+            $data[$b] = $request->has($b) ? 1 : 0;
+        }
+
+        // Manejar imágenes si se subieron nuevas (lógica similar a step2)
+        if ($request->hasFile('imagen_principal')) {
+             $file = $request->file('imagen_principal');
+             $filename = time() . '_principal_' . $file->getClientOriginalName();
+             $path = $file->storeAs('productos/temp', $filename, 'public');
+             $data['imagen_principal_temp'] = $filename;
+        }
+
+        if ($request->hasFile('imagenes_adicionales')) {
+            $imagenesAdicionales = [];
+            foreach ($request->file('imagenes_adicionales') as $index => $file) {
+                $filename = time() . '_adicional_' . $index . '_' . $file->getClientOriginalName();
+                $path = $file->storeAs('productos/temp', $filename, 'public');
+                $imagenesAdicionales[] = $filename;
+            }
+            $data['imagenes_adicionales_temp'] = $imagenesAdicionales;
+        }
+
+        $presentaciones = DB::table('presentaciones')->get();
+        $concentraciones = DB::table('concentraciones')->get();
+
+        return view('almacen.edit-detailed', [
+            'producto_data' => $data,
+            'detalle' => $detalle,
+            'producto' => $producto,
+            'presentaciones' => $presentaciones,
+            'concentraciones' => $concentraciones
+        ]);
+    }
+
     public function update(Request $request, $id)
     {
-        $detalle = AlmacenIngresoDetalle::findOrFail($id);
+        $detalle = AlmacenIngresoDetalle::with('producto')->findOrFail($id);
         $producto = $detalle->producto;
         
         $request->validate([
@@ -515,8 +579,10 @@ class AlmacenController extends Controller
             'laboratorio_id' => 'nullable|integer',
             'marca_id' => 'nullable|integer',
             'unidad_medida_id' => 'nullable|integer',
+            'tipo_impuesto' => 'nullable|string',
+            'condicion_venta' => 'nullable|string',
             
-            // Datos del Detalle
+            // Datos del Inventario (Detalle)
             'cantidad' => 'required|numeric',
             'costo' => 'required|numeric',
             'pvp' => 'required|numeric',
@@ -530,29 +596,99 @@ class AlmacenController extends Controller
             'peso' => 'nullable|numeric',
         ]);
 
-        // Actualizar Producto
-        $producto->update([
-            'nombre' => $request->nombre,
-            'laboratorio' => $request->laboratorio_id,
-            'marca_id' => $request->marca_id,
-            'unidad_medida_id' => $request->unidad_medida_id,
-            'peso' => $request->peso,
-        ]);
+        DB::beginTransaction();
+        try {
+            // 1. Manejar Imagen Principal
+            $imagenPrincipal = $producto->imagen_principal;
+            if ($request->hasFile('imagen_principal')) {
+                $file = $request->file('imagen_principal');
+                $filename = time() . '_' . $file->getClientOriginalName();
+                $imagenPrincipal = $file->storeAs('productos', $filename, 'public');
+            } elseif ($request->input('imagen_principal_temp')) {
+                $tempFilename = $request->input('imagen_principal_temp');
+                if (Storage::disk('public')->exists('productos/temp/' . $tempFilename)) {
+                    Storage::disk('public')->copy('productos/temp/' . $tempFilename, 'productos/' . $tempFilename);
+                    Storage::disk('public')->delete('productos/temp/' . $tempFilename);
+                    $imagenPrincipal = 'productos/' . $tempFilename;
+                }
+            }
 
-        // Actualizar Detalle
-        $detalle->update([
-            'cantidad' => $request->cantidad,
-            'costo' => $request->costo,
-            'pvp' => $request->pvp,
-            'pvpd' => $request->pvpd,
-            'pvc' => $request->pvc,
-            'pvcd' => $request->pvcd,
-            'lote' => $request->lote,
-            'fecha_vencimiento' => $request->fecha_vencimiento,
-            'stock_min' => $request->stock_min,
-            'stock_max' => $request->stock_max,
-        ]);
+            // 2. Manejar Imágenes Adicionales
+            $imagenesAdicionales = $producto->imagenes_adicionales ?: [];
+            if (!is_array($imagenesAdicionales)) {
+                $imagenesAdicionales = json_decode($imagenesAdicionales, true) ?: [];
+            }
+            if ($request->hasFile('imagenes_adicionales')) {
+                foreach ($request->file('imagenes_adicionales') as $file) {
+                    $filename = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
+                    $imagenesAdicionales[] = $file->storeAs('productos', $filename, 'public');
+                }
+            } elseif ($request->input('imagenes_adicionales_temp')) {
+                $tempFilenames = $request->input('imagenes_adicionales_temp');
+                if (is_array($tempFilenames)) {
+                    foreach ($tempFilenames as $tempFilename) {
+                        if (Storage::disk('public')->exists('productos/temp/' . $tempFilename)) {
+                            Storage::disk('public')->copy('productos/temp/' . $tempFilename, 'productos/' . $tempFilename);
+                            Storage::disk('public')->delete('productos/temp/' . $tempFilename);
+                            $imagenesAdicionales[] = 'productos/' . $tempFilename;
+                        }
+                    }
+                }
+            }
 
-        return redirect()->route('almacen.index')->with('success', 'Producto e inventario actualizados correctamente.');
+            // 3. Preparar JSON de Características
+            $caracteristicas = json_encode([
+                'propiedades' => $request->input('caracteristicas', []),
+                'almacenamiento' => $request->input('almacenamiento', []),
+                'seguridad' => $request->input('seguridad', []),
+            ]);
+
+            // 4. Actualizar Producto
+            $producto->update([
+                'nombre' => $request->nombre,
+                'laboratorio' => $request->laboratorio_id,
+                'familia_id' => $request->familia_id,
+                'subfamilia_id' => $request->subfamilia_id,
+                'marca_id' => $request->marca_id,
+                'unidad_medida_id' => $request->unidad_medida_id,
+                'tipo_impuesto' => $request->tipo_impuesto,
+                'condicion_venta' => $request->condicion_venta,
+                'caracteristicas' => $caracteristicas,
+                'ficha_tecnica' => json_encode($request->input('ficha_tecnica', [])),
+                'imagen_principal' => $imagenPrincipal,
+                'imagenes_adicionales' => json_encode($imagenesAdicionales),
+                'imagen_alt' => $request->input('imagen_alt'),
+                'imagen_titulo' => $request->input('imagen_titulo'),
+                'imagen_fuente' => $request->input('imagen_fuente'),
+                // Booleans
+                'opciones_avanzadas' => $request->boolean('opciones_avanzadas'),
+                'attr_numero_serie' => $request->boolean('attr_numero_serie'),
+                'attr_fecha_vencimiento' => $request->boolean('attr_fecha_vencimiento'),
+                'attr_lote_produccion' => $request->boolean('attr_lote_produccion'),
+                'attr_venta_menudeo' => $request->boolean('attr_venta_menudeo'),
+            ]);
+
+            // 5. Actualizar Detalle de Almacén
+            $detalle->update([
+                'cantidad' => $request->cantidad,
+                'costo' => $request->costo,
+                'pvp' => $request->pvp,
+                'pvpd' => $request->pvpd,
+                'pvc' => $request->pvc,
+                'pvcd' => $request->pvcd,
+                'lote' => $request->lote,
+                'fecha_vencimiento' => $request->fecha_vencimiento,
+                'stock_min' => $request->stock_min,
+                'stock_max' => $request->stock_max,
+                'peso' => $request->peso,
+            ]);
+
+            DB::commit();
+            return redirect()->route('almacen.index')->with('success', 'Registro de almacén y datos del producto actualizados correctamente.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error actualizando registro de almacén: ' . $e->getMessage());
+            return back()->withErrors('Error al actualizar: ' . $e->getMessage())->withInput();
+        }
     }
 }

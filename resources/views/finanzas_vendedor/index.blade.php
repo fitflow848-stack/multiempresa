@@ -20,22 +20,58 @@
             </div>
         @endif
 
+        {{-- Filtros Avanzados --}}
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="GET" action="{{ route('finanzas_vendedor.index') }}" class="row g-3">
+                    <input type="hidden" name="tipo" value="{{ $tipoActivo }}">
+                    <div class="col-md-3">
+                        <label class="form-label">Buscar</label>
+                        <input type="text" name="search" class="form-control" placeholder="Empresa, descripción..." value="{{ $search }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Desde</label>
+                        <input type="date" name="fecha_desde" class="form-control" value="{{ $fechaDesde }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Hasta</label>
+                        <input type="date" name="fecha_hasta" class="form-control" value="{{ $fechaHasta }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Vista</label>
+                        <select name="agrupar" class="form-select">
+                            <option value="0" {{ !$agrupar ? 'selected' : '' }}>Detallado</option>
+                            <option value="1" {{ $agrupar ? 'selected' : '' }}>Agrupado por Persona</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="bx bx-filter-alt"></i> Filtrar
+                        </button>
+                        <a href="{{ route('finanzas_vendedor.index') }}" class="btn btn-outline-secondary">
+                            <i class="bx bx-reset"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         {{-- Tabs de filtro rápido --}}
         <div class="mb-3">
             <div class="btn-group" role="group">
-                <a href="{{ route('finanzas_vendedor.index') }}"
+                <a href="{{ route('finanzas_vendedor.index', ['agrupar' => $agrupar, 'search' => $search, 'fecha_desde' => $fechaDesde, 'fecha_hasta' => $fechaHasta]) }}"
                    class="btn btn-sm {{ !$tipoActivo ? 'btn-primary' : 'btn-outline-secondary' }}">
                     <i class="bx bx-list-ul me-1"></i> Todos
                 </a>
-                <a href="{{ route('finanzas_vendedor.index', ['tipo' => 'adelanto_personal']) }}"
+                <a href="{{ route('finanzas_vendedor.index', ['tipo' => 'adelanto_personal', 'agrupar' => $agrupar, 'search' => $search, 'fecha_desde' => $fechaDesde, 'fecha_hasta' => $fechaHasta]) }}"
                    class="btn btn-sm {{ $tipoActivo == 'adelanto_personal' ? 'btn-info' : 'btn-outline-secondary' }}">
                     <i class="bx bx-user me-1"></i> Adelantos Personal
                 </a>
-                <a href="{{ route('finanzas_vendedor.index', ['tipo' => 'compras_credito']) }}"
+                <a href="{{ route('finanzas_vendedor.index', ['tipo' => 'compras_credito', 'agrupar' => $agrupar, 'search' => $search, 'fecha_desde' => $fechaDesde, 'fecha_hasta' => $fechaHasta]) }}"
                    class="btn btn-sm {{ $tipoActivo == 'compras_credito' ? 'btn-primary' : 'btn-outline-secondary' }}">
                     <i class="bx bx-cart me-1"></i> Compras a Crédito
                 </a>
-                <a href="{{ route('finanzas_vendedor.index', ['tipo' => 'adelanto_clientes']) }}"
+                <a href="{{ route('finanzas_vendedor.index', ['tipo' => 'adelanto_clientes', 'agrupar' => $agrupar, 'search' => $search, 'fecha_desde' => $fechaDesde, 'fecha_hasta' => $fechaHasta]) }}"
                    class="btn btn-sm {{ $tipoActivo == 'adelanto_clientes' ? 'btn-success' : 'btn-outline-secondary' }}">
                     <i class="bx bx-money me-1"></i> Adelanto Clientes
                 </a>
@@ -45,11 +81,13 @@
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Historial de Operaciones</h5>
+                    <h5 class="mb-0">{{ $agrupar ? 'Resumen Agrupado por Empresa/Persona' : 'Historial de Operaciones' }}</h5>
                     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalRegistro">
                         <i class="bx bx-plus me-1"></i> Registrar Operación
                     </button>
                 </div>
+
+                @if(!$agrupar)
                 <div class="table-responsive text-nowrap">
                     <table class="table table-hover">
                         <thead>
@@ -73,7 +111,7 @@
                                     <td>
                                         @php
                                             $badgeColor = match ($op->tipo->nombre) {
-                                                'Compras a credito' => 'bg-label-primary',
+                                                'Compras a crédito' => 'bg-label-primary',
                                                 'Adelanto clientes' => 'bg-label-success',
                                                 'Adelantos personal' => 'bg-label-info',
                                                 default => 'bg-label-secondary'
@@ -165,7 +203,7 @@
                                             </div>
                                         @endif
 
-                                        @if($op->tipo->nombre === 'Compras a crédito' && $op->monto_pagado > 0)
+                                        @if($op->monto_pagado > 0)
                                             <div class="dropdown d-inline-block">
                                                 <button class="btn btn-sm btn-icon" type="button" data-bs-toggle="dropdown">
                                                     <i class="bx bx-dots-vertical-rounded"></i>
@@ -198,10 +236,100 @@
                         </tbody>
                     </table>
                 </div>
-
                 <div class="card-footer py-3">
                     {{ $operaciones->links() }}
                 </div>
+                @else
+                {{-- VISTA AGRUPADA --}}
+                <div class="table-responsive text-nowrap">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Empresa / Persona</th>
+                                <th>Operaciones</th>
+                                <th>Monto Total</th>
+                                <th>Pagado Total</th>
+                                <th>Saldo Pendiente</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($operaciones as $group)
+                                <tr>
+                                    <td class="fw-bold">
+                                        <i class="bx bx-building-house me-1"></i> {{ $group->empresa_persona }}
+                                    </td>
+                                    <td><span class="badge bg-label-secondary">{{ $group->cantidad_operaciones }} registros</span></td>
+                                    <td class="fw-bold">S/ {{ number_format($group->total_monto, 2) }}</td>
+                                    <td>S/ {{ number_format($group->total_pagado, 2) }}</td>
+                                    <td class="text-danger fw-bold">S/ {{ number_format($group->saldo, 2) }}</td>
+                                    <td>
+                                        @if($group->saldo > 0)
+                                            <button type="button" class="btn btn-primary btn-sm" 
+                                                    data-bs-toggle="modal" data-bs-target="#modalPagoAcumulado{{ $loop->index }}">
+                                                <i class="bx bx-dollar me-1"></i> Pagar Todo
+                                            </button>
+
+                                            {{-- Modal Pago Acumulado --}}
+                                            <div class="modal fade" id="modalPagoAcumulado{{ $loop->index }}" tabindex="-1" aria-hidden="true">
+
+                                                <div class="modal-dialog modal-dialog-centered">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title">Pago Acumulado: {{ $group->empresa_persona }}</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                        </div>
+                                                        <form action="{{ route('finanzas_vendedor.pagar_acumulado') }}" method="POST">
+                                                            @csrf
+                                                            <input type="hidden" name="empresa_persona" value="{{ $group->empresa_persona }}">
+                                                            <div class="modal-body">
+                                                                <div class="mb-3">
+                                                                    <label class="form-label">Monto a Distribuir (Saldo: {{ number_format($group->saldo, 2) }})</label>
+                                                                    <input type="number" step="0.01" name="monto" class="form-control" 
+                                                                           value="{{ $group->saldo }}" max="{{ $group->saldo }}" required>
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <label class="form-label">Método de Pago</label>
+                                                                    <select name="metodo_pago" class="form-select" required>
+                                                                        <option value="Efectivo">Efectivo</option>
+                                                                        <option value="Transferencia">Transferencia</option>
+                                                                        <option value="Yape/Plin">Yape/Plin</option>
+                                                                    </select>
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <label class="form-label">Fecha Pago</label>
+                                                                    <input type="date" name="fecha_pago" class="form-control" value="{{ date('Y-m-d') }}" required>
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <label class="form-label">Observaciones</label>
+                                                                    <textarea name="observaciones" class="form-control" rows="2"></textarea>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                                                <button type="submit" class="btn btn-primary">Registrar Pago</button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @else
+                                            <span class="text-success"><i class="bx bx-check-double"></i> Al día</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="text-center">No hay resumen disponible.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+                @endif
+            </div>
+        </div>
+
             </div>
         </div>
     </div>

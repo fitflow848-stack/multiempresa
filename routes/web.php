@@ -262,6 +262,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::post('/transferir', [AlmacenController::class, 'storeTransferencia'])->name('transferir.store')->middleware('can:inventario.transferir');
         Route::get('/api/lotes', [AlmacenController::class, 'getLotesAvailable'])->name('api.lotes');
         Route::get('/edit/{id}', [AlmacenController::class, 'edit'])->name('edit')->middleware('can:inventario.ajustar');
+        Route::post('/edit-detailed/{id}', [AlmacenController::class, 'editDetailed'])->name('edit-detailed')->middleware('can:inventario.ajustar');
         Route::post('/update/{id}', [AlmacenController::class, 'update'])->name('update')->middleware('can:inventario.ajustar');
     });
 
@@ -325,10 +326,13 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
     Route::post('/finanzas-vendedor', [App\Http\Controllers\FinanzasVendedorController::class, 'store'])->name('finanzas_vendedor.store');
     Route::get('/finanzas-vendedor/{id}/edit', [App\Http\Controllers\FinanzasVendedorController::class, 'edit'])->name('finanzas_vendedor.edit');
     Route::post('/finanzas-vendedor/{id}/update', [App\Http\Controllers\FinanzasVendedorController::class, 'update'])->name('finanzas_vendedor.update');
+    Route::post('/finanzas-vendedor/pagar-acumulado', [App\Http\Controllers\FinanzasVendedorController::class, 'registrarPagoAcumulado'])->name('finanzas_vendedor.pagar_acumulado');
+
 
     // Balance Route
     Route::prefix('balance')->middleware('can:contabilidad.ver')->group(function () {
-        Route::get('/', [BalanceController::class, 'index'])->name('balance.index');
-        Route::get('/graficos', [BalanceController::class, 'graficos'])->name('balance.graficos');
+        Route::get('/', [App\Http\Controllers\BalanceController::class, 'index'])->name('balance.index');
+        Route::get('/export', [App\Http\Controllers\BalanceController::class, 'export'])->name('balance.export');
+        Route::get('/graficos', [App\Http\Controllers\BalanceController::class, 'graficos'])->name('balance.graficos');
     });
 });

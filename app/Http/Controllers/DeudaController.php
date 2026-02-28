@@ -21,6 +21,7 @@ class DeudaController extends Controller
 
         // Obtener clientes con deudas filtradas
         $query = Cliente::where('company_id', $user->company_id)
+            ->where('sucursal_id', $user->branch_id)
             ->whereHas('deudas', function ($q) use ($request) {
                 if ($request->has('estado') && !empty($request->estado)) {
                     $q->where('estado', $request->estado);
@@ -86,9 +87,9 @@ class DeudaController extends Controller
 
         // Estadísticas rápidas (Globales)
         $estadisticas = [
-            'total_pendiente' => Deuda::pendientes()->sum('monto_deuda'),
-            'cantidad_pendiente' => Deuda::pendientes()->count(),
-            'vencidas' => Deuda::vencidas()->count(),
+            'total_pendiente' => Deuda::where('sucursal_id', $user->branch_id)->pendientes()->sum('monto_deuda'),
+            'cantidad_pendiente' => Deuda::where('sucursal_id', $user->branch_id)->pendientes()->count(),
+            'vencidas' => Deuda::where('sucursal_id', $user->branch_id)->vencidas()->count(),
         ];
 
         return view('deudas.index', compact('clientes', 'estadisticas'));
@@ -170,6 +171,10 @@ class DeudaController extends Controller
                 $cajaAbierta = \App\Models\CierreCaja::where('user_id', Auth::id())
                     ->whereNull('fecha_cierre')
                     ->first();
+            }
+
+            if (!$cajaAbierta) {
+                throw new \Exception('No se puede registrar el pago porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
             }
 
             $pago = DeudaPago::create([
@@ -296,6 +301,10 @@ class DeudaController extends Controller
                 $cajaAbierta = \App\Models\CierreCaja::where('user_id', Auth::id())
                     ->whereNull('fecha_cierre')
                     ->first();
+            }
+
+            if (!$cajaAbierta) {
+                throw new \Exception('No se puede registrar el pago acumulado porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
             }
 
             $pagoIds = [];

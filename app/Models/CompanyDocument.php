@@ -10,6 +10,7 @@ class CompanyDocument extends Model
 {
     use HasFactory, BelongsToCompany, BelongsToSucursal;
     
+    protected $sucursalForeignKey = 'branch_id';
 
     protected $fillable = [
         'company_id',

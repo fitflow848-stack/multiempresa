@@ -17,7 +17,9 @@ class PasivoController extends Controller
 {
     public function index(Request $request)
     {
-        $tipos = TipoPasivo::orderBy('nombre')->get();
+        $tipos = TipoPasivo::whereNotIn('nombre', ['Adelanto clientes', 'Adelanto de clientes', 'Adelantos personal'])
+            ->orderBy('nombre')
+            ->get();
 
         $query = Pasivo::with(['tipo', 'pagos'])->orderBy('fecha_registro', 'desc');
 
@@ -56,24 +58,34 @@ class PasivoController extends Controller
             $tipo = $pasivo->tipo->nombre;
             if (in_array(strtolower($tipo), ['adelanto de clientes', 'aporte'])) {
                 $selectedCajaId = session('selected_caja_id');
-                $cajaAbierta = CierreCaja::where('user_id', Auth::id())
-                    ->where('caja_id', $selectedCajaId)
-                    ->whereNull('fecha_cierre')
-                    ->first();
+                $cajaAbierta = null;
 
-                if ($cajaAbierta) {
-                    $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $pasivo->monto;
-                    $cajaAbierta->save();
-
-                    OperacionCaja::create([
-                        'cierre_caja_id' => $cajaAbierta->id,
-                        'user_id' => Auth::id(),
-                        'tipo' => 'ingreso',
-                        'partida' => $tipo,
-                        'concepto' => 'Registro de ' . $tipo . ': ' . $pasivo->nombre,
-                        'importe' => $pasivo->monto,
-                    ]);
+                if ($selectedCajaId) {
+                    $cajaAbierta = CierreCaja::where('user_id', Auth::id())
+                        ->where('caja_id', $selectedCajaId)
+                        ->whereNull('fecha_cierre')
+                        ->first();
+                } else {
+                    $cajaAbierta = CierreCaja::where('user_id', Auth::id())
+                        ->whereNull('fecha_cierre')
+                        ->first();
                 }
+
+                if (!$cajaAbierta) {
+                    throw new \Exception('No se puede registrar este ' . $tipo . ' porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
+                }
+
+                $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $pasivo->monto;
+                $cajaAbierta->save();
+
+                OperacionCaja::create([
+                    'cierre_caja_id' => $cajaAbierta->id,
+                    'user_id' => Auth::id(),
+                    'tipo' => 'ingreso',
+                    'partida' => $tipo,
+                    'concepto' => 'Registro de ' . $tipo . ': ' . $pasivo->nombre,
+                    'importe' => $pasivo->monto,
+                ]);
             }
 
             DB::commit();
@@ -180,24 +192,34 @@ class PasivoController extends Controller
 
             // Registrar en OperacionCaja como Egreso (Gasto) si hay caja abierta
             $selectedCajaId = session('selected_caja_id');
-            $cajaAbierta = CierreCaja::where('user_id', Auth::id())
-                ->where('caja_id', $selectedCajaId)
-                ->whereNull('fecha_cierre')
-                ->first();
+            $cajaAbierta = null;
 
-            if ($cajaAbierta) {
-                $cajaAbierta->egresos = ($cajaAbierta->egresos ?? 0) + $monto;
-                $cajaAbierta->save();
-
-                OperacionCaja::create([
-                    'cierre_caja_id' => $cajaAbierta->id,
-                    'user_id' => Auth::id(),
-                    'tipo' => 'gasto',
-                    'partida' => 'Pago Pasivo',
-                    'concepto' => 'Pago de ' . $pasivo->tipo->nombre . ': ' . $pasivo->nombre,
-                    'importe' => $monto,
-                ]);
+            if ($selectedCajaId) {
+                $cajaAbierta = CierreCaja::where('user_id', Auth::id())
+                    ->where('caja_id', $selectedCajaId)
+                    ->whereNull('fecha_cierre')
+                    ->first();
+            } else {
+                $cajaAbierta = CierreCaja::where('user_id', Auth::id())
+                    ->whereNull('fecha_cierre')
+                    ->first();
             }
+
+            if (!$cajaAbierta) {
+                throw new \Exception('No se puede registrar el pago porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
+            }
+
+            $cajaAbierta->egresos = ($cajaAbierta->egresos ?? 0) + $monto;
+            $cajaAbierta->save();
+
+            OperacionCaja::create([
+                'cierre_caja_id' => $cajaAbierta->id,
+                'user_id' => Auth::id(),
+                'tipo' => 'gasto',
+                'partida' => 'Pago Pasivo',
+                'concepto' => 'Pago de ' . $pasivo->tipo->nombre . ': ' . $pasivo->nombre,
+                'importe' => $monto,
+            ]);
 
             DB::commit();
 

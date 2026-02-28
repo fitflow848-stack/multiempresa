@@ -47,9 +47,13 @@ class ComprasController extends Controller
                 'proveedores.nombre_comercial as proveedor',
                 'compras.total_neto',
                 'compras.received_at'
-            );
+            )
+            ->where('compras.company_id', Auth::user()->company_id)
+            ->where('compras.local_destino', Auth::user()->branch_id);
 
-        $recordsTotal = Compra::count();
+        $recordsTotal = Compra::where('company_id', Auth::user()->company_id)
+            ->where('local_destino', Auth::user()->branch_id)
+            ->count();
 
         if ($search) {
             $query->where(function ($q) use ($search) {

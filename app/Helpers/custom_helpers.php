@@ -383,9 +383,15 @@ if(! function_exists('obtenerSerieDocumento')) {
             ->where('nombre', 'like', '%' . $tipoDocumento . '%')
             ->first();
 
-        $document = CompanyDocument::where('company_id','=', $company->id)
-        ->where('branch_id','=', Auth::user()->branch_id)
-        ->where('sunat_document_id',$documento->id_tido)->first();
-        return $document->series;
+        if (!$documento) {
+            return null;
+        }
+
+        $document = CompanyDocument::where('company_id', $company->id)
+            ->where('branch_id', Auth::user()->branch_id)
+            ->where('sunat_document_id', $documento->id_tido)
+            ->first();
+
+        return $document ? $document->series : null;
     }
 }

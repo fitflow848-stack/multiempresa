@@ -38,8 +38,14 @@ class GuiaRemisionTransporteController extends Controller
     public function add()
     {
         $documento = CompanyDocument::where(['company_id' => Auth::user()->company_id, 'branch_id' => Auth::user()->branch_id, 'sunat_document_id' => 11])->first();
-        $serie =  $documento->serie;
-        $numero =  $documento->numero;
+        
+        if (!$documento) {
+            return redirect()->route('guia-transporte.index')
+                ->with('error', 'La sucursal actual no tiene configurada una serie para Guía de Remisión (Tipo 11).');
+        }
+
+        $serie =  $documento->series;
+        $numero =  $documento->number;
         $departamentos = Departamento::all();
         return view('guia-transporte.add', compact('serie', 'numero', 'departamentos'));
     }

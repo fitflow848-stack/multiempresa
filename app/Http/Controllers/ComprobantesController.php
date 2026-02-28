@@ -353,24 +353,36 @@ class ComprobantesController extends Controller
 
                 // 2. Registrar salida de dinero (Devolución)
                 if ($venta->total > 0) {
-                    $cajaAbierta = CierreCaja::where('id_empresa', $user->company_id)
-                        ->whereNull('fecha_cierre')
-                        ->orderBy('id', 'desc')
-                        ->first();
+                    $selectedCajaId = session('selected_caja_id');
+                    $cajaAbierta = null;
 
-                    if ($cajaAbierta) {
-                        OperacionCaja::create([
-                            'cierre_caja_id' => $cajaAbierta->id,
-                            'tipo' => 'EGRESO',
-                            'monto' => $venta->total,
-                            'concepto' => 'Devolución de venta ' . ($venta->serie . '-' . $venta->numero),
-                            'usuario_id' => $user->id,
-                            'fecha' => now(),
-                        ]);
-                        // Update caja totals
-                        $cajaAbierta->egresos = floatval($cajaAbierta->egresos) + floatval($venta->total);
-                        $cajaAbierta->save();
+                    if ($selectedCajaId) {
+                        $cajaAbierta = CierreCaja::where('user_id', Auth::id())
+                            ->where('caja_id', $selectedCajaId)
+                            ->whereNull('fecha_cierre')
+                            ->first();
+                    } else {
+                        $cajaAbierta = CierreCaja::where('user_id', Auth::id())
+                            ->whereNull('fecha_cierre')
+                            ->first();
                     }
+
+                    if (!$cajaAbierta) {
+                        throw new \Exception('No se puede procesar la devolución porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
+                    }
+
+                    OperacionCaja::create([
+                        'cierre_caja_id' => $cajaAbierta->id,
+                        'user_id' => Auth::id(),
+                        'tipo' => 'gasto',
+                        'importe' => $venta->total,
+                        'partida' => 'Devolución',
+                        'concepto' => 'Devolución de venta ' . ($venta->serie . '-' . $venta->numero),
+                        'fecha' => now(),
+                    ]);
+                    // Update caja totals
+                    $cajaAbierta->egresos = floatval($cajaAbierta->egresos) + floatval($venta->total);
+                    $cajaAbierta->save();
                 }
 
                 // 3. Generar Nota de Crédito (Solo Facturas id:2 y Boletas id:1)

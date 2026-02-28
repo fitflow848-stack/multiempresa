@@ -1933,4 +1933,28 @@
     </script>
     @include('pos.partials.modals.context-menu-ticket')
     @include('pos.partials.js.finalizar-venta')
+
+    @if(session('error'))
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: "{{ session('error') }}"
+                });
+            });
+        </script>
+    @endif
+
+    @if(session('success'))
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Éxito',
+                    text: "{{ session('success') }}"
+                });
+            });
+        </script>
+    @endif
 @endsection

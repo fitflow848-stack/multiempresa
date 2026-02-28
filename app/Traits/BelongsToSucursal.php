@@ -43,9 +43,9 @@ trait BelongsToSucursal
                 return;
             }
 
-            // Solo super_admin ve todas las sucursales
-            if ($user->hasRole('super_admin')) {
-                logger()->info("Trait: User is super_admin, no scope");
+            // Los roles super_admin, admin_empresa y Admin ven todas las sucursales de su empresa
+            if ($user->hasAnyRole(['super_admin', 'admin_empresa', 'Admin'])) {
+                logger()->info("Trait: User has admin privileges, no branch scope");
                 return;
             }
 

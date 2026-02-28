@@ -10,31 +10,117 @@ use App\Models\CierreCaja;
 use App\Models\Venta;
 use App\Models\OperacionCaja;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class BalanceController extends Controller
 {
     public function index(Request $request)
     {
         $fecha = $request->input('fecha', now()->format('Y-m-d'));
-        $data = $this->calculateData($fecha);
+        $baseData = $this->calculateData($fecha);
+        $data = $this->refineData($baseData);
         $data['fecha'] = $fecha;
         return view('balance.index', $data);
+    }
+
+    public function export(Request $request)
+    {
+        $fecha = $request->input('fecha', now()->format('Y-m-d'));
+        $baseData = $this->calculateData($fecha);
+        $data = $this->refineData($baseData);
+
+        $filename = "balance_general_{$fecha}.xlsx";
+        
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\BalanceExport($data, $fecha), 
+            $filename
+        );
     }
 
     public function graficos(Request $request)
     {
         $fecha = $request->input('fecha', now()->format('Y-m-d'));
-        $data = $this->calculateData($fecha);
+        $baseData = $this->calculateData($fecha);
+        $data = $this->refineData($baseData);
         $data['fecha'] = $fecha;
         return view('balance.graficos', $data);
+    }
+
+    private function refineData($data)
+    {
+        $tiposPasivos = $data['tiposPasivosCorrientes'];
+        $tiposActivos = $data['tiposActivosCorrientes'];
+
+        // 1. Mover "Adelantos Personal" de Pasivos a Activos (es una cuenta por cobrar a empleados)
+        $idxPersonal = $tiposPasivos->search(function($item) {
+            $name = strtolower($item->nombre);
+            return str_contains($name, 'adelanto') && str_contains($name, 'personal');
+        });
+
+        if ($idxPersonal !== false) {
+            $personalObj = $tiposPasivos->pull($idxPersonal);
+            $monto = $personalObj->pasivos_sum_monto ?? 0;
+
+            // Buscar si ya existe en activos
+            $existente = $tiposActivos->first(function($item) {
+                $name = strtolower($item->nombre);
+                return str_contains($name, 'adelanto') && str_contains($name, 'personal');
+            });
+
+            if ($existente) {
+                $existente->activos_sum_monto = ($existente->activos_sum_monto ?? 0) + $monto;
+            } else {
+                $new = new \App\Models\TipoActivoCorriente();
+                $new->nombre = 'Adelantos a Personal';
+                $new->activos_sum_monto = $monto;
+                $tiposActivos->push($new);
+            }
+        }
+
+        // 2. Unificar "Adelanto Clientes" y "Adelanto de Clientes" en Pasivos
+        $adelantoClientes = $tiposPasivos->filter(function($item) {
+            $name = strtolower($item->nombre);
+            return str_contains($name, 'adelanto') && str_contains($name, 'cliente');
+        });
+
+        if ($adelantoClientes->count() > 1) {
+            $totalAdelanto = $adelantoClientes->sum('pasivos_sum_monto');
+            $keepId = $adelantoClientes->first()->id;
+
+            // Mantener solo uno y sumar el resto
+            $data['tiposPasivosCorrientes'] = $tiposPasivos->reject(function($item) use ($adelantoClientes, $keepId) {
+                return $adelantoClientes->pluck('id')->contains($item->id) && $item->id !== $keepId;
+            });
+            
+            $finalObj = $data['tiposPasivosCorrientes']->firstWhere('id', $keepId);
+            if ($finalObj) {
+                $finalObj->nombre = 'Adelanto de Clientes';
+                $finalObj->pasivos_sum_monto = $totalAdelanto;
+            }
+        }
+
+        // Recalcular Totales
+        $data['tiposActivosCorrientes'] = $tiposActivos;
+        $data['total_activo_corriente'] = $data['caja'] + $data['inventario'] + $tiposActivos->sum('activos_sum_monto');
+        $data['total_activo'] = $data['total_activo_corriente'] + $data['total_activo_no_corriente'];
+        
+        $data['total_pasivo_corriente'] = $data['tiposPasivosCorrientes']->sum('pasivos_sum_monto');
+        $data['total_pasivo'] = $data['total_pasivo_corriente'] + $data['total_pasivo_no_corriente'];
+        
+        $data['patrimonio_calculado'] = $data['total_activo'] - $data['total_pasivo'];
+
+        return $data;
     }
 
     private function calculateData($fecha)
     {
         // 1. ACTIVO CORRIENTE
-
         // CAJA: Dinero efectivo en cajas ABIERTAS
-        $cajasAbiertas = CierreCaja::whereNull('fecha_cierre')->get();
+        $cajasAbiertas = CierreCaja::whereNull('fecha_cierre')
+            ->whereHas('caja', function($q) {
+                $q->where('sucursal_id', Auth::user()->branch_id);
+            })
+            ->get();
         $caja = 0.00;
 
         foreach ($cajasAbiertas as $box) {
@@ -67,96 +153,97 @@ class BalanceController extends Controller
 
         // INVENTARIO: Valorizado al costo promedio o costo de entrada (Sistema)
         $inventario = AlmacenIngresoDetalle::where('cantidad', '>', 0)
+            ->whereHas('ingreso', function($q) {
+                $q->where('sucursal_id', Auth::user()->branch_id);
+            })
             ->sum(DB::raw('cantidad * costo'));
 
         // CUENTAS POR COBRAR Calculado (Sistema)
-        // Deudas pendientes (estado 'pendiente' o 'parcial')
-        $cxc_auto = Deuda::whereIn('estado', [Deuda::ESTADO_PENDIENTE, Deuda::ESTADO_PARCIAL])
+        $cxc_auto = Deuda::where('sucursal_id', Auth::user()->branch_id)
+            ->whereIn('estado', [Deuda::ESTADO_PENDIENTE, Deuda::ESTADO_PARCIAL])
             ->whereDate('fecha_venta', '<=', $fecha)
-            ->sum('monto_deuda');
+            ->sum(DB::raw('monto_deuda - monto_pagado'));
 
-        // ACTIVOS CORRIENTES (Desde el nuevo módulo: Bancos, CxC Extras, Anticipos, Otros)
+        // ACTIVOS CORRIENTES (Desde el nuevo módulo)
         $tiposActivosCorrientes = \App\Models\TipoActivoCorriente::withSum([
             'activos' => function ($q) use ($fecha) {
-                $q->whereDate('fecha_registro', '<=', $fecha);
+                $q->where('sucursal_id', Auth::user()->branch_id)
+                    ->whereDate('fecha_registro', '<=', $fecha);
             }
         ], 'monto')->get();
 
         // Integrar CxC Automático al tipo correspondiente
         $tipoCxC = $tiposActivosCorrientes->first(function ($item) {
-            return \Illuminate\Support\Str::contains(strtolower($item->nombre), 'cuentas por cobrar') ||
-                \Illuminate\Support\Str::contains(strtolower($item->nombre), 'cxc');
+            $lower = strtolower($item->nombre);
+            return str_contains($lower, 'cuentas por cobrar') || str_contains($lower, 'cxc');
         });
 
         if ($tipoCxC) {
             $tipoCxC->activos_sum_monto = ($tipoCxC->activos_sum_monto ?? 0) + $cxc_auto;
         } else if ($cxc_auto > 0) {
             $newType = new \App\Models\TipoActivoCorriente();
-            $newType->nombre = 'Cuentas por Cobrar (Sistema)';
+            $newType->nombre = 'Cuentas por Cobrar (CxC)';
             $newType->activos_sum_monto = $cxc_auto;
             $tiposActivosCorrientes->push($newType);
         }
 
-        // Total Activo Corriente
-        $total_manual_y_cxc = $tiposActivosCorrientes->sum('activos_sum_monto');
-        $total_activo_corriente = $caja + $inventario + $total_manual_y_cxc;
+        $total_activo_corriente = $caja + $inventario + $tiposActivosCorrientes->sum('activos_sum_monto');
 
         // 2. ACTIVO NO CORRIENTE
         $tiposActivosNoCorrientes = \App\Models\TipoActivo::withSum([
             'activos' => function ($q) use ($fecha) {
-                $q->whereDate('fecha_adquisicion', '<=', $fecha);
+                $q->where('sucursal_id', Auth::user()->branch_id)
+                    ->whereDate('fecha_adquisicion', '<=', $fecha);
             }
         ], 'monto')->get();
 
         $total_activo_no_corriente = $tiposActivosNoCorrientes->sum('activos_sum_monto');
-
         $total_activo = $total_activo_corriente + $total_activo_no_corriente;
 
         // 3. PASIVO CORRIENTE
-
-        // Calculo AUTOMATICO de Compras a Credito
         $compras_credito_auto = 0;
         try {
             if (class_exists('App\Models\Compra')) {
-                $compras_credito_auto = Compra::where('credito', true)
+                $compras_credito_auto = Compra::where('local_destino', Auth::user()->branch_id)
+                    ->where('credito', true)
                     ->whereDate('fecha_emision', '<=', $fecha)
-                    ->sum('total_pagar');
+                    ->sum(DB::raw('total_pagar - monto_pagado'));
             }
-        } catch (\Exception $e) {
-            $compras_credito_auto = 0;
-        }
+        } catch (\Exception $e) { $compras_credito_auto = 0; }
 
         // Obtener Pasivos Manuales
         $tiposPasivosCorrientes = \App\Models\TipoPasivo::withSum([
             'pasivos' => function ($q) use ($fecha) {
-                $q->whereDate('fecha_registro', '<=', $fecha);
+                $q->where('sucursal_id', Auth::user()->branch_id)
+                    ->whereDate('fecha_registro', '<=', $fecha);
             }
         ], 'monto')->withSum([
-                    'pasivos' => function ($q) use ($fecha) {
-                        $q->whereDate('fecha_registro', '<=', $fecha);
-                    }
-                ], 'monto_pagado')->get();
+            'pasivos' => function ($q) use ($fecha) {
+                $q->where('sucursal_id', Auth::user()->branch_id)
+                    ->whereDate('fecha_registro', '<=', $fecha);
+            }
+        ], 'monto_pagado')->get();
 
         // Calcular el neto de cada tipo
         foreach ($tiposPasivosCorrientes as $tipo) {
             $tipo->pasivos_sum_monto = ($tipo->pasivos_sum_monto ?? 0) - ($tipo->pasivos_sum_monto_pagado ?? 0);
         }
 
-        // Integrar el cálculo automático a la categoría correspondiente (Compras a crédito)
+        // Integrar Compras a crédito automáticas
         $tipoCC = $tiposPasivosCorrientes->first(function ($item) {
-            return \Illuminate\Support\Str::contains(strtolower($item->nombre), 'compras a cr');
+            return str_contains(strtolower($item->nombre), 'compras a cr');
         });
 
         if ($tipoCC) {
             $tipoCC->pasivos_sum_monto = ($tipoCC->pasivos_sum_monto ?? 0) + $compras_credito_auto;
         } else if ($compras_credito_auto > 0) {
             $newType = new \App\Models\TipoPasivo();
-            $newType->nombre = 'Compras a crédito (Sistema)';
+            $newType->nombre = 'Compras a crédito';
             $newType->pasivos_sum_monto = $compras_credito_auto;
             $tiposPasivosCorrientes->push($newType);
         }
 
-        // Separar Aportes de Pasivos para el Balance
+        // Patrimonio: Aportes
         $tipoAporteObj = $tiposPasivosCorrientes->first(function ($item) {
             return strtolower($item->nombre) === 'aporte';
         });
@@ -164,9 +251,8 @@ class BalanceController extends Controller
         $total_aportes = 0;
         if ($tipoAporteObj) {
             $total_aportes = $tipoAporteObj->pasivos_sum_monto ?? 0;
-            // Quitamos Aporte de la lista de Pasivos para que no sume doble y no aparezca en Pasivos
-            $tiposPasivosCorrientes = $tiposPasivosCorrientes->reject(function ($item) {
-                return strtolower($item->nombre) === 'aporte';
+            $tiposPasivosCorrientes = $tiposPasivosCorrientes->reject(function ($item) use ($tipoAporteObj) {
+                return $item->id === $tipoAporteObj->id;
             });
         }
 
@@ -175,7 +261,6 @@ class BalanceController extends Controller
         // 4. PASIVO NO CORRIENTE
         $otros_pasivos_no_corrientes = 0.00;
         $total_pasivo_no_corriente = $otros_pasivos_no_corrientes;
-
         $total_pasivo = $total_pasivo_corriente + $total_pasivo_no_corriente;
 
         // 5. PATRIMONIO
@@ -199,3 +284,4 @@ class BalanceController extends Controller
         ];
     }
 }
+

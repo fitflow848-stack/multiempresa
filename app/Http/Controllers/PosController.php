@@ -183,6 +183,12 @@ class PosController extends Controller
 
         // Determinar la serie según el tipo de documento
         $serieDocumento = obtenerSerieDocumento($company, $tipoDocumento);
+        
+        if (!$serieDocumento && !$isProforma) {
+            return redirect()->route('pos.index')
+                ->with('error', "La sucursal actual no tiene configurada una serie para el tipo de documento: " . strtoupper($tipoDocumento));
+        }
+
         $metodos = TipoPago::where('activo', true)->orderBy('orden')->get();
 
         $idCoti = $request->input('id_coti');

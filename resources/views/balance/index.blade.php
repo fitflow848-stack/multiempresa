@@ -18,6 +18,10 @@
                             <i class="bx bx-refresh me-1"></i> Actualizar
                         </button>
                     </div>
+                    <a href="{{ route('balance.export', ['fecha' => $fecha]) }}"
+                        class="btn btn-success px-4 bg-gradient-success me-2 text-white">
+                        <i class="bx bx-spreadsheet me-1"></i> Exportar
+                    </a>
                     <a href="{{ route('balance.graficos', ['fecha' => $fecha]) }}"
                         class="btn btn-info px-4 bg-gradient-info text-white">
                         <i class="bx bx-pie-chart-alt-2 me-1"></i> Ver Gráficos
@@ -107,10 +111,10 @@
                                         </tr>
                                     @endforeach
                                 </tbody>
-                                <tfoot class="bg-success bg-opacity-10">
-                                    <tr>
-                                        <th class="ps-4 py-3 text-success">TOTAL ACTIVO</th>
-                                        <th class="pe-4 py-3 text-end text-success fw-bolder fs-5">S/
+                                <tfoot>
+                                    <tr class="bg-success text-white">
+                                        <th class="ps-4 py-3 text-white">TOTAL ACTIVO</th>
+                                        <th class="pe-4 py-3 text-end text-white fw-bolder fs-5">S/
                                             {{ number_format($total_activo, 2) }}</th>
                                     </tr>
                                 </tfoot>
@@ -168,10 +172,10 @@
                                                 {{ number_format($otros_pasivos_no_corrientes, 2) }}</td>
                                         </tr>
                                     </tbody>
-                                    <tfoot class="bg-danger bg-opacity-10">
-                                        <tr>
-                                            <th class="ps-4 py-3 text-danger">TOTAL PASIVO</th>
-                                            <th class="pe-4 py-3 text-end text-danger fw-bolder fs-5">S/
+                                    <tfoot>
+                                        <tr class="bg-danger text-white">
+                                            <th class="ps-4 py-3 text-white">TOTAL PASIVO</th>
+                                            <th class="pe-4 py-3 text-end text-white fw-bolder fs-5">S/
                                                 {{ number_format($total_pasivo, 2) }}</th>
                                         </tr>
                                     </tfoot>
@@ -199,10 +203,10 @@
                                                 {{ number_format($patrimonio_calculado - $total_aportes, 2) }}</td>
                                         </tr>
                                     </tbody>
-                                    <tfoot class="bg-info bg-opacity-10">
-                                        <tr>
-                                            <th class="ps-4 py-3 text-info">TOTAL PATRIMONIO</th>
-                                            <th class="pe-4 py-3 text-end text-info fw-bolder fs-5">S/
+                                    <tfoot>
+                                        <tr class="bg-info text-white">
+                                            <th class="ps-4 py-3 text-white">TOTAL PATRIMONIO</th>
+                                            <th class="pe-4 py-3 text-end text-white fw-bolder fs-5">S/
                                                 {{ number_format($patrimonio_calculado, 2) }}</th>
                                         </tr>
                                     </tfoot>

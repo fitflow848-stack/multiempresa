@@ -25,17 +25,53 @@ class FinanzasVendedorController extends Controller
         ];
 
         $tipoFiltro = $request->get('tipo');
+        $fechaDesde = $request->get('fecha_desde');
+        $fechaHasta = $request->get('fecha_hasta');
+        $search = $request->get('search');
+        $agrupar = $request->get('agrupar', 0);
+
         $nombresTipos = ['Compras a crédito', 'Adelanto clientes', 'Adelantos personal'];
 
-        $query = Pasivo::whereHas('tipo', function ($q) use ($nombresTipos, $tipoFiltro, $tipoMap) {
+        $query = Pasivo::where('sucursal_id', Auth::user()->branch_id)
+            ->whereHas('tipo', function ($q) use ($nombresTipos, $tipoFiltro, $tipoMap) {
             if ($tipoFiltro && isset($tipoMap[$tipoFiltro])) {
                 $q->where('nombre', $tipoMap[$tipoFiltro]);
             } else {
                 $q->whereIn('nombre', $nombresTipos);
             }
-        })->with(['tipo', 'pagos'])->orderBy('fecha_registro', 'desc');
+        });
 
-        $operaciones = $query->paginate(20)->appends($request->query());
+        // Filtros adicionales
+        if ($fechaDesde) {
+            $query->whereDate('fecha_registro', '>=', $fechaDesde);
+        }
+        if ($fechaHasta) {
+            $query->whereDate('fecha_registro', '<=', $fechaHasta);
+        }
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('empresa_persona', 'like', "%$search%")
+                  ->orWhere('nombre', 'like', "%$search%")
+                  ->orWhere('documento', 'like', "%$search%");
+            });
+        }
+
+        if ($agrupar) {
+            $operaciones = $query->select('empresa_persona', 
+                    DB::raw('SUM(monto) as total_monto'),
+                    DB::raw('SUM(monto_pagado) as total_pagado'),
+                    DB::raw('COUNT(*) as cantidad_operaciones')
+                )
+                ->groupBy('empresa_persona')
+                ->orderBy('total_monto', 'desc')
+                ->get()
+                ->map(function($item) {
+                    $item->saldo = $item->total_monto - $item->total_pagado;
+                    return $item;
+                });
+        } else {
+            $operaciones = $query->with(['tipo', 'pagos'])->orderBy('fecha_registro', 'desc')->paginate(20)->appends($request->query());
+        }
 
         $tipoActivo = $tipoFiltro;
         $titulos = [
@@ -45,7 +81,7 @@ class FinanzasVendedorController extends Controller
         ];
         $tituloSeccion = $titulos[$tipoFiltro] ?? 'Todas las Operaciones';
 
-        return view('finanzas_vendedor.index', compact('operaciones', 'tipoActivo', 'tituloSeccion'));
+        return view('finanzas_vendedor.index', compact('operaciones', 'tipoActivo', 'tituloSeccion', 'agrupar', 'fechaDesde', 'fechaHasta', 'search'));
     }
 
     public function store(Request $request)
@@ -90,6 +126,8 @@ class FinanzasVendedorController extends Controller
             }
 
             $pasivo = Pasivo::create([
+                'company_id' => Auth::user()->company_id,
+                'sucursal_id' => Auth::user()->branch_id,
                 'tipo_pasivo_id' => $tipoPasivo->id,
                 'nombre' => $nombre,
                 'empresa_persona' => $empresaPersona,
@@ -103,42 +141,53 @@ class FinanzasVendedorController extends Controller
 
             // Lógica de Caja
             $selectedCajaId = session('selected_caja_id');
+            $cajaAbierta = null;
+
             if ($selectedCajaId) {
                 $cajaAbierta = CierreCaja::where('user_id', Auth::id())
                     ->where('caja_id', $selectedCajaId)
                     ->whereNull('fecha_cierre')
                     ->first();
+            } else {
+                // Si no hay seleccionada, buscar la única abierta por el usuario
+                $cajaAbierta = CierreCaja::where('user_id', Auth::id())
+                    ->whereNull('fecha_cierre')
+                    ->first();
+            }
 
-                if ($cajaAbierta) {
-                    // Adelanto clientes: Entra dinero (Ingreso)
-                    if ($tipoOperacion === 'adelanto_clientes') {
-                        $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $monto;
-                        $cajaAbierta->save();
+            // Validar que haya caja para operaciones que mueven efectivo
+            if (in_array($tipoOperacion, ['adelanto_clientes', 'adelanto_personal']) && !$cajaAbierta) {
+                throw new \Exception('No se puede registrar esta operación porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
+            }
 
-                        OperacionCaja::create([
-                            'cierre_caja_id' => $cajaAbierta->id,
-                            'user_id' => Auth::id(),
-                            'tipo' => 'ingreso',
-                            'partida' => 'Adelanto clientes',
-                            'concepto' => 'Adelanto de cliente: ' . $nombre,
-                            'importe' => $monto,
-                        ]);
-                    }
-                    // Adelantos personal: Sale dinero (Gasto) - Opcional pero lógico
-                    elseif ($tipoOperacion === 'adelanto_personal') {
-                        $cajaAbierta->egresos = ($cajaAbierta->egresos ?? 0) + $monto;
-                        $cajaAbierta->save();
+            if ($cajaAbierta) {
+                // Adelanto clientes: Entra dinero (Ingreso)
+                if ($tipoOperacion === 'adelanto_clientes') {
+                    $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $monto;
+                    $cajaAbierta->save();
 
-                        OperacionCaja::create([
-                            'cierre_caja_id' => $cajaAbierta->id,
-                            'user_id' => Auth::id(),
-                            'tipo' => 'gasto',
-                            'partida' => 'Adelantos personal',
-                            'concepto' => 'Adelanto a personal: ' . $nombre,
-                            'importe' => $monto,
-                        ]);
-                    }
-                    // Compras a crédito: No mueve caja hasta que se paga
+                    OperacionCaja::create([
+                        'cierre_caja_id' => $cajaAbierta->id,
+                        'user_id' => Auth::id(),
+                        'tipo' => 'ingreso',
+                        'partida' => 'Adelanto clientes',
+                        'concepto' => 'Adelanto de cliente: ' . $nombre,
+                        'importe' => $monto,
+                    ]);
+                }
+                // Adelantos personal: Sale dinero (Gasto)
+                elseif ($tipoOperacion === 'adelanto_personal') {
+                    $cajaAbierta->egresos = ($cajaAbierta->egresos ?? 0) + $monto;
+                    $cajaAbierta->save();
+
+                    OperacionCaja::create([
+                        'cierre_caja_id' => $cajaAbierta->id,
+                        'user_id' => Auth::id(),
+                        'tipo' => 'gasto',
+                        'partida' => 'Adelantos personal',
+                        'concepto' => 'Adelanto a personal: ' . $nombre,
+                        'importe' => $monto,
+                    ]);
                 }
             }
 
@@ -219,6 +268,104 @@ class FinanzasVendedorController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Error al actualizar la operación: ' . $e->getMessage());
+        }
+    }
+
+    public function registrarPagoAcumulado(Request $request)
+    {
+        $request->validate([
+            'empresa_persona' => 'required|string',
+            'monto' => 'required|numeric|min:0.01',
+            'metodo_pago' => 'required|string',
+            'fecha_pago' => 'required|date',
+            'observaciones' => 'nullable|string'
+        ]);
+
+        $montoRestante = floatval($request->monto);
+        $montoInicial = $montoRestante;
+        $empresaPersona = $request->empresa_persona;
+
+        // Buscar pasivos con saldo de esta persona/empresa (solo Compras a Crédito)
+        $pasivos = Pasivo::where('empresa_persona', $empresaPersona)
+            ->whereHas('tipo', function($q) {
+                $q->where('nombre', 'Compras a crédito');
+            })
+            ->whereRaw('monto > monto_pagado')
+            ->orderBy('fecha_registro', 'asc')
+            ->get();
+
+        if ($pasivos->isEmpty()) {
+            return back()->with('error', 'No hay deudas pendientes para: ' . $empresaPersona);
+        }
+
+        DB::beginTransaction();
+        try {
+            $selectedCajaId = session('selected_caja_id');
+            $cajaAbierta = null;
+
+            if ($selectedCajaId) {
+                $cajaAbierta = CierreCaja::where('user_id', Auth::id())
+                    ->where('caja_id', $selectedCajaId)
+                    ->whereNull('fecha_cierre')
+                    ->first();
+            } else {
+                $cajaAbierta = CierreCaja::where('user_id', Auth::id())
+                    ->whereNull('fecha_cierre')
+                    ->first();
+            }
+
+            if (!$cajaAbierta) {
+                throw new \Exception('No se puede registrar el pago porque no tienes una caja abierta.');
+            }
+
+            foreach ($pasivos as $pasivo) {
+                if ($montoRestante <= 0) break;
+
+                $pagoMonto = min($montoRestante, $pasivo->saldo);
+
+                \App\Models\PasivoPago::create([
+                    'pasivo_id' => $pasivo->id,
+                    'user_id' => Auth::id(),
+                    'monto' => $pagoMonto,
+                    'fecha_pago' => $request->fecha_pago,
+                    'metodo_pago' => $request->metodo_pago,
+                    'observaciones' => $request->observaciones ? ('Pago acumulado: ' . $request->observaciones) : 'Pago acumulado'
+                ]);
+
+                $pasivo->monto_pagado += $pagoMonto;
+                if ($pasivo->monto_pagado >= $pasivo->monto) {
+                    $pasivo->estado = 'pagado';
+                } else {
+                    $pasivo->estado = 'parcial';
+                }
+                $pasivo->save();
+
+                $montoRestante -= $pagoMonto;
+            }
+
+            // Registrar en Caja (Gasto porque es pago a proveedor/compra)
+            $cajaAbierta->egresos = ($cajaAbierta->egresos ?? 0) + $montoInicial;
+            $cajaAbierta->save();
+
+            OperacionCaja::create([
+                'cierre_caja_id' => $cajaAbierta->id,
+                'user_id' => Auth::id(),
+                'tipo' => 'gasto',
+                'partida' => 'Pago Pasivo',
+                'concepto' => 'Pago acumulado a: ' . $empresaPersona,
+                'importe' => $montoInicial,
+                'metodo_pago' => $request->metodo_pago,
+                'es_efectivo' => ($request->metodo_pago === 'Efectivo') ? 1 : 0,
+                'fecha' => now()
+            ]);
+
+            DB::commit();
+            return redirect()->route('finanzas_vendedor.index', ['agrupar' => 1])
+                ->with('success', 'Pago acumulado de S/ ' . number_format($montoInicial, 2) . ' aplicado correctamente.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Error al procesar el pago: ' . $e->getMessage());
         }
     }
 }

@@ -3,16 +3,17 @@
 namespace App\Models;
 use App\Traits\BelongsToCompany;
 
+use App\Traits\BelongsToSucursal;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-
 use Illuminate\Database\Eloquent\Model;
 
 class ActivoCorriente extends Model
 {
-    use HasFactory, BelongsToCompany;
+    use HasFactory, BelongsToCompany, BelongsToSucursal;
     
     protected $fillable = [
         'company_id',
+        'sucursal_id',
         'tipo_activo_corriente_id',
         'nombre',
         'monto',

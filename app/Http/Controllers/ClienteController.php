@@ -31,7 +31,9 @@ class ClienteController extends Controller
     public function data(Request $request)
     {
         $user = Auth::user();
-        $query = Cliente::where('company_id', $user->company_id)->activos();
+        $query = Cliente::where('company_id', $user->company_id)
+            ->where('sucursal_id', $user->branch_id)
+            ->activos();
 
         // Filtro de búsqueda
         if ($request->has('search') && !empty($request->search['value'])) {
@@ -112,8 +114,8 @@ class ClienteController extends Controller
 
         // 2. Verificar existencia (Evitar back() en AJAX)
         $existeCliente = Cliente::where('company_id', $user->company_id)
+            ->where('sucursal_id', $user->branch_id)
             ->where('numero_documento', $request->numero_documento)
-            ->where('tipo_documento', $request->tipo_documento)
             ->first();
 
         if ($existeCliente) {
@@ -205,8 +207,8 @@ class ClienteController extends Controller
 
         // Verificar si ya existe otro cliente con ese documento
         $existeCliente = Cliente::where('company_id', Auth::user()->company_id)
+            ->where('sucursal_id', Auth::user()->branch_id)
             ->where('numero_documento', $request->numero_documento)
-            ->where('tipo_documento', $request->tipo_documento)
             ->where('id', '!=', $cliente->id)
             ->first();
 
@@ -264,8 +266,8 @@ class ClienteController extends Controller
 
         // Verificar si ya existe el cliente
         $existeCliente = Cliente::where('company_id', $user->company_id)
+            ->where('sucursal_id', $user->branch_id)
             ->where('numero_documento', $documento)
-            ->where('tipo_documento', $tipoDocumento)
             ->first();
 
         if ($existeCliente) {
@@ -351,6 +353,7 @@ class ClienteController extends Controller
         $termino = $request->get('q', '');
 
         $clientes = Cliente::where('company_id', $user->company_id)
+            ->where('sucursal_id', $user->branch_id)
             ->activos()
             ->when($termino, function ($query, $termino) {
                 $query->buscar($termino);
@@ -383,6 +386,7 @@ class ClienteController extends Controller
         $query = $request->get('q', '');
 
         $clientes = Cliente::where('company_id', $user->company_id)
+            ->where('sucursal_id', $user->branch_id)
             ->where('activo', 1)
             ->where(function ($q) use ($query) {
                 $q->where('nombre', 'like', "%{$query}%")
@@ -430,6 +434,7 @@ class ClienteController extends Controller
                 'success' => true,
                 'data' => [
                     'dni' => $data['dni'] ?? $dni,
+                    'numero_documento' => $data['dni'] ?? $dni,
                     'nombres' => $data['nombres'] ?? '',
                     'apellido_paterno' => $data['apellidoPaterno'] ?? '',
                     'apellido_materno' => $data['apellidoMaterno'] ?? '',
