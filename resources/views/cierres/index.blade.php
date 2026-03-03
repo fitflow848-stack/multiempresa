@@ -6,16 +6,18 @@
     <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="h3 mb-0">Cierres de Caja</h1>
-                <small class="text-muted">Registro y control de cierres de caja</small>
+                <h1 class="h3 mb-0">{{ $isTesoreria ? 'Arqueos de Tesorería' : 'Cierres de Caja' }}</h1>
+                <small class="text-muted">{{ $isTesoreria ? 'Registro y control de bóvedas generales' : 'Registro y control de cierres de caja' }}</small>
             </div>
             <div class="d-flex gap-2">
+                @if (!$isTesoreria)
                 <a href="{{ route('pos.index') }}" class="btn btn-outline-secondary">
                     <i class="fas fa-cash-register me-2"></i>Ir a TPV
                 </a>
+                @endif
                 @if (!$openCaja)
-                    <a href="{{ route('cierre-caja.create') }}" class="btn btn-primary">
-                        <i class="fas fa-plus me-2"></i>Abrir Caja
+                    <a href="{{ route('cierre-caja.create', ['tipo' => $isTesoreria ? 'tesoreria' : 'caja']) }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>{{ $isTesoreria ? 'Abrir Bóveda' : 'Abrir Caja' }}
                     </a>
                 @endif
             </div>
@@ -38,15 +40,16 @@
                             </select>
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label">Caja</label>
+                            <label class="form-label">Caja (Contexto Actual)</label>
                             <select name="caja_id" class="form-select">
                                 <option value="">Todas</option>
-                                @foreach (auth()->user()->cajasDisponibles() as $c)
-                                    <option value="{{ $c->id }}" {{ request('caja_id') == $c->id ? 'selected' : '' }}>
+                                @foreach (auth()->user()->cajasDisponibles()->filter(function($c) use ($isTesoreria) { return (bool)$c->is_boveda === $isTesoreria; }) as $c)
+                                    <option value="{{ $c->id }}" {{ $filtroCajaId == $c->id ? 'selected' : '' }}>
                                         {{ $c->nombre }}
                                     </option>
                                 @endforeach
                             </select>
+                            <input type="hidden" name="tipo" value="{{ $isTesoreria ? 'tesoreria' : 'caja' }}">
                         </div>
                     @endif
 

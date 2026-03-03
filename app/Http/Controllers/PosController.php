@@ -85,10 +85,9 @@ class PosController extends Controller
     public function buscar(Request $request)
     {
         $q = $request->get('q', '');
-        $sucursalId = Auth::user()->branch_id;
 
-        // Usamos el método buscar del repositorio
-        $productos = $this->productRepo->buscar($q, $sucursalId);
+        // El repositorio ya toma el active_branch_id de la sesión por defecto
+        $productos = $this->productRepo->buscar($q);
 
         return response()->json($productos);
     }
@@ -101,9 +100,8 @@ class PosController extends Controller
             return response()->json(['error' => 'ID de producto requerido'], 400);
         }
 
-        $sucursalId = Auth::user()->branch_id;
-        // Usamos el método obtenerLotes del repositorio
-        $lotes = $this->productRepo->obtenerLotes((int) $productoId, $sucursalId);
+        // El repositorio ya toma el active_branch_id de la sesión por defecto
+        $lotes = $this->productRepo->obtenerLotes((int) $productoId);
 
         return response()->json($lotes);
     }
@@ -153,7 +151,7 @@ class PosController extends Controller
         }
 
         // Obtener lotes disponibles del producto
-        $lotes = $this->productRepo->elegirStock((int) $productoId, $sucursalId);
+        $lotes = $this->productRepo->elegirStock((int) $productoId);
 
         return view('pos.elegir-stock', compact('user', 'company', 'producto', 'lotes'));
     }

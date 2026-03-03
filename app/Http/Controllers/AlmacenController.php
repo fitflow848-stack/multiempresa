@@ -23,15 +23,16 @@ class AlmacenController extends Controller
             ->where('company_id', $company->id)
             ->get();
 
-        // Query base
+        // Query base: agrupamos por producto_linea_id para sumar existencias de diferentes lotes
         $query = DB::table('almacen_ingreso_detalle as d')
-            ->join('productos as p', 'p.id', 'd.producto_id')
-            ->join('producto_lineas as pl', 'pl.producto_id', 'p.id')
+            ->join('productos as p', 'p.id', '=', 'd.producto_id')
+            ->join('producto_lineas as pl', 'pl.id', '=', 'd.producto_linea_id')
             ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
             ->leftJoin('sucursales as s', 's.id', '=', 'i.sucursal_id')
             ->select(
-                'd.id',
+                DB::raw('MAX(d.id) as id'), // El ID representativo del lote más reciente para acciones
                 'd.producto_id',
+                'd.producto_linea_id',
                 'p.nombre as producto',
                 'pl.cb as codigo',
                 's.nombre as almacen_nombre',
@@ -76,8 +77,10 @@ class AlmacenController extends Controller
             }
         }
 
-        $stocks = $query->groupBy('d.id', 'd.producto_id', 'p.nombre', 'pl.cb', 's.nombre')
-            ->paginate(20);
+        // Aplicar la agrupación obligatoria para las funciones agregadas y evitar error 1055
+        $query->groupBy('d.producto_id', 'd.producto_linea_id', 'p.nombre', 'pl.cb', 's.nombre');
+
+        $stocks = $query->paginate(20);
 
         $productos = $stocks;
 
@@ -126,13 +129,15 @@ class AlmacenController extends Controller
     {
         $user = Auth::user();
         $query = DB::table('almacen_ingreso_detalle as d')
-            ->join('productos as p', 'p.id', 'd.producto_id')
+            ->join('productos as p', 'p.id', '=', 'd.producto_id')
+            ->join('producto_lineas as pl', 'pl.id', '=', 'd.producto_linea_id')
             ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
             ->leftJoin('sucursales as s', 's.id', '=', 'i.sucursal_id')
             ->select(
-                'd.id',
+                DB::raw('MAX(d.id) as id'),
+                'd.producto_id',
                 'p.nombre as producto',
-                'p.codigo_barras as codigo',
+                'pl.cb as codigo',
                 's.nombre as almacen_nombre',
                 DB::raw('SUM(d.cantidad) as existencias'),
                 DB::raw('AVG(d.costo) as costo'),
@@ -156,7 +161,7 @@ class AlmacenController extends Controller
             });
         }
 
-        $productos = $query->groupBy('d.id', 'd.producto_id', 'p.nombre', 'p.codigo_barras', 's.nombre')
+        $productos = $query->groupBy('d.producto_id', 'd.producto_linea_id', 'p.nombre', 'pl.cb', 's.nombre')
             ->get();
 
         return response()->json($productos);

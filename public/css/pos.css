@@ -40,17 +40,18 @@ html {
 .header-select {
     border: 1px solid #ddd;
     border-radius: 4px;
-    padding: 2px 5px;
-    font-size: 11px;
+    padding: 3px 8px;
+    font-size: 13px;
     color: #333;
     outline: none;
+    background: #f8f9fa;
 }
 
 .header-right {
     display: flex;
     align-items: center;
     gap: 15px;
-    font-size: 11px;
+    font-size: 13px;
 }
 
 .pos-header .nav-item {
@@ -101,14 +102,14 @@ html {
 .action-bar {
     background: #f9fafb;
     /* Lighter background */
-    padding: 6px 15px;
+    padding: 8px 15px;
     border-bottom: 1px solid #e0e0e0;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 10px;
-    height: 42px;
-    /* Fixed height */
+    height: 52px;
+    /* Increased height for larger inputs */
 }
 
 .bar-left {
@@ -135,12 +136,18 @@ html {
 }
 
 .search-input {
-    border: 1px solid #ccc;
-    border-radius: 3px;
-    padding: 4px 8px;
-    font-size: 11px;
-    /* Smaller font as requested */
-    height: 26px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    /* Readable but not huge */
+    height: 34px;
+    color: #333;
+    transition: all 0.2s;
+}
+.search-input:focus {
+    border-color: #696cff;
+    box-shadow: 0 0 0 3px rgba(105, 108, 255, 0.1);
 }
 
 .main-search {
@@ -175,7 +182,7 @@ html {
     display: flex;
     align-items: center;
     gap: 15px;
-    font-size: 11px;
+    font-size: 14px;
 }
 
 .payment-group {
@@ -248,8 +255,8 @@ html {
 
 .ticket-header-compact {
     background: #f1f3f4;
-    padding: 4px 10px;
-    font-size: 11px;
+    padding: 6px 12px;
+    font-size: 13px;
     font-weight: bold;
     color: #555;
     border-bottom: 1px solid #ddd;
@@ -279,19 +286,19 @@ html {
 .ticket-controls-compact {
     display: flex;
     justify-content: flex-end;
-    gap: 5px;
-    padding: 4px 5px;
+    gap: 8px;
+    padding: 6px 10px;
     background: #fff;
     border-bottom: 1px solid #eee;
 }
 
 .btn-compact {
-    padding: 3px 10px;
-    font-size: 10px;
-    border-radius: 2px;
+    padding: 6px 15px;
+    font-size: 13px;
+    border-radius: 4px;
     border: 1px solid transparent;
     cursor: pointer;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .btn-compact.danger {
@@ -321,28 +328,26 @@ html {
 
 /* --- Footer --- */
 .pos-footer-led {
-    background: #000;
-    color: #0f0;
-    padding: 8px 15px;
-    font-family: 'Courier New', monospace;
+    background: #1e293b;
+    /* Sleek slate background */
+    color: #f8fafc;
+    padding: 10px 20px;
     display: flex;
     justify-content: flex-start;
     align-items: center;
-    gap: 40px;
+    gap: 30px;
     flex-shrink: 0;
     z-index: 200;
-    min-height: 60px;
-    border-top: 2px solid #333;
+    min-height: 70px;
+    border-top: 1px solid #334155;
     position: relative;
-    /* For absolute positioning of client */
 }
 
 .footer-totals-led {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 4px;
     font-size: 14px;
-    font-weight: bold;
 }
 
 .footer-totals-led div {
@@ -351,35 +356,64 @@ html {
     min-width: 180px;
 }
 
+.footer-totals-led .value {
+    font-family: 'Courier New', monospace;
+    color: #22c55e;
+    font-weight: bold;
+}
+
 .footer-dsctos {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 4px;
     font-size: 14px;
-    font-weight: bold;
-    color: #0f0;
 }
 
 .footer-dsctos div {
     display: flex;
     gap: 15px;
-    /* Add gap between label/value and extra text */
     align-items: center;
 }
 
-.footer-cliente {
-    position: absolute;
-    right: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 20px;
-    /* Big font for client */
+.footer-dsctos .value {
+    font-family: 'Courier New', monospace;
+    color: #fbbf24;
     font-weight: bold;
+}
+
+/* TOTAL STYLING */
+#footer-total-container {
+    background: rgba(34, 197, 94, 0.1);
+    padding: 5px 15px;
+    border-radius: 8px;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.total-label {
+    font-size: 16px;
+    font-weight: 800;
+    color: #f8fafc;
+}
+
+.total-value {
+    font-size: 26px;
+    font-weight: 900;
+    color: #22c55e;
+    font-family: 'Courier New', monospace;
+}
+
+.footer-cliente {
+    margin-left: auto;
+    font-size: 18px;
+    font-weight: 700;
     display: flex;
     align-items: center;
-    gap: 10px;
-    background: #000;
-    padding-left: 10px;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 8px 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: #e2e8f0;
 }
 
 
@@ -393,18 +427,18 @@ html {
     background: #f8f9fa;
     position: sticky;
     top: 0;
-    font-size: 10px;
+    font-size: 13px;
     text-transform: uppercase;
-    color: #666;
-    padding: 6px 8px;
+    color: #444;
+    padding: 10px 12px;
     border-bottom: 1px solid #ddd;
     text-align: left;
 }
 
 .productos-table td {
-    padding: 8px;
+    padding: 12px;
     border-bottom: 1px solid #f0f0f0;
-    font-size: 12px;
+    font-size: 14px;
     color: #333;
 }
 

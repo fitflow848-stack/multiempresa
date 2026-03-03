@@ -14,14 +14,14 @@ return new class extends Migration
         Schema::table('clientes', function (Blueprint $table) {
             // Eliminar la restricción única existente
             // El nombre por defecto suele ser: clientes_company_id_numero_documento_tipo_documento_unique
-            try {
-                $table->dropUnique(['company_id', 'numero_documento', 'tipo_documento']);
-            } catch (\Exception $e) {
-                // Si ya fue eliminada o tiene otro nombre
-            }
+            // try {
+            //     $table->dropUnique(['company_id', 'numero_documento', 'tipo_documento']);
+            // } catch (\Exception $e) {
+            //     // Si ya fue eliminada o tiene otro nombre
+            // }
 
             // Nueva restricción única: company_id, sucursal_id, numero_documento
-            $table->unique(['company_id', 'sucursal_id', 'numero_documento'], 'clientes_unique_identity');
+            // $table->unique(['company_id', 'sucursal_id', 'numero_documento'], 'clientes_unique_identity');
         });
     }
 

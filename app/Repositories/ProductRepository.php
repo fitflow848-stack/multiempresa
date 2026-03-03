@@ -14,6 +14,7 @@ class ProductRepository
      */
     public function buscar(string $q, ?int $sucursalId = null): array
     {
+        $sucursalId = $sucursalId ?? session('active_branch_id');
         $joinIngresos = $sucursalId ? "INNER JOIN almacen_ingresos ai ON ai.id = ad.ingreso_id AND ai.sucursal_id = ?" : "";
         $params = ["%{$q}%", "%{$q}%"];
         if ($sucursalId) {
@@ -23,21 +24,21 @@ class ProductRepository
         return DB::select("
             SELECT
                 p.id AS producto_id,
-                p.tipo_impuesto,
+                MAX(p.tipo_impuesto) as tipo_impuesto,
                 ad.producto_linea_id AS product_linea_id,
                 MAX(ad.id) AS id,
                 CONCAT_WS(' / ', 
-                    p.nombre, 
+                    MAX(p.nombre), 
                     NULLIF(CONCAT_WS(' ', 
-                        NULLIF(NULLIF(TRIM(pl.presentacion), ''), '-- Ver --'),
-                        NULLIF(NULLIF(TRIM(pl.concentracion), ''), '-- Ver --')
+                        NULLIF(NULLIF(TRIM(MAX(pl.presentacion)), ''), '-- Ver --'),
+                        NULLIF(NULLIF(TRIM(MAX(pl.concentracion)), ''), '-- Ver --')
                     ), '')
                 ) AS nombre,
                 CONCAT(
-                    'lt. ', ad.lote, ' Fv. ', LPAD(DAY(ad.fecha_vencimiento), 2, '0'),
-                    ' ', LOWER(LEFT(MONTHNAME(ad.fecha_vencimiento), 3)), ' ', RIGHT(YEAR(ad.fecha_vencimiento), 2)
+                    'lt. ', MAX(ad.lote), ' Fv. ', LPAD(DAY(MAX(ad.fecha_vencimiento)), 2, '0'),
+                    ' ', LOWER(LEFT(MONTHNAME(MAX(ad.fecha_vencimiento)), 3)), ' ', RIGHT(YEAR(MAX(ad.fecha_vencimiento)), 2)
                 ) AS detalle,
-                m.nombre AS marca,
+                MAX(m.nombre) AS marca,
                 MAX(f.nombre) AS familia,
                 MAX(um.nombre) AS unidad_medida,
                 MAX(p.ficha_tecnica) AS ficha_tecnica,
@@ -50,7 +51,7 @@ class ProductRepository
                 MAX(ad.pvc) AS pvc,
                 MAX(ad.pvcd) AS pvcd,
                 COUNT(ad.id) AS total_lotes,
-                ad.fecha_vencimiento,
+                MAX(ad.fecha_vencimiento) as fecha_vencimiento,
                 MAX(ad.stock_min) AS stock_min,
                 CASE 
                     WHEN SUM(ad.cantidad) <= MAX(COALESCE(ad.stock_min, 0)) AND MAX(COALESCE(ad.stock_min, 0)) > 0 
@@ -65,13 +66,15 @@ class ProductRepository
             LEFT JOIN familias f ON f.id = p.familia_id
             LEFT JOIN unidades_medida um ON um.id = p.unidad_medida_id
             WHERE (p.nombre LIKE ? OR p.codigo_barras LIKE ?) AND ad.cantidad > 0
-            GROUP BY p.id, p.tipo_impuesto, ad.producto_linea_id, p.nombre, pl.presentacion, pl.concentracion, ad.lote, ad.fecha_vencimiento, m.nombre
-            ORDER BY p.nombre ASC
+            GROUP BY p.id, ad.producto_linea_id
+            ORDER BY MAX(p.nombre) ASC
         ", $params);
     }
 
     public function obtenerLotes(int $productoId, ?int $sucursalId = null): array
     {
+        $sucursalId = $sucursalId ?? session('active_branch_id');
+        
         $joinIngresos = $sucursalId ? "INNER JOIN almacen_ingresos ai ON ai.id = ad.ingreso_id AND ai.sucursal_id = ?" : "";
         $params = $sucursalId ? [$sucursalId, $productoId] : [$productoId];
         
@@ -97,6 +100,7 @@ class ProductRepository
 
     public function elegirStock(int $productoId, ?int $sucursalId = null): array
     {
+        $sucursalId = $sucursalId ?? session('active_branch_id');
         $joinIngresos = $sucursalId ? "INNER JOIN almacen_ingresos ai ON ai.id = ad.ingreso_id AND ai.sucursal_id = ?" : "";
         $params = $sucursalId ? [$sucursalId, $productoId] : [$productoId];
 

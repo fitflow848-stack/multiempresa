@@ -213,33 +213,29 @@
         <div class="pos-footer-led">
             <div class="footer-totals-led">
                 <div>
-                    <span class="label">Gravada</span> : <span class="value">S/ <span id="footer-gravada">0.00</span></span>
+                    <span class="label">GRAVADA</span> <span class="value">S/ <span id="footer-gravada">0.00</span></span>
                 </div>
                 <div>
-                    <span class="label">Exonerada</span> : <span class="value">S/ <span
-                            id="footer-exonerada">0.00</span></span>
+                    <span class="label">EXONERADA</span> <span class="value">S/ <span id="footer-exonerada">0.00</span></span>
                 </div>
                 <div>
-                    <span class="label">IGV</span> : <span class="value">S/ <span id="footer-igv">0.00</span></span>
-                </div>
-                <div>
-                    <span class="label">ICBPER</span> : <span class="value">S/ <span id="footer-icbper">0.00</span></span>
+                    <span class="label">I.G.V.</span> <span class="value">S/ <span id="footer-igv">0.00</span></span>
                 </div>
             </div>
+            
             <div class="footer-dsctos">
                 <div>
-                    <span class="label">Dscto Detalle</span> : <span class="value">S/ <span
-                            id="footer-dscto">0.00</span></span>
-                    <span class="productos-listados">en <span id="footer-productos-listados">0</span> productos
-                        listados</span>
+                    <span class="label">DESCUENTO</span> <span class="value">S/ <span id="footer-dscto">0.00</span></span>
                 </div>
-                <div>
-                    <span class="label">TOTAL</span> : <span class="value">S/ <span id="footer-total">0.00</span></span>
-                    <span class="productos-listados" style="opacity:0;">listados</span>
+                <div id="footer-total-container">
+                    <span class="total-label">TOTAL</span> 
+                    <span class="total-value">S/ <span id="footer-total">0.00</span></span>
                 </div>
             </div>
+
             <div class="footer-cliente" onclick="mostrarBuscadorClientes()" style="cursor: pointer;">
-                <span id="footer-cliente" style="font-weight:bold;">CLIENTE CONTABLE</span>
+                <i class="bx bx-user-circle fs-3"></i>
+                <span id="footer-cliente">CLIENTE CONTABLE</span>
             </div>
         </div>
     </div>

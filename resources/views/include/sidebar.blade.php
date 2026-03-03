@@ -211,8 +211,8 @@
                         </a>
                         <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="ventasDropdown">
                             @if (isset($current_user_cajas) && $current_user_cajas->count() > 0)
-                                <li class="dropdown-header text-uppercase fs-tiny fw-bold">Caja Activa</li>
-                                @foreach ($current_user_cajas as $caja)
+                                <li class="dropdown-header text-uppercase fs-tiny fw-bold">Cajas de Venta</li>
+                                @foreach ($current_user_cajas->where('is_boveda', false) as $caja)
                                     @php
                                         $sesionAbierta = \App\Models\CierreCaja::where('caja_id', $caja->id)
                                             ->whereNull('fecha_cierre')
@@ -242,6 +242,42 @@
                                         </form>
                                     </li>
                                 @endforeach
+                                
+                                @if($current_user_cajas->where('is_boveda', true)->count() > 0)
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li class="dropdown-header text-uppercase fs-tiny fw-bold">Bóvedas / Tesorería</li>
+                                    @foreach ($current_user_cajas->where('is_boveda', true) as $caja)
+                                        @php
+                                            $sesionAbierta = \App\Models\CierreCaja::where('caja_id', $caja->id)
+                                                ->whereNull('fecha_cierre')
+                                                ->first();
+                                            $enUsoPorOtro = $sesionAbierta && $sesionAbierta->user_id !== auth()->id();
+                                        @endphp
+                                        <li>
+                                            <form action="{{ route('caja.select') }}" method="POST"
+                                                id="form-caja-{{ $caja->id }}">
+                                                @csrf
+                                                <input type="hidden" name="caja_id" value="{{ $caja->id }}">
+                                                <button type="submit" {{ $enUsoPorOtro ? 'disabled' : '' }}
+                                                    class="dropdown-item d-flex justify-content-between align-items-center {{ session('selected_caja_id') == $caja->id ? 'bg-light fw-bold text-primary' : '' }}">
+                                                    <span class="{{ $enUsoPorOtro ? 'text-muted' : '' }}">
+                                                        <i class="bx bx-cabinet me-2"></i>{{ $caja->nombre }}
+                                                        @if ($sesionAbierta)
+                                                            <small
+                                                                class="ms-1 {{ $enUsoPorOtro ? 'text-danger fw-bold' : 'text-success fw-bold' }}">
+                                                                ({{ $enUsoPorOtro ? 'En uso: ' . $sesionAbierta->user->name : 'Abierta por ti' }})
+                                                            </small>
+                                                        @endif
+                                                    </span>
+                                                    @if (session('selected_caja_id') == $caja->id)
+                                                        <i class="bx bx-check text-primary"></i>
+                                                    @endif
+                                                </button>
+                                            </form>
+                                        </li>
+                                    @endforeach
+                                @endif
+
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
@@ -290,9 +326,15 @@
                             @endcan
                             @can('caja.ver')
                                 <li>
-                                    <a class="dropdown-item {{ request()->is('cierre-caja*') ? 'active' : '' }}"
+                                    <a class="dropdown-item {{ request()->is('cierre-caja*') && request()->get('tipo') == 'tesoreria' ? 'active' : '' }}"
+                                        href="{{ route('cierre-caja.index', ['tipo' => 'tesoreria']) }}">
+                                        <i class="bx bx-cabinet me-2"></i> Tesorería / Bóvedas
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item {{ request()->is('cierre-caja*') && request()->get('tipo') != 'tesoreria' ? 'active' : '' }}"
                                         href="{{ route('cierre-caja.index') }}">
-                                        <i class="bx bx-cabinet me-2"></i> Tesorería / Caja
+                                        <i class="bx bx-box me-2"></i> Arqueo de Cajas Base
                                     </a>
                                 </li>
                             @endcan

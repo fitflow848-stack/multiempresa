@@ -24,7 +24,13 @@ class Pasivo extends Model
         'estado',
         'fecha_registro',
         'documento',
-        'observaciones'
+        'observaciones',
+        'user_id',
+        'cierre_caja_id',
+        'id_operacion_caja',
+        'is_settled',
+        'tipo_adelanto',
+        'is_compra_credito'
     ];
 
     protected $casts = [
@@ -36,6 +42,21 @@ class Pasivo extends Model
     public function tipo()
     {
         return $this->belongsTo(TipoPasivo::class, 'tipo_pasivo_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function cierreCaja()
+    {
+        return $this->belongsTo(CierreCaja::class);
+    }
+
+    public function operacionCaja()
+    {
+        return $this->belongsTo(OperacionCaja::class, 'id_operacion_caja');
     }
 
     public function pagos()

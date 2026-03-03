@@ -29,12 +29,18 @@ class CreateSucursal extends CreateRecord
             ]);
 
             // Assign to users with super_admin or admin_empresa
-            $users = \App\Models\User::role(['super_admin', 'admin_empresa'])
+            $users = \App\Models\User::role(['super_admin', 'admin_empresa', 'Admin'])
                 ->where('company_id', $sucursal->company_id)
                 ->get();
 
             if ($users->count() > 0) {
                 $boveda->users()->syncWithoutDetaching($users->pluck('id'));
+            }
+            
+            // También asignar al usuario actual por si acaso
+            $currentUser = auth()->guard('admin')->user() ?? auth()->guard('web')->user();
+            if ($currentUser) {
+                $boveda->users()->syncWithoutDetaching([$currentUser->id]);
             }
         }
     }

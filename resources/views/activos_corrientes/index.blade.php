@@ -89,26 +89,43 @@
                                     @forelse($activos as $activo)
                                         <tr>
                                             <td>{{ $activo->fecha_registro->format('d/m/Y') }}</td>
-                                            <td><span class="badge bg-primary">{{ $activo->tipo->nombre }}</span></td>
+                                            <td><span class="badge bg-primary">{{ $activo->tipo->nombre }}</span> @if(str_contains(strtolower($activo->tipo->nombre), 'adelanto') && $activo->is_settled)<span class="badge bg-success ml-1">SALDADO</span>@endif</td>
                                             <td>{{ $activo->nombre }}</td>
                                             <td>{{ $activo->documento ?? '-' }}</td>
                                             <td class="text-right font-weight-bold">S/
                                                 {{ number_format($activo->monto, 2) }}</td>
-                                            <td class="text-center">
-                                                <form action="{{ route('activos_corrientes.destroy', $activo->id) }}"
-                                                    method="POST" class="d-inline delete-form">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-danger btn-circle btn-sm"
-                                                        title="Eliminar">
-                                                        <i class="bx bx-trash"></i>
-                                                    </button>
-                                                </form>
-                                                <button type="button" class="btn btn-warning btn-circle btn-sm btn-edit-activo"
-                                                    data-id="{{ $activo->id }}" title="Editar">
-                                                    <i class="bx bx-edit"></i>
-                                                </button>
-                                            </td>
+                                             <td class="text-center">
+                                                 @if(str_contains(strtolower($activo->tipo->nombre), 'adelanto') && !$activo->is_settled)
+                                                     <form action="{{ route('finanzas.saldar-adelanto-personal', $activo->id) }}"
+                                                         method="POST" class="d-inline confirm-form" data-msg="¿Desea marcar este adelanto como SALDADO?">
+                                                         @csrf
+                                                         <button type="submit" class="btn btn-success btn-circle btn-sm" title="Saldar">
+                                                             <i class="fas fa-check"></i>
+                                                         </button>
+                                                     </form>
+                                                 @endif
+
+                                                 @if(str_contains(strtolower($activo->tipo->nombre), 'adelanto'))
+                                                     <a href="{{ route('finanzas.ticket-personal', $activo->id) }}" target="_blank"
+                                                        class="btn btn-info btn-circle btn-sm" title="Ver Ticket">
+                                                         <i class="fas fa-print"></i>
+                                                     </a>
+                                                 @endif
+
+                                                 <form action="{{ route('activos_corrientes.destroy', $activo->id) }}"
+                                                     method="POST" class="d-inline delete-form">
+                                                     @csrf
+                                                     @method('DELETE')
+                                                     <button type="submit" class="btn btn-danger btn-circle btn-sm"
+                                                         title="Eliminar">
+                                                         <i class="bx bx-trash"></i>
+                                                     </button>
+                                                 </form>
+                                                 <button type="button" class="btn btn-warning btn-circle btn-sm btn-edit-activo"
+                                                     data-id="{{ $activo->id }}" title="Editar">
+                                                     <i class="bx bx-edit"></i>
+                                                 </button>
+                                             </td>
                                         </tr>
                                     @empty
                                         <tr>
@@ -376,7 +393,15 @@
                 });
             });
 
-            // ... your existing code ...
+            // Confirmación genérica con mensaje personalizado
+            document.querySelectorAll('.confirm-form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    const msg = this.getAttribute('data-msg') || '¿Está seguro de realizar esta acción?';
+                    if (!confirm(msg)) {
+                        e.preventDefault();
+                    }
+                });
+            });
         });
     </script>
 @endpush

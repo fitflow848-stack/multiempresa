@@ -17,8 +17,7 @@ class PasivoController extends Controller
 {
     public function index(Request $request)
     {
-        $tipos = TipoPasivo::whereNotIn('nombre', ['Adelanto clientes', 'Adelanto de clientes', 'Adelantos personal'])
-            ->orderBy('nombre')
+        $tipos = TipoPasivo::orderBy('nombre')
             ->get();
 
         $query = Pasivo::with(['tipo', 'pagos'])->orderBy('fecha_registro', 'desc');

@@ -17,34 +17,74 @@ class CierreCajaController extends Controller
         $user = Auth::user();
         $selectedCajaId = session('selected_caja_id');
 
+        $isTesoreria = $request->has('tipo') && $request->tipo === 'tesoreria';
+
         $query = CierreCaja::with(['user', 'caja'])->latest();
+
+        // Separar visiblemente las cajas normales de las bóvedas/tesorerías
+        if ($isTesoreria) {
+            $query->whereHas('caja', function($q) {
+                $q->where('is_boveda', true);
+            });
+        } else {
+            $query->whereHas('caja', function($q) {
+                $q->where('is_boveda', false);
+            });
+        }
 
         // Filtro por empresa
         $query->where('id_empresa', $user->company_id);
 
-        // Filtro por la caja seleccionada en la sesión (Solo para usuarios sin rol administrativo)
-        if ($selectedCajaId && !$user->hasAnyRole(['super_admin', 'admin_empresa', 'supervisor'])) {
-            $query->where('caja_id', $selectedCajaId);
+        // Filtro por sucursal activa
+        if ($user->hasAnyRole(['admin_empresa', 'supervisor']) && $user->branch_id) {
+            $query->whereHas('caja', function($q) use ($user) {
+                $q->where('sucursal_id', $user->branch_id);
+            });
+        }
+
+        // Lógica de filtro por caja: si selecciona una explícitamente, o si tiene una en sesión
+        $filtroCajaId = null;
+        if ($request->has('caja_id')) {
+            $filtroCajaId = $request->caja_id; // Puede ser un ID o '' (Todas)
+        } else {
+            // Por defecto, usar la de sesión si existe y coincide con el tipo (Bóveda vs Normal)
+            if ($selectedCajaId) {
+                $cajaSesion = Caja::find($selectedCajaId);
+                if ($cajaSesion && (bool)$cajaSesion->is_boveda === $isTesoreria) {
+                    $filtroCajaId = $selectedCajaId;
+                }
+            }
+        }
+
+        // Aplicar el ID de caja a la consulta si no está vacío
+        if (!empty($filtroCajaId)) {
+            $query->where('caja_id', $filtroCajaId);
+        } elseif (!$user->hasAnyRole(['super_admin', 'admin_empresa', 'supervisor'])) {
+            // Un usuario normal DEBE tener una caja asignada por sesión para ver. 
+            // Si la caja seleccionada no es del tipo actual, aún forzamos filtro por su ID de caja asignada 
+            // (que hará que no vea nada) o simplemente filtraremos a sus cajas asignadas de este tipo.
+            // Para mantener compatibilidad con el diseño original:
+            if ($selectedCajaId) {
+                $query->where('caja_id', $selectedCajaId);
+            }
         }
 
         // Si no es admin/supervisor, solo ve sus propios cierres
         if (!$user->hasAnyRole(['super_admin', 'admin_empresa', 'supervisor'])) {
             $query->where('user_id', $user->id);
+        } else {
+            // Filtro manual de usuario
+            if ($request->filled('user_id')) {
+                $query->where('user_id', $request->user_id);
+            }
         }
 
-        // Aplicar filtros
-        if ($request->filled('user_id') && $user->hasAnyRole(['super_admin', 'admin_empresa', 'supervisor'])) {
-            $query->where('user_id', $request->user_id);
-        }
+        // Aplicar filtros de fecha
         if ($request->filled('fecha_desde')) {
             $query->whereDate('created_at', '>=', $request->fecha_desde);
         }
         if ($request->filled('fecha_hasta')) {
             $query->whereDate('created_at', '<=', $request->fecha_hasta);
-        }
-
-        if ($request->filled('caja_id') && $user->hasAnyRole(['super_admin', 'admin_empresa', 'supervisor'])) {
-            $query->where('caja_id', $request->caja_id);
         }
 
         $cierres = $query->paginate(20);
@@ -53,26 +93,33 @@ class CierreCajaController extends Controller
         $openCaja = null;
         if ($selectedCajaId) {
             $openCaja = CierreCaja::where('caja_id', $selectedCajaId)
+                ->whereHas('caja', function($q) use ($isTesoreria) {
+                    $q->where('is_boveda', $isTesoreria);
+                })
                 ->whereNull('fecha_cierre')
                 ->latest()
                 ->first();
         } else {
-            // Si no hay caja seleccionada, ver si tiene alguna abierta en general
+            // Si no hay caja seleccionada, ver si tiene alguna abierta en general para este tipo
             $openCaja = CierreCaja::where('user_id', $user->id)
+                ->whereHas('caja', function($q) use ($isTesoreria) {
+                    $q->where('is_boveda', $isTesoreria);
+                })
                 ->whereNull('fecha_cierre')
                 ->latest()
                 ->first();
         }
 
-        return view('cierres.index', compact('cierres', 'openCaja'));
+        return view('cierres.index', compact('cierres', 'openCaja', 'isTesoreria', 'filtroCajaId'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
         $selectedCajaId = session('selected_caja_id');
+        $isTesoreria = $request->has('tipo') && $request->tipo === 'tesoreria';
 
         if (!$selectedCajaId) {
-            return redirect()->route('cierre-caja.index')->with('error', 'Debe seleccionar una caja activa en el menú superior antes de abrir una sesión.');
+            return redirect()->route('cierre-caja.index', ['tipo' => $request->tipo])->with('error', 'Debe seleccionar una caja activa en el menú superior antes de abrir una sesión.');
         }
 
         // Verificar si la caja ya está abierta
@@ -100,8 +147,9 @@ class CierreCajaController extends Controller
 
         // El saldo inicial será el monto de cierre del último arqueo, o 0 si no hay cierres previos
         $saldoInicial = $ultimoCierre ? $ultimoCierre->monto_cierre : 0.00;
+        $isTesoreria = $request->has('tipo') && $request->tipo === 'tesoreria';
 
-        return view('cierres.create', compact('saldoInicial', 'ultimoCierre'));
+        return view('cierres.create', compact('saldoInicial', 'ultimoCierre', 'isTesoreria'));
     }
 
     public function store(Request $request)
@@ -255,7 +303,6 @@ class CierreCajaController extends Controller
                         break;
                 }
             }
-
             // Para la vista principal de arqueo, usamos los totales de EFECTIVO
             // ya que se asume que el cierre es del cajón de dinero.
             $cierre->ingresos = $ingresosEfectivo;
@@ -263,11 +310,14 @@ class CierreCajaController extends Controller
             $cierre->aportaciones = $aportacionesEfectivo;
             $cierre->sustracciones = $sustraccionesEfectivo;
 
-            // Podemos pasar los totales generales a la vista si fuera necesario, 
-            // pero por ahora priorizamos que el teórico cuadre con el efectivo.
+            // Calculamos el teórico acumulado para el balance
+            $cierre->teorico_acumulado = $cierre->monto_apertura + $ingresosEfectivo - $egresosEfectivo + $aportacionesEfectivo - $sustraccionesEfectivo;
+            $cierre->descuatdre_calculado = $cierre->monto_cierre - $cierre->teorico_acumulado;
         }
 
-        return view('cierres.show', ['cierre' => $cierre, 'movimientos' => $movimientos, 'ingresosPorMetodo' => $ingresosPorMetodo]);
+        $isTesoreria = $cierre->caja ? $cierre->caja->is_boveda : false;
+
+        return view('cierres.show', ['cierre' => $cierre, 'movimientos' => $movimientos, 'ingresosPorMetodo' => $ingresosPorMetodo, 'isTesoreria' => $isTesoreria]);
     }
 
     public function close(Request $request, CierreCaja $cierre)

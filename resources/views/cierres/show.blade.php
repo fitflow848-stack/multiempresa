@@ -58,14 +58,14 @@
     <div id="cierre-container" class="container-fluid py-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
-                <h1 class="h4 mb-0 text-dark">Cierre de Caja #{{ $cierre->id }}</h1>
+                <h1 class="h4 mb-0 text-dark">{{ isset($isTesoreria) && $isTesoreria ? 'Arqueo de Tesorería' : 'Cierre de Caja' }} #{{ $cierre->id }}</h1>
                 <p class="text-muted small mb-0">Usuario: {{ auth()->user()->name ?? 'Administrador' }}</p>
             </div>
             <div class="d-flex gap-2">
                 <a href="{{ route('pos.index') }}" class="btn btn-sm btn-outline-primary px-3">
                     <i class="fas fa-cash-register me-1"></i> Volver TPV
                 </a>
-                <a href="{{ route('cierre-caja.index') }}" class="btn btn-sm btn-outline-secondary px-3">
+                <a href="{{ route('cierre-caja.index', isset($isTesoreria) && $isTesoreria ? ['tipo' => 'tesoreria'] : []) }}" class="btn btn-sm btn-outline-secondary px-3">
                     <i class="fas fa-chevron-left me-1"></i> Volver
                 </a>
                 @if ($cierre->fecha_cierre)
@@ -178,13 +178,28 @@
                                 placeholder="Notas adicionales sobre el cierre...">{{ $cierre->observaciones }}</textarea>
                         </div>
 
+                        <hr class="my-4">
+                        <h6 class="fw-bold mb-3 text-primary"><i class="fas fa-star me-1"></i> Operaciones Especiales</h6>
+                        <div class="d-grid gap-2">
+                             <button type="button" class="btn btn-outline-info btn-sm text-start" onclick="openModalAdelanto('personal')">
+                                <i class="fas fa-user-tag me-2"></i> Adelanto a Personal
+                            </button>
+                            <button type="button" class="btn btn-outline-success btn-sm text-start" onclick="openModalAdelanto('cliente')">
+                                <i class="fas fa-user-clock me-2"></i> Adelanto de Cliente
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm text-start" onclick="openModalAdelanto('compra_credito')">
+                                <i class="fas fa-file-invoice-dollar me-2"></i> Compra a Crédito
+                            </button>
+                        </div>
+
                         <input type="hidden" id="teorico_cierre" value="{{ $cierre->teorico_cierre }}">
                         <input type="hidden" id="descuadre" value="{{ $cierre->descuadre }}">
                     </div>
 
-                    <div class="mt-3 d-flex gap-2">
-                        <button id="btn-arqueo-actual" class="btn btn-sm btn-success">Arqueo Actual</button>
-                        <button id="btn-registrar-arqueo" class="btn btn-sm btn-primary">Registrar Arqueo</button>
+                    <div class="card-footer bg-white border-top-0 d-flex gap-2 pb-3">
+                        <button id="btn-arqueo-actual" class="btn btn-sm btn-success flex-grow-1">
+                            <i class="fas fa-calculator me-1"></i> Arqueo Actual
+                        </button>
                     </div>
                 </div>
             </div>
@@ -305,6 +320,54 @@
             <i class="bx bx-plus fa-lg"></i>
         </button>
     @endif
+
+    <!-- Modal Adelantos / Finanzas Especiales -->
+    <div id="modal-adelanto" class="modal" tabindex="-1" style="background: rgba(0,0,0,0.5); display: none;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0">
+                <div class="modal-header bg-primary text-white" id="adelanto-header">
+                    <h6 class="modal-title" id="adelanto-title">Registrar Adelanto</h6>
+                    <button type="button" class="btn-close btn-close-white" onclick="closeModals()"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="adelanto_type">
+                    <div class="row g-3">
+                        <div class="col-12" id="div-person">
+                            <label class="label-custom" id="label-person">Nombre del Personal</label>
+                            <input id="ad_nombre" class="form-control form-control-sm" placeholder="Ingrese nombre...">
+                        </div>
+                        <div class="col-12" id="div-empresa" style="display:none;">
+                            <label class="label-custom">Empresa / Proveedor</label>
+                            <input id="ad_empresa_persona" class="form-control form-control-sm" placeholder="Nombre de la empresa...">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="label-custom">Monto (S/)</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">S/</span>
+                                <input id="ad_monto" type="number" step="0.01" class="form-control fw-bold" value="0.00">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="label-custom">Fecha</label>
+                            <input id="ad_fecha" type="date" class="form-control form-control-sm" value="{{ date('Y-m-d') }}">
+                        </div>
+                        <div class="col-12" id="div-doc" style="display:none;">
+                            <label class="label-custom">Nro Documento / Referencia</label>
+                            <input id="ad_documento" class="form-control form-control-sm" placeholder="Ej: Recibo-001">
+                        </div>
+                        <div class="col-12">
+                            <label class="label-custom">Observaciones</label>
+                            <textarea id="ad_observaciones" class="form-control form-control-sm" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button class="btn btn-sm btn-light px-4" onclick="closeModals()">Cancelar</button>
+                    <button id="btn-save-adelanto" class="btn btn-sm btn-primary px-4">Registrar y Ver Ticket</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div id="modal-operacion" class="modal" tabindex="-1" style="background: rgba(0,0,0,0.5); display: none;">
         <div class="modal-dialog modal-dialog-centered">
@@ -447,12 +510,109 @@
     </div>
 
     <script>
+        function openModalAdelanto(type) {
+            document.getElementById('adelanto_type').value = type;
+            const header = document.getElementById('adelanto-header');
+            const title = document.getElementById('adelanto-title');
+            const divEmpresa = document.getElementById('div-empresa');
+            const divDoc = document.getElementById('div-doc');
+            const labelPerson = document.getElementById('label-person');
+
+            // Reset
+            divEmpresa.style.display = 'none';
+            divDoc.style.display = 'none';
+            header.className = 'modal-header text-white';
+
+            if (type === 'personal') {
+                title.innerText = 'Registrar Adelanto a Personal';
+                labelPerson.innerText = 'Nombre del Personal';
+                header.classList.add('bg-info');
+            } else if (type === 'cliente') {
+                title.innerText = 'Registrar Adelanto de Cliente';
+                labelPerson.innerText = 'Nombre del Cliente';
+                header.classList.add('bg-success');
+            } else if (type === 'compra_credito') {
+                title.innerText = 'Registrar Compra a Crédito';
+                labelPerson.innerText = 'Concepto / Referencia';
+                divEmpresa.style.display = 'block';
+                divDoc.style.display = 'block';
+                header.classList.add('bg-secondary');
+            }
+
+            document.getElementById('modal-adelanto').style.display = 'block';
+        }
+
+        // Handler para guardar adelantos
+        document.getElementById('btn-save-adelanto')?.addEventListener('click', async () => {
+            const type = document.getElementById('adelanto_type').value;
+            const payload = {
+                nombre: document.getElementById('ad_nombre').value,
+                monto: parseFloat(document.getElementById('ad_monto').value) || 0,
+                fecha_registro: document.getElementById('ad_fecha').value,
+                observaciones: document.getElementById('ad_observaciones').value,
+                cierre_caja_id: cierreId
+            };
+
+            if (type === 'compra_credito') {
+                payload.empresa_persona = document.getElementById('ad_empresa_persona').value;
+                payload.documento = document.getElementById('ad_documento').value;
+            }
+
+            if (!payload.nombre || payload.monto <= 0) {
+                alert('Por favor complete los campos obligatorios.');
+                return;
+            }
+
+            let url = "";
+            let ticketUrl = "";
+            if (type === 'personal') {
+                url = "{{ route('finanzas.adelanto-personal') }}";
+                ticketUrl = "/finanzas-especiales/ticket-personal/";
+            } else if (type === 'cliente') {
+                url = "{{ route('finanzas.adelanto-cliente') }}";
+                ticketUrl = "/finanzas-especiales/ticket-pasivo/";
+            } else if (type === 'compra_credito') {
+                url = "{{ route('finanzas.compra-credito') }}";
+                ticketUrl = "/finanzas-especiales/ticket-pasivo/";
+            }
+
+            const btn = document.getElementById('btn-save-adelanto');
+            btn.disabled = true;
+            btn.innerText = 'Procesando...';
+
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    window.open(ticketUrl + data.id, '_blank');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.message || 'No se pudo registrar la operación.'));
+                }
+            } catch (err) {
+                alert('Ocurrió un error de red.');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Registrar y Ver Ticket';
+            }
+        });
+
         const isCajaClosed = {{ $cierre->fecha_cierre ? 'true' : 'false' }};
         const cierreId = {{ $cierre->id }};
 
         function closeModals() {
             document.getElementById('modal-operacion').style.display = 'none';
             document.getElementById('modal-add-partida').style.display = 'none';
+            document.getElementById('modal-adelanto').style.display = 'none';
+            if (document.getElementById('modal-arqueo')) document.getElementById('modal-arqueo').style.display = 'none';
         }
 
         function recalcular() {

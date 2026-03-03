@@ -10,8 +10,7 @@ class ActivoCorrienteController extends Controller
 {
     public function index(Request $request)
     {
-        $tipos = TipoActivoCorriente::whereNotIn('nombre', ['Adelantos a Personal', 'Cuentas por Cobrar (CxC)'])
-            ->orderBy('nombre')
+        $tipos = TipoActivoCorriente::orderBy('nombre')
             ->get();
 
         $query = ActivoCorriente::with('tipo')->orderBy('fecha_registro', 'desc');

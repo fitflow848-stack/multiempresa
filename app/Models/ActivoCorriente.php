@@ -19,7 +19,12 @@ class ActivoCorriente extends Model
         'monto',
         'fecha_registro',
         'documento',
-        'observaciones'
+        'observaciones',
+        'user_id',
+        'cierre_caja_id',
+        'id_operacion_caja',
+        'is_settled',
+        'tipo_adelanto'
     ];
 
     protected $casts = [
@@ -30,5 +35,20 @@ class ActivoCorriente extends Model
     public function tipo()
     {
         return $this->belongsTo(TipoActivoCorriente::class, 'tipo_activo_corriente_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function cierreCaja()
+    {
+        return $this->belongsTo(CierreCaja::class);
+    }
+
+    public function operacionCaja()
+    {
+        return $this->belongsTo(OperacionCaja::class, 'id_operacion_caja');
     }
 }

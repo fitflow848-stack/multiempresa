@@ -6,8 +6,8 @@
 <div class="container-fluid bg-white p-3">
 	<div class="d-flex justify-content-between align-items-start border-bottom pb-2">
 		<div>
-			<h5 class="text-danger mb-0">Arqueos de caja</h5>
-			<small class="text-muted" id="movimientos_info">Movimientos de caja</small>
+			<h5 class="text-danger mb-0">{{ isset($isTesoreria) && $isTesoreria ? 'Apertura de Bóveda / Tesorería' : 'Apertura de Caja' }}</h5>
+			<small class="text-muted" id="movimientos_info">{{ isset($isTesoreria) && $isTesoreria ? 'Operaciones de la Bóveda General' : 'Movimientos de caja' }}</small>
 		</div>
 		<div class="text-end">
 			<span class="badge bg-success">ABIERTA</span>

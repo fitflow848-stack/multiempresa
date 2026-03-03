@@ -105,12 +105,38 @@
                                                 @else
                                                     <span class="badge bg-secondary">PENDIENTE</span>
                                                 @endif
+                                                @if($pasivo->is_settled || $pasivo->saldo == 0)
+                                                    <span class="badge bg-success">SALDADO</span>
+                                                @endif
                                             </td>
-                                            <td class="text-center">
-                                                @if($pasivo->saldo > 0)
+                                             <td class="text-center">
+                                                @if(str_contains(strtolower($pasivo->tipo->nombre), 'compra') && $pasivo->saldo > 0)
+                                                    <form action="{{ route('finanzas.pagar-compra-credito', $pasivo->id) }}"
+                                                        method="POST" class="d-inline confirm-form" data-msg="¿Desea marcar esta compra como PAGADA?">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-success btn-circle btn-sm" title="Pagar Compra">
+                                                            <i class="fas fa-hand-holding-usd"></i>
+                                                        </button>
+                                                    </form>
+                                                @elseif(str_contains(strtolower($pasivo->tipo->nombre), 'adelanto') && !$pasivo->is_settled)
+                                                     <form action="{{ route('finanzas.saldar-adelanto-cliente', $pasivo->id) }}"
+                                                        method="POST" class="d-inline confirm-form" data-msg="¿Desea marcar este adelanto como UTILIZADO/SALDADO? (Esto generará un egreso de caja neutro)">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-success btn-circle btn-sm" title="Saldar Adelanto">
+                                                            <i class="fas fa-user-check"></i>
+                                                        </button>
+                                                    </form>
+                                                @endif
+
+                                                <a href="{{ route('finanzas.ticket-pasivo', $pasivo->id) }}" target="_blank"
+                                                   class="btn btn-info btn-circle btn-sm" title="Ver Ticket">
+                                                    <i class="fas fa-print"></i>
+                                                </a>
+
+                                                @if($pasivo->saldo > 0 && !str_contains(strtolower($pasivo->tipo->nombre), 'compra'))
                                                     <button type="button" class="btn btn-primary btn-circle btn-sm"
                                                         onclick="abrirModalPagoPasivo({{ $pasivo->id }}, '{{ $pasivo->nombre }}', {{ $pasivo->saldo }})"
-                                                        title="Registrar Pago">
+                                                        title="Registrar Pago (Afecta Caja)">
                                                         <i class="bx bx-money"></i>
                                                     </button>
                                                 @endif
@@ -475,6 +501,14 @@
                             modalEditarPasivo.show();
                         })
                         .catch(error => alert('Error al cargar datos'));
+                });
+            // Confirmación genérica
+            document.querySelectorAll('.confirm-form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    const msg = this.getAttribute('data-msg') || '¿Está seguro de realizar esta acción?';
+                    if (!confirm(msg)) {
+                        e.preventDefault();
+                    }
                 });
             });
         });

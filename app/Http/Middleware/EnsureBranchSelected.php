@@ -25,12 +25,20 @@ class EnsureBranchSelected
 
             // Si no ha seleccionado sucursal en esta sesion
             if (!session('branch_selected')) {
-                $branchesCount = $user->branches()->count();
+                // Si es admin_empresa, puede entrar a CUALQUIERA de su empresa.
+                // Los demás roles solo las que tengan asignadas en el pivot.
+                if ($user->isAdminEmpresa()) {
+                    $branches = $user->company->sucursales ?? collect();
+                } else {
+                    $branches = $user->branches ?? collect();
+                }
+
+                $branchesCount = $branches->count();
 
                 if ($branchesCount > 1) {
                     return redirect()->route('branch.select');
                 } elseif ($branchesCount === 1) {
-                    $branch = $user->branches->first();
+                    $branch = $branches->first();
                     session([
                         'active_branch_id' => $branch->id,
                         'branch_selected' => true

@@ -337,4 +337,16 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::get('/export', [App\Http\Controllers\BalanceController::class, 'export'])->name('balance.export');
         Route::get('/graficos', [App\Http\Controllers\BalanceController::class, 'graficos'])->name('balance.graficos');
     });
+
+    // Finanzas Especiales (Adelantos, Compras Crédito)
+    Route::prefix('finanzas-especiales')->group(function () {
+        Route::post('/adelanto-personal', [App\Http\Controllers\FinanzasEspecialesController::class, 'storeAdelantoPersonal'])->name('finanzas.adelanto-personal');
+        Route::post('/saldar-adelanto-personal/{id}', [App\Http\Controllers\FinanzasEspecialesController::class, 'saldarAdelantoPersonal'])->name('finanzas.saldar-adelanto-personal');
+        Route::post('/adelanto-cliente', [App\Http\Controllers\FinanzasEspecialesController::class, 'storeAdelantoCliente'])->name('finanzas.adelanto-cliente');
+        Route::post('/saldar-adelanto-cliente/{id}', [App\Http\Controllers\FinanzasEspecialesController::class, 'saldarAdelantoCliente'])->name('finanzas.saldar-adelanto-cliente');
+        Route::post('/compra-credito', [App\Http\Controllers\FinanzasEspecialesController::class, 'storeCompraCredito'])->name('finanzas.compra-credito');
+        Route::post('/pagar-compra-credito/{id}', [App\Http\Controllers\FinanzasEspecialesController::class, 'pagarCompraCredito'])->name('finanzas.pagar-compra-credito');
+        Route::get('/ticket-personal/{id}', [App\Http\Controllers\FinanzasEspecialesController::class, 'ticketPersonal'])->name('finanzas.ticket-personal');
+        Route::get('/ticket-pasivo/{id}', [App\Http\Controllers\FinanzasEspecialesController::class, 'ticketPasivo'])->name('finanzas.ticket-pasivo');
+    });
 });

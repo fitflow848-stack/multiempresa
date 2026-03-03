@@ -185,7 +185,7 @@ class VentaService
             $venta->pagado = $entrega >= $total ? 1 : 0;
             $venta->moneda = 1; // PEN por defecto
             $venta->apli_igv = true;
-            $venta->sucursal = 1; // Por defecto (ajustar si tienes lógica)
+            $venta->sucursal = $user->branch_id; // Sincronizado con la sesión activa
             $venta->direccion = $clienteData['direccion'] ?? '-';
             $venta->cierre_caja_id = $openCaja->id;
             $venta->id_usuario = $user->id;
@@ -211,7 +211,7 @@ class VentaService
                 $deuda->estado = Deuda::ESTADO_PENDIENTE;
                 $deuda->observaciones = $observaciones;
                 $deuda->user_id = $user->id;
-                $deuda->sucursal_id = 1; // Ajustar según tu lógica
+                $deuda->sucursal_id = $user->branch_id; // Sincronizado con la sesión activa
                 $deuda->save();
 
                 Log::info("Deuda creada para cliente {$clienteData['id']} por monto S/ {$montoDeuda}", [
