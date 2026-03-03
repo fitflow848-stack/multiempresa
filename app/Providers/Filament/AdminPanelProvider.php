@@ -30,6 +30,7 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->brandName('WOLVIX - Sistema de Ventas')
             ->favicon(asset('favicon.ico'))
+            ->maxContentWidth('full')
             ->colors([
                 'primary' => Color::Blue,
             ])

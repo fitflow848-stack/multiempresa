@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" class="light-style layout-menu-fixed" dir="ltr" data-theme="theme-default"
+<html lang="es" class="light-style layout-without-menu" dir="ltr" data-theme="theme-default"
     data-assets-path="../assets/" data-template="vertical-menu-template-free">
 
 <head>
@@ -44,6 +44,37 @@
     <script src="{{ asset('assets/js/config.js') }}"></script>
 </head>
 <style>
+    /* Fix for layout width and horizontal overflow */
+    html,
+    body {
+        overflow-x: hidden;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    .layout-wrapper,
+    .content-wrapper {
+        width: 100% !important;
+        max-width: none !important;
+        flex-basis: auto !important;
+    }
+
+    /* Remove any fixed left padding/margin that layout-menu-fixed might have added */
+    .layout-page,
+    .content-wrapper,
+    .layout-wrapper:not(.layout-without-menu) .layout-page {
+        padding-left: 0 !important;
+        margin-left: 0 !important;
+    }
+
+    /* Ensure container-fluid actually takes full width */
+    .container-fluid {
+        width: 100% !important;
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+    }
+
     /* Ensure SweetAlert2 appears above Bootstrap modals */
     .swal2-container {
         z-index: 10000 !important;
@@ -60,7 +91,8 @@
 </style>
 @stack('styles')
 
-<body class="bg-body {{ View::hasSection('hideSidebar') ? 'p-0' : '' }}"> 
+<body class="bg-body {{ View::hasSection('hideSidebar') ? 'p-0' : '' }}">
+
     @if (!View::hasSection('hideSidebar'))
         @include('include.sidebar')
     @endif
