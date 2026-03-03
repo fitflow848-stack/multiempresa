@@ -459,18 +459,16 @@
                 `{{ route('deudas.pagar-acumulado') }}` :
                 `{{ url('deudas') }}/${targetId}/aplicar-pago`;
 
-            const body = tipo === 'acumulado' ?
-                {
-                    cliente_id: targetId,
-                    monto_pago: montoPago,
-                    metodo_pago,
-                    observaciones
-                } :
-                {
-                    monto_pago: montoPago,
-                    metodo_pago,
-                    observaciones
-                };
+            const body = tipo === 'acumulado' ? {
+                cliente_id: targetId,
+                monto_pago: montoPago,
+                metodo_pago,
+                observaciones
+            } : {
+                monto_pago: montoPago,
+                metodo_pago,
+                observaciones
+            };
 
             if (!confirm(`¿Está seguro de aplicar un pago de S/ ${montoPago} vía ${metodo_pago}?`)) return;
 
@@ -486,27 +484,52 @@
                 .then(data => {
                     if (data.success) {
                         $('#modalAplicarPago').modal('hide');
-                        let msg = data.message || 'Pago registrado correctamente';
-                        if (confirm(msg + '. ¿Desea imprimir el comprobante de pago ahora?')) {
-                            if (data.pago_id) {
-                                window.open(`{{ url('deudas/pago') }}/${data.pago_id}/comprobante`, '_blank');
-                            } else if (data.pago_ids && data.pago_ids.length > 0) {
-                                data.pago_ids.forEach((id, index) => {
-                                    setTimeout(() => {
-                                        window.open(
-                                            `{{ url('deudas/pago') }}/${id}/comprobante`,
-                                            '_blank');
-                                    }, index * 500);
-                                });
-                            }
-                            setTimeout(() => {
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Pago Correcto!',
+                            text: data.message || 'El pago se ha registrado correctamente.',
+                            showCancelButton: true,
+                            confirmButtonText: '<i class="fa fa-print"></i> Imprimir Comprobante',
+                            cancelButtonText: 'Cerrar',
+                            confirmButtonColor: '#696cff',
+                            reverseButtons: true
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                if (data.pago_id) {
+                                    window.open(`{{ url('deudas/pago') }}/${data.pago_id}/comprobante`,
+                                        '_blank');
+                                } else if (data.pago_ids && data.pago_ids.length > 0) {
+                                    // Abrir el primero inmediatamente (acción directa del usuario)
+                                    window.open(
+                                        `{{ url('deudas/pago') }}/${data.pago_ids[0]}/comprobante`,
+                                        '_blank');
+
+                                    // Si hay más, avisar al usuario o abrirlos con delay (pero Chrome los bloqueará igual si son muchos)
+                                    if (data.pago_ids.length > 1) {
+                                        for (let i = 1; i < data.pago_ids.length; i++) {
+                                            setTimeout(() => {
+                                                window.open(
+                                                    `{{ url('deudas/pago') }}/${data.pago_ids[i]}/comprobante`,
+                                                    '_blank');
+                                            }, i * 800);
+                                        }
+                                    }
+                                }
+
+                                setTimeout(() => {
+                                    window.location.reload();
+                                }, 1500);
+                            } else {
                                 window.location.reload();
-                            }, 1000);
-                        } else {
-                            window.location.reload();
-                        }
+                            }
+                        });
                     } else {
-                        alert('Error: ' + data.message);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: data.message || 'No se pudo aplicar el pago'
+                        });
                     }
                 })
                 .catch(error => {

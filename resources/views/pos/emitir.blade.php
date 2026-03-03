@@ -85,10 +85,11 @@
                                     <td style="text-align: center;">{{ $item->cantidad }}</td>
                                     <td style="text-align: right;">S/ {{ number_format($item->precio, 2) }}</td>
                                     <td style="text-align: right; color: #d63384;">
-                                        S/ {{ number_format(($item->precio * $item->cantidad) - ($item->importe ?? ($item->precio * $item->cantidad)), 2) }}
+                                        S/
+                                        {{ number_format($item->precio * $item->cantidad - ($item->importe ?? $item->precio * $item->cantidad), 2) }}
                                     </td>
                                     <td style="text-align: right; font-weight: bold;">
-                                        S/ {{ number_format($item->importe ?? ($item->precio * $item->cantidad), 2) }}
+                                        S/ {{ number_format($item->importe ?? $item->precio * $item->cantidad, 2) }}
                                     </td>
                                 </tr>
                             @endforeach
@@ -140,7 +141,7 @@
                         <div style="position: relative;">
                             <span style="position: absolute; left: 8px; top: 8px; color: #666;">S/</span>
                             <input id="entrega" type="number" step="0.01"
-                                value="{{ ($metodoPagoInput ?? 'contado') === 'credito' ? '0.00' : ($total ?? '0.00') }}"
+                                value="{{ ($metodoPagoInput ?? 'contado') === 'credito' ? '0.00' : $total ?? '0.00' }}"
                                 style="width:100%; padding:8px 8px 8px 30px; border:1px solid #ccc; border-radius:4px; font-weight: bold;"
                                 onkeyup="calcularCambio()">
                         </div>
@@ -174,7 +175,8 @@
                 <div style="display:flex; gap:10px; margin-bottom: 12px;">
                     <div style="flex: 1;">
                         <label style="font-size: 11px; color: #666;">Serie</label>
-                        <input type="text" id="serie" value="{{ $serieDocumento ?? ($company->serie_boleta ?? 'B001') }}"
+                        <input type="text" id="serie"
+                            value="{{ $serieDocumento ?? ($company->serie_boleta ?? 'B001') }}"
                             style="width:100%; padding:6px; border:1px solid #ddd; background: #f9f9f9;" readonly>
                     </div>
                     <div style="flex: 1;">
@@ -203,7 +205,6 @@
                         style="flex:1; padding:6px; border:1px solid #ddd; border-radius: 4px; font-size: 11px;">
                 </div>
             </div>
-
             <!-- BOTONES -->
             <div style="margin-top: 20px; display: flex; gap: 10px;">
                 <button onclick="cancel()"
@@ -213,6 +214,53 @@
                     VENTA</button>
             </div>
 
+        </div>
+    </div>
+
+    <!-- Modal para seleccionar formato de impresión -->
+    <div class="modal fade" id="modalFormatosImpresion" tabindex="-1" aria-hidden="true" style="z-index: 2050;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold"><i class="bx bx-printer me-1"></i> Imprimir Comprobante</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <input type="hidden" id="imprimirVentaId">
+                    <p class="mb-4" id="texto-venta-success"></p>
+                    <div class="d-flex flex-wrap justify-content-center gap-3">
+                        <button type="button"
+                            class="btn btn-primary d-flex flex-column align-items-center p-3 btn-print-format shadow-sm"
+                            data-format="default" style="width: 120px; transition: transform 0.2s;">
+                            <i class="bx bxs-file-pdf fs-1 mb-2"></i>
+                            <span class="small fw-bold">Hoja A4</span>
+                        </button>
+                        <button type="button"
+                            class="btn btn-secondary d-flex flex-column align-items-center p-3 btn-print-format shadow-sm"
+                            data-format="media-a4" style="width: 120px; transition: transform 0.2s;">
+                            <i class="bx bxs-file-pdf fs-1 mb-2"></i>
+                            <span class="small fw-bold">Media Hoja A4</span>
+                        </button>
+                        <button type="button"
+                            class="btn btn-info text-white d-flex flex-column align-items-center p-3 btn-print-format shadow-sm"
+                            data-format="8cm" style="width: 120px; transition: transform 0.2s;">
+                            <i class="bx bx-receipt fs-1 mb-2"></i>
+                            <span class="small fw-bold">Voucher 8cm</span>
+                        </button>
+                        <button type="button"
+                            class="btn btn-info text-white d-flex flex-column align-items-center p-3 btn-print-format shadow-sm"
+                            data-format="5.8cm"
+                            style="width: 120px; filter: brightness(0.9); transition: transform 0.2s;">
+                            <i class="bx bx-receipt fs-1 mb-2"></i>
+                            <span class="small fw-bold">Voucher 5.8cm</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light border-0">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal"
+                        id="btn-cerrar-finalizar">Cerrar y Regresar</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -288,133 +336,53 @@
             };
 
             // Deshabilitar botón para evitar doble clic
-            const btnAceptar = event.target;
-            btnAceptar.disabled = true;
-            btnAceptar.textContent = 'Procesando...';
-
-            // IMPORTANTE: Abrir la ventana ANTES del fetch para evitar bloqueo de popups
-            // Los navegadores solo permiten window.open() en respuesta directa al clic del usuario
-            const pdfWindow = window.open('about:blank', '_blank');
-            if (pdfWindow) {
-                pdfWindow.document.write(
-                    '<html><head><title>Cargando documento...</title></head><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:Arial;"><h2>Generando documento, por favor espere...</h2></body></html>'
-                );
+            const btnAceptar = document.querySelector('button[onclick="accept()"]');
+            if (btnAceptar) {
+                btnAceptar.disabled = true;
+                btnAceptar.textContent = 'Procesando...';
             }
 
             // Enviar datos al servidor
             const urlSave = (isProforma === '1' || isProforma === 1) ? '{{ route('cotizaciones.save-cotizacion') }}' :
                 '{{ route('pos.save-venta') }}';
 
+            // Mostrar cargando con Swal
+            Swal.fire({
+                title: 'Guardando venta...',
+                text: 'Por favor espere mientras procesamos la información.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
             fetch(urlSave, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify(datosEmision)
-            })
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify(datosEmision)
+                })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Construir URL del PDF
                         const ventaId = data.data.venta_id;
-                        let urlA4 = '{{ route('pos.pdf', ['id' => ':id', 'format' => 'default']) }}'.replace(':id',
-                            ventaId);
-                        let url8cm = '{{ route('pos.pdf', ['id' => ':id', 'format' => '8cm']) }}'.replace(':id',
-                            ventaId);
+                        const numeroCompleto = data.data.numero_completo;
 
-                        if (isProforma === '1' || isProforma === 1) {
-                            urlA4 = '{{ route('cotizaciones.pdfCotizacion', ':id') }}'.replace(':id', ventaId);
-                            url8cm = '{{ route('cotizaciones.pdfCotizacion8cm', ':id') }}'.replace(':id', ventaId);
-                        }
+                        // Guardar IDs para la impresión
+                        window.currentVentaId = ventaId;
+                        window.currentVentaData = data.data;
 
-                        const openUrl = (tipoDocumentoSeleccionado === 'ticket') ? url8cm : urlA4;
-                        localStorage.setItem('ultimoVentaId', ventaId);
+                        Swal.close();
 
-                        // Si hay deuda, mostrar información detallada primero
-                        if (datosEmision.deuda > 0) {
-                            // Cerrar la ventana de carga - el usuario verá el PDF después de confirmar
-                            if (pdfWindow && !pdfWindow.closed) {
-                                pdfWindow.close();
-                            }
+                        // Mostrar el modal de formatos
+                        document.getElementById('texto-venta-success').innerHTML =
+                            `¡Venta <b>${numeroCompleto}</b> guardada con éxito!<br>Total: <b>S/ ${data.data.total}</b><br><br>Elija el formato de impresión:`;
 
-                            const mensajeDeuda = `
-                                    <div style="text-align: left; padding: 10px;">
-                                        <p><strong>✅ Venta guardada exitosamente</strong></p>
-                                        <p>Número: <strong>${data.data.numero_completo}</strong></p>
-                                        <p>Total: <strong>S/ ${data.data.total}</strong></p>
-                                        <hr style="margin: 15px 0;">
-                                        <p style="color: #dc3545; font-size: 18px;"><strong>⚠️ DEUDA GENERADA</strong></p>
-                                        <p>Monto de deuda: <strong style="color: #dc3545; font-size: 20px;">S/ ${datosEmision.deuda.toFixed(2)}</strong></p>
-                                        <p>Pago recibido: S/ ${datosEmision.entrega.toFixed(2)}</p>
-                                        <p>Cliente: ${clienteData ? JSON.parse(clienteData).nombre : 'Cliente Contado'}</p>
-                                    </div>
-                                `;
+                        const modalImpresion = new bootstrap.Modal(document.getElementById('modalFormatosImpresion'));
+                        modalImpresion.show();
 
-                            if (typeof Swal !== 'undefined') {
-                                Swal.fire({
-                                    title: 'Venta con Deuda',
-                                    html: mensajeDeuda,
-                                    icon: 'warning',
-                                    showCancelButton: true,
-                                    confirmButtonText: '📄 Ver Documento',
-                                    cancelButtonText: 'Cerrar',
-                                    confirmButtonColor: '#3085d6',
-                                    cancelButtonColor: '#6c757d'
-                                }).then((result) => {
-                                    if (result.isConfirmed) {
-                                        window.open(openUrl, '_blank');
-                                    }
-                                    limpiarYRedirigir();
-                                });
-                            } else {
-                                // Fallback sin SweetAlert
-                                let mensaje =
-                                    `¡Venta guardada exitosamente!\nNúmero: ${data.data.numero_completo}\nTotal: S/ ${data.data.total}`;
-                                mensaje += `\n\n⚠️ DEUDA GENERADA: S/ ${datosEmision.deuda.toFixed(2)}`;
-                                mensaje += `\nPago recibido: S/ ${datosEmision.entrega.toFixed(2)}`;
-                                mensaje +=
-                                    `\nCliente: ${clienteData ? JSON.parse(clienteData).nombre : 'Cliente Contado'}`;
-                                mensaje += `\n\n¿Desea ver el documento?`;
-
-                                if (confirm(mensaje)) {
-                                    window.open(openUrl, '_blank');
-                                }
-                                limpiarYRedirigir();
-                            }
-                        } else {
-                            // Sin deuda - comportamiento normal con SweetAlert
-                            Swal.fire({
-                                title: '¡Venta exitosa!',
-                                html: `<p>Número: <strong>${data.data.numero_completo}</strong></p><p>Total: <strong>S/ ${data.data.total}</strong></p>`,
-                                icon: 'success',
-                                timer: 2500,
-                                showConfirmButton: false
-                            });
-
-                            // Actualizar la URL de la ventana que ya abrimos
-                            if (pdfWindow && !pdfWindow.closed) {
-                                pdfWindow.location.href = openUrl;
-                            }
-
-                            limpiarYRedirigir();
-                        }
-
-                        function limpiarYRedirigir() {
-                            // Limpiar ticket y datos temporales del localStorage/sessionStorage si existe
-                            try {
-                                localStorage.removeItem('ticketPOS');
-                                sessionStorage.removeItem('ticketPOS');
-                                localStorage.removeItem('ventaPersistentePOS');
-                                sessionStorage.removeItem('ticketGuardadoPOS');
-                                sessionStorage.removeItem('clienteGuardadoPOS');
-                            } catch (e) {
-                                console.warn('No se pudieron limpiar algunas claves de storage:', e);
-                            }
-
-                            // Redirigir al POS
-                            window.location.href = '{{ route('pos.index') }}';
-                        }
                     } else {
                         Swal.fire({
                             title: 'Error',
@@ -422,11 +390,9 @@
                             icon: 'error',
                             confirmButtonText: 'Entendido'
                         });
-                        btnAceptar.disabled = false;
-                        btnAceptar.textContent = 'CONFIRMAR VENTA';
-                        // Cerrar la ventana de carga si hubo error
-                        if (pdfWindow && !pdfWindow.closed) {
-                            pdfWindow.close();
+                        if (btnAceptar) {
+                            btnAceptar.disabled = false;
+                            btnAceptar.textContent = 'CONFIRMAR VENTA';
                         }
                     }
                 })
@@ -438,13 +404,71 @@
                         icon: 'error',
                         confirmButtonText: 'Entendido'
                     });
-                    btnAceptar.disabled = false;
-                    btnAceptar.textContent = 'CONFIRMAR VENTA';
-                    // Cerrar la ventana de carga si hubo error
-                    if (pdfWindow && !pdfWindow.closed) {
-                        pdfWindow.close();
+                    if (btnAceptar) {
+                        btnAceptar.disabled = false;
+                        btnAceptar.textContent = 'CONFIRMAR VENTA';
                     }
                 });
+        }
+
+        // Manejar el clic en los formatos de impresión
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.btn-print-format')) {
+                const btn = e.target.closest('.btn-print-format');
+                const format = btn.getAttribute('data-format');
+                const ventaId = window.currentVentaId;
+
+                if (!ventaId) return;
+
+                let url;
+                if (isProforma === '1' || isProforma === 1) {
+                    if (format === '8cm') {
+                        url = '{{ route('cotizaciones.pdfCotizacion8cm', ':id') }}'.replace(':id', ventaId);
+                    } else {
+                        url = '{{ route('cotizaciones.pdfCotizacion', ':id') }}'.replace(':id', ventaId);
+                        if (format === 'media-a4') {
+                            // Proformas no tienen media-a4 implementado en PdfVentaService según parece
+                            // pero usemos la URL normal por ahora
+                        }
+                    }
+                } else {
+                    url = '{{ route('pos.pdf', ['id' => ':id', 'format' => ':format']) }}'
+                        .replace(':id', ventaId)
+                        .replace(':format', format);
+                }
+
+                window.open(url, '_blank');
+                limpiarYRedirigir();
+            }
+        });
+
+        document.getElementById('btn-cerrar-finalizar').addEventListener('click', function() {
+            limpiarYRedirigir();
+        });
+
+        // También cerrar al darle a la X del modal (si se usa data-bs-dismiss)
+        document.getElementById('modalFormatosImpresion').addEventListener('hidden.bs.modal', function() {
+            // Si el usuario cierra el modal sin imprimir, igual debemos redirigir para limpiar el ticket
+            if (!window.imprimiendoRedirigiendo) {
+                limpiarYRedirigir();
+            }
+        });
+
+        function limpiarYRedirigir() {
+            window.imprimiendoRedirigiendo = true;
+            // Limpiar ticket y datos temporales
+            try {
+                localStorage.removeItem('ticketPOS');
+                sessionStorage.removeItem('ticketPOS');
+                localStorage.removeItem('ventaPersistentePOS');
+                sessionStorage.removeItem('ticketGuardadoPOS');
+                sessionStorage.removeItem('clienteGuardadoPOS');
+            } catch (e) {
+                console.warn('No se pudieron limpiar algunas claves de storage:', e);
+            }
+
+            // Redirigir al POS
+            window.location.href = '{{ route('pos.index') }}';
         }
 
         function cancel() {
@@ -454,7 +478,7 @@
         }
 
         // Calcular cambio inicial
-        document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('DOMContentLoaded', function() {
             calcularCambio();
 
             // Obtener el siguiente número de serie
@@ -466,16 +490,16 @@
             const serie = document.getElementById('serie').value;
 
             fetch('{{ route('pos.obtener-siguiente-numero') }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({
-                    serie: serie,
-                    tipo_documento: tipoDocumentoSeleccionado
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        serie: serie,
+                        tipo_documento: tipoDocumentoSeleccionado
+                    })
                 })
-            })
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('numero').value = data.numero;
