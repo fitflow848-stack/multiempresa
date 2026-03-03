@@ -34,11 +34,18 @@ class FinanzasVendedorController extends Controller
 
         $query = Pasivo::where('sucursal_id', Auth::user()->branch_id)
             ->whereHas('tipo', function ($q) use ($nombresTipos, $tipoFiltro, $tipoMap) {
-            if ($tipoFiltro && isset($tipoMap[$tipoFiltro])) {
-                $q->where('nombre', $tipoMap[$tipoFiltro]);
-            } else {
-                $q->whereIn('nombre', $nombresTipos);
-            }
+                if ($tipoFiltro && isset($tipoMap[$tipoFiltro])) {
+                    $q->where('nombre', $tipoMap[$tipoFiltro]);
+                } else {
+                    $q->whereIn('nombre', $nombresTipos);
+                }
+            });
+
+        // "Una vez saldado debería desaparecer el registro" - Para Adelantos Personal y Clientes
+        $query->where(function ($q) {
+            $q->whereDoesntHave('tipo', function ($t) {
+                $t->whereIn('nombre', ['Adelantos personal', 'Adelanto clientes', 'Adelanto de clientes']);
+            })->orWhere('estado', '!=', 'pagado');
         });
 
         // Filtros adicionales
@@ -49,23 +56,24 @@ class FinanzasVendedorController extends Controller
             $query->whereDate('fecha_registro', '<=', $fechaHasta);
         }
         if ($search) {
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('empresa_persona', 'like', "%$search%")
-                  ->orWhere('nombre', 'like', "%$search%")
-                  ->orWhere('documento', 'like', "%$search%");
+                    ->orWhere('nombre', 'like', "%$search%")
+                    ->orWhere('documento', 'like', "%$search%");
             });
         }
 
         if ($agrupar) {
-            $operaciones = $query->select('empresa_persona', 
-                    DB::raw('SUM(monto) as total_monto'),
-                    DB::raw('SUM(monto_pagado) as total_pagado'),
-                    DB::raw('COUNT(*) as cantidad_operaciones')
-                )
+            $operaciones = $query->select(
+                'empresa_persona',
+                DB::raw('SUM(monto) as total_monto'),
+                DB::raw('SUM(monto_pagado) as total_pagado'),
+                DB::raw('COUNT(*) as cantidad_operaciones')
+            )
                 ->groupBy('empresa_persona')
                 ->orderBy('total_monto', 'desc')
                 ->get()
-                ->map(function($item) {
+                ->map(function ($item) {
                     $item->saldo = $item->total_monto - $item->total_pagado;
                     return $item;
                 });
@@ -121,7 +129,7 @@ class FinanzasVendedorController extends Controller
             if (!$tipoPasivo) {
                 $tipoPasivo = TipoPasivo::create([
                     'nombre'     => $nombreTipo,
-                    'descripcion'=> 'Registrado por vendedor'
+                    'descripcion' => 'Registrado por vendedor'
                 ]);
             }
 
@@ -193,9 +201,14 @@ class FinanzasVendedorController extends Controller
 
             DB::commit();
 
+            if (in_array($tipoOperacion, ['adelanto_personal', 'adelanto_clientes', 'compras_credito'])) {
+                return redirect()->route('finanzas_vendedor.index', ['tipo' => $tipoOperacion])
+                    ->with('success', 'Operación registrada correctamente.')
+                    ->with('imprimir_pasivo_id', $pasivo->id);
+            }
+
             return redirect()->route('finanzas_vendedor.index')
                 ->with('success', 'Operación registrada correctamente.');
-
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Error al registrar la operación: ' . $e->getMessage());
@@ -204,7 +217,7 @@ class FinanzasVendedorController extends Controller
     public function edit($id)
     {
         $operacion = Pasivo::with('tipo')->findOrFail($id);
-        
+
         // Determinar el tipo_operacion para el select
         $tipoOperacion = '';
         if ($operacion->tipo->nombre === 'Compras a crédito') {
@@ -238,7 +251,7 @@ class FinanzasVendedorController extends Controller
             DB::beginTransaction();
 
             $operacion = Pasivo::findOrFail($id);
-            
+
             $nombreTipo = '';
             if ($request->tipo_operacion === 'compras_credito') {
                 $nombreTipo = 'Compras a crédito';
@@ -249,7 +262,7 @@ class FinanzasVendedorController extends Controller
             }
 
             $tipoPasivo = TipoPasivo::where('nombre', $nombreTipo)->first();
-            
+
             $operacion->update([
                 'tipo_pasivo_id' => $tipoPasivo->id,
                 'nombre' => $request->nombre,
@@ -264,7 +277,6 @@ class FinanzasVendedorController extends Controller
 
             return redirect()->route('finanzas_vendedor.index')
                 ->with('success', 'Operación actualizada correctamente.');
-
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Error al actualizar la operación: ' . $e->getMessage());
@@ -287,7 +299,7 @@ class FinanzasVendedorController extends Controller
 
         // Buscar pasivos con saldo de esta persona/empresa (solo Compras a Crédito)
         $pasivos = Pasivo::where('empresa_persona', $empresaPersona)
-            ->whereHas('tipo', function($q) {
+            ->whereHas('tipo', function ($q) {
                 $q->where('nombre', 'Compras a crédito');
             })
             ->whereRaw('monto > monto_pagado')
@@ -343,26 +355,11 @@ class FinanzasVendedorController extends Controller
                 $montoRestante -= $pagoMonto;
             }
 
-            // Registrar en Caja (Gasto porque es pago a proveedor/compra)
-            $cajaAbierta->egresos = ($cajaAbierta->egresos ?? 0) + $montoInicial;
-            $cajaAbierta->save();
-
-            OperacionCaja::create([
-                'cierre_caja_id' => $cajaAbierta->id,
-                'user_id' => Auth::id(),
-                'tipo' => 'gasto',
-                'partida' => 'Pago Pasivo',
-                'concepto' => 'Pago acumulado a: ' . $empresaPersona,
-                'importe' => $montoInicial,
-                'metodo_pago' => $request->metodo_pago,
-                'es_efectivo' => ($request->metodo_pago === 'Efectivo') ? 1 : 0,
-                'fecha' => now()
-            ]);
+            // Compras a crédito no afectan a caja por solicitud
 
             DB::commit();
             return redirect()->route('finanzas_vendedor.index', ['agrupar' => 1])
                 ->with('success', 'Pago acumulado de S/ ' . number_format($montoInicial, 2) . ' aplicado correctamente.');
-
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Error al procesar el pago: ' . $e->getMessage());

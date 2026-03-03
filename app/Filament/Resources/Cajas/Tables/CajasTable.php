@@ -59,6 +59,13 @@ class CajasTable
                     ->falseIcon('heroicon-o-x-circle')
                     ->trueColor('success')
                     ->falseColor('danger'),
+                IconColumn::make('is_boveda')
+                    ->label('Bóveda/Tesorería')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-shield-check')
+                    ->falseIcon('heroicon-o-x-mark')
+                    ->trueColor('warning')
+                    ->falseColor('gray'),
                 TextColumn::make('descripcion')
                     ->label('Descripción')
                     ->limit(30)

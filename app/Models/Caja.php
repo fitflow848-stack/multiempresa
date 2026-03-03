@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -8,19 +9,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use App\Traits\BelongsToCompany;
 use App\Traits\BelongsToSucursal;
 
-
-
-
-
-
-
-
-
-
 class Caja extends Model
 {
     use HasFactory, BelongsToCompany, BelongsToSucursal;
-    
+
 
     protected $table = 'cajas';
 
@@ -30,10 +22,12 @@ class Caja extends Model
         'nombre',
         'descripcion',
         'is_active',
+        'is_boveda',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_boveda' => 'boolean',
     ];
 
     /**

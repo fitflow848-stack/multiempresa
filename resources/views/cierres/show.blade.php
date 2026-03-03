@@ -105,7 +105,8 @@
                             </div>
                             <div class="col-6">
                                 <label class="label-custom text-danger">(-) Gastos</label>
-                                <input type="number" id="gastos" class="form-control form-control-sm border-danger bg-light"
+                                <input type="number" id="gastos"
+                                    class="form-control form-control-sm border-danger bg-light"
                                     value="{{ $cierre->egresos }}" readonly>
                             </div>
                             <div class="col-6">
@@ -158,7 +159,8 @@
                                 <h6 class="fw-bold mb-3 text-secondary">Otros Métodos de Pago (No Efectivo)</h6>
                                 <ul class="list-group list-group-flush border rounded shadow-sm">
                                     @foreach ($ingresosPorMetodo as $metodo => $totalMetodo)
-                                        <li class="list-group-item d-flex justify-content-between align-items-center bg-light">
+                                        <li
+                                            class="list-group-item d-flex justify-content-between align-items-center bg-light">
                                             <span class="label-custom fw-bold text-dark"><i
                                                     class="fas fa-wallet me-1 text-secondary"></i>
                                                 {{ $metodo }}</span>
@@ -221,15 +223,15 @@
                                                     $tipoOp = strtolower($movimiento->operacion);
                                                     $badgeClass = match (true) {
                                                         str_contains($tipoOp, 'ingreso') ||
-                                                        str_contains($tipoOp, 'venta')
-                                                        => 'bg-success',
+                                                            str_contains($tipoOp, 'venta')
+                                                            => 'bg-success',
                                                         str_contains($tipoOp, 'gasto') ||
-                                                        str_contains($tipoOp, 'compra')
-                                                        => 'bg-danger',
+                                                            str_contains($tipoOp, 'compra')
+                                                            => 'bg-danger',
                                                         str_contains($tipoOp, 'aporte') => 'bg-info',
                                                         str_contains($tipoOp, 'sustraccion') ||
-                                                        str_contains($tipoOp, 'retiro')
-                                                        => 'bg-warning text-dark',
+                                                            str_contains($tipoOp, 'retiro')
+                                                            => 'bg-warning text-dark',
                                                         default => 'bg-secondary',
                                                     };
                                                 @endphp
@@ -256,7 +258,9 @@
                                             </td>
                                             @if (!$cierre->fecha_cierre)
                                                 <td class="text-center">
-                                                    @if (isset($movimiento->origen_movimiento) && $movimiento->origen_movimiento === 'operacion' && ($movimiento->operacion ?? '') !== 'Cobro Deuda')
+                                                    @if (isset($movimiento->origen_movimiento) &&
+                                                            $movimiento->origen_movimiento === 'operacion' &&
+                                                            ($movimiento->operacion ?? '') !== 'Cobro Deuda')
                                                         <button
                                                             class="btn btn-sm btn-outline-primary px-2 py-0 border-0 fs-6 edit-operacion"
                                                             data-id="{{ $movimiento->id_movimiento }}"
@@ -279,8 +283,8 @@
                                     @empty
                                         <tr>
                                             <td colspan="4" class="text-center py-5">
-                                                <img src="https://cdn-icons-png.flaticon.com/512/4076/4076403.png" width="50"
-                                                    class="opacity-25 mb-3"><br>
+                                                <img src="https://cdn-icons-png.flaticon.com/512/4076/4076403.png"
+                                                    width="50" class="opacity-25 mb-3"><br>
                                                 <span class="text-muted">No se encontraron movimientos el día de
                                                     hoy.</span>
                                             </td>
@@ -319,6 +323,7 @@
                                 <option value="gasto">Gasto (-)</option>
                                 <option value="aportacion">Aportación (+)</option>
                                 <option value="sustraccion">Sustracción (-)</option>
+                                <option value="transferencia_boveda">🏦 Transferir a Tesorería (-)</option>
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -390,21 +395,21 @@
                                 value="0" min="0"></label>
                         <label> S/1.00: <input type="number" class="m-count form-control form-control-sm" data-value="1"
                                 value="0" min="0"></label>
-                        <label> S/0.50: <input type="number" class="m-count form-control form-control-sm" data-value="0.5"
-                                value="0" min="0"></label>
-                        <label> S/0.20: <input type="number" class="m-count form-control form-control-sm" data-value="0.2"
-                                value="0" min="0"></label>
-                        <label> S/0.10: <input type="number" class="m-count form-control form-control-sm" data-value="0.1"
-                                value="0" min="0"></label>
+                        <label> S/0.50: <input type="number" class="m-count form-control form-control-sm"
+                                data-value="0.5" value="0" min="0"></label>
+                        <label> S/0.20: <input type="number" class="m-count form-control form-control-sm"
+                                data-value="0.2" value="0" min="0"></label>
+                        <label> S/0.10: <input type="number" class="m-count form-control form-control-sm"
+                                data-value="0.1" value="0" min="0"></label>
                     </div>
                 </div>
                 <div style="flex:1;">
                     <h6>Billetes</h6>
                     <div>
-                        <label> S/200: <input type="number" class="b-count form-control form-control-sm" data-value="200"
-                                value="0" min="0"></label>
-                        <label> S/100: <input type="number" class="b-count form-control form-control-sm" data-value="100"
-                                value="0" min="0"></label>
+                        <label> S/200: <input type="number" class="b-count form-control form-control-sm"
+                                data-value="200" value="0" min="0"></label>
+                        <label> S/100: <input type="number" class="b-count form-control form-control-sm"
+                                data-value="100" value="0" min="0"></label>
                         <label> S/50: <input type="number" class="b-count form-control form-control-sm" data-value="50"
                                 value="0" min="0"></label>
                         <label> S/20: <input type="number" class="b-count form-control form-control-sm" data-value="20"
@@ -429,8 +434,7 @@
                     </div>
                     <div style="margin-top:12px;">
                         <label>Notas:<br>
-                            <textarea id="arqueo-notas" class="form-control form-control-sm"
-                                style="width:100%; height:80px;"></textarea>
+                            <textarea id="arqueo-notas" class="form-control form-control-sm" style="width:100%; height:80px;"></textarea>
                         </label>
                     </div>
                 </div>
@@ -502,6 +506,19 @@
         }
 
         // Event Listeners
+        document.getElementById('op_tipo').addEventListener('change', function(e) {
+            const partidaEl = document.getElementById('op_partida');
+            const conceptoEl = document.getElementById('op_concepto');
+
+            if (e.target.value === 'transferencia_boveda') {
+                partidaEl.value = '';
+                partidaEl.disabled = true;
+                if (!conceptoEl.value) conceptoEl.value = 'Exceso de caja transferido';
+            } else {
+                partidaEl.disabled = false;
+            }
+        });
+
         document.getElementById('fab-add-operacion')?.addEventListener('click', () => {
             document.getElementById('op_id').value = '';
             document.getElementById('op_tipo').value = 'ingreso';
@@ -519,7 +536,8 @@
                 document.getElementById('op_id').value = btnEl.getAttribute('data-id');
                 document.getElementById('op_tipo').value = btnEl.getAttribute('data-tipo');
                 document.getElementById('op_concepto').value = btnEl.getAttribute('data-concepto');
-                document.getElementById('op_metodo').value = btnEl.getAttribute('data-metodo') || 'Efectivo';
+                document.getElementById('op_metodo').value = btnEl.getAttribute('data-metodo') ||
+                    'Efectivo';
                 document.getElementById('op_importe').value = parseFloat(btnEl.getAttribute('data-importe'))
                     .toFixed(2);
 
@@ -551,7 +569,7 @@
         document.querySelectorAll('.delete-operacion').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 if (!confirm(
-                    '¿Desea eliminar esta operación? Esta acción alterará los totales de la caja.'))
+                        '¿Desea eliminar esta operación? Esta acción alterará los totales de la caja.'))
                     return;
                 const id = e.currentTarget.getAttribute('data-id');
                 try {
@@ -655,7 +673,7 @@
                     opt.textContent = p.nombre;
                     select.appendChild(opt);
                 });
-            } catch (e) { }
+            } catch (e) {}
         }
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -726,7 +744,7 @@
             });
 
             // Inicializar handlers de Arqueo
-            (function () {
+            (function() {
                 const modal = document.getElementById('modal-arqueo');
                 const btnOpen = document.getElementById('btn-registrar-arqueo');
                 const btnClose = document.getElementById('btn-close-arqueo');
@@ -801,12 +819,12 @@
                             document.getElementById('total-caja').innerText = parseFloat(a.total ||
                                 0).toFixed(2);
                             document.getElementById('total-monedas').innerText = parseFloat(a
-                                .monedas ? Object.keys(a.monedas).reduce((s, k) => s + (
-                                    parseFloat(k) * (parseFloat(a.monedas[k]) || 0)), 0) : 0)
+                                    .monedas ? Object.keys(a.monedas).reduce((s, k) => s + (
+                                        parseFloat(k) * (parseFloat(a.monedas[k]) || 0)), 0) : 0)
                                 .toFixed(2);
                             document.getElementById('total-billetes').innerText = parseFloat(a
-                                .billetes ? Object.keys(a.billetes).reduce((s, k) => s + (
-                                    parseFloat(k) * (parseFloat(a.billetes[k]) || 0)), 0) : 0)
+                                    .billetes ? Object.keys(a.billetes).reduce((s, k) => s + (
+                                        parseFloat(k) * (parseFloat(a.billetes[k]) || 0)), 0) : 0)
                                 .toFixed(2);
                             document.getElementById('arqueo-notas').value = a.notas || '';
                         }

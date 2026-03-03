@@ -48,6 +48,10 @@ class CajaForm
                         ->label('Caja Activa')
                         ->default(true)
                         ->helperText('Solo las cajas activas pueden ser asignadas a usuarios'),
+                    Toggle::make('is_boveda')
+                        ->label('Es Tesorería / Bóveda General')
+                        ->default(false)
+                        ->helperText('Activar si esta caja funciona como bóveda general para recaudar excedentes'),
                 ])
                 ->columns(2),
 

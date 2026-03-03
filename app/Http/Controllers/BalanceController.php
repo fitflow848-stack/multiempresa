@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\BalanceExport;
 use Illuminate\Http\Request;
 use App\Models\AlmacenIngresoDetalle;
 use App\Models\Deuda;
@@ -11,6 +12,7 @@ use App\Models\Venta;
 use App\Models\OperacionCaja;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Excel;
 
 class BalanceController extends Controller
 {
@@ -30,9 +32,9 @@ class BalanceController extends Controller
         $data = $this->refineData($baseData);
 
         $filename = "balance_general_{$fecha}.xlsx";
-        
-        return \Maatwebsite\Excel\Facades\Excel::download(
-            new \App\Exports\BalanceExport($data, $fecha), 
+
+        return Excel::download(
+            new BalanceExport($data, $fecha),
             $filename
         );
     }
@@ -52,7 +54,7 @@ class BalanceController extends Controller
         $tiposActivos = $data['tiposActivosCorrientes'];
 
         // 1. Mover "Adelantos Personal" de Pasivos a Activos (es una cuenta por cobrar a empleados)
-        $idxPersonal = $tiposPasivos->search(function($item) {
+        $idxPersonal = $tiposPasivos->search(function ($item) {
             $name = strtolower($item->nombre);
             return str_contains($name, 'adelanto') && str_contains($name, 'personal');
         });
@@ -62,7 +64,7 @@ class BalanceController extends Controller
             $monto = $personalObj->pasivos_sum_monto ?? 0;
 
             // Buscar si ya existe en activos
-            $existente = $tiposActivos->first(function($item) {
+            $existente = $tiposActivos->first(function ($item) {
                 $name = strtolower($item->nombre);
                 return str_contains($name, 'adelanto') && str_contains($name, 'personal');
             });
@@ -78,7 +80,7 @@ class BalanceController extends Controller
         }
 
         // 2. Unificar "Adelanto Clientes" y "Adelanto de Clientes" en Pasivos
-        $adelantoClientes = $tiposPasivos->filter(function($item) {
+        $adelantoClientes = $tiposPasivos->filter(function ($item) {
             $name = strtolower($item->nombre);
             return str_contains($name, 'adelanto') && str_contains($name, 'cliente');
         });
@@ -88,10 +90,10 @@ class BalanceController extends Controller
             $keepId = $adelantoClientes->first()->id;
 
             // Mantener solo uno y sumar el resto
-            $data['tiposPasivosCorrientes'] = $tiposPasivos->reject(function($item) use ($adelantoClientes, $keepId) {
+            $data['tiposPasivosCorrientes'] = $tiposPasivos->reject(function ($item) use ($adelantoClientes, $keepId) {
                 return $adelantoClientes->pluck('id')->contains($item->id) && $item->id !== $keepId;
             });
-            
+
             $finalObj = $data['tiposPasivosCorrientes']->firstWhere('id', $keepId);
             if ($finalObj) {
                 $finalObj->nombre = 'Adelanto de Clientes';
@@ -103,10 +105,10 @@ class BalanceController extends Controller
         $data['tiposActivosCorrientes'] = $tiposActivos;
         $data['total_activo_corriente'] = $data['caja'] + $data['inventario'] + $tiposActivos->sum('activos_sum_monto');
         $data['total_activo'] = $data['total_activo_corriente'] + $data['total_activo_no_corriente'];
-        
+
         $data['total_pasivo_corriente'] = $data['tiposPasivosCorrientes']->sum('pasivos_sum_monto');
         $data['total_pasivo'] = $data['total_pasivo_corriente'] + $data['total_pasivo_no_corriente'];
-        
+
         $data['patrimonio_calculado'] = $data['total_activo'] - $data['total_pasivo'];
 
         return $data;
@@ -114,12 +116,12 @@ class BalanceController extends Controller
 
     private function calculateData($fecha)
     {
+        $user = Auth::user();
+
         // 1. ACTIVO CORRIENTE
-        // CAJA: Dinero efectivo en cajas ABIERTAS
+        // CAJA: Dinero efectivo en cajas ABIERTAS de toda la empresa
         $cajasAbiertas = CierreCaja::whereNull('fecha_cierre')
-            ->whereHas('caja', function($q) {
-                $q->where('sucursal_id', Auth::user()->branch_id);
-            })
+            ->where('id_empresa', $user->company_id)
             ->get();
         $caja = 0.00;
 
@@ -128,23 +130,26 @@ class BalanceController extends Controller
             $caja += $box->aportaciones ?? 0;
             $caja -= $box->sustracciones ?? 0;
 
-            // Ventas en efectivo asociadas a esta caja por fecha o ID
+            // Ventas en efectivo asociadas a esta caja
+            // Usamos monto_recibido - vuelto para obtener el efectivo real que quedó en caja de esa venta
             $ventasEfectivo = Venta::where('cierre_caja_id', $box->id)
                 ->whereHas('tipoPago', function ($q) {
                     $q->where('es_efectivo', true);
                 })
                 ->where('estado', '!=', '0') // No anuladas
-                ->sum('total');
+                ->sum(DB::raw('monto_recibido - vuelto'));
 
             $caja += $ventasEfectivo;
 
-            // Operaciones de caja (Ingresos/Gastos extras)
+            // Operaciones de caja (Ingresos/Gastos extras) - Solo EFECTIVO
             $ingresosCaja = OperacionCaja::where('cierre_caja_id', $box->id)
                 ->where('tipo', 'ingreso')
+                ->where('es_efectivo', 1)
                 ->sum('importe');
 
             $egresosCaja = OperacionCaja::where('cierre_caja_id', $box->id)
-                ->where('tipo', 'egreso')
+                ->whereIn('tipo', ['egreso', 'gasto'])
+                ->where('es_efectivo', 1)
                 ->sum('importe');
 
             $caja += $ingresosCaja;
@@ -152,22 +157,23 @@ class BalanceController extends Controller
         }
 
         // INVENTARIO: Valorizado al costo promedio o costo de entrada (Sistema)
+        // Lo calculamos para toda la empresa para que coincida con el balance general
         $inventario = AlmacenIngresoDetalle::where('cantidad', '>', 0)
-            ->whereHas('ingreso', function($q) {
-                $q->where('sucursal_id', Auth::user()->branch_id);
+            ->whereHas('ingreso', function ($q) use ($user) {
+                $q->where('empresa_id', $user->company_id);
             })
             ->sum(DB::raw('cantidad * costo'));
 
-        // CUENTAS POR COBRAR Calculado (Sistema)
-        $cxc_auto = Deuda::where('sucursal_id', Auth::user()->branch_id)
+        // CUENTAS POR COBRAR: Monto de deuda pendiente de clientes de toda la empresa
+        $cxc = Deuda::where('company_id', $user->company_id)
             ->whereIn('estado', [Deuda::ESTADO_PENDIENTE, Deuda::ESTADO_PARCIAL])
             ->whereDate('fecha_venta', '<=', $fecha)
-            ->sum(DB::raw('monto_deuda - monto_pagado'));
+            ->sum(DB::raw('monto_deuda')); // Usamos monto_deuda total
 
-        // ACTIVOS CORRIENTES (Desde el nuevo módulo)
+        // ACTIVOS CORRIENTES (Desde el nuevo módulo) - Toda la empresa
         $tiposActivosCorrientes = \App\Models\TipoActivoCorriente::withSum([
-            'activos' => function ($q) use ($fecha) {
-                $q->where('sucursal_id', Auth::user()->branch_id)
+            'activos' => function ($q) use ($user, $fecha) {
+                $q->where('company_id', $user->company_id)
                     ->whereDate('fecha_registro', '<=', $fecha);
             }
         ], 'monto')->get();
@@ -179,20 +185,20 @@ class BalanceController extends Controller
         });
 
         if ($tipoCxC) {
-            $tipoCxC->activos_sum_monto = ($tipoCxC->activos_sum_monto ?? 0) + $cxc_auto;
-        } else if ($cxc_auto > 0) {
+            $tipoCxC->activos_sum_monto = ($tipoCxC->activos_sum_monto ?? 0) + $cxc;
+        } else if ($cxc > 0) {
             $newType = new \App\Models\TipoActivoCorriente();
             $newType->nombre = 'Cuentas por Cobrar (CxC)';
-            $newType->activos_sum_monto = $cxc_auto;
+            $newType->activos_sum_monto = $cxc;
             $tiposActivosCorrientes->push($newType);
         }
 
         $total_activo_corriente = $caja + $inventario + $tiposActivosCorrientes->sum('activos_sum_monto');
 
-        // 2. ACTIVO NO CORRIENTE
+        // 2. ACTIVO NO CORRIENTE - Toda la empresa
         $tiposActivosNoCorrientes = \App\Models\TipoActivo::withSum([
-            'activos' => function ($q) use ($fecha) {
-                $q->where('sucursal_id', Auth::user()->branch_id)
+            'activos' => function ($q) use ($user, $fecha) {
+                $q->where('company_id', $user->company_id)
                     ->whereDate('fecha_adquisicion', '<=', $fecha);
             }
         ], 'monto')->get();
@@ -204,22 +210,25 @@ class BalanceController extends Controller
         $compras_credito_auto = 0;
         try {
             if (class_exists('App\Models\Compra')) {
-                $compras_credito_auto = Compra::where('local_destino', Auth::user()->branch_id)
+                // Compras a crédito de toda la empresa
+                $compras_credito_auto = Compra::where('company_id', $user->company_id)
                     ->where('credito', true)
                     ->whereDate('fecha_emision', '<=', $fecha)
-                    ->sum(DB::raw('total_pagar - monto_pagado'));
+                    ->sum(DB::raw('total_pagar - total_descuento')); // Ajustar cálculo si es necesario
             }
-        } catch (\Exception $e) { $compras_credito_auto = 0; }
+        } catch (\Exception $e) {
+            $compras_credito_auto = 0;
+        }
 
-        // Obtener Pasivos Manuales
+        // Obtener Pasivos Manuales de toda la empresa
         $tiposPasivosCorrientes = \App\Models\TipoPasivo::withSum([
-            'pasivos' => function ($q) use ($fecha) {
-                $q->where('sucursal_id', Auth::user()->branch_id)
+            'pasivos' => function ($q) use ($user, $fecha) {
+                $q->where('company_id', $user->company_id)
                     ->whereDate('fecha_registro', '<=', $fecha);
             }
         ], 'monto')->withSum([
-            'pasivos' => function ($q) use ($fecha) {
-                $q->where('sucursal_id', Auth::user()->branch_id)
+            'pasivos' => function ($q) use ($user, $fecha) {
+                $q->where('company_id', $user->company_id)
                     ->whereDate('fecha_registro', '<=', $fecha);
             }
         ], 'monto_pagado')->get();
@@ -284,4 +293,3 @@ class BalanceController extends Controller
         ];
     }
 }
-

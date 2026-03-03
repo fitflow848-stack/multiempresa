@@ -190,41 +190,50 @@ class PasivoController extends Controller
             }
             $pasivo->save();
 
-            // Registrar en OperacionCaja como Egreso (Gasto) si hay caja abierta
-            $selectedCajaId = session('selected_caja_id');
-            $cajaAbierta = null;
+            // Registrar en OperacionCaja si NO es Compras a Crédito
+            if ($pasivo->tipo->nombre !== 'Compras a crédito') {
+                $selectedCajaId = session('selected_caja_id');
+                $cajaAbierta = null;
 
-            if ($selectedCajaId) {
-                $cajaAbierta = CierreCaja::where('user_id', Auth::id())
-                    ->where('caja_id', $selectedCajaId)
-                    ->whereNull('fecha_cierre')
-                    ->first();
-            } else {
-                $cajaAbierta = CierreCaja::where('user_id', Auth::id())
-                    ->whereNull('fecha_cierre')
-                    ->first();
+                if ($selectedCajaId) {
+                    $cajaAbierta = CierreCaja::where('user_id', Auth::id())
+                        ->where('caja_id', $selectedCajaId)
+                        ->whereNull('fecha_cierre')
+                        ->first();
+                } else {
+                    $cajaAbierta = CierreCaja::where('user_id', Auth::id())
+                        ->whereNull('fecha_cierre')
+                        ->first();
+                }
+
+                if (!$cajaAbierta) {
+                    throw new \Exception('No se puede registrar el pago porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
+                }
+
+                if ($pasivo->tipo->nombre === 'Adelantos personal') {
+                    $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $monto;
+                    $tipoOp = 'ingreso';
+                    $partida = 'Liquidación Adelanto';
+                } else {
+                    $cajaAbierta->egresos = ($cajaAbierta->egresos ?? 0) + $monto;
+                    $tipoOp = 'gasto';
+                    $partida = in_array($pasivo->tipo->nombre, ['Adelanto clientes', 'Adelanto de clientes']) ? 'Entrega Producto (Adelanto)' : 'Pago Pasivo';
+                }
+                $cajaAbierta->save();
+
+                OperacionCaja::create([
+                    'cierre_caja_id' => $cajaAbierta->id,
+                    'user_id' => Auth::id(),
+                    'tipo' => $tipoOp,
+                    'partida' => $partida,
+                    'concepto' => ($tipoOp === 'ingreso' ? 'Recepción de pago/saldado: ' : 'Pago de ') . $pasivo->tipo->nombre . ': ' . $pasivo->nombre,
+                    'importe' => $monto,
+                ]);
             }
-
-            if (!$cajaAbierta) {
-                throw new \Exception('No se puede registrar el pago porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
-            }
-
-            $cajaAbierta->egresos = ($cajaAbierta->egresos ?? 0) + $monto;
-            $cajaAbierta->save();
-
-            OperacionCaja::create([
-                'cierre_caja_id' => $cajaAbierta->id,
-                'user_id' => Auth::id(),
-                'tipo' => 'gasto',
-                'partida' => 'Pago Pasivo',
-                'concepto' => 'Pago de ' . $pasivo->tipo->nombre . ': ' . $pasivo->nombre,
-                'importe' => $monto,
-            ]);
 
             DB::commit();
 
-            return redirect()->route('pasivos.index')->with('success', 'Pago registrado correctamente.')->with('pago_id', $pago->id);
-
+            return back()->with('success', 'Pago registrado correctamente.')->with('pago_id', $pago->id);
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Error al registrar el pago: ' . $e->getMessage());
@@ -240,6 +249,17 @@ class PasivoController extends Controller
             ->setPaper([0, 0, 226, 600], 'portrait'); // Tamaño térmico aprox
 
         return $pdf->stream('ticket_pago_pasivo_' . $pago->id . '.pdf');
+    }
+
+    public function ticketRegistro($id)
+    {
+        $pasivo = Pasivo::with(['tipo', 'sucursal'])->findOrFail($id);
+        $company = Company::first();
+
+        $pdf = Pdf::loadView('pasivos.ticket_registro', compact('pasivo', 'company'))
+            ->setPaper([0, 0, 226, 600], 'portrait');
+
+        return $pdf->stream('ticket_registro_pasivo_' . $pasivo->id . '.pdf');
     }
 
     public function edit($id)

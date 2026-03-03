@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Traits\BelongsToCompany;
@@ -10,7 +11,7 @@ class Venta extends Model
 {
     protected $sucursalForeignKey = 'sucursal';
     use HasFactory, BelongsToCompany, BelongsToSucursal;
-    
+
 
     protected $primaryKey = 'id_venta';
 
@@ -104,7 +105,7 @@ class Venta extends Model
      */
     public function tipoPago()
     {
-        return $this->belongsTo(TipoPago::class, 'medoto_pago_id');
+        return $this->belongsTo(TipoPago::class, 'id_tipo_pago');
     }
 
     /**

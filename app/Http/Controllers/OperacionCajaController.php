@@ -13,7 +13,7 @@ class OperacionCajaController extends Controller
     {
         $data = $request->validate([
             'cierre_caja_id' => 'nullable|exists:cierre_cajas,id',
-            'tipo' => 'required|in:aportacion,sustraccion,ingreso,gasto',
+            'tipo' => 'required|in:aportacion,sustraccion,ingreso,gasto,transferencia_boveda',
             'partida' => 'nullable|string|max:255',
             'concepto' => 'nullable|string',
             'metodo_pago' => 'nullable|string|max:50',
@@ -23,6 +23,28 @@ class OperacionCajaController extends Controller
         $data['user_id'] = Auth::id();
         $data['metodo_pago'] = $data['metodo_pago'] ?? 'Efectivo';
         $data['es_efectivo'] = ($data['metodo_pago'] === 'Efectivo') ? 1 : 0;
+
+        $isTransferenciaBoveda = $data['tipo'] === 'transferencia_boveda';
+
+        if ($isTransferenciaBoveda) {
+            $user = Auth::user();
+            // Buscar bóveda activa en la empresa actual
+            $bovedaAbierta = CierreCaja::whereNull('fecha_cierre')
+                ->whereHas('caja', function ($q) {
+                    $q->where('is_boveda', true);
+                })
+                ->where('id_empresa', $user->company_id)
+                ->first();
+
+            if (!$bovedaAbierta) {
+                return response()->json(['success' => false, 'message' => 'No hay ninguna Tesorería / Bóveda con sesión abierta actualmente.'], 400);
+            }
+
+            // Transformamos esta operación para la caja actual como una "sustraccion"
+            $data['tipo'] = 'sustraccion';
+            $data['partida'] = 'Transferencia a Tesorería';
+            $data['concepto'] = 'Envío de fondos: ' . ($data['concepto'] ?? '');
+        }
 
         $operacion = OperacionCaja::create($data);
 
@@ -47,8 +69,28 @@ class OperacionCajaController extends Controller
             }
         }
 
+        // Si fue a bóveda, crear también el ingreso allí
+        if ($isTransferenciaBoveda && isset($bovedaAbierta)) {
+            OperacionCaja::create([
+                'cierre_caja_id' => $bovedaAbierta->id,
+                'user_id' => $data['user_id'],
+                'tipo' => 'ingreso', // en la bóveda es un ingreso
+                'partida' => 'Recepción de Caja',
+                'concepto' => 'Recibido de caja #' . $data['cierre_caja_id'] . ': ' . ($request->concepto ?? ''),
+                'importe' => $data['importe'],
+                'es_efectivo' => $data['es_efectivo'],
+                'metodo_pago' => $data['metodo_pago'],
+            ]);
+
+            if ($data['es_efectivo']) {
+                $bovedaAbierta->ingresos = ($bovedaAbierta->ingresos ?? 0) + $data['importe'];
+                $bovedaAbierta->save();
+            }
+        }
+
         return response()->json(['success' => true, 'operacion' => $operacion]);
     }
+
 
     public function update(Request $request, $id)
     {

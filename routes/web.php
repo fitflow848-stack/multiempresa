@@ -268,6 +268,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
 
     Route::prefix('guia')->middleware('can:guias_remision.ver')->group(function () {
         Route::get('/get/all', [GuiaRemisionTransporteController::class, 'getAll'])->name('guia.getAll');
+        Route::get('/', [GuiaRemisionTransporteController::class, 'index'])->name('guias_remision.index');
         Route::resource('/', GuiaRemisionTransporteController::class)->names('guia');
         Route::post('/save', [GuiaRemisionTransporteController::class, 'store'])->name('guia.save')->middleware('can:guias_remision.crear');
         Route::post('/sendSunat/{id}', [GuiaRemisionTransporteController::class, 'sendSunat'])->name('guia.sendSunat')->middleware('can:guias_remision.enviar');
@@ -316,6 +317,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::post('/convertir-aporte/{id}', [PasivoController::class, 'convertirAporte'])->name('pasivos.convertir-aporte');
         Route::post('/pagar/{id}', [PasivoController::class, 'registrarPago'])->name('pasivos.pagar');
         Route::get('/ticket/{id}', [PasivoController::class, 'ticketPago'])->name('pasivos.ticket');
+        Route::get('/ticket-registro/{id}', [PasivoController::class, 'ticketRegistro'])->name('pasivos.ticket_registro');
         Route::get('/{id}/edit', [PasivoController::class, 'edit'])->name('pasivos.edit');
         Route::post('/{id}/update', [PasivoController::class, 'update'])->name('pasivos.update');
         Route::delete('/{id}', [PasivoController::class, 'destroy'])->name('pasivos.destroy');
