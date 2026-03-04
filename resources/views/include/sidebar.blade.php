@@ -214,24 +214,36 @@
                                 <li class="dropdown-header text-uppercase fs-tiny fw-bold">Cajas de Venta</li>
                                 @foreach ($current_user_cajas->where('is_boveda', false) as $caja)
                                     @php
-                                        $sesionAbierta = \App\Models\CierreCaja::where('caja_id', $caja->id)
+                                        $sesionAbiertaRaw = \Illuminate\Support\Facades\DB::table('cierre_cajas')
+                                            ->where('caja_id', $caja->id)
                                             ->whereNull('fecha_cierre')
                                             ->first();
-                                        $enUsoPorOtro = $sesionAbierta && $sesionAbierta->user_id !== auth()->id();
+                                        $isAdminRole =
+                                            auth()->user()->hasRole('super_admin') ||
+                                            auth()->user()->hasRole('admin_empresa');
+                                        $enUsoPorOtro =
+                                            $sesionAbiertaRaw &&
+                                            $sesionAbiertaRaw->user_id !== auth()->id() &&
+                                            !$isAdminRole;
+                                        $displayEnUso =
+                                            $sesionAbiertaRaw && $sesionAbiertaRaw->user_id !== auth()->id();
+                                        $nombreEnUso = $displayEnUso
+                                            ? optional(\App\Models\User::find($sesionAbiertaRaw->user_id))->name
+                                            : null;
                                     @endphp
                                     <li>
                                         <form action="{{ route('caja.select') }}" method="POST"
                                             id="form-caja-{{ $caja->id }}">
                                             @csrf
                                             <input type="hidden" name="caja_id" value="{{ $caja->id }}">
-                                            <button type="submit" {{ $enUsoPorOtro ? 'disabled' : '' }}
+                                            <button type="submit" @if ($enUsoPorOtro) disabled @endif
                                                 class="dropdown-item d-flex justify-content-between align-items-center {{ session('selected_caja_id') == $caja->id ? 'bg-light fw-bold text-primary' : '' }}">
-                                                <span class="{{ $enUsoPorOtro ? 'text-muted' : '' }}">
+                                                <span class="{{ $displayEnUso ? 'text-muted' : '' }}">
                                                     <i class="bx bx-box me-2"></i>{{ $caja->nombre }}
-                                                    @if ($sesionAbierta)
+                                                    @if ($sesionAbiertaRaw)
                                                         <small
-                                                            class="ms-1 {{ $enUsoPorOtro ? 'text-danger fw-bold' : 'text-success fw-bold' }}">
-                                                            ({{ $enUsoPorOtro ? 'En uso: ' . $sesionAbierta->user->name : 'Abierta por ti' }})
+                                                            class="ms-1 {{ $displayEnUso ? 'text-danger fw-bold' : 'text-success fw-bold' }}">
+                                                            ({{ $displayEnUso ? 'En uso: ' . $nombreEnUso : 'Abierta por ti' }})
                                                         </small>
                                                     @endif
                                                 </span>
@@ -242,16 +254,25 @@
                                         </form>
                                     </li>
                                 @endforeach
-                                
-                                @if($current_user_cajas->where('is_boveda', true)->count() > 0)
-                                    <li><hr class="dropdown-divider"></li>
+
+                                @if ($current_user_cajas->where('is_boveda', true)->count() > 0)
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
                                     <li class="dropdown-header text-uppercase fs-tiny fw-bold">Bóvedas / Tesorería</li>
                                     @foreach ($current_user_cajas->where('is_boveda', true) as $caja)
                                         @php
                                             $sesionAbierta = \App\Models\CierreCaja::where('caja_id', $caja->id)
                                                 ->whereNull('fecha_cierre')
                                                 ->first();
-                                            $enUsoPorOtro = $sesionAbierta && $sesionAbierta->user_id !== auth()->id();
+                                            $isAllowedOverride =
+                                                auth()->user()->hasRole('super_admin') ||
+                                                auth()->user()->hasRole('admin_empresa');
+                                            $enUsoPorOtro =
+                                                $sesionAbierta &&
+                                                $sesionAbierta->user_id !== auth()->id() &&
+                                                !$isAllowedOverride;
+                                            $displayEnUso = $sesionAbierta && $sesionAbierta->user_id !== auth()->id();
                                         @endphp
                                         <li>
                                             <form action="{{ route('caja.select') }}" method="POST"
@@ -260,12 +281,12 @@
                                                 <input type="hidden" name="caja_id" value="{{ $caja->id }}">
                                                 <button type="submit" {{ $enUsoPorOtro ? 'disabled' : '' }}
                                                     class="dropdown-item d-flex justify-content-between align-items-center {{ session('selected_caja_id') == $caja->id ? 'bg-light fw-bold text-primary' : '' }}">
-                                                    <span class="{{ $enUsoPorOtro ? 'text-muted' : '' }}">
+                                                    <span class="{{ $displayEnUso ? 'text-muted' : '' }}">
                                                         <i class="bx bx-cabinet me-2"></i>{{ $caja->nombre }}
                                                         @if ($sesionAbierta)
                                                             <small
-                                                                class="ms-1 {{ $enUsoPorOtro ? 'text-danger fw-bold' : 'text-success fw-bold' }}">
-                                                                ({{ $enUsoPorOtro ? 'En uso: ' . $sesionAbierta->user->name : 'Abierta por ti' }})
+                                                                class="ms-1 {{ $displayEnUso ? 'text-danger fw-bold' : 'text-success fw-bold' }}">
+                                                                ({{ $displayEnUso ? 'En uso: ' . $sesionAbierta->user->name : 'Abierta por ti' }})
                                                             </small>
                                                         @endif
                                                     </span>

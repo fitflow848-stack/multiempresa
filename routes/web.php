@@ -48,12 +48,11 @@ Route::get('/pos/pvpd', [PosController::class, 'getDescuentoProducto'])->name('p
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-Route::post('/caja/select', [CajaSessionController::class, 'select'])->name('caja.select');
-Route::post('/api/documento/ruc', [ApiDocumentosController::class, 'getRuc'])->name('apidocumento.ruc');
 // Rutas de selección de sucursal
 Route::middleware(['auth'])->group(function () {
     Route::get('/select-branch', [BranchSelectionController::class, 'index'])->name('branch.select');
     Route::post('/select-branch', [BranchSelectionController::class, 'select'])->name('branch.select.post');
+    Route::post('/caja/select', [CajaSessionController::class, 'select'])->name('caja.select');
 });
 
 Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function () {

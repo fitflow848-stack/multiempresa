@@ -23,11 +23,14 @@ class CajaSessionController extends Controller
         }
 
         // Seguridad: No permitir seleccionar una caja que ya tiene una sesión abierta por OTRO usuario
+        // A menos que sea super_admin o admin_empresa, quienes pueden entrar para auditar o cerrar
+        $isAllowedOverride = $user->hasRole('super_admin') || $user->hasRole('admin_empresa');
+
         $openCaja = \App\Models\CierreCaja::where('caja_id', $request->caja_id)
             ->whereNull('fecha_cierre')
             ->first();
 
-        if ($openCaja && $openCaja->user_id !== $user->id) {
+        if ($openCaja && $openCaja->user_id !== $user->id && !$isAllowedOverride) {
             return back()->with('error', 'La caja "' . $openCaja->caja->nombre . '" ya está siendo utilizada por el usuario ' . $openCaja->user->name . '. Debe esperar a que cierre su sesión.');
         }
 

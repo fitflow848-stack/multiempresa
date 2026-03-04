@@ -136,10 +136,18 @@ class User extends Authenticatable implements FilamentUser
     public function cajasDisponibles()
     {
         // El scope se aplica automáticamente desde BelongsToCompany si el usuario tiene un company_id (AuthHelper lo inyecta), incluso para super_admin.
-        
+
         // Si es admin o supervisor, ve todas las cajas de su sucursal actual (filtradas por el trait)
         if ($this->isSuperAdmin() || $this->isAdminEmpresa() || $this->hasRole('supervisor')) {
-            return Caja::activas()->get();
+            $query = Caja::activas();
+
+            // Forzamos el filtro por la sucursal actual para que roles altos como super_admin o admin_empresa 
+            // solo vean en el dropdown las cajas de la sucursal desde la que han iniciado sesión
+            if ($this->branch_id) {
+                $query->where('sucursal_id', $this->branch_id);
+            }
+
+            return $query->get();
         }
 
         // Vendedor / cajero → solo las asignadas vía pivot de su sucursal activa
@@ -156,9 +164,11 @@ class User extends Authenticatable implements FilamentUser
         }
 
         if ($this->isAdminEmpresa()) {
-            return Caja::withoutGlobalScope('sucursal')
+            // El admin_empresa puede acceder a cualquier caja de su empresa
+            // (no se restringe por sucursal, él puede moverse entre ellas)
+            return Caja::withoutGlobalScopes()
                 ->where('id', $cajaId)
-                ->where('sucursal_id', $this->branch_id)
+                ->where('company_id', $this->company_id)
                 ->exists();
         }
 
