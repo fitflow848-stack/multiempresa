@@ -25,4 +25,13 @@ jobs:
             echo "Actualizando repo..."
             git pull
 
+            echo "Instalando dependencias de PHP..."
+            composer install --no-interaction --prefer-dist --optimize-autoloader
+
+            echo "Ejecutando migraciones..."
+            php artisan migrate --force
+
+            echo "Limpiando y optimizando caché..."
+            php artisan optimize:clear
+
             echo "Deploy completado."
