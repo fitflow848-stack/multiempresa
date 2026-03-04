@@ -181,7 +181,7 @@ class PosController extends Controller
 
         // Determinar la serie según el tipo de documento
         $serieDocumento = obtenerSerieDocumento($company, $tipoDocumento);
-        
+
         if (!$serieDocumento && !$isProforma) {
             return redirect()->route('pos.index')
                 ->with('error', "La sucursal actual no tiene configurada una serie para el tipo de documento: " . strtoupper($tipoDocumento));
@@ -452,56 +452,67 @@ class PosController extends Controller
 
     public function getDescuentoProducto(Request $request)
     {
-        $producto_id = $request->get('producto_id');
-        $almacen_detalle_id = $request->get('almacen_detalle_id');
-        $cantidad = (float) $request->get('cantidad', 1);
-        $precio = (float) $request->get('precio', 0);
-        $tipo = $request->get('tipo', 'publico'); // 'publico' o 'corporativo'
+        try {
+            $producto_id = $request->get('producto_id');
+            $almacen_detalle_id = $request->get('almacen_detalle_id');
+            $cantidad = (float) $request->get('cantidad', 1);
+            $precio = (float) $request->get('precio', 0);
+            $tipo = $request->get('tipo', 'publico'); // 'publico' o 'corporativo'
 
-        $pvpd = null;
+            $pvpd = null;
+            $campo = ($tipo === 'corporativo') ? 'pvcd' : 'pvpd';
 
-        if ($almacen_detalle_id) {
-            $detalle = AlmacenIngresoDetalle::find($almacen_detalle_id);
-            if ($detalle) {
-                $pvpd = ($tipo === 'corporativo') ? $detalle->pvcd : $detalle->pvpd;
-            }
-        }
-
-        if ($pvpd === null && $producto_id) {
-            $detalleQuery = AlmacenIngresoDetalle::where('producto_id', $producto_id);
-
-            if ($tipo === 'corporativo') {
-                $detalleQuery->whereNotNull('pvcd');
-            } else {
-                $detalleQuery->whereNotNull('pvpd');
-            }
-
-            $detalle = $detalleQuery->orderBy('id', 'desc')->first();
-
-            if ($detalle) {
-                $pvpd = ($tipo === 'corporativo') ? $detalle->pvcd : $detalle->pvpd;
-            }
-        }
-
-        $maxAmount = null;
-        if ($pvpd !== null) {
-            $pvpd = (float) $pvpd;
-            if ($pvpd <= 1) {
-                $maxAmount = $cantidad * $precio * $pvpd;
-            } else {
-                // El pvpd representa el precio mínimo permitido para el producto.
-                // El descuento máximo permitido es la diferencia entre el precio actual y el mínimo,
-                // multiplicado por la cantidad total de la línea.
-                $maxAmount = ($precio - $pvpd) * $cantidad;
-                if ($maxAmount < 0) {
-                    $maxAmount = 0;
+            // Usar DB::table para evitar global scopes de Eloquent
+            if ($almacen_detalle_id) {
+                $detalle = DB::table('almacen_ingreso_detalle')
+                    ->where('id', $almacen_detalle_id)
+                    ->first();
+                if ($detalle) {
+                    $pvpd = $detalle->$campo;
                 }
             }
-        }
 
-        return response()->json([
-            'pvpd' => $pvpd,
-            'maxAmount' => $maxAmount,
-        ]);
+            if ($pvpd === null && $producto_id) {
+                $detalle = DB::table('almacen_ingreso_detalle')
+                    ->where('producto_id', $producto_id)
+                    ->whereNotNull($campo)
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+                if ($detalle) {
+                    $pvpd = $detalle->$campo;
+                }
+            }
+
+            $maxAmount = null;
+            if ($pvpd !== null) {
+                $pvpd = (float) $pvpd;
+                if ($pvpd <= 1) {
+                    // pvpd es un porcentaje decimal (ej: 0.25 = 25%)
+                    $maxAmount = $cantidad * $precio * $pvpd;
+                } else {
+                    // pvpd es el precio mínimo permitido
+                    $maxAmount = ($precio - $pvpd) * $cantidad;
+                    if ($maxAmount < 0) {
+                        $maxAmount = 0;
+                    }
+                }
+            }
+
+            return response()->json([
+                'pvpd' => $pvpd,
+                'maxAmount' => $maxAmount,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('getDescuentoProducto Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'params' => $request->all(),
+            ]);
+            return response()->json([
+                'pvpd' => null,
+                'maxAmount' => null,
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

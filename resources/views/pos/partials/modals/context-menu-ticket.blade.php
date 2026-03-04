@@ -71,7 +71,6 @@
         <span>Quitar articulo</span>
     </div>
 </div>
-@include('pos.partials.js.cantidad-venta')
 
 <script>
     // Handlers mínimos para acciones del menú del ticket. Usan `currentProduct` y `ticket`.
@@ -165,7 +164,16 @@
                 tipo: ticket[idx].es_precio_corporativo ? 'corporativo' : 'publico'
             });
 
-            const resp = await fetch(`{{ url('/pos/pvpd') }}?${q.toString()}`);
+            const resp = await fetch(`{{ route('pos.pvpd') }}?${q.toString()}`);
+
+            // Verificar si la respuesta es OK
+            if (!resp.ok) {
+                const text = await resp.text();
+                console.error('Error HTTP ' + resp.status + ':', text.substring(0, 500));
+                return alert('Error al obtener descuento (HTTP ' + resp.status +
+                    '). Revisa la consola del navegador.');
+            }
+
             const data = await resp.json();
 
             const pvpd = parseFloat(data.pvpd); // Ej: 0.25 (25%)
@@ -272,7 +280,7 @@
     }
 
     // Cerrar el menú ticket al hacer click fuera
-    document.addEventListener('click', function (e) {
+    document.addEventListener('click', function(e) {
         const menu = document.getElementById('context-menu-ticket');
         if (menu && menu.style.display === 'block' && !menu.contains(e.target)) {
             cerrarContextMenuTicket();

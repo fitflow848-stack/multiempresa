@@ -41,13 +41,11 @@ Route::get('/', function () {
     return redirect('/login');
 });
 
-// Endpoint helper para obtener pvpd y monto máximo de descuento para POS
-Route::get('/pos/pvpd', [PosController::class, 'getDescuentoProducto'])->name('pos.pvpd');
-
 // Rutas de autenticación
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
 // Rutas de selección de sucursal
 Route::middleware(['auth'])->group(function () {
     Route::get('/select-branch', [BranchSelectionController::class, 'index'])->name('branch.select');
@@ -57,6 +55,9 @@ Route::middleware(['auth'])->group(function () {
 
 Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function () {
     Route::get('/principal', [PrincipalController::class, 'index'])->name('principal.index');
+
+    // Endpoint helper para obtener pvpd y monto máximo de descuento para POS
+    Route::get('/pos/pvpd', [PosController::class, 'getDescuentoProducto'])->name('pos.pvpd');
 
     // Ruta para registrar arqueo de caja desde POS/UI
     Route::post('/arqueo', [ArqueoCajaController::class, 'store'])->name('arqueo.store');
