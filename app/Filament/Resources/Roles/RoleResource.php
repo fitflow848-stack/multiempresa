@@ -20,15 +20,9 @@ class RoleResource extends Resource
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-shield-check';
 
-    protected static UnitEnum|string|null $navigationGroup = 'Administración';
+    protected static UnitEnum|string|null $navigationGroup = 'Usuarios y Accesos';
 
-    protected static ?string $recordTitleAttribute = 'name';
-
-    protected static ?string $modelLabel = 'Rol';
-
-    protected static ?string $pluralModelLabel = 'Roles';
-
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 2;
 
     public static function form(Schema $schema): Schema
     {

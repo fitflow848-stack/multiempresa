@@ -7,6 +7,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Actions\BulkActionGroup;
@@ -18,9 +19,6 @@ class SucursalesTable
     {
         return $table
             ->columns([
-                TextColumn::make('id')
-                    ->label('ID')
-                    ->sortable(),
                 ImageColumn::make('logo')
                     ->label('Logo')
                     ->circular()
@@ -30,30 +28,28 @@ class SucursalesTable
                     ->label('Nombre')
                     ->searchable()
                     ->sortable()
-                    ->weight('bold'),
+                    ->weight('bold')
+                    ->description(fn($record) => $record->direccion),
                 TextColumn::make('company.razon_social')
                     ->label('Empresa')
                     ->searchable()
-                    ->sortable(),
-                TextColumn::make('direccion')
-                    ->label('Dirección')
-                    ->limit(30)
-                    ->tooltip(fn($record) => $record->direccion),
+                    ->sortable()
+                    ->color('gray')
+                    ->size('sm')
+                    ->toggleable(isToggledHiddenByDefault: fn() => !auth()->guard('admin')->user()?->hasRole('super_admin')),
                 TextColumn::make('telefono')
-                    ->label('Teléfono'),
-                TextColumn::make('numero_cajas')
-                    ->label('N° Cajas')
-                    ->badge()
-                    ->color('info')
-                    ->alignCenter(),
+                    ->label('Teléfono')
+                    ->icon('heroicon-o-phone')
+                    ->toggleable(),
                 TextColumn::make('cajas_count')
-                    ->label('Cajas Creadas')
+                    ->label('Cajas Registradas')
                     ->counts('cajas')
                     ->badge()
-                    ->color(fn($state, $record) => $state < $record->numero_cajas ? 'warning' : 'success')
+                    ->color(fn($state, $record) => $state >= ($record->numero_cajas ?? 1) ? 'success' : 'warning')
+                    ->suffix(fn($state, $record) => " / " . ($record->numero_cajas ?? '1'))
                     ->alignCenter(),
                 IconColumn::make('is_active')
-                    ->label('Activa')
+                    ->label('Estado')
                     ->boolean()
                     ->trueIcon('heroicon-o-check-circle')
                     ->falseIcon('heroicon-o-x-circle')
@@ -62,12 +58,17 @@ class SucursalesTable
                 TextColumn::make('created_at')
                     ->dateTime('d/m/Y')
                     ->label('Creada')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('company_id')
                     ->label('Empresa')
-                    ->relationship('company', 'razon_social'),
+                    ->relationship('company', 'razon_social')
+                    ->hidden(fn() => !auth()->guard('admin')->user()?->hasRole('super_admin')),
+                Filter::make('is_active')
+                    ->label('Solo sucursales activas')
+                    ->query(fn($query) => $query->where('is_active', true)),
             ])
             ->recordActions([
                 ViewAction::make(),
@@ -75,7 +76,11 @@ class SucursalesTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->requiresConfirmation()
+                        ->modalHeading('Eliminar Sucursales')
+                        ->modalDescription('Si eliminas una sucursal, se perderán las cajas y datos asociados. ¿Estás seguro?')
+                        ->modalSubmitActionLabel('Sí, eliminar permanentemente'),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');

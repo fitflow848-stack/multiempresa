@@ -21,7 +21,7 @@ class UserResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-users';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Administración';
+    protected static string|UnitEnum|null $navigationGroup = 'Usuarios y Accesos';
 
     protected static ?string $recordTitleAttribute = 'name';
 
@@ -70,4 +70,3 @@ class UserResource extends Resource
         return (string) static::getEloquentQuery()->count();
     }
 }
-

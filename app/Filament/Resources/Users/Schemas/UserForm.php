@@ -72,7 +72,7 @@ class UserForm
                         ->hidden(fn() => !auth()->user()->hasRole('super_admin'))
                         ->default(fn() => auth()->user()->company_id)
                         ->afterStateUpdated(function (callable $set) {
-                            $set('branch_id', null);
+                            $set('branches', []);
                             $set('cajas', []);
                         }),
 
@@ -82,11 +82,17 @@ class UserForm
                             'branches',
                             'nombre',
                             function ($query, $get) {
-                                $companyId = $get('company_id') ?? auth()->user()->company_id;
+                                // Deshabilitar el GlobalScope de empresa para que el Super Admin pueda ver sucursales de otras empresas
+                                $query->withoutGlobalScopes();
+
+                                // Priorizar la empresa seleccionada en el select, si no hay (no es super admin), usar la del usuario logueado
+                                $companyId = $get('company_id') ?: auth()->user()->company_id;
+
                                 if ($companyId) {
-                                    $query->where('company_id', $companyId);
+                                    return $query->where('company_id', $companyId);
                                 }
-                                return $query;
+
+                                return $query->whereRaw('1 = 0'); // No mostrar nada si no hay empresa
                             }
                         )
                         ->multiple()
@@ -124,7 +130,7 @@ class UserForm
                             'cajas',
                             'nombre',
                             fn($query, $get) =>
-                            $query->withoutGlobalScope('sucursal')
+                            $query->withoutGlobalScopes()
                                 ->whereIn('sucursal_id', $get('branches') ?? [])
                                 ->where('is_active', true)
                         )

@@ -6,11 +6,15 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
+use Filament\Actions\Action;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Filament\Notifications\Notification;
 
 class UsersTable
 {
@@ -19,41 +23,40 @@ class UsersTable
         return $table
             ->columns([
                 TextColumn::make('name')
-                    ->label('Nombre')
+                    ->label('Usuario')
                     ->searchable()
-                    ->sortable(),
-
-                TextColumn::make('email')
-                    ->label('Email')
-                    ->searchable()
-                    ->icon('heroicon-o-envelope'),
+                    ->sortable()
+                    ->description(fn($record) => $record->email)
+                    ->icon('heroicon-o-user-circle')
+                    ->weight('bold'),
 
                 TextColumn::make('company.razon_social')
                     ->label('Empresa')
                     ->searchable()
                     ->sortable()
+                    ->badge()
+                    ->color('gray')
                     ->placeholder('Sin asignar'),
 
                 TextColumn::make('branches.nombre')
                     ->label('Sucursales')
                     ->searchable()
-                    ->sortable()
                     ->badge()
                     ->color('info')
                     ->separator(', ')
                     ->placeholder('Sin sucursal'),
 
                 TextColumn::make('roles.name')
-                    ->label('Roles')
+                    ->label('Rol')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
-                        'super_admin' => 'danger',
+                        'super_admin'   => 'danger',
                         'admin_empresa' => 'warning',
-                        'admin' => 'danger',
-                        'supervisor' => 'warning',
-                        'vendedor' => 'success',
-                        'cajero' => 'info',
-                        default => 'gray',
+                        'admin'         => 'danger',
+                        'supervisor'    => 'warning',
+                        'vendedor'      => 'success',
+                        'cajero'        => 'info',
+                        default         => 'gray',
                     })
                     ->placeholder('Sin roles'),
 
@@ -63,17 +66,17 @@ class UsersTable
                     ->color('primary')
                     ->separator(', ')
                     ->placeholder('Sin cajas')
-                    ->toggleable(isToggledHiddenByDefault: false),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 TextColumn::make('phone')
                     ->label('Teléfono')
                     ->searchable()
-                    ->placeholder('No especificado')
+                    ->placeholder('—')
                     ->icon('heroicon-o-phone')
                     ->toggleable(isToggledHiddenByDefault: true),
 
                 IconColumn::make('is_active')
-                    ->label('Estado')
+                    ->label('Activo')
                     ->boolean()
                     ->trueIcon('heroicon-o-check-circle')
                     ->falseIcon('heroicon-o-x-circle')
@@ -87,53 +90,78 @@ class UsersTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                // Company filter
                 SelectFilter::make('company_id')
                     ->label('Empresa')
-                    ->options(function () {
-                        return \App\Models\Company::all()
-                            ->mapWithKeys(fn($c) => [$c->id => $c->razon_social ?? 'Sin asignar'])
-                            ->toArray();
-                    }),
+                    ->options(fn() => \App\Models\Company::all()
+                        ->mapWithKeys(fn($c) => [$c->id => $c->razon_social ?? 'Sin asignar'])
+                        ->toArray()),
 
-                // Branch filter
-                SelectFilter::make('branch_id')
-                    ->label('Sucursal')
-                    ->options(function () {
-                        return \App\Models\Sucursal::all()
-                            ->mapWithKeys(fn($s) => [$s->id => $s->nombre ?? 'Sin nombre'])
-                            ->toArray();
-                    }),
-
-                // Roles filter
                 SelectFilter::make('roles')
                     ->label('Rol')
-                    ->options(function () {
-                        return \Spatie\Permission\Models\Role::all()
-                            ->mapWithKeys(fn($r) => [$r->id => $r->name ?? 'Sin nombre'])
-                            ->toArray();
-                    })
+                    ->options(fn() => \Spatie\Permission\Models\Role::all()
+                        ->mapWithKeys(fn($r) => [$r->id => $r->name])
+                        ->toArray())
                     ->multiple(),
 
                 Filter::make('is_active')
                     ->label('Solo usuarios activos')
                     ->query(fn($query) => $query->where('is_active', true)),
 
-                Filter::make('has_company')
-                    ->label('Con empresa asignada')
-                    ->query(fn($query) => $query->whereNotNull('company_id')),
-
-                Filter::make('has_cajas')
-                    ->label('Con cajas asignadas')
-                    ->query(fn($query) => $query->has('cajas')),
+                Filter::make('sin_cajas')
+                    ->label('Sin cajas asignadas')
+                    ->query(fn($query) => $query->doesntHave('cajas')),
             ])
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
+
+                // Toggle Activar / Desactivar rápido
+                Action::make('toggleActive')
+                    ->label(fn($record) => $record->is_active ? 'Desactivar' : 'Activar')
+                    ->icon(fn($record) => $record->is_active ? 'heroicon-o-x-circle' : 'heroicon-o-check-circle')
+                    ->color(fn($record) => $record->is_active ? 'warning' : 'success')
+                    ->requiresConfirmation()
+                    ->modalHeading(fn($record) => $record->is_active ? 'Desactivar Usuario' : 'Activar Usuario')
+                    ->modalDescription(fn($record) => $record->is_active
+                        ? "¿Confirmas que deseas desactivar a {$record->name}? No podrá iniciar sesión."
+                        : "¿Confirmas que deseas activar a {$record->name}?")
+                    ->modalSubmitActionLabel('Sí, confirmar')
+                    ->action(function ($record) {
+                        $nuevoEstado = !$record->is_active;
+                        $record->update(['is_active' => $nuevoEstado]);
+                        Notification::make()
+                            ->title($nuevoEstado ? '✅ Usuario activado' : '🚫 Usuario desactivado')
+                            ->success()
+                            ->send();
+                    }),
+
+                // Resetear contraseña
+                Action::make('resetPassword')
+                    ->label('Resetear Contraseña')
+                    ->icon('heroicon-o-key')
+                    ->color('gray')
+                    ->requiresConfirmation()
+                    ->modalHeading('Resetear Contraseña')
+                    ->modalDescription(fn($record) => "Se generará una contraseña temporal para {$record->name}. Anótala antes de cerrar.")
+                    ->modalSubmitActionLabel('Sí, resetear')
+                    ->action(function ($record) {
+                        $newPassword = Str::random(10);
+                        $record->update(['password' => Hash::make($newPassword)]);
+                        Notification::make()
+                            ->title('🔑 Contraseña reseteada')
+                            ->body("Nueva contraseña temporal: {$newPassword}")
+                            ->warning()
+                            ->persistent()
+                            ->send();
+                    }),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->requiresConfirmation()
+                        ->modalHeading('Eliminar Usuarios Seleccionados')
+                        ->modalDescription('Esta acción es irreversible. Se eliminarán permanentemente los usuarios seleccionados y todos sus datos asociados.')
+                        ->modalSubmitActionLabel('Sí, eliminar permanentemente'),
                 ]),
             ])
             ->defaultSort('created_at', 'desc');

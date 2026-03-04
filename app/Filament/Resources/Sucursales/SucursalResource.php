@@ -22,15 +22,9 @@ class SucursalResource extends Resource
     // Use a known heroicon name to avoid SvgNotFound (reuse Company icon)
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-building-office';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Administración';
+    protected static string|UnitEnum|null $navigationGroup = 'Estructura';
 
-    protected static ?string $recordTitleAttribute = 'nombre';
-
-    protected static ?string $modelLabel = 'Sucursal';
-
-    protected static ?string $pluralModelLabel = 'Sucursales';
-
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 1;
 
     public static function form(Schema $schema): Schema
     {

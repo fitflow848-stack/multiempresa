@@ -21,17 +21,9 @@ class TesoreriaResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-archive-box';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Finanzas';
+    protected static string|UnitEnum|null $navigationGroup = 'Finanzas y Caja';
 
-    protected static ?string $navigationLabel = 'Tesorería / Caja';
-
-    protected static ?string $recordTitleAttribute = 'nombre';
-
-    protected static ?string $modelLabel = 'Tesorería';
-
-    protected static ?string $pluralModelLabel = 'Tesorerías';
-
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 1;
 
     public static function form(Schema $schema): Schema
     {

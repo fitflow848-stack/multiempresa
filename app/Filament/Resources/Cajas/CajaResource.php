@@ -21,15 +21,9 @@ class CajaResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-calculator';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Administración';
+    protected static string|UnitEnum|null $navigationGroup = 'Estructura';
 
-    protected static ?string $recordTitleAttribute = 'nombre';
-
-    protected static ?string $modelLabel = 'Caja';
-
-    protected static ?string $pluralModelLabel = 'Cajas';
-
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 2;
 
     public static function form(Schema $schema): Schema
     {

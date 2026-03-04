@@ -21,15 +21,9 @@ class CompanyResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-building-office';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Administración';
+    protected static string|UnitEnum|null $navigationGroup = 'Configuración';
 
-    protected static ?string $recordTitleAttribute = 'razon_social';
-
-    protected static ?string $modelLabel = 'Empresa';
-
-    protected static ?string $pluralModelLabel = 'Empresas';
-
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 1;
 
     public static function form(Schema $schema): Schema
     {
