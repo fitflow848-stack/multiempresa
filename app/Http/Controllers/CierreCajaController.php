@@ -89,6 +89,17 @@ class CierreCajaController extends Controller
 
         $cierres = $query->paginate(20);
 
+        // Actualizar dinámicamente si están abiertas para que la vista index las muestre correctas
+        foreach ($cierres as $cierre) {
+            if (is_null($cierre->fecha_cierre)) {
+                $totales = $cierre->calcularTotalesDinamicos();
+                $cierre->ingresos = $totales['ingresos_efectivo'];
+                $cierre->egresos = $totales['egresos_efectivo'];
+                $cierre->aportaciones = $totales['aportaciones_efectivo'];
+                $cierre->sustracciones = $totales['sustracciones_efectivo'];
+            }
+        }
+
         // Para tesorería: la bóveda es compartida, verificar si hay ALGUNA sesión
         // abierta de bóveda en la empresa (sin importar quién la abrió)
         if ($isTesoreria) {
@@ -259,115 +270,19 @@ class CierreCajaController extends Controller
             }
         }
 
-        $movimientos = DB::select("( SELECT
-                v.created_at AS fecha_emision,
-                'Ingreso - Venta' AS operacion,
-                'ingreso' AS tipo_movimiento,
-                c.nombre AS cliente_nombre,
-                CONCAT( v.serie, ' ', v.numero ) AS concepto,
-                tp.nombre AS metodo_pago,
-                tp.es_efectivo,
-                CASE 
-                    WHEN d.id IS NULL THEN v.total
-                    ELSE (v.total - (d.monto_deuda + COALESCE((SELECT SUM(monto) FROM deuda_pagos WHERE deuda_id = d.id), 0)))
-                END AS importe,
-                u.name AS usuario,
-                v.id_venta AS id_movimiento,
-                'venta' AS origen_movimiento
-                FROM
-                    ventas v
-                    INNER JOIN clientes c ON c.id = v.id_cliente
-                    INNER JOIN users u ON u.id = v.id_usuario 
-                    LEFT JOIN tipos_pagos tp ON tp.id = v.id_tipo_pago
-                    LEFT JOIN deudas d ON d.venta_id = v.id_venta
-                WHERE
-                    v.cierre_caja_id = :cierre_id AND v.estado != 0 
-                ) UNION
-                (
-                SELECT
-                    o.created_at AS fecha_emision,
-                    o.partida AS operacion,
-                    o.tipo AS tipo_movimiento,
-                    o.tipo AS cliente_nombre,
-                    o.concepto,
-                    o.metodo_pago,
-                    o.es_efectivo,
-                    o.importe,
-                    u.name AS usuario,
-                    o.id AS id_movimiento,
-                    'operacion' AS origen_movimiento
-                FROM
-                    operaciones_caja o
-                INNER JOIN users u ON u.id = o.user_id 
-                where o.cierre_caja_id = :cierre_id_2
-                ) ORDER BY fecha_emision DESC", ['cierre_id' => $cierre->id, 'cierre_id_2' => $cierre->id]);
+        $totalesDin = $cierre->calcularTotalesDinamicos();
+        $movimientos = $totalesDin['movimientos'];
+        $ingresosPorMetodo = $totalesDin['ingresos_por_metodo'];
 
-        $ingresosPorMetodo = [];
-        foreach ($movimientos as $mov) {
-            $importe = floatval($mov->importe);
-            $esEfectivo = (bool) ($mov->es_efectivo ?? false);
-            $metodoPago = $mov->metodo_pago ?? 'Sin método';
-
-            if (strtolower($mov->tipo_movimiento ?? '') === 'ingreso' && !$esEfectivo) {
-                if (!isset($ingresosPorMetodo[$metodoPago])) {
-                    $ingresosPorMetodo[$metodoPago] = 0;
-                }
-                $ingresosPorMetodo[$metodoPago] += $importe;
-            }
-        }
-
-        // Si el cierre está abierto, calculamos los totales dinámicamente
+        // Si el cierre está abierto, usamos los totales dinámicos (calculados al vuelo)
         if (!$cierre->fecha_cierre) {
-            $ingresosTotal = 0;
-            $egresosTotal = 0;
-            $aportacionesTotal = 0;
-            $sustraccionesTotal = 0;
-
-            // Totales exclusivos para el balance de EFECTIVO
-            $ingresosEfectivo = 0;
-            $egresosEfectivo = 0;
-            $aportacionesEfectivo = 0;
-            $sustraccionesEfectivo = 0;
-
-            foreach ($movimientos as $mov) {
-                $importe = floatval($mov->importe);
-                $esEfectivo = (bool) ($mov->es_efectivo ?? false);
-                $tipoMov = strtolower($mov->tipo_movimiento ?? '');
-
-                switch ($tipoMov) {
-                    case 'ingreso':
-                        $ingresosTotal += $importe;
-                        if ($esEfectivo)
-                            $ingresosEfectivo += $importe;
-                        break;
-                    case 'gasto':
-                        $egresosTotal += $importe;
-                        if ($esEfectivo)
-                            $egresosEfectivo += $importe;
-                        break;
-                    case 'aportacion':
-                    case 'aporte':
-                        $aportacionesTotal += $importe;
-                        if ($esEfectivo)
-                            $aportacionesEfectivo += $importe;
-                        break;
-                    case 'sustraccion':
-                    case 'retiro':
-                        $sustraccionesTotal += $importe;
-                        if ($esEfectivo)
-                            $sustraccionesEfectivo += $importe;
-                        break;
-                }
-            }
-            // Para la vista principal de arqueo, usamos los totales de EFECTIVO
-            // ya que se asume que el cierre es del cajón de dinero.
-            $cierre->ingresos = $ingresosEfectivo;
-            $cierre->egresos = $egresosEfectivo;
-            $cierre->aportaciones = $aportacionesEfectivo;
-            $cierre->sustracciones = $sustraccionesEfectivo;
+            $cierre->ingresos = $totalesDin['ingresos_efectivo'];
+            $cierre->egresos = $totalesDin['egresos_efectivo'];
+            $cierre->aportaciones = $totalesDin['aportaciones_efectivo'];
+            $cierre->sustracciones = $totalesDin['sustracciones_efectivo'];
 
             // Calculamos el teórico acumulado para el balance
-            $cierre->teorico_acumulado = $cierre->monto_apertura + $ingresosEfectivo - $egresosEfectivo + $aportacionesEfectivo - $sustraccionesEfectivo;
+            $cierre->teorico_acumulado = $cierre->monto_apertura + $cierre->ingresos - $cierre->egresos + $cierre->aportaciones - $cierre->sustracciones;
             $cierre->descuatdre_calculado = $cierre->monto_cierre - $cierre->teorico_acumulado;
         }
 

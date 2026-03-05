@@ -134,6 +134,8 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
 
     // Pase Caja → Bóveda (lo realiza el cajero)
     Route::post('/boveda/pase-caja-a-boveda', [OperacionCajaController::class, 'transferenciaCajaABoveda'])->name('boveda.caja-a-boveda');
+    // Bóveda → Caja Petición (lo realiza el cajero indicando que recibe dinero)
+    Route::post('/boveda/pase-caja-desde-boveda', [OperacionCajaController::class, 'transferenciaCajaDesdeBoveda'])->name('boveda.caja-desde-boveda');
     // Pase Bóveda → Caja (solo admin/supervisor, selecciona caja destino)
     Route::post('/boveda/pase-boveda-a-caja', [OperacionCajaController::class, 'transferenciaBovedaACaja'])->name('boveda.boveda-a-caja');
     // Listar cajas con sesión abierta (para selector de destino)

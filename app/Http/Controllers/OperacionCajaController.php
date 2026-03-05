@@ -172,6 +172,81 @@ class OperacionCajaController extends Controller
     }
 
     /**
+     * BÓVEDA → CAJA (Petición/Recepción desde la Caja)
+     * El cajero solicita/registra que está recibiendo efectivo de la bóveda
+     */
+    public function transferenciaCajaDesdeBoveda(Request $request)
+    {
+        $data = $request->validate([
+            'cierre_caja_id' => 'required|exists:cierre_cajas,id',
+            'importe'        => 'required|numeric|min:0.01',
+            'concepto'       => 'nullable|string|max:255',
+        ]);
+
+        $user = Auth::user();
+        
+        $cierreOrigen = CierreCaja::with('caja')->find($data['cierre_caja_id']);
+        
+        // Buscamos bóveda abierta de la empresa
+        $bovedaAbierta = CierreCaja::where('id_empresa', $user->company_id)
+            ->whereNull('fecha_cierre')
+            ->whereHas('caja', fn($q) => $q->where('is_boveda', true))
+            ->first();
+
+        if (!$bovedaAbierta) {
+            return response()->json(['success' => false, 'message' => 'No hay caja en tesorería (bóveda) abierta.'], 400);
+        }
+
+        $nombreCaja = optional($cierreOrigen->caja)->nombre ?? 'Caja';
+        $nombreBoveda = optional($bovedaAbierta->caja)->nombre ?? 'Bóveda';
+        $concepto = $data['concepto'] ?: 'Transferencia recibida de bóveda';
+
+        DB::transaction(function () use ($data, $user, $cierreOrigen, $bovedaAbierta, $nombreCaja, $concepto) {
+            OperacionCaja::create([
+                'cierre_caja_id' => $bovedaAbierta->id,
+                'user_id'        => $user->id,
+                'tipo'           => 'sustraccion',
+                'partida'        => 'Pase a Caja',
+                'concepto'       => 'Pase a ' . $nombreCaja . ': ' . $concepto,
+                'importe'        => $data['importe'],
+                'es_efectivo'    => 1,
+                'metodo_pago'    => 'Efectivo',
+            ]);
+            $bovedaAbierta->sustracciones = ($bovedaAbierta->sustracciones ?? 0) + $data['importe'];
+            $bovedaAbierta->save();
+
+            OperacionCaja::create([
+                'cierre_caja_id' => $cierreOrigen->id,
+                'user_id'        => $user->id,
+                'tipo'           => 'ingreso',
+                'partida'        => 'Recibido de Bóveda',
+                'concepto'       => $concepto,
+                'importe'        => $data['importe'],
+                'es_efectivo'    => 1,
+                'metodo_pago'    => 'Efectivo',
+            ]);
+            $cierreOrigen->ingresos = ($cierreOrigen->ingresos ?? 0) + $data['importe'];
+            $cierreOrigen->save();
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Recepción desde bóveda registrada correctamente.',
+            'ticket_data' => [
+                'tipo'             => 'PASE BÓVEDA → CAJA',
+                'origen'           => $nombreBoveda,
+                'destino'          => $nombreCaja,
+                'importe'          => $data['importe'],
+                'concepto'         => $concepto,
+                'usuario'          => $user->name,
+                'fecha'            => now()->format('d/m/Y H:i:s'),
+                'id_origen'        => $bovedaAbierta->id,
+                'id_destino'       => $cierreOrigen->id,
+            ]
+        ]);
+    }
+
+    /**
      * PASE BÓVEDA → CAJA
      * Solo admin/supervisor. Transfiere a una caja específica con sesión abierta.
      */

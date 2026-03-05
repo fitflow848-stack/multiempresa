@@ -193,11 +193,15 @@
 
                             @if(!$cierre->fecha_cierre)
                             <hr class="my-1">
-                            {{-- Desde CAJA normal: el cajero puede enviar efectivo a la bóveda --}}
+                            {{-- Desde CAJA normal: el cajero puede enviar efectivo a la bóveda o solicitar desde bóveda --}}
                             @if(!$isTesoreria)
                             <button type="button" class="btn btn-warning btn-sm text-start fw-bold"
                                     onclick="abrirModalCajaABoveda()">
                                 <i class="fas fa-vault me-2"></i> Pase a Bóveda
+                            </button>
+                            <button type="button" class="btn btn-info btn-sm text-start fw-bold text-white mt-1"
+                                    onclick="abrirModalCajaDesdeBoveda()">
+                                <i class="fas fa-hand-holding-dollar me-2"></i> Recibir de Bóveda
                             </button>
                             @endif
 
@@ -1157,6 +1161,36 @@
         </div>
     </div>
 
+    {{-- ══════════ MODAL CAJA DESDE BÓVEDA (Pedir a Bóveda) ══════════ --}}
+    <div id="modal-caja-desde-boveda" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:3100; align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:10px; width:420px; max-width:95vw; overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+            <div style="background:#0ea5e9; color:#fff; padding:14px 18px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:700; font-size:15px;">🏦 Recibir de Bóveda</span>
+                <button onclick="cerrarModalCajaDesdeBoveda()" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">×</button>
+            </div>
+            <div style="padding:20px;">
+                <div style="background:#e0f2fe; border:1px solid #bae6fd; border-radius:6px; padding:10px; margin-bottom:14px; font-size:12px; color:#0369a1;">
+                    <i class="fas fa-info-circle me-1"></i> Registra un ingreso a tu caja proveniente de la Bóveda General (Ej. para dar vuelto).
+                </div>
+                <div class="mb-3">
+                    <label class="label-custom">Importe a recibir (S/)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-info-subtle">S/</span>
+                        <input type="number" id="cd_importe" step="0.01" min="0.01" class="form-control fw-bold" placeholder="0.00" value="">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="label-custom">Concepto / Motivo</label>
+                    <input type="text" id="cd_concepto" class="form-control form-control-sm" placeholder="Ej: Cambio en sencillo">
+                </div>
+                <div class="d-flex gap-2 justify-content-end">
+                    <button onclick="cerrarModalCajaDesdeBoveda()" class="btn btn-sm btn-light px-4">Cancelar</button>
+                    <button id="btn-confirmar-caja-desde-boveda" onclick="ejecutarCajaDesdeBoveda()" class="btn btn-sm btn-info px-4 fw-bold text-white">Confirmar Ingreso</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     {{-- ══════════ MODAL PASE BÓVEDA → CAJA ══════════ --}}
     <div id="modal-boveda-caja" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:3100; align-items:center; justify-content:center;">
         <div style="background:#fff; border-radius:10px; width:440px; max-width:95vw; overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,0.3);">
@@ -1248,6 +1282,57 @@
                 console.error(e);
             } finally {
                 btn.disabled = false; btn.innerText = 'Confirmar Pase';
+            }
+        }
+
+        // ─── CAJA RECIBE DE BÓVEDA (Petición) ───────────────────────
+        function abrirModalCajaDesdeBoveda() {
+            document.getElementById('cd_importe').value = '';
+            document.getElementById('cd_concepto').value = '';
+            document.getElementById('modal-caja-desde-boveda').style.display = 'flex';
+        }
+        function cerrarModalCajaDesdeBoveda() {
+            document.getElementById('modal-caja-desde-boveda').style.display = 'none';
+        }
+
+        async function ejecutarCajaDesdeBoveda() {
+            const importe = parseFloat(document.getElementById('cd_importe').value);
+            const concepto = document.getElementById('cd_concepto').value.trim();
+
+            if (!importe || importe <= 0) { alert('Ingrese un importe válido.'); return; }
+
+            const btn = document.getElementById('btn-confirmar-caja-desde-boveda');
+            btn.disabled = true; btn.innerText = 'Procesando...';
+
+            try {
+                const res = await fetch('{{ route("boveda.caja-desde-boveda") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfBoveda },
+                    body: JSON.stringify({ cierre_caja_id: cierreIdBoveda, importe, concepto })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    cerrarModalCajaDesdeBoveda();
+                    const t = data.ticket_data;
+                    const url = ticketBaseUrl + '?tipo=' + encodeURIComponent(t.tipo)
+                        + '&origen=' + encodeURIComponent(t.origen)
+                        + '&destino=' + encodeURIComponent(t.destino)
+                        + '&importe=' + encodeURIComponent(t.importe)
+                        + '&concepto=' + encodeURIComponent(t.concepto)
+                        + '&usuario=' + encodeURIComponent(t.usuario)
+                        + '&fecha=' + encodeURIComponent(t.fecha)
+                        + '&id_origen=' + encodeURIComponent(t.id_origen)
+                        + '&id_destino=' + encodeURIComponent(t.id_destino);
+                    window.open(url, '_blank');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.message || 'No se pudo completar el pase.'));
+                }
+            } catch(e) {
+                alert('Error de red.');
+                console.error(e);
+            } finally {
+                btn.disabled = false; btn.innerText = 'Confirmar Ingreso';
             }
         }
 
