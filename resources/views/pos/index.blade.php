@@ -33,17 +33,13 @@
         background: white;
         border-radius: 4px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        display: none !important; /* Por defecto oculto */
         transition: flex 0.3s ease;
     }
 
-    .results-area:has(tbody:empty) {
-        display: none !important;
-    }
-
-    .results-area:not(:has(tbody:empty)) {
+    .results-area.has-results {
         display: block !important;
         flex: 0 0 40%;
-        /* Toma el 40% si hay resultados */
         max-height: 50%;
         overflow-y: auto;
     }
@@ -465,6 +461,7 @@
 
         if (q.length < 2) {
             document.getElementById('productos-tbody').innerHTML = '';
+            document.querySelector('.results-area').classList.remove('has-results');
             return;
         }
 
@@ -478,6 +475,7 @@
 
         if (q.length < 2) {
             document.getElementById('productos-tbody').innerHTML = '';
+            document.querySelector('.results-area').classList.remove('has-results');
             return;
         }
 
@@ -1578,8 +1576,15 @@
     // Modifica la función renderProductos para llenar la tabla (no el grid):
     function renderProductos(productos) {
         const tbody = document.getElementById('productos-tbody');
+        const resultsArea = document.querySelector('.results-area');
         tbody.innerHTML = ''; // Limpia resultados previos
 
+        if (productos.length === 0) {
+            resultsArea.classList.remove('has-results');
+            return;
+        }
+
+        resultsArea.classList.add('has-results');
         productos.forEach(p => {
             const tr = document.createElement('tr');
             tr.style.cursor = 'pointer';
@@ -1749,6 +1754,15 @@
         renderTicket();
         // Auto-guardar después de agregar producto
         guardarVentaPersistente();
+
+        // Focus al buscador de Nombre/Marca después de agregar producto
+        setTimeout(() => {
+            const searchInput = document.querySelector('.secondary-search');
+            if (searchInput) {
+                searchInput.focus();
+                searchInput.select();
+            }
+        }, 100);
     }
 
     function renderTicket() {
