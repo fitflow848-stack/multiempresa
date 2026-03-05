@@ -124,14 +124,12 @@ class FinanzasVendedorController extends Controller
                 $nombreTipo = 'Adelantos personal';
             }
 
-            // Buscar sin scope de empresa (TipoPasivo es compartido)
-            $tipoPasivo = TipoPasivo::where('nombre', $nombreTipo)->first();
-            if (!$tipoPasivo) {
-                $tipoPasivo = TipoPasivo::create([
-                    'nombre'     => $nombreTipo,
-                    'descripcion' => 'Registrado por vendedor'
-                ]);
-            }
+            // Obtener o crear el TipoPasivo para la empresa actual (company-scoped)
+            $tipoPasivo = TipoPasivo::withoutGlobalScopes()
+                ->firstOrCreate(
+                    ['nombre' => $nombreTipo, 'company_id' => Auth::user()->company_id],
+                    ['descripcion' => 'Tipo de operación: ' . $nombreTipo]
+                );
 
             $pasivo = Pasivo::create([
                 'company_id' => Auth::user()->company_id,
@@ -261,7 +259,11 @@ class FinanzasVendedorController extends Controller
                 $nombreTipo = 'Adelantos personal';
             }
 
-            $tipoPasivo = TipoPasivo::where('nombre', $nombreTipo)->first();
+            $tipoPasivo = TipoPasivo::withoutGlobalScopes()
+                ->firstOrCreate(
+                    ['nombre' => $nombreTipo, 'company_id' => Auth::user()->company_id],
+                    ['descripcion' => 'Tipo de operación: ' . $nombreTipo]
+                );
 
             $operacion->update([
                 'tipo_pasivo_id' => $tipoPasivo->id,
