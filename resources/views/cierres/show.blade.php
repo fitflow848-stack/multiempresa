@@ -190,6 +190,25 @@
                             <button type="button" class="btn btn-outline-secondary btn-sm text-start" onclick="openModalAdelanto('compra_credito')">
                                 <i class="fas fa-file-invoice-dollar me-2"></i> Compra a Crédito
                             </button>
+
+                            @if(!$cierre->fecha_cierre)
+                            <hr class="my-1">
+                            {{-- Desde CAJA normal: el cajero puede enviar efectivo a la bóveda --}}
+                            @if(!$isTesoreria)
+                            <button type="button" class="btn btn-warning btn-sm text-start fw-bold"
+                                    onclick="abrirModalCajaABoveda()">
+                                <i class="fas fa-vault me-2"></i> Pase a Bóveda
+                            </button>
+                            @endif
+
+                            {{-- Desde BÓVEDA: el admin envía efectivo a una caja específica --}}
+                            @if($isTesoreria)
+                            <button type="button" class="btn btn-dark btn-sm text-start fw-bold"
+                                    onclick="abrirModalBovedaACaja()">
+                                <i class="fas fa-money-bill-transfer me-2"></i> Pase a Caja
+                            </button>
+                            @endif
+                            @endif
                         </div>
 
                         <input type="hidden" id="teorico_cierre" value="{{ $cierre->teorico_cierre }}">
@@ -1106,5 +1125,211 @@
                 });
             })();
         });
+    </script>
+
+    {{-- ══════════ MODAL PASE CAJA → BÓVEDA ══════════ --}}
+    <div id="modal-caja-boveda" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:3100; align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:10px; width:420px; max-width:95vw; overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+            <div style="background:#f59e0b; color:#fff; padding:14px 18px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:700; font-size:15px;">🏦 Pase a Bóveda</span>
+                <button onclick="cerrarModalCajaABoveda()" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">×</button>
+            </div>
+            <div style="padding:20px;">
+                <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:6px; padding:10px; margin-bottom:14px; font-size:12px; color:#92400e;">
+                    <i class="fas fa-info-circle me-1"></i> Transfiere el exceso de efectivo a la Bóveda. El administrador lo recibirá y firmará.
+                </div>
+                <div class="mb-3">
+                    <label class="label-custom">Importe a transferir (S/)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-warning-subtle">S/</span>
+                        <input type="number" id="cb_importe" step="0.01" min="0.01" class="form-control fw-bold" placeholder="0.00" value="">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="label-custom">Concepto / Motivo</label>
+                    <input type="text" id="cb_concepto" class="form-control form-control-sm" placeholder="Ej: Exceso de caja turno mañana">
+                </div>
+                <div class="d-flex gap-2 justify-content-end">
+                    <button onclick="cerrarModalCajaABoveda()" class="btn btn-sm btn-light px-4">Cancelar</button>
+                    <button id="btn-confirmar-caja-boveda" onclick="ejecutarCajaABoveda()" class="btn btn-sm btn-warning px-4 fw-bold">Confirmar Pase</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ══════════ MODAL PASE BÓVEDA → CAJA ══════════ --}}
+    <div id="modal-boveda-caja" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:3100; align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:10px; width:440px; max-width:95vw; overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,0.3);">
+            <div style="background:#1a1a2e; color:#fff; padding:14px 18px; display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-weight:700; font-size:15px;">💰 Pase Bóveda → Caja</span>
+                <button onclick="cerrarModalBovedaACaja()" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">×</button>
+            </div>
+            <div style="padding:20px;">
+                <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:10px; margin-bottom:14px; font-size:12px; color:#1e3a8a;">
+                    <i class="fas fa-info-circle me-1"></i> Solo administradores/supervisores. Seleccione la caja destino con sesión activa.
+                </div>
+                <div class="mb-3">
+                    <label class="label-custom">Caja Destino</label>
+                    <select id="bc_caja_destino" class="form-select form-select-sm">
+                        <option value="">Cargando cajas abiertas...</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="label-custom">Importe a transferir (S/)</label>
+                    <div class="input-group">
+                        <span class="input-group-text">S/</span>
+                        <input type="number" id="bc_importe" step="0.01" min="0.01" class="form-control fw-bold" placeholder="0.00">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="label-custom">Concepto / Motivo</label>
+                    <input type="text" id="bc_concepto" class="form-control form-control-sm" placeholder="Ej: Reposición de caja 2">
+                </div>
+                <div class="d-flex gap-2 justify-content-end">
+                    <button onclick="cerrarModalBovedaACaja()" class="btn btn-sm btn-light px-4">Cancelar</button>
+                    <button id="btn-confirmar-boveda-caja" onclick="ejecutarBovedaACaja()" class="btn btn-sm btn-dark px-4 fw-bold">Confirmar Pase</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const cierreIdBoveda = {{ $cierre->id }};
+        const isTesoreria    = {{ $isTesoreria ? 'true' : 'false' }};
+        const csrfBoveda     = '{{ csrf_token() }}';
+        const ticketBaseUrl  = '{{ route("boveda.ticket") }}';
+
+        // ─── PASE CAJA → BÓVEDA ─────────────────────────────────────
+        function abrirModalCajaABoveda() {
+            document.getElementById('cb_importe').value = '';
+            document.getElementById('cb_concepto').value = '';
+            document.getElementById('modal-caja-boveda').style.display = 'flex';
+        }
+        function cerrarModalCajaABoveda() {
+            document.getElementById('modal-caja-boveda').style.display = 'none';
+        }
+
+        async function ejecutarCajaABoveda() {
+            const importe = parseFloat(document.getElementById('cb_importe').value);
+            const concepto = document.getElementById('cb_concepto').value.trim();
+
+            if (!importe || importe <= 0) { alert('Ingrese un importe válido.'); return; }
+
+            const btn = document.getElementById('btn-confirmar-caja-boveda');
+            btn.disabled = true; btn.innerText = 'Procesando...';
+
+            try {
+                const res = await fetch('{{ route("boveda.caja-a-boveda") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfBoveda },
+                    body: JSON.stringify({ cierre_caja_id: cierreIdBoveda, importe, concepto })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    cerrarModalCajaABoveda();
+                    // Abrir ticket en nueva pestaña
+                    const t = data.ticket_data;
+                    const url = ticketBaseUrl + '?tipo=' + encodeURIComponent(t.tipo)
+                        + '&origen=' + encodeURIComponent(t.origen)
+                        + '&destino=' + encodeURIComponent(t.destino)
+                        + '&importe=' + encodeURIComponent(t.importe)
+                        + '&concepto=' + encodeURIComponent(t.concepto)
+                        + '&usuario=' + encodeURIComponent(t.usuario)
+                        + '&fecha=' + encodeURIComponent(t.fecha)
+                        + '&id_origen=' + encodeURIComponent(t.id_origen)
+                        + '&id_destino=' + encodeURIComponent(t.id_destino);
+                    window.open(url, '_blank');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.message || 'No se pudo completar el pase.'));
+                }
+            } catch(e) {
+                alert('Error de red.');
+                console.error(e);
+            } finally {
+                btn.disabled = false; btn.innerText = 'Confirmar Pase';
+            }
+        }
+
+        // ─── PASE BÓVEDA → CAJA ─────────────────────────────────────
+        function abrirModalBovedaACaja() {
+            document.getElementById('bc_importe').value = '';
+            document.getElementById('bc_concepto').value = '';
+            document.getElementById('modal-boveda-caja').style.display = 'flex';
+            cargarCajasAbiertas();
+        }
+        function cerrarModalBovedaACaja() {
+            document.getElementById('modal-boveda-caja').style.display = 'none';
+        }
+
+        async function cargarCajasAbiertas() {
+            const sel = document.getElementById('bc_caja_destino');
+            sel.innerHTML = '<option value="">Cargando...</option>';
+            try {
+                const res = await fetch('{{ route("boveda.cajas-abiertas") }}');
+                const data = await res.json();
+                if (data.length === 0) {
+                    sel.innerHTML = '<option value="">No hay cajas con sesión abierta</option>';
+                } else {
+                    sel.innerHTML = '<option value="">Seleccione caja destino...</option>';
+                    data.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.id;
+                        opt.textContent = c.nombre;
+                        sel.appendChild(opt);
+                    });
+                }
+            } catch(e) {
+                sel.innerHTML = '<option value="">Error al cargar cajas</option>';
+            }
+        }
+
+        async function ejecutarBovedaACaja() {
+            const cajaId  = document.getElementById('bc_caja_destino').value;
+            const importe = parseFloat(document.getElementById('bc_importe').value);
+            const concepto = document.getElementById('bc_concepto').value.trim();
+
+            if (!cajaId)  { alert('Seleccione la caja destino.'); return; }
+            if (!importe || importe <= 0) { alert('Ingrese un importe válido.'); return; }
+
+            const btn = document.getElementById('btn-confirmar-boveda-caja');
+            btn.disabled = true; btn.innerText = 'Procesando...';
+
+            try {
+                const res = await fetch('{{ route("boveda.boveda-a-caja") }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfBoveda },
+                    body: JSON.stringify({
+                        cierre_boveda_id: cierreIdBoveda,
+                        caja_destino_id: cajaId,
+                        importe,
+                        concepto
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    cerrarModalBovedaACaja();
+                    const t = data.ticket_data;
+                    const url = ticketBaseUrl + '?tipo=' + encodeURIComponent(t.tipo)
+                        + '&origen=' + encodeURIComponent(t.origen)
+                        + '&destino=' + encodeURIComponent(t.destino)
+                        + '&importe=' + encodeURIComponent(t.importe)
+                        + '&concepto=' + encodeURIComponent(t.concepto)
+                        + '&usuario=' + encodeURIComponent(t.usuario)
+                        + '&fecha=' + encodeURIComponent(t.fecha)
+                        + '&id_origen=' + encodeURIComponent(t.id_origen)
+                        + '&id_destino=' + encodeURIComponent(t.id_destino);
+                    window.open(url, '_blank');
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.message || 'No se pudo completar el pase.'));
+                }
+            } catch(e) {
+                alert('Error de red.');
+                console.error(e);
+            } finally {
+                btn.disabled = false; btn.innerText = 'Confirmar Pase';
+            }
+        }
     </script>
 @endsection

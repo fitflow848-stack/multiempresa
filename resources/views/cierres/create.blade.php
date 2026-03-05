@@ -17,6 +17,7 @@
 
 	<form action="{{ route('cierre-caja.store') }}" method="POST" id="arqueoForm" class="mt-4">
 		@csrf
+		<input type="hidden" name="is_tesoreria" value="{{ isset($isTesoreria) && $isTesoreria ? '1' : '0' }}">
 		
 		@if(isset($ultimoCierre))
 			<div class="alert alert-info alert-dismissible fade show" role="alert">

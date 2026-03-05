@@ -4,6 +4,16 @@
 
 @section('content')
     <div class="container-fluid">
+        @foreach(['error','success','info','warning'] as $msgType)
+            @if(session($msgType))
+                <div class="alert alert-{{ $msgType === 'error' ? 'danger' : $msgType }} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-{{ $msgType === 'error' ? 'exclamation-circle' : ($msgType === 'success' ? 'check-circle' : 'info-circle') }} me-2"></i>
+                    {{ session($msgType) }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
+        @endforeach
+
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h1 class="h3 mb-0">{{ $isTesoreria ? 'Arqueos de Tesorería' : 'Cierres de Caja' }}</h1>
@@ -18,6 +28,11 @@
                 @if (!$openCaja)
                     <a href="{{ route('cierre-caja.create', ['tipo' => $isTesoreria ? 'tesoreria' : 'caja']) }}" class="btn btn-primary">
                         <i class="fas fa-plus me-2"></i>{{ $isTesoreria ? 'Abrir Bóveda' : 'Abrir Caja' }}
+                    </a>
+                @elseif($isTesoreria)
+                    <a href="{{ route('cierre-caja.show', $openCaja->id) }}" class="btn btn-success">
+                        <i class="fas fa-vault me-2"></i> Ver Bóveda Activa
+                        <span class="badge bg-white text-success ms-1">ABIERTA</span>
                     </a>
                 @endif
             </div>

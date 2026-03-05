@@ -89,22 +89,22 @@ class CierreCajaController extends Controller
 
         $cierres = $query->paginate(20);
 
-        // Corregir lógica de openCaja para que coincida con lo que busca el POS y VentaService
-        $openCaja = null;
-        if ($selectedCajaId) {
+        // Para tesorería: la bóveda es compartida, verificar si hay ALGUNA sesión
+        // abierta de bóveda en la empresa (sin importar quién la abrió)
+        if ($isTesoreria) {
+            $openCaja = CierreCaja::where('id_empresa', $user->company_id)
+                ->whereHas('caja', fn($q) => $q->where('is_boveda', true))
+                ->whereNull('fecha_cierre')
+                ->latest()
+                ->first();
+        } elseif ($selectedCajaId) {
             $openCaja = CierreCaja::where('caja_id', $selectedCajaId)
-                ->whereHas('caja', function($q) use ($isTesoreria) {
-                    $q->where('is_boveda', $isTesoreria);
-                })
                 ->whereNull('fecha_cierre')
                 ->latest()
                 ->first();
         } else {
-            // Si no hay caja seleccionada, ver si tiene alguna abierta en general para este tipo
             $openCaja = CierreCaja::where('user_id', $user->id)
-                ->whereHas('caja', function($q) use ($isTesoreria) {
-                    $q->where('is_boveda', $isTesoreria);
-                })
+                ->whereHas('caja', fn($q) => $q->where('is_boveda', false))
                 ->whereNull('fecha_cierre')
                 ->latest()
                 ->first();
@@ -115,9 +115,57 @@ class CierreCajaController extends Controller
 
     public function create(Request $request)
     {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
         $selectedCajaId = session('selected_caja_id');
         $isTesoreria = $request->has('tipo') && $request->tipo === 'tesoreria';
 
+        if ($isTesoreria) {
+            // Para la bóveda, usar withoutGlobalScopes() para evitar interferencia de traits.
+            $cajaBoveda = Caja::withoutGlobalScopes()
+                ->where('is_boveda', true)
+                ->where('is_active', true)
+                ->where('company_id', $user->company_id)
+                ->when($user->branch_id, fn($q) => $q->where('sucursal_id', $user->branch_id))
+                ->first();
+
+            // Si no existe bóveda, crearla automáticamente para esta sucursal
+            if (!$cajaBoveda) {
+                $cajaBoveda = Caja::create([
+                    'company_id'  => $user->company_id,
+                    'sucursal_id' => $user->branch_id,
+                    'nombre'      => 'Bóveda General',
+                    'descripcion' => 'Bóveda creada automáticamente',
+                    'is_active'   => true,
+                    'is_boveda'   => true,
+                ]);
+            }
+
+            // Verificar si ya hay una sesión abierta para esta bóveda
+            $openCaja = CierreCaja::where('caja_id', $cajaBoveda->id)
+                ->whereNull('fecha_cierre')
+                ->first();
+
+            if ($openCaja) {
+                // Redirigir al show si ya está abierta (cualquier usuario la comparte)
+                return redirect()->route('cierre-caja.show', $openCaja->id)
+                    ->with('info', 'La bóveda ya está abierta.');
+            }
+
+            // Guardar en sesión para que store() lo use
+            session(['boveda_caja_id' => $cajaBoveda->id]);
+
+            $ultimoCierre = CierreCaja::where('caja_id', $cajaBoveda->id)
+                ->whereNotNull('fecha_cierre')
+                ->orderBy('created_at', 'desc')
+                ->first();
+
+            $saldoInicial = $ultimoCierre ? $ultimoCierre->monto_cierre : 0.00;
+
+            return view('cierres.create', compact('saldoInicial', 'ultimoCierre', 'isTesoreria'));
+        }
+
+        // ---------- Flujo normal (caja regular) ----------
         if (!$selectedCajaId) {
             return redirect()->route('cierre-caja.index', ['tipo' => $request->tipo])->with('error', 'Debe seleccionar una caja activa en el menú superior antes de abrir una sesión.');
         }
@@ -147,7 +195,6 @@ class CierreCajaController extends Controller
 
         // El saldo inicial será el monto de cierre del último arqueo, o 0 si no hay cierres previos
         $saldoInicial = $ultimoCierre ? $ultimoCierre->monto_cierre : 0.00;
-        $isTesoreria = $request->has('tipo') && $request->tipo === 'tesoreria';
 
         return view('cierres.create', compact('saldoInicial', 'ultimoCierre', 'isTesoreria'));
     }
@@ -170,7 +217,15 @@ class CierreCajaController extends Controller
 
         $data['user_id'] = $user->id;
         $data['id_empresa'] = $user->company_id;
-        $data['caja_id'] = session('selected_caja_id');
+
+        // Si viene de apertura de bóveda, usar el caja_id de la bóveda guardado en sesión
+        $isTesoreria = $request->boolean('is_tesoreria', false);
+        if ($isTesoreria && session('boveda_caja_id')) {
+            $data['caja_id'] = session('boveda_caja_id');
+            session()->forget('boveda_caja_id'); // Limpiar después de usar
+        } else {
+            $data['caja_id'] = session('selected_caja_id');
+        }
 
         if (!$data['caja_id']) {
             return back()->with('error', 'Error: No hay una caja activa seleccionada.');
@@ -187,7 +242,8 @@ class CierreCajaController extends Controller
 
         CierreCaja::create($data);
 
-        return redirect()->route('cierre-caja.index')->with('success', 'Arqueo de caja registrado correctamente.');
+        $redirectParams = $isTesoreria ? ['tipo' => 'tesoreria'] : [];
+        return redirect()->route('cierre-caja.index', $redirectParams)->with('success', 'Arqueo de ' . ($isTesoreria ? 'Bóveda' : 'Caja') . ' registrado correctamente.');
     }
 
     public function show(CierreCaja $cierre)

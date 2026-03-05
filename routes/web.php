@@ -132,6 +132,15 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
     Route::put('/operaciones-caja/{id}', [OperacionCajaController::class, 'update'])->name('operaciones-caja.update');
     Route::delete('/operaciones-caja/{id}', [OperacionCajaController::class, 'destroy'])->name('operaciones-caja.destroy');
 
+    // Pase Caja → Bóveda (lo realiza el cajero)
+    Route::post('/boveda/pase-caja-a-boveda', [OperacionCajaController::class, 'transferenciaCajaABoveda'])->name('boveda.caja-a-boveda');
+    // Pase Bóveda → Caja (solo admin/supervisor, selecciona caja destino)
+    Route::post('/boveda/pase-boveda-a-caja', [OperacionCajaController::class, 'transferenciaBovedaACaja'])->name('boveda.boveda-a-caja');
+    // Listar cajas con sesión abierta (para selector de destino)
+    Route::get('/boveda/cajas-abiertas', [OperacionCajaController::class, 'cajasAbiertas'])->name('boveda.cajas-abiertas');
+    // Ticket imprimible de transferencia
+    Route::get('/boveda/ticket', [OperacionCajaController::class, 'ticketTransferencia'])->name('boveda.ticket');
+
     // Partidas (API para listar y crear partidas usadas en operaciones)
     Route::get('/partidas', [PartidaController::class, 'index'])->name('partidas.index');
     Route::post('/partidas', [PartidaController::class, 'store'])->name('partidas.store');
