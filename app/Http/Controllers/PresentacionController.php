@@ -16,8 +16,14 @@ class PresentacionController extends Controller
 
     public function store(Request $request)
     {
+        $user = \App\Helpers\AuthHelper::resolveAuthenticatedUser();
         $request->validate([
-            'nombre' => 'required|string|max:255|unique:presentaciones,nombre',
+            'nombre' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('presentaciones', 'nombre')->where('company_id', $user?->company_id)
+            ],
             'descripcion' => 'nullable|string|max:1000'
         ]);
 
@@ -46,7 +52,9 @@ class PresentacionController extends Controller
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('presentaciones', 'nombre')->ignore($presentacion->id)
+                Rule::unique('presentaciones', 'nombre')
+                    ->ignore($presentacion->id)
+                    ->where('company_id', \App\Helpers\AuthHelper::resolveAuthenticatedUser()?->company_id)
             ],
             'descripcion' => 'nullable|string|max:1000',
             'activo' => 'boolean'

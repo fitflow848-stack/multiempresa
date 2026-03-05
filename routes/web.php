@@ -158,6 +158,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::post('consultar-reniec', [ClienteController::class, 'consultarReniec'])->name('consultar-reniec');
         Route::post('/crear-desde-reniec', [ClienteController::class, 'crearDesdeReniec'])->name('crear-desde-reniec');
         Route::post('/buscar-pos', [ClienteController::class, 'buscarParaPos'])->name('buscar-pos');
+        Route::get('/cliente-contable', [ClienteController::class, 'clienteContable'])->name('cliente-contable');
     });
 
     Route::prefix('compras')->name('compras.')->middleware('can:compras.ver')->group(function () {

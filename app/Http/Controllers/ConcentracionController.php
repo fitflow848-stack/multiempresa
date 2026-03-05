@@ -16,8 +16,14 @@ class ConcentracionController extends Controller
 
     public function store(Request $request)
     {
+        $user = \App\Helpers\AuthHelper::resolveAuthenticatedUser();
         $request->validate([
-            'nombre' => 'required|string|max:255|unique:concentraciones,nombre',
+            'nombre' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('concentraciones', 'nombre')->where('company_id', $user->company_id)
+            ],
             'descripcion' => 'nullable|string|max:1000',
             'unidad' => 'nullable|string|max:50'
         ]);
@@ -48,7 +54,9 @@ class ConcentracionController extends Controller
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('concentraciones', 'nombre')->ignore($concentracion->id)
+                Rule::unique('concentraciones', 'nombre')
+                    ->ignore($concentracion->id)
+                    ->where('company_id', \App\Helpers\AuthHelper::resolveAuthenticatedUser()?->company_id)
             ],
             'descripcion' => 'nullable|string|max:1000',
             'unidad' => 'nullable|string|max:50',

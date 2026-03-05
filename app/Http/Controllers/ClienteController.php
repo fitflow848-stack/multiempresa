@@ -374,7 +374,50 @@ class ClienteController extends Controller
                 ];
             });
 
-        return response()->json($clientes);
+        // Siempre incluir el CLIENTE CONTABLE (id=999999) sin importar la empresa
+        // Se excluye del scope BelongsToCompany usando withoutGlobalScopes
+        $clienteContable = Cliente::withoutGlobalScopes()->find(999999);
+        if ($clienteContable) {
+            $yaIncluido = $clientes->contains('id', 999999);
+            if (!$yaIncluido) {
+                $clientes->prepend([
+                    'id' => $clienteContable->id,
+                    'tipo_documento' => $clienteContable->tipo_documento,
+                    'numero_documento' => $clienteContable->numero_documento,
+                    'nombre' => $clienteContable->nombre,
+                    'direccion' => $clienteContable->direccion,
+                    'telefono' => $clienteContable->telefono,
+                    'email' => $clienteContable->email,
+                    'debe' => 0
+                ]);
+            }
+        }
+
+        return response()->json($clientes->values());
+    }
+
+    /**
+     * Retornar el cliente contable global (id=999999) sin scope de empresa.
+     * Usado por el POS para el botón de "Al Contado".
+     */
+    public function clienteContable()
+    {
+        $cliente = Cliente::withoutGlobalScopes()->find(999999);
+
+        if (!$cliente) {
+            return response()->json(['error' => 'Cliente contable no encontrado'], 404);
+        }
+
+        return response()->json([
+            'id' => $cliente->id,
+            'tipo_documento' => $cliente->tipo_documento,
+            'numero_documento' => $cliente->numero_documento,
+            'nombre' => $cliente->nombre,
+            'direccion' => $cliente->direccion,
+            'telefono' => $cliente->telefono,
+            'email' => $cliente->email,
+            'debe' => 0
+        ]);
     }
 
     /**
