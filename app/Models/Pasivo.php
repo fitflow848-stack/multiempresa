@@ -44,6 +44,11 @@ class Pasivo extends Model
         return $this->belongsTo(TipoPasivo::class, 'tipo_pasivo_id');
     }
 
+    public function sucursal()
+    {
+        return $this->belongsTo(Sucursal::class, 'sucursal_id');
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
