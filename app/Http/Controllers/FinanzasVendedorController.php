@@ -181,15 +181,15 @@ class FinanzasVendedorController extends Controller
                         'importe' => $monto,
                     ]);
                 }
-                // Adelantos personal: Sale dinero (Gasto)
+                // Adelantos personal: Sale dinero (Sustracción)
                 elseif ($tipoOperacion === 'adelanto_personal') {
-                    $cajaAbierta->egresos = ($cajaAbierta->egresos ?? 0) + $monto;
+                    $cajaAbierta->sustracciones = ($cajaAbierta->sustracciones ?? 0) + $monto;
                     $cajaAbierta->save();
 
                     OperacionCaja::create([
                         'cierre_caja_id' => $cajaAbierta->id,
                         'user_id' => Auth::id(),
-                        'tipo' => 'gasto',
+                        'tipo' => 'sustraccion',
                         'partida' => 'Adelantos personal',
                         'concepto' => 'Adelanto a personal: ' . $nombre,
                         'importe' => $monto,

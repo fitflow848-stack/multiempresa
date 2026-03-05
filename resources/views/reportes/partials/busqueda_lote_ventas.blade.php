@@ -31,7 +31,7 @@
                         </a>
                     </td>
                     <td>{{ $row->nombre_servicio ?? ($row->producto->nombre ?? 'N/A') }}</td>
-                    <td>{{ $row->venta->fecha_emision ?? '' }}</td>
+                    <td>{{ $row->venta->fecha_emision ? $row->venta->fecha_emision->format('d/m/Y H:i') : '' }}</td>
                     <td class="text-center">{{ (float) $row->cantidad }}</td>
                     <td class="text-end">{{ number_format($row->importe, 2) }}</td>
                 </tr>

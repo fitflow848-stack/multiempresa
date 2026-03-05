@@ -106,7 +106,7 @@
     <table>
         <tr>
             <td class="bold" width="30%">Fecha E:</td>
-            <td>{{ $venta->fecha_emision }}</td>
+            <td>{{ $venta->fecha_emision->format('d/m/Y H:i') }}</td>
         </tr>
         <tr>
             <td class="bold">RUC/DNI:</td>

@@ -37,11 +37,11 @@ class FinanzasEspecialesController extends Controller
                 ['descripcion' => 'Adelantos de sueldo al personal']
             );
 
-            // 2. Crear la operación en caja (Gasto)
+            // 2. Crear la operación en caja (Sustracción)
             $operacion = OperacionCaja::create([
                 'cierre_caja_id' => $request->cierre_caja_id,
                 'user_id' => Auth::id(),
-                'tipo' => 'gasto',
+                'tipo' => 'sustraccion',
                 'partida' => 'Adelanto Personal',
                 'concepto' => 'Adelanto a: ' . $request->nombre,
                 'importe' => $request->monto,
@@ -51,7 +51,7 @@ class FinanzasEspecialesController extends Controller
 
             // Actualizar cierre
             $cierre = CierreCaja::find($request->cierre_caja_id);
-            $cierre->egresos = ($cierre->egresos ?? 0) + $request->monto;
+            $cierre->sustracciones = ($cierre->sustracciones ?? 0) + $request->monto;
             $cierre->save();
 
             // 3. Crear el Activo Corriente

@@ -213,10 +213,14 @@ class PasivoController extends Controller
                     $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $monto;
                     $tipoOp = 'ingreso';
                     $partida = 'Liquidación Adelanto';
+                } elseif (in_array($pasivo->tipo->nombre, ['Adelanto clientes', 'Adelanto de clientes'])) {
+                    $cajaAbierta->sustracciones = ($cajaAbierta->sustracciones ?? 0) + $monto;
+                    $tipoOp = 'sustraccion';
+                    $partida = 'Entrega Producto (Adelanto)';
                 } else {
                     $cajaAbierta->egresos = ($cajaAbierta->egresos ?? 0) + $monto;
                     $tipoOp = 'gasto';
-                    $partida = in_array($pasivo->tipo->nombre, ['Adelanto clientes', 'Adelanto de clientes']) ? 'Entrega Producto (Adelanto)' : 'Pago Pasivo';
+                    $partida = 'Pago Pasivo';
                 }
                 $cajaAbierta->save();
 

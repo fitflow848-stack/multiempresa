@@ -151,7 +151,7 @@
                     <td style="font-weight:bold; width: 100px;">Nombre / Razón Social</td>
                     <td>: {{ $cliente->nombre }}</td>
                     <td style="font-weight:bold; width: 80px;">Fecha de Emisión</td>
-                    <td>: {{ $venta->fecha_emision ?? $venta->fecha }}</td>
+                    <td>: {{ $venta->fecha_emision ? $venta->fecha_emision->format('d/m/Y H:i') : ($venta->fecha ?? '-') }}</td>
                 </tr>
                 <tr>
                     <td style="font-weight:bold;">Dirección</td>

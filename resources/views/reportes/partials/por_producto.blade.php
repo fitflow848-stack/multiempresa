@@ -23,7 +23,7 @@
         <tbody>
             @forelse($resultados as $detalle)
                 <tr>
-                    <td>{{ $detalle->venta->fecha_emision ? $detalle->venta->fecha_emision->format('d/m/Y') : '' }}</td>
+                    <td>{{ $detalle->venta->fecha_emision ? $detalle->venta->fecha_emision->format('d/m/Y H:i') : '' }}</td>
                     <td>{{ $detalle->venta->serie ?? '' }}-{{ $detalle->venta->numero ?? '' }}</td>
                     <td>{{ $detalle->producto->nombre ?? 'Producto Eliminado' }}</td>
                     <td class="text-center">{{ number_format($detalle->cantidad, 2) }}</td>

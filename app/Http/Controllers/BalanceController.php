@@ -10,6 +10,7 @@ use App\Models\Compra;
 use App\Models\CierreCaja;
 use App\Models\Venta;
 use App\Models\OperacionCaja;
+use App\Models\Caja;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Maatwebsite\Excel\Excel;
@@ -119,41 +120,60 @@ class BalanceController extends Controller
         $user = Auth::user();
 
         // 1. ACTIVO CORRIENTE
-        // CAJA: Dinero efectivo en cajas ABIERTAS de toda la empresa
-        $cajasAbiertas = CierreCaja::whereNull('fecha_cierre')
-            ->where('id_empresa', $user->company_id)
-            ->get();
+        // CAJA: Dinero efectivo en todas las cajas de la empresa (abiertas y último cierre de las cerradas)
+        $cajas = Caja::where('company_id', $user->company_id)->get();
         $caja = 0.00;
 
-        foreach ($cajasAbiertas as $box) {
-            $caja += $box->monto_apertura;
-            $caja += $box->aportaciones ?? 0;
-            $caja -= $box->sustracciones ?? 0;
+        foreach ($cajas as $cajaModel) {
+            // Buscar el último cierre/sesión de esta caja hasta la fecha consultada
+            $box = CierreCaja::where('caja_id', $cajaModel->id)
+                ->whereDate('created_at', '<=', $fecha)
+                ->orderBy('created_at', 'desc')
+                ->first();
 
-            // Ventas en efectivo asociadas a esta caja
-            // Usamos monto_recibido - vuelto para obtener el efectivo real que quedó en caja de esa venta
-            $ventasEfectivo = Venta::where('cierre_caja_id', $box->id)
-                ->whereHas('tipoPago', function ($q) {
-                    $q->where('es_efectivo', true);
-                })
-                ->where('estado', '!=', '0') // No anuladas
-                ->sum(DB::raw('monto_recibido - vuelto'));
+            if (!$box) continue;
 
-            $caja += $ventasEfectivo;
+            // Si la caja estaba cerrada a la fecha consultada, usamos el monto_cierre.
+            // Si estaba abierta (o se cerró después), calculamos el teórico a esa fecha.
+            $estaCerradaAFecha = $box->fecha_cierre && $box->fecha_cierre->format('Y-m-d') <= $fecha;
 
-            // Operaciones de caja (Ingresos/Gastos extras) - Solo EFECTIVO
-            $ingresosCaja = OperacionCaja::where('cierre_caja_id', $box->id)
-                ->where('tipo', 'ingreso')
-                ->where('es_efectivo', 1)
-                ->sum('importe');
+            if ($estaCerradaAFecha) {
+                $caja += floatval($box->monto_cierre);
+            } else {
+                // Cálculo dinámico para sesión que estaba activa a la fecha
+                $subtotal = floatval($box->monto_apertura);
 
-            $egresosCaja = OperacionCaja::where('cierre_caja_id', $box->id)
-                ->whereIn('tipo', ['egreso', 'gasto'])
-                ->where('es_efectivo', 1)
-                ->sum('importe');
+                // Ventas en efectivo asociadas a esta caja hasta la fecha
+                $ventasEfectivo = Venta::where('cierre_caja_id', $box->id)
+                    ->whereDate('created_at', '<=', $fecha)
+                    ->whereHas('tipoPago', function ($q) {
+                        $q->where('es_efectivo', true);
+                    })
+                    ->where('estado', '!=', '0')
+                    ->sum(DB::raw('monto_recibido - vuelto'));
 
-            $caja += $ingresosCaja;
-            $caja -= $egresosCaja;
+                $subtotal += floatval($ventasEfectivo);
+
+                // Operaciones de caja (Ingresos/Aportes) hasta la fecha
+                $ingresosExtra = OperacionCaja::where('cierre_caja_id', $box->id)
+                    ->whereDate('created_at', '<=', $fecha)
+                    ->whereIn('tipo', ['ingreso', 'aportacion', 'aporte'])
+                    ->where('es_efectivo', 1)
+                    ->sum('importe');
+
+                $subtotal += floatval($ingresosExtra);
+
+                // Operaciones de caja (Egresos/Gastos/Sustracciones) hasta la fecha
+                $egresosExtra = OperacionCaja::where('cierre_caja_id', $box->id)
+                    ->whereIn('tipo', ['egreso', 'gasto', 'sustraccion', 'retiro'])
+                    ->whereDate('created_at', '<=', $fecha)
+                    ->where('es_efectivo', 1)
+                    ->sum('importe');
+
+                $subtotal -= floatval($egresosExtra);
+                
+                $caja += $subtotal;
+            }
         }
 
         // INVENTARIO: Valorizado al costo promedio o costo de entrada (Sistema)

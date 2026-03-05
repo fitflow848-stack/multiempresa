@@ -18,7 +18,7 @@
         <tbody>
             @forelse($resultados as $venta)
                 <tr>
-                    <td>{{ $venta->fecha_emision ? $venta->fecha_emision->format('d/m/Y') : '' }}</td>
+                    <td>{{ $venta->fecha_emision ? $venta->fecha_emision->format('d/m/Y H:i') : '' }}</td>
                     <td>{{ $venta->serie }}-{{ $venta->numero }}</td>
                     <td>{{ $venta->cliente->nombre ?? 'Sin Cliente' }}</td>
                     <td class="text-end fw-bold text-danger">{{ number_format($venta->total, 2) }}</td>

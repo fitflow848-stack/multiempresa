@@ -157,19 +157,21 @@
         <div class="ticket-area">
             <div class="ticket-header-compact">
                 <span>TICKET ACTUAL ▷</span>
-                <div class="ticket-actions-mini">
-                    <button
-                        onclick="typeof Swal !== 'undefined' ? limpiarTicketRapidoConSweetAlert() : limpiarTicketRapido()"
-                        title="Limpiar todo">🗑️</button>
-                    <button onclick="aplicarDescuentoGlobal()" title="Descuento Global">💸</button>
-                </div>
-            </div>
+                <div class="ticket-header-right">
+                    <button class="btn-compact danger"
+                        onclick="typeof Swal !== 'undefined' ? cancelarVentaConSweetAlert() : cancelarVenta()">Cancelar</button>
+                    <button class="btn-compact primary" onclick="guardarTicket()">Guardar</button>
+                    <button class="btn-compact success" onclick="mostrarSeleccionTipoDocumento()">Emitir</button>
 
-            <div class="ticket-controls-compact">
-                <button class="btn-compact danger"
-                    onclick="typeof Swal !== 'undefined' ? cancelarVentaConSweetAlert() : cancelarVenta()">Cancelar</button>
-                <button class="btn-compact primary" onclick="guardarTicket()">Guardar</button>
-                <button class="btn-compact success" onclick="mostrarSeleccionTipoDocumento()">Emitir</button>
+                    <div class="ticket-actions-mini-divider"></div>
+
+                    <div class="ticket-actions-mini">
+                        <button
+                            onclick="typeof Swal !== 'undefined' ? limpiarTicketRapidoConSweetAlert() : limpiarTicketRapido()"
+                            title="Limpiar todo">🗑️</button>
+                        <button onclick="aplicarDescuentoGlobal()" title="Descuento Global">💸</button>
+                    </div>
+                </div>
             </div>
 
 
@@ -186,6 +188,7 @@
                             <th>Impuesto</th>
                             <th>PVU</th>
                             <th>Importe</th>
+                            <th style="width: 40px;">Acc.</th>
                         </tr>
                     </thead>
                     <tbody id="ticket-tbody">
@@ -1831,6 +1834,13 @@
                                         <td>${p.tipo_impuesto === 'exonerado' ? '0.00' : (p.importe - (p.importe / 1.18)).toFixed(3)}</td>
                                         <td>${p.precio.toFixed(2)}</td>
                                         <td>${p.importe.toFixed(2)}</td>
+                                        <td style="text-align: center;">
+                                            <button onclick="event.stopPropagation(); eliminarLinea(${idx})" 
+                                                    style="background: none; border: none; color: #dc3545; cursor: pointer; padding: 2px 5px;"
+                                                    title="Eliminar este producto">
+                                                <i class="fa-solid fa-trash-can"></i>
+                                            </button>
+                                        </td>
                                     </tr>
                                 `;
         });
@@ -1843,6 +1853,40 @@
             window.renderTicketSaveTimeout = setTimeout(() => {
                 guardarVentaPersistente();
             }, 1000); // Esperar 1 segundo después del último cambio
+        }
+    }
+
+    function eliminarLinea(index) {
+        const producto = ticket[index];
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: '¿Quitar producto?',
+                text: `¿Desea eliminar "${producto.nombre}" del ticket?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'No'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    ticket.splice(index, 1);
+                    window.selectedIndex = -1;
+                    renderTicket();
+                    guardarVentaPersistente();
+                    if (typeof mostrarNotificacion === 'function') {
+                        mostrarNotificacion(`🗑️ "${producto.nombre.substring(0, 20)}..." eliminado`);
+                    }
+                }
+            });
+        } else {
+            if (confirm(`¿Quitar "${producto.nombre}" del ticket?`)) {
+                ticket.splice(index, 1);
+                window.selectedIndex = -1;
+                renderTicket();
+                guardarVentaPersistente();
+            }
         }
     }
 
@@ -1964,13 +2008,7 @@
         // Supr (Delete): Eliminar Línea
         if (e.key === 'Delete') {
             if (window.selectedIndex !== -1 && !isInput) {
-                const producto = ticket[window.selectedIndex];
-                if (confirm(`¿Quitar "${producto.nombre}" del ticket?`)) {
-                    ticket.splice(window.selectedIndex, 1);
-                    window.selectedIndex = -1;
-                    renderTicket();
-                    guardarVentaPersistente();
-                }
+                eliminarLinea(window.selectedIndex);
             }
         }
 
