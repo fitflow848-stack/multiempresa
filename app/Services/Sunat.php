@@ -15,7 +15,7 @@ class Sunat
     public function __construct()
     {
         $this->client = new Client();
-        $this->apiUrl = "https://magustechnologies.com/apisunat/api";
+        $this->apiUrl = "http://84.247.162.204/api-sunat-laravel/api/v1";
     }
 
     public function sendRequest($endpoint, $method = 'POST', $data = [])
@@ -37,7 +37,7 @@ class Sunat
 
     public function getXmlSunat($data)
     {
-        return $this->sendRequest('/generar/comprobante/electronico', 'POST', $data);
+        return $this->sendRequest('/generar/comprobante', 'POST', $data);
     }
 
     public function sendDocumentoBoletaFactura($data)
@@ -57,7 +57,7 @@ class Sunat
 
     public function generarNotaCredito($data)
     {
-        return $this->sendRequest('/generar/nota/electronica', 'POST', $data);
+        return $this->sendRequest('/generar/nota', 'POST', $data);
     }
 
     public function formatJsonFacturaBoleta($nombre_documento, $contenido_documento)
