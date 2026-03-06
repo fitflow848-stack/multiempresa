@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
 
 class AlmacenController extends Controller
 {
@@ -47,7 +48,7 @@ class AlmacenController extends Controller
         $query->where('i.company_id', $user->company_id);
 
         // Seguridad: Filtro por Sucursal (excepto super_admin)
-        if (!$user->hasRole('super_admin')) {
+        if (!$user->isSuperAdmin()) {
             $query->where('i.sucursal_id', $user->branch_id);
         }
 
@@ -148,7 +149,7 @@ class AlmacenController extends Controller
 
         // Filtro por Empresa y Sucursal
         $query->where('i.company_id', $user->company_id);
-        if (!$user->hasRole('super_admin')) {
+        if (!$user->isSuperAdmin()) {
             $query->where('i.sucursal_id', $user->branch_id);
         }
 
@@ -300,26 +301,38 @@ class AlmacenController extends Controller
     {
         $user = Auth::user();
         $company = $user->company ?? Company::find($user->company_id);
+        $sucursal_id = $request->get('sucursal_id', $user->branch_id);
+        
+        $sucursales = DB::table('sucursales')
+            ->where('company_id', $user->company_id)
+            ->get();
 
         $movimientos = [];
         $producto = null;
-        $saldo = 0; // Para calcular saldo acumulado si ordenamos ASC, pero mejor mostrar en vista
+        $fecha_desde = $request->get('fecha_desde', Carbon::now()->subMonths(3)->format('Y-m-d'));
+        $fecha_hasta = $request->get('fecha_hasta', Carbon::now()->format('Y-m-d'));
 
         if ($request->has('producto_id')) {
             $productoId = $request->get('producto_id');
             $producto = Producto::find($productoId);
 
             if ($producto) {
-                // Consulta UNION para Entradas, Salidas (Ventas) y Transferencias (Salidas)
+                // Filtros de fecha habilitados
+                $dateFilter = " AND created_at >= '{$fecha_desde} 00:00:00' AND created_at <= '{$fecha_hasta} 23:59:59'";
+                $dateFilterV = " AND v.created_at >= '{$fecha_desde} 00:00:00' AND v.created_at <= '{$fecha_hasta} 23:59:59'";
+                $dateFilterT = " AND t.created_at >= '{$fecha_desde} 00:00:00' AND t.created_at <= '{$fecha_hasta} 23:59:59'";
+
+                // Consulta UNION para Entradas, Salidas (Ventas) y Transferencias
                 $movimientos = DB::select("
                     SELECT * FROM (
-                        -- INGRESOS (Compras / Inventario) - Reconstruyendo cantidad inicial
+                        -- INGRESOS (Compras / Inventario)
                         SELECT 
                             ai.created_at as fecha,
                             'ENTRADA' as tipo,
+                            s.nombre as sucursal,
                             CONCAT('Lote: ', COALESCE(aid.lote, '-'), ' / Ingreso #', ai.id, ' ', COALESCE(ai.observacion, '')) as detalle,
                             (aid.cantidad + 
-                                COALESCE((SELECT SUM(cantidad) FROM venta_detalles WHERE almacen_ingreso_detalle_id = aid.id), 0) +
+                                COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
                                 COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
                             ) as entrada,
                             CAST(0 AS DECIMAL(10,2)) as salida,
@@ -327,8 +340,11 @@ class AlmacenController extends Controller
                             u.name as usuario
                         FROM almacen_ingreso_detalle aid
                         JOIN almacen_ingresos ai ON ai.id = aid.ingreso_id
+                        LEFT JOIN sucursales s ON s.id = ai.sucursal_id
                         LEFT JOIN users u ON u.id = ai.user_id
                         WHERE aid.producto_id = :prod_id1
+                        AND ai.sucursal_id = :suc1
+                        {$dateFilter}
 
                         UNION ALL
 
@@ -336,6 +352,7 @@ class AlmacenController extends Controller
                         SELECT
                             v.created_at as fecha,
                             'SALIDA' as tipo,
+                            '' as sucursal,
                             CONCAT('Venta: ', COALESCE(v.serie, ''), '-', LPAD(COALESCE(v.numero, 0), 8, '0'), ' / ', COALESCE(c.nombre, 'Cliente General')) as detalle,
                             CAST(0 AS DECIMAL(10,2)) as entrada,
                             CAST(vd.cantidad AS DECIMAL(10,2)) as salida,
@@ -345,8 +362,10 @@ class AlmacenController extends Controller
                         JOIN ventas v ON v.id_venta = vd.id_venta
                         LEFT JOIN clientes c ON c.id = v.id_cliente
                         LEFT JOIN users u ON u.id = v.id_usuario
-                        -- Intentamos vincular por almacen_ingreso_detalle_id si es posible para ser precisos
-                        WHERE vd.servicio_id = :prod_id2 AND v.estado != 0
+                        WHERE vd.servicio_id = :prod_id2 
+                        AND v.sucursal = :suc2
+                        AND v.estado != 0
+                        {$dateFilterV}
 
                         UNION ALL
 
@@ -354,22 +373,29 @@ class AlmacenController extends Controller
                         SELECT
                             t.created_at as fecha,
                             'SALIDA TRANSFERENCIA' as tipo,
-                            CONCAT('Transferencia a: ', COALESCE(s.nombre, 'Sucursal Destino'), '. Obs: ', COALESCE(t.observaciones, '-')) as detalle,
+                            'SALIDA' as sucursal,
+                            CONCAT('Transferencia a: ', COALESCE(s_dest.nombre, 'Sucursal Destino')) as detalle,
                             CAST(0 AS DECIMAL(10,2)) as entrada,
                             t.cantidad as salida,
                             CAST(0 AS DECIMAL(10,2)) as precio_unitario,
                             u.name as usuario
                         FROM almacen_transferencias t
-                        LEFT JOIN sucursales s ON s.id = t.sucursal_destino_id
+                        LEFT JOIN sucursales s_dest ON s_dest.id = t.sucursal_destino_id
                         LEFT JOIN users u ON u.id = t.user_id
                         WHERE t.producto_id = :prod_id3
+                        AND t.sucursal_origen_id = :suc3
+                        {$dateFilterT}
                     ) as historial
                     ORDER BY fecha ASC
-                ", ['prod_id1' => $productoId, 'prod_id2' => $productoId, 'prod_id3' => $productoId]);
+                ", [
+                    'prod_id1' => $productoId, 'suc1' => $sucursal_id,
+                    'prod_id2' => $productoId, 'suc2' => $sucursal_id,
+                    'prod_id3' => $productoId, 'suc3' => $sucursal_id
+                ]);
             }
         }
 
-        return view('almacen.kardex', compact('movimientos', 'producto', 'user', 'company'));
+        return view('almacen.kardex', compact('movimientos', 'producto', 'user', 'company', 'sucursales', 'sucursal_id', 'fecha_desde', 'fecha_hasta'));
     }
     // --- TRANSFERENCIAS ENTRE SUCURSALES ---
 
@@ -495,7 +521,7 @@ class AlmacenController extends Controller
         $user = Auth::user();
 
         // Seguridad: Filtro por Sucursal (excepto super_admin)
-        if (!$user->hasRole('super_admin') && $detalle->ingreso->sucursal_id != $user->branch_id) {
+        if (!$user->isSuperAdmin() && $detalle->ingreso->sucursal_id != $user->branch_id) {
             abort(403, 'No tienes permiso para editar este registro.');
         }
 

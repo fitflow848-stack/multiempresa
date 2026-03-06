@@ -12,8 +12,8 @@
             <div class="card-body">
                 <form action="{{ route('almacen.kardex') }}" method="GET" class="mb-4">
                     <div class="row">
-                        <div class="col-md-8">
-                            <label for="producto_id">Buscar Producto:</label>
+                        <div class="col-md-4">
+                            <label for="producto_id" class="form-label">Producto:</label>
                             <select class="form-control select2-producto" name="producto_id" required style="width: 100%;">
                                 @if ($producto)
                                     <option value="{{ $producto->id }}">{{ $producto->nombre }}
@@ -21,9 +21,27 @@
                                 @endif
                             </select>
                         </div>
-                        <div class="col-md-4 d-flex align-items-end">
+                        <div class="col-md-3">
+                            <label for="sucursal_id" class="form-label">Sucursal / Local:</label>
+                            <select name="sucursal_id" class="form-control">
+                                @foreach($sucursales as $suc)
+                                    <option value="{{ $suc->id }}" {{ $sucursal_id == $suc->id ? 'selected' : '' }}>
+                                        {{ $suc->nombre }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="fecha_desde" class="form-label">Desde:</label>
+                            <input type="date" name="fecha_desde" class="form-control" value="{{ $fecha_desde }}">
+                        </div>
+                        <div class="col-md-2">
+                            <label for="fecha_hasta" class="form-label">Hasta:</label>
+                            <input type="date" name="fecha_hasta" class="form-control" value="{{ $fecha_hasta }}">
+                        </div>
+                        <div class="col-md-1 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary w-100">
-                                <i class="fas fa-search me-2"></i> Consultar Kardex
+                                <i class="fas fa-search"></i>
                             </button>
                         </div>
                     </div>
@@ -45,6 +63,7 @@
                                 <tr>
                                     <th rowspan="2" class="align-middle">Fecha / Hora</th>
                                     <th rowspan="2" class="align-middle">Tipo</th>
+                                    <th rowspan="2" class="align-middle">Sucursal</th>
                                     <th rowspan="2" class="align-middle">Detalle / Documento</th>
                                     <th rowspan="2" class="align-middle">Usuario</th>
                                     <th colspan="3">Cantidades</th>
@@ -72,6 +91,7 @@
                                                 <span class="badge bg-danger">SALIDA</span>
                                             @endif
                                         </td>
+                                        <td>{{ $mov->sucursal }}</td>
                                         <td>{{ $mov->detalle }}</td>
                                         <td>{{ $mov->usuario }}</td>
                                         <td class="text-right font-weight-bold text-success">

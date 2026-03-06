@@ -41,7 +41,7 @@ class ArqueoCajaController extends Controller
         ]);
 
         $userId = $request->user()?->id ?? null;
-        $sucursalId = Auth::user()->company_id ?? null;
+        $sucursalId = Auth::user()->branch_id ?? null;
         $cierreId = $data['cierre_id'] ?? null;
 
         // Buscar arqueo existente por cierre_id si se proporcionó

@@ -220,7 +220,7 @@
                     </div>
 
                     <div class="card-footer bg-white border-top-0 d-flex gap-2 pb-3">
-                        <button id="btn-arqueo-actual" class="btn btn-sm btn-success flex-grow-1">
+                        <button id="btn-registrar-arqueo" class="btn btn-sm btn-success flex-grow-1">
                             <i class="fas fa-calculator me-1"></i> Arqueo Actual
                         </button>
                     </div>

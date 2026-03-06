@@ -20,6 +20,7 @@ class PrincipalController extends Controller
     {
         $user = Auth::user();
         $companyId = $user->company_id;
+        $branchId = $user->branch_id;
 
         // --- PEDIDOS VENTAS ---
         $proformas_pendientes_cnt = Cotizacion::count();
@@ -32,19 +33,22 @@ class PrincipalController extends Controller
         $reservas_entregar_cnt = 0;
 
         // --- VENTAS ---
-        $creditos_pendientes_cnt = Deuda::where('monto_deuda', '>', 0)->count();
-        $creditos_pendientes_monto = Deuda::where('monto_deuda', '>', 0)->sum('monto_deuda');
+        $creditosQuery = Deuda::where('monto_deuda', '>', 0);
+        if ($branchId) $creditosQuery->where('sucursal_id', $branchId);
+        
+        $creditos_pendientes_cnt = $creditosQuery->count();
+        $creditos_pendientes_monto = $creditosQuery->sum('monto_deuda');
 
         // --- TESORERIA ---
         $cobros_pendientes_cnt = $creditos_pendientes_cnt;
         $cobros_pendientes_monto = $creditos_pendientes_monto;
 
-        $cobros_vencidos_cnt = Deuda::where('monto_deuda', '>', 0)
-            ->where('fecha_vencimiento', '<', now())
-            ->count();
-        $cobros_vencidos_monto = Deuda::where('monto_deuda', '>', 0)
-            ->where('fecha_vencimiento', '<', now())
-            ->sum('monto_deuda');
+        $cobrosVencidosQuery = Deuda::where('monto_deuda', '>', 0)
+            ->where('fecha_vencimiento', '<', now());
+        if ($branchId) $cobrosVencidosQuery->where('sucursal_id', $branchId);
+
+        $cobros_vencidos_cnt = $cobrosVencidosQuery->count();
+        $cobros_vencidos_monto = $cobrosVencidosQuery->sum('monto_deuda');
 
         $pagos_pendientes_cnt = 0;
         $pagos_pendientes_monto = 0;
@@ -74,8 +78,13 @@ class PrincipalController extends Controller
             ->count();
 
         // --- CAPITAL ACTUAL ---
-        $stock_valuations = AlmacenIngresoDetalle::whereHas('ingreso', function($q) {
-                // BelongsToSucursal on AlmacenIngreso will handle this
+        $branchId = $user->branch_id;
+        $stock_valuations = AlmacenIngresoDetalle::whereHas('ingreso', function($q) use ($user, $branchId) {
+                // Si es super_admin, tratamos de filtrar por la sucursal seleccionada en la sesión
+                // Para otros roles, el trait BelongsToSucursal ya debería encargarse, but we ensure it here.
+                if ($branchId) {
+                    $q->where('sucursal_id', $branchId);
+                }
             })
             ->where('cantidad', '>', 0)
             ->select(
@@ -99,10 +108,13 @@ class PrincipalController extends Controller
         // ====== DATOS PARA GRÁFICOS ======
 
         // Ventas de los últimos 6 meses
-        $ventasMensuales = Venta::where('id_empresa', $companyId)
+        $ventasMensualesQuery = Venta::where('id_empresa', $companyId)
             ->where('estado', '!=', 0)
-            ->where('created_at', '>=', Carbon::now()->subMonths(6))
-            ->select(
+            ->where('created_at', '>=', Carbon::now()->subMonths(6));
+        
+        if ($branchId) $ventasMensualesQuery->where('sucursal', $branchId);
+
+        $ventasMensuales = $ventasMensualesQuery->select(
                 DB::raw('MONTH(created_at) as mes'),
                 DB::raw('YEAR(created_at) as anio'),
                 DB::raw('SUM(total) as total'),
@@ -148,13 +160,16 @@ class PrincipalController extends Controller
             });
 
         // Top 5 productos más vendidos (últimos 30 días)
-        $topProductos = DB::table('venta_detalles')
+        $topProductosQuery = DB::table('venta_detalles')
             ->join('ventas', 'venta_detalles.id_venta', '=', 'ventas.id_venta')
             ->join('productos', 'venta_detalles.servicio_id', '=', 'productos.id')
             ->where('ventas.id_empresa', $companyId)
             ->where('ventas.estado', '!=', 0)
-            ->where('ventas.created_at', '>=', Carbon::now()->subDays(30))
-            ->select(
+            ->where('ventas.created_at', '>=', Carbon::now()->subDays(30));
+        
+        if ($branchId) $topProductosQuery->where('ventas.sucursal', $branchId);
+
+        $topProductos = $topProductosQuery->select(
                 'productos.nombre',
                 DB::raw('SUM(venta_detalles.cantidad) as cantidad'),
                 DB::raw('SUM(venta_detalles.importe) as total')
@@ -186,23 +201,26 @@ class PrincipalController extends Controller
         }
 
         // Venta de hoy
-        $ventaHoy = Venta::where('id_empresa', $companyId)
+        $ventaHoyQuery = Venta::where('id_empresa', $companyId)
             ->where('estado', '!=', 0)
-            ->whereDate('created_at', Carbon::today())
-            ->sum('total');
+            ->whereDate('created_at', Carbon::today());
+        if ($branchId) $ventaHoyQuery->where('sucursal', $branchId);
+        $ventaHoy = $ventaHoyQuery->sum('total');
 
         // Venta de ayer para comparación
-        $ventaAyer = Venta::where('id_empresa', $companyId)
+        $ventaAyerQuery = Venta::where('id_empresa', $companyId)
             ->where('estado', '!=', 0)
-            ->whereDate('created_at', Carbon::yesterday())
-            ->sum('total');
+            ->whereDate('created_at', Carbon::yesterday());
+        if ($branchId) $ventaAyerQuery->where('sucursal', $branchId);
+        $ventaAyer = $ventaAyerQuery->sum('total');
 
         // Venta del mes
-        $ventaMes = Venta::where('id_empresa', $companyId)
+        $ventaMesQuery = Venta::where('id_empresa', $companyId)
             ->where('estado', '!=', 0)
             ->whereMonth('created_at', Carbon::now()->month)
-            ->whereYear('created_at', Carbon::now()->year)
-            ->sum('total');
+            ->whereYear('created_at', Carbon::now()->year);
+        if ($branchId) $ventaMesQuery->where('sucursal', $branchId);
+        $ventaMes = $ventaMesQuery->sum('total');
 
         $chartData = [
             'mesesLabels' => $mesesLabels,
