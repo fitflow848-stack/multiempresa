@@ -25,9 +25,7 @@ class CreateCompany extends CreateRecord
             if (\Illuminate\Support\Facades\Storage::exists($record->cert_file)) {
                 $certContent = base64_encode(\Illuminate\Support\Facades\Storage::get($record->cert_file));
 
-                $password = $record->cert_password;
-
-                $sunatService->guardarCertificado($record->ruc, $password, $certContent);
+                $sunatService->guardarCertificado($record->ruc, $certContent);
 
                 \Filament\Notifications\Notification::make()
                     ->title('Certificado enviado correctamente al API')

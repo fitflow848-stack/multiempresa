@@ -31,9 +31,8 @@ class EditCompany extends EditRecord
             $sunatService = app(Sunat::class);
             if (Storage::exists($record->cert_file)) {
                 $certContent = base64_encode(Storage::get($record->cert_file));
-                $password = $record->cert_password;
 
-                $sunatService->guardarCertificado($record->ruc, $password, $certContent);
+                $sunatService->guardarCertificado($record->ruc, $certContent);
 
                 Notification::make()
                     ->title('Certificado enviado correctamente al API')

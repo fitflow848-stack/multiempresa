@@ -31,7 +31,14 @@ class Sunat
         ]);
         $result = curl_exec($ch);
         curl_close($ch);
-        $result = mb_substr($result, 1);
+        $result = trim((string)$result);
+        
+        $pos = strpos($result, '{');
+        if ($pos !== false && $pos > 0 && $pos < 10) {
+            $result = substr($result, $pos);
+        }
+
+        Log::info('Result: ' . $result);
         return $result;
     }
 
@@ -45,13 +52,13 @@ class Sunat
         return $this->sendRequest('/enviar/documento/electronico', 'POST', $data);
     }
 
-    public function guardarCertificado($ruc, $password, $certContentBase64)
+    public function guardarCertificado($ruc, $certContentBase64)
     {
         $data = json_encode([
-            'password' => $password,
-            'archivo' => $certContentBase64
+            'certificado' => $certContentBase64
         ]);
-
+        
+        Log::info('Data: ' . $data);
         return $this->sendRequest('/guardar/certificado/' . $ruc, 'POST', $data);
     }
 

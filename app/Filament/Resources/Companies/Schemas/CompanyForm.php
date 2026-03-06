@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Companies\Schemas;
 
+use Filament\Actions\Action;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
@@ -32,7 +33,55 @@ class CompanyForm
                                     ->label('RUC')
                                     ->required()
                                     ->length(11)
-                                    ->disabled($isNotSuperAdmin),
+                                    ->disabled($isNotSuperAdmin)
+                                    ->suffixAction(
+                                        Action::make('searchRuc')
+                                            ->icon('heroicon-m-magnifying-glass')
+                                            ->action(function ($state, callable $set) {
+                                                if (strlen($state) !== 11) {
+                                                    return;
+                                                }
+                                                
+                                                $service = app(\App\Services\PeruConsultasService::class);
+                                                $resultado = $service->consultarRuc($state);
+                                                
+                                                if (!isset($resultado['error']) && isset($resultado['razonSocial'])) {
+                                                    $set('razon_social', $resultado['razonSocial']);
+                                                    
+                                                    if (!empty($resultado['nombreComercial'])) {
+                                                        $set('nombre_comercial', $resultado['nombreComercial']);
+                                                    }
+                                                    
+                                                    if (!empty($resultado['direccion'])) {
+                                                        $set('direccion_fiscal', $resultado['direccion']);
+                                                    }
+                                                    
+                                                    if (!empty($resultado['departamento'])) {
+                                                        $set('department', $resultado['departamento']);
+                                                    }
+                                                    if (!empty($resultado['provincia'])) {
+                                                        $set('province', $resultado['provincia']);
+                                                    }
+                                                    if (!empty($resultado['distrito'])) {
+                                                        $set('district', $resultado['distrito']);
+                                                        
+                                                        // También setear el ubigeo interno automáticamente si lo tenemos
+                                                        if (!empty($resultado['departamento']) && !empty($resultado['provincia'])) {
+                                                            $dep = \App\Models\Departamento::where('dep_nombre', $resultado['departamento'])->first();
+                                                            if ($dep) {
+                                                                $prov = \App\Models\Provincia::where('dep_codigo', $dep->dep_cod)->where('pro_nombre', $resultado['provincia'])->first();
+                                                                if ($prov) {
+                                                                    $dist = \App\Models\Distrito::where('dep_codigo', $dep->dep_cod)->where('pro_codigo', $prov->pro_cod)->where('dis_nombre', $resultado['distrito'])->first();
+                                                                    if ($dist) {
+                                                                        $set('ubigeo', $dep->dep_cod . $prov->pro_cod . $dist->dis_codigo);
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            })
+                                    ),
                                 TextInput::make('razon_social')
                                     ->label('Razón Social')
                                     ->required()
@@ -89,13 +138,79 @@ class CompanyForm
                         Section::make('Ubicación Fiscal')
                             ->disabled($isNotSuperAdmin)
                             ->schema([
-                                TextInput::make('department')->label('Departamento'),
-                                TextInput::make('province')->label('Provincia'),
-                                TextInput::make('district')->label('Distrito'),
+                                Select::make('department')
+                                    ->label('Departamento')
+                                    ->options(\App\Models\Departamento::pluck('dep_nombre', 'dep_nombre')->toArray())
+                                    ->live()
+                                    ->afterStateUpdated(function (callable $set) {
+                                        $set('province', null);
+                                        $set('district', null);
+                                        $set('ubigeo', null);
+                                    })
+                                    ->searchable(),
+                                Select::make('province')
+                                    ->label('Provincia')
+                                    ->options(function (callable $get) {
+                                        $depNombre = $get('department');
+                                        if (! $depNombre) {
+                                            return [];
+                                        }
+                                        $departamento = \App\Models\Departamento::where('dep_nombre', $depNombre)->first();
+                                        if (!$departamento) return [];
+                                        
+                                        return \App\Models\Provincia::where('dep_codigo', $departamento->dep_cod)->pluck('pro_nombre', 'pro_nombre')->toArray();
+                                    })
+                                    ->live()
+                                    ->afterStateUpdated(function (callable $set) {
+                                        $set('district', null);
+                                        $set('ubigeo', null);
+                                    })
+                                    ->searchable(),
+                                Select::make('district')
+                                    ->label('Distrito')
+                                    ->options(function (callable $get) {
+                                        $depNombre = $get('department');
+                                        $proNombre = $get('province');
+                                        if (! $depNombre || ! $proNombre) {
+                                            return [];
+                                        }
+                                        $departamento = \App\Models\Departamento::where('dep_nombre', $depNombre)->first();
+                                        if (!$departamento) return [];
+                                        
+                                        $provincia = \App\Models\Provincia::where('dep_codigo', $departamento->dep_cod)->where('pro_nombre', $proNombre)->first();
+                                        if (!$provincia) return [];
+                                        
+                                        return \App\Models\Distrito::where('dep_codigo', $departamento->dep_cod)->where('pro_codigo', $provincia->pro_cod)->pluck('dis_nombre', 'dis_nombre')->toArray();
+                                    })
+                                    ->live()
+                                    ->afterStateUpdated(function (callable $set, $state, callable $get) {
+                                        $depNombre = $get('department');
+                                        $proNombre = $get('province');
+                                        if ($depNombre && $proNombre && $state) {
+                                            $departamento = \App\Models\Departamento::where('dep_nombre', $depNombre)->first();
+                                            if ($departamento) {
+                                                $provincia = \App\Models\Provincia::where('dep_codigo', $departamento->dep_cod)->where('pro_nombre', $proNombre)->first();
+                                                if ($provincia) {
+                                                    $distrito = \App\Models\Distrito::where('dep_codigo', $departamento->dep_cod)
+                                                        ->where('pro_codigo', $provincia->pro_cod)
+                                                        ->where('dis_nombre', $state)->first();
+                                                    if ($distrito) {
+                                                        $set('ubigeo', $departamento->dep_cod . $provincia->pro_cod . $distrito->dis_codigo);
+                                                        return;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        $set('ubigeo', null);
+                                    })
+                                    ->searchable(),
                                 Textarea::make('direccion_fiscal')
                                     ->label('Dirección Fiscal')
                                     ->columnSpanFull(),
-                                TextInput::make('ubigeo')->label('Ubigeo')->length(6),
+                                TextInput::make('ubigeo')
+                                    ->label('Ubigeo')
+                                    ->readOnly()
+                                    ->length(6),
                             ])->columns(2),
 
                         Section::make('Facturación y Certificado')
