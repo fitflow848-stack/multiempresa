@@ -361,9 +361,12 @@ class ProductoController extends Controller
         $q = $request->get('q', null);
         $cb = $request->get('cb', null);
         $ref = $request->get('ref', null);
+        $user = Auth::user();
 
         // Buscamos desde ProductoLinea con el producto relacionado
-        $query = ProductoLinea::with(['producto'])->orderBy('created_at', 'desc');
+        $query = ProductoLinea::with(['producto'])->whereHas('producto', function ($productQuery) use ($user) {
+            $productQuery->where('id_empresa', $user->company_id);
+        })->orderBy('created_at', 'desc');
 
         if ($cb) {
             $query->where('cb', 'like', "%{$cb}%");

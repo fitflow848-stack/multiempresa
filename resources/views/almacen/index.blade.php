@@ -97,7 +97,7 @@
                 <div class="col-md-3">
                     <div class="input-group">
                         <span class="input-group-text bg-transparent border-end-0 text-muted"><i
-                                class="fas fa-search"></i></span>
+                                class="bx bx-search"></i></span>
                         <input type="text" name="producto" class="form-control border-start-0"
                             placeholder="Producto o código..." value="{{ request('producto') }}">
                     </div>
@@ -216,7 +216,7 @@
             @else
                 <div class="text-center py-5">
                     <div class="mb-3">
-                        <i class="fas fa-search fa-4x text-light"></i>
+                        <i class="bx bx-search fa-4x text-light"></i>
                     </div>
                     <h4 class="text-muted fw-light">Sin coincidencias para la búsqueda</h4>
                     <a href="{{ route('almacen.index') }}" class="btn btn-primary mt-3">Restablecer filtros</a>

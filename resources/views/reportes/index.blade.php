@@ -53,7 +53,7 @@
                         </div>
                         <div class="col-md-6 d-flex align-items-end gap-2">
                             <button type="button" class="btn btn-dark" id="btnSearch">
-                                <i class="fas fa-search"></i> Buscar
+                                <i class="bx bx-search"></i> Buscar
                             </button>
                             <button type="button" class="btn btn-danger" id="btnPrint">
                                 <i class="fas fa-file-pdf"></i> Imprimir

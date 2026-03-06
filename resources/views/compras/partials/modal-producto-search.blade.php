@@ -34,7 +34,7 @@
 
                                 <div class="col-md-6">
                                     <label class="form-label">
-                                        <i class="fas fa-search mr-1"></i>
+                                        <i class="bx bx-search mr-1"></i>
                                         Nombre del Producto
                                     </label>
                                     <div class="input-group">
@@ -77,7 +77,7 @@
                                         <div class="ms-auto">
                                             <button id="btn-product-search" type="submit"
                                                 class="btn btn-primary btn-sm">
-                                                <i class="fas fa-search mr-1"></i>
+                                                <i class="bx bx-search mr-1"></i>
                                                 Buscar
                                             </button>
                                             <button id="btn-product-clear" type="button"

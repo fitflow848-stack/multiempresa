@@ -751,7 +751,7 @@
                                     <div class="d-flex mb-3">
                                         <div class="input-group">
                                             <span class="input-group-text">
-                                                <i class="fas fa-search"></i>
+                                                <i class="bx bx-search"></i>
                                             </span>
                                             <input type="text" id="fam-filter" class="form-control"
                                                 placeholder="Buscar familia...">
@@ -778,7 +778,7 @@
                                     <div class="d-flex mb-3">
                                         <div class="input-group">
                                             <span class="input-group-text">
-                                                <i class="fas fa-search"></i>
+                                                <i class="bx bx-search"></i>
                                             </span>
                                             <input type="text" id="subfam-filter" class="form-control"
                                                 placeholder="Buscar subfamilia...">

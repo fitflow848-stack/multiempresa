@@ -90,7 +90,7 @@
                 <div class="col-md-3">
                     <div class="input-group">
                         <span class="input-group-text bg-transparent border-end-0 text-muted"><i
-                                class="fas fa-search"></i></span>
+                                class="bx bx-search"></i></span>
                         <input type="text" id="proveedor-filter" class="form-control border-start-0"
                             placeholder="Buscar proveedor...">
                     </div>

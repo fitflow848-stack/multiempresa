@@ -318,7 +318,7 @@ class AlmacenController extends Controller
 
             if ($producto) {
                 // Filtros de fecha habilitados
-                $dateFilter = " AND created_at >= '{$fecha_desde} 00:00:00' AND created_at <= '{$fecha_hasta} 23:59:59'";
+                $dateFilter = " AND ai.created_at >= '{$fecha_desde} 00:00:00' AND ai.created_at <= '{$fecha_hasta} 23:59:59'";
                 $dateFilterV = " AND v.created_at >= '{$fecha_desde} 00:00:00' AND v.created_at <= '{$fecha_hasta} 23:59:59'";
                 $dateFilterT = " AND t.created_at >= '{$fecha_desde} 00:00:00' AND t.created_at <= '{$fecha_hasta} 23:59:59'";
 

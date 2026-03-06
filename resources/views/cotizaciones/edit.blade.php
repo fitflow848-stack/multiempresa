@@ -26,7 +26,7 @@
             <div class="card h-100">
                 <div class="card-header">
                     <h5 class="card-title mb-0">
-                        <i class="fas fa-search me-2"></i>Búsqueda de productos
+                        <i class="bx bx-search me-2"></i>Búsqueda de productos
                     </h5>
                 </div>
                 <div class="card-body">
@@ -38,7 +38,7 @@
                         </div>
                         <div class="col-md-4">
                             <button type="button" class="btn btn-outline-primary w-100" id="search-btn">
-                                <i class="fas fa-search me-2"></i>Buscar
+                                <i class="bx bx-search me-2"></i>Buscar
                             </button>
                         </div>
                     </div>
@@ -46,7 +46,7 @@
                     <!-- Resultados de búsqueda -->
                     <div id="search-results" class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                         <div class="text-center text-muted py-5">
-                            <i class="fas fa-search fa-2x mb-3"></i>
+                            <i class="bx bx-search fa-2x mb-3"></i>
                             <p>Busca productos para agregarlos a la cotización</p>
                         </div>
                     </div>
