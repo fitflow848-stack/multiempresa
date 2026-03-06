@@ -35,7 +35,7 @@
             </form>
 
             <div class="mt-4 text-center">
-                <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="text-decoration-none text-muted small">
+                <a href="{{ route('logout') }}" onclick="event.preventDefault(); clearPOSStorage(); document.getElementById('logout-form').submit();" class="text-decoration-none text-muted small">
                     <i class="fas fa-sign-out-alt me-1"></i> Cerrar Sesión
                 </a>
                 <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">

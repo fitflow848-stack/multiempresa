@@ -143,6 +143,31 @@
                 window.location.href = "{{ route('cierre-caja.index') }}";
             }
         });
+
+        // Función global para limpiar el storage del POS
+        function clearPOSStorage() {
+            const keys = [
+                'ventaPersistentePOS',
+                'clientePersistentePOS',
+                'ticketGuardadoPOS',
+                'clienteGuardadoPOS',
+                'ticketPOS',
+                'clienteSeleccionadoPOS',
+                'lotesSeleccionados'
+            ];
+            keys.forEach(key => {
+                localStorage.removeItem(key);
+                sessionStorage.removeItem(key);
+            });
+            console.log('POS Storage cleared');
+        }
+
+        // Auto-attach to logout forms
+        document.addEventListener('submit', function(e) {
+            if (e.target && (e.target.id === 'logout-form' || e.target.action.includes('logout') || e.target.action.includes('select-branch'))) {
+                clearPOSStorage();
+            }
+        });
     </script>
     @stack('scripts')
 </body>
