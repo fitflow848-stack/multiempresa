@@ -109,7 +109,7 @@ class SunatManager
             return response()->json(['error' => 'Venta no encontrada.'], 404);
         }
 
-        $cliente = Cliente::find($venta->id_cliente);
+        $cliente = Cliente::withoutGlobalScopes()->find($venta->id_cliente);
         $productos = VentaDetalle::where('id_venta', $venta->id_venta)->get();
         // Usar la función que arma el JSON con cuotas cuando corresponda
         $json  = $this->sunatClient->formatJsonXml($venta, $cliente, $productos, 0);

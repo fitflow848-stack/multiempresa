@@ -352,7 +352,7 @@ class AlmacenController extends Controller
                         SELECT
                             v.created_at as fecha,
                             'SALIDA' as tipo,
-                            '' as sucursal,
+                            COALESCE(s.nombre, 'N/A') as sucursal,
                             CONCAT('Venta: ', COALESCE(v.serie, ''), '-', LPAD(COALESCE(v.numero, 0), 8, '0'), ' / ', COALESCE(c.nombre, 'Cliente General')) as detalle,
                             CAST(0 AS DECIMAL(10,2)) as entrada,
                             CAST(vd.cantidad AS DECIMAL(10,2)) as salida,
@@ -360,6 +360,7 @@ class AlmacenController extends Controller
                             u.name as usuario
                         FROM venta_detalles vd
                         JOIN ventas v ON v.id_venta = vd.id_venta
+                        LEFT JOIN sucursales s ON s.id = v.sucursal
                         LEFT JOIN clientes c ON c.id = v.id_cliente
                         LEFT JOIN users u ON u.id = v.id_usuario
                         WHERE vd.servicio_id = :prod_id2 

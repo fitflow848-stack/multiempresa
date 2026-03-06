@@ -108,11 +108,12 @@ class Sunat
         $total = isset($venta->total) ? (float)$venta->total : (float)$costo_unitario;
 
         // preparar cliente/empresa
-        $empresa_razon = isset($cliente->nombre) ? $this->formatString($cliente->nombre) : '';
+        $empresa_razon = isset($cliente->nombre) ? $this->formatString($cliente->nombre) : 'VARIOS';
         $clienteDireccion = isset($cliente->direccion) ? $cliente->direccion : '-';
-        $clienteNumDoc = $cliente->numero_documento;
+        $clienteNumDoc = isset($cliente->numero_documento) ? $cliente->numero_documento : (isset($cliente->documento) ? $cliente->documento : '0');
+        
         if (empty($clienteNumDoc) || $clienteNumDoc == '-' || $clienteNumDoc == '0') {
-            $clienteNumDoc = 1111111;
+            $clienteNumDoc = 11111111; // 8 unos para DNI genérico si es necesario
         }
 
         $empresa = Company::where('id', Auth::user()->company_id)->first();
@@ -307,11 +308,11 @@ class Sunat
         $serieNumeroAfectado = $ventaAfectada->serie . '-' . ltrim((string)$ventaAfectada->numero, '0');
         $numeroNCSinCeros = ltrim((string)$ventaNC->numero, '0');
 
-        $empresa_razon = isset($cliente->nombre) ? $this->formatString($cliente->nombre) : '';
+        $empresa_razon = isset($cliente->nombre) ? $this->formatString($cliente->nombre) : 'VARIOS';
         $clienteDireccion = isset($cliente->direccion) ? $cliente->direccion : '-';
-        $clienteNumDoc = $cliente->numero_documento;
+        $clienteNumDoc = isset($cliente->numero_documento) ? $cliente->numero_documento : (isset($cliente->documento) ? $cliente->documento : '0');
         if (empty($clienteNumDoc) || $clienteNumDoc == '-' || $clienteNumDoc == '0') {
-            $clienteNumDoc = 1111111; // Default
+            $clienteNumDoc = 11111111; // Default
         }
 
         $items = [];

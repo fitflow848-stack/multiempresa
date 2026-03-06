@@ -836,18 +836,37 @@ class ReporteController extends Controller
     private function reporteCapitalActualCompra(Request $request)
     {
         $user = Auth::user();
-        $query = AlmacenIngresoDetalle::where('almacen_ingreso_detalle.cantidad', '>', 0)
-            ->join('almacen_ingresos', 'almacen_ingreso_detalle.ingreso_id', '=', 'almacen_ingresos.id')
-            ->where('almacen_ingresos.empresa_id', $user->company_id)
-            ->select(
+        
+        // Base query with scoping
+        $baseQuery = AlmacenIngresoDetalle::withoutGlobalScopes()
+            ->where('almacen_ingreso_detalle.cantidad', '>', 0)
+            ->whereHas('ingreso', function ($q) use ($user, $request) {
+                $q->withoutGlobalScopes()
+                  ->where('empresa_id', $user->company_id);
+                if ($request->input('local_id')) {
+                    $q->where('sucursal_id', $request->input('local_id'));
+                }
+            });
+
+        // Apply product filters
+        if ($request->input('familia_id')) {
+            $baseQuery->whereHas('producto', function ($q) use ($request) {
+                $q->where('familia_id', $request->input('familia_id'));
+            });
+        }
+
+        if ($request->input('codigo_barras')) {
+            $baseQuery->whereHas('producto', function ($q) use ($request) {
+                $q->where('codigo_barras', 'like', '%' . $request->input('codigo_barras') . '%');
+            });
+        }
+
+        $totalQuery = clone $baseQuery;
+        $total = $totalQuery->select(
                 DB::raw('SUM(almacen_ingreso_detalle.cantidad * almacen_ingreso_detalle.costo) as total_capital')
-            );
+            )->first()->total_capital ?? 0;
 
-        $total = $query->first()->total_capital ?? 0;
-
-        $detalles = AlmacenIngresoDetalle::where('almacen_ingreso_detalle.cantidad', '>', 0)
-            ->join('almacen_ingresos', 'almacen_ingreso_detalle.ingreso_id', '=', 'almacen_ingresos.id')
-            ->where('almacen_ingresos.empresa_id', $user->company_id)
+        $detalles = $baseQuery
             ->with(['producto.marca', 'producto.familia', 'producto.laboratorio'])
             ->select(
                 'almacen_ingreso_detalle.producto_id',
@@ -869,18 +888,29 @@ class ReporteController extends Controller
     private function reporteCapitalActualPromedio(Request $request)
     {
         $user = Auth::user();
-        $query = AlmacenIngresoDetalle::where('almacen_ingreso_detalle.cantidad', '>', 0)
-            ->join('almacen_ingresos', 'almacen_ingreso_detalle.ingreso_id', '=', 'almacen_ingresos.id')
-            ->where('almacen_ingresos.empresa_id', $user->company_id)
-            ->select(
+        
+        $baseQuery = AlmacenIngresoDetalle::withoutGlobalScopes()
+            ->where('almacen_ingreso_detalle.cantidad', '>', 0)
+            ->whereHas('ingreso', function ($q) use ($user, $request) {
+                $q->withoutGlobalScopes()
+                  ->where('empresa_id', $user->company_id);
+                if ($request->input('local_id')) {
+                    $q->where('sucursal_id', $request->input('local_id'));
+                }
+            });
+
+        if ($request->input('familia_id')) {
+            $baseQuery->whereHas('producto', function ($q) use ($request) {
+                $q->where('familia_id', $request->input('familia_id'));
+            });
+        }
+
+        $totalQuery = clone $baseQuery;
+        $total = $totalQuery->select(
                 DB::raw('SUM(almacen_ingreso_detalle.cantidad * almacen_ingreso_detalle.costo) as total_capital')
-            );
+            )->first()->total_capital ?? 0;
 
-        $total = $query->first()->total_capital ?? 0;
-
-        $detalles = AlmacenIngresoDetalle::where('almacen_ingreso_detalle.cantidad', '>', 0)
-            ->join('almacen_ingresos', 'almacen_ingreso_detalle.ingreso_id', '=', 'almacen_ingresos.id')
-            ->where('almacen_ingresos.empresa_id', $user->company_id)
+        $detalles = $baseQuery
             ->with('producto')
             ->select('almacen_ingreso_detalle.producto_id', DB::raw('SUM(almacen_ingreso_detalle.cantidad) as stock'), DB::raw('SUM(almacen_ingreso_detalle.cantidad * almacen_ingreso_detalle.costo) as valor'))
             ->groupBy('almacen_ingreso_detalle.producto_id')
@@ -922,13 +952,27 @@ class ReporteController extends Controller
     private function reporteStockConsolidado(Request $request)
     {
         $user = Auth::user();
-        $query = AlmacenIngresoDetalle::where('almacen_ingreso_detalle.cantidad', '>', 0)
-            ->join('almacen_ingresos', 'almacen_ingreso_detalle.ingreso_id', '=', 'almacen_ingresos.id')
-            ->where('almacen_ingresos.empresa_id', $user->company_id)
+        $sucursalId = $request->input('local_id') ?? $user->branch_id;
+
+        $query = AlmacenIngresoDetalle::withoutGlobalScopes()
+            ->where('almacen_ingreso_detalle.cantidad', '>', 0)
+            ->whereHas('ingreso', function ($q) use ($user, $sucursalId) {
+                $q->withoutGlobalScopes()
+                  ->where('empresa_id', $user->company_id);
+                if ($sucursalId) {
+                    $q->where('sucursal_id', $sucursalId);
+                }
+            })
             ->select('almacen_ingreso_detalle.producto_id', DB::raw('SUM(almacen_ingreso_detalle.cantidad) as stock_total'))
             ->groupBy('almacen_ingreso_detalle.producto_id')
             ->orderByDesc('stock_total')
             ->with('producto');
+
+        if ($request->input('familia_id')) {
+            $query->whereHas('producto', function ($q) use ($request) {
+                $q->where('familia_id', $request->input('familia_id'));
+            });
+        }
 
         $resultados = $query->limit(200)->get();
         return [
@@ -940,13 +984,27 @@ class ReporteController extends Controller
     private function reporteStockPorLocal(Request $request)
     {
         $user = Auth::user();
-        $resultados = AlmacenIngresoDetalle::where('almacen_ingreso_detalle.cantidad', '>', 0)
-            ->join('almacen_ingresos', 'almacen_ingreso_detalle.ingreso_id', '=', 'almacen_ingresos.id')
-            ->where('almacen_ingresos.empresa_id', $user->company_id)
+        $sucursalId = $request->input('local_id') ?? $user->branch_id;
+
+        $query = AlmacenIngresoDetalle::withoutGlobalScopes()->where('almacen_ingreso_detalle.cantidad', '>', 0)
+            ->whereHas('ingreso', function ($q) use ($user, $sucursalId) {
+                $q->withoutGlobalScopes()->where('empresa_id', $user->company_id);
+                if ($sucursalId) {
+                    $q->where('sucursal_id', $sucursalId);
+                }
+            })
             ->select('almacen_ingreso_detalle.producto_id', 'almacen_ingresos.sucursal_id', DB::raw('SUM(almacen_ingreso_detalle.cantidad) as stock_total'))
+            ->join('almacen_ingresos', 'almacen_ingreso_detalle.ingreso_id', '=', 'almacen_ingresos.id')
             ->groupBy('almacen_ingreso_detalle.producto_id', 'almacen_ingresos.sucursal_id')
-            ->with('producto')
-            ->limit(100)->get();
+            ->with('producto');
+
+        if ($request->input('familia_id')) {
+            $query->whereHas('producto', function ($q) use ($request) {
+                $q->where('familia_id', $request->input('familia_id'));
+            });
+        }
+
+        $resultados = $query->limit(100)->get();
         return [
             'view' => 'reportes.partials.stock_local',
             'data' => compact('resultados')
@@ -956,15 +1014,27 @@ class ReporteController extends Controller
     private function reporteStockPorReferencia(Request $request)
     {
         $user = Auth::user();
-        $resultados = AlmacenIngresoDetalle::where('almacen_ingreso_detalle.cantidad', '>', 0)
-            ->join('almacen_ingresos', 'almacen_ingreso_detalle.ingreso_id', '=', 'almacen_ingresos.id')
-            ->where('almacen_ingresos.empresa_id', $user->company_id)
+        $sucursalId = $request->input('local_id') ?? $user->branch_id;
+
+        $query = AlmacenIngresoDetalle::withoutGlobalScopes()->where('almacen_ingreso_detalle.cantidad', '>', 0)
+            ->whereHas('ingreso', function ($q) use ($user, $sucursalId) {
+                $q->withoutGlobalScopes()->where('empresa_id', $user->company_id);
+                if ($sucursalId) {
+                    $q->where('sucursal_id', $sucursalId);
+                }
+            })
             ->with('producto')
             ->select('almacen_ingreso_detalle.*')
             ->orderBy('almacen_ingreso_detalle.producto_id')
-            ->orderBy('almacen_ingreso_detalle.lote')
-            ->limit(200)
-            ->get();
+            ->orderBy('almacen_ingreso_detalle.lote');
+
+        if ($request->input('familia_id')) {
+            $query->whereHas('producto', function ($q) use ($request) {
+                $q->where('familia_id', $request->input('familia_id'));
+            });
+        }
+
+        $resultados = $query->limit(100)->get();
         return [
             'view' => 'reportes.partials.stock_referencia',
             'data' => compact('resultados')
@@ -982,18 +1052,25 @@ class ReporteController extends Controller
     private function reportePorVencer(Request $request)
     {
         $user = Auth::user();
-        // Productos próximos a vencer (3 meses por defecto)
         $meses = $request->input('meses', 3);
         $fechaLimite = now()->addMonths($meses);
 
-        $query = AlmacenIngresoDetalle::with(['producto.familia', 'ingreso'])
-            ->join('almacen_ingresos', 'almacen_ingreso_detalle.ingreso_id', '=', 'almacen_ingresos.id')
-            ->where('almacen_ingresos.empresa_id', $user->company_id)
+        $sucursalId = $request->input('local_id') ?? $user->branch_id;
+        $query = AlmacenIngresoDetalle::withoutGlobalScopes()
+            ->with(['producto.familia', 'ingreso'])
+            ->whereHas('ingreso', function ($q) use ($user, $sucursalId) {
+                $q->withoutGlobalScopes()
+                  ->where('empresa_id', $user->company_id);
+                if ($sucursalId) {
+                    $q->where('sucursal_id', $sucursalId);
+                }
+            })
             ->where('almacen_ingreso_detalle.cantidad', '>', 0)
             ->whereNotNull('almacen_ingreso_detalle.fecha_vencimiento')
             ->whereDate('almacen_ingreso_detalle.fecha_vencimiento', '<=', $fechaLimite)
             ->select('almacen_ingreso_detalle.*')
             ->orderBy('almacen_ingreso_detalle.fecha_vencimiento', 'asc');
+
         if ($request->input('familia_id')) {
             $query->whereHas('producto', function ($q) use ($request) {
                 $q->where('familia_id', $request->input('familia_id'));

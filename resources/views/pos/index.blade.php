@@ -674,14 +674,25 @@
         document.getElementById('modal-tipo-documento').style.display = 'none';
     }
 
+    let isProcessingEmission = false;
+
     // Función para seleccionar el tipo de documento y proceder a emitir
-    function seleccionarTipoDocumento(tipo) {
+    async function seleccionarTipoDocumento(tipo) {
+        if (isProcessingEmission) return;
+        
         cerrarModalTipoDocumento();
-        emitirVentaConTipo(tipo);
+        
+        // Deshabilitar botones de tipo documento para evitar doble clic
+        const buttons = document.querySelectorAll('.tipo-doc-btn');
+        buttons.forEach(btn => btn.disabled = true);
+        
+        await emitirVentaConTipo(tipo);
     }
 
     // Función para emitir venta con el tipo de documento seleccionado
-    function emitirVentaConTipo(tipoDocumento) {
+    async function emitirVentaConTipo(tipoDocumento) {
+        if (isProcessingEmission) return;
+        
         // Doble validación antes de proceder
         if (ticket.length === 0) {
             Swal.fire({
@@ -692,20 +703,30 @@
             return;
         }
 
+        isProcessingEmission = true;
+
         // Asegurar que siempre hay un cliente (crear cliente contable si es necesario)
         if (!clienteActual || !clienteActual.id) {
-            crearClienteContable();
+            try {
+                mostrarNotificacion('Configurando cliente...');
+                await crearClienteContable();
+            } catch (err) {
+                console.error('Error al crear cliente contable:', err);
+                isProcessingEmission = false;
+                return;
+            }
         }
 
         // VALIDACIÓN: Factura requiere RUC (11 dígitos)
         if (tipoDocumento === 'factura') {
-            const doc = (clienteActual && clienteActual.numero_documento) ? clienteActual.numero_documento : '';
+            const doc = (clienteActual && (clienteActual.numero_documento || clienteActual.documento)) ? (clienteActual.numero_documento || clienteActual.documento) : '';
             if (doc.length !== 11) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'RUC Requerido',
                     text: 'Para emitir FACTURA, el cliente debe tener un RUC válido (11 dígitos).'
                 });
+                isProcessingEmission = false;
                 return;
             }
         }
@@ -713,8 +734,7 @@
         // VALIDACIÓN: Crédito requiere cliente específico
         const radioCredito = document.getElementById('radio-credito');
         if (radioCredito && radioCredito.checked) {
-            const nombresGenericos = ['CLIENTE CONTABLE', 'Cliente Contado', 'VARIOS'];
-            // Validar por nombre o si el ID es el genérico (usualmente 1)
+            const nombresGenericos = ['CLIENTE CONTABLE', 'Cliente Contado', 'VARIOS', 'ANONIMO'];
             if (!clienteActual || !clienteActual.id ||
                 nombresGenericos.includes(clienteActual.nombre.toUpperCase().trim())) {
                 Swal.fire({
@@ -722,22 +742,21 @@
                     title: 'Cliente Requerido',
                     text: 'Para ventas a CRÉDITO, debe seleccionar un cliente específico (no Cliente Contable).'
                 });
+                isProcessingEmission = false;
                 return;
             }
         }
 
         // Calcular totales considerando tipo de impuesto
         let total_con_igv = 0;
-        let subtotal_gravado = 0;
         let total_igv = 0;
 
         ticket.forEach(item => {
-            const itemTotal = parseFloat(item.importe || (parseFloat(item.precio) * parseInt(item.cantidad)));
+            const itemTotal = parseFloat(item.importe || (parseFloat(item.precio) * parseFloat(item.cantidad)));
             total_con_igv += itemTotal;
 
             if (item.tipo_impuesto !== 'exonerado') {
                 const itemGravado = itemTotal / 1.18;
-                subtotal_gravado += itemGravado;
                 total_igv += (itemTotal - itemGravado);
             }
         });
@@ -746,10 +765,17 @@
         const igv = total_igv;
         const total = total_con_igv;
 
+        // Limpiar persistencia ANTES de enviar para evitar que se restaure en otros lugares/tiempos
+        const ticketCopia = [...ticket];
+        const clienteCopia = {...clienteActual};
+        
+        // Limpiar todo antes de salir para evitar "ghost products" por restauración de localStorage
+        limpiarVentaCompletada();
+        
         // Preparar datos para enviar
         const datosVenta = {
-            ticket: JSON.stringify(ticket),
-            cliente: JSON.stringify(clienteActual),
+            ticket: JSON.stringify(ticketCopia),
+            cliente: JSON.stringify(clienteCopia),
             subtotal: subtotal.toFixed(2),
             igv: igv.toFixed(2),
             total: total.toFixed(2),

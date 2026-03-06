@@ -179,6 +179,10 @@
                                     </td>
                                     <td class="text-center">
                                         <div class="d-flex gap-1 justify-content-center">
+                                            <a href="{{ route('almacen.kardex', ['producto_id' => $p->id_producto ?? $p->id]) }}"
+                                                class="btn btn-sm btn-white border shadow-sm px-2 rounded-pill text-info fw-bold" title="Ver Kardex">
+                                                <i class="fas fa-history"></i>
+                                            </a>
                                             <a href="{{ route('almacen.edit', $p->id) }}"
                                                 class="btn btn-sm btn-white border shadow-sm px-2 rounded-pill text-warning fw-bold">
                                                 <i class="bx bx-edit"></i>

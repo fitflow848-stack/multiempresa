@@ -297,57 +297,63 @@
 
     // Función para crear/obtener cliente contable en base de datos
     function crearClienteContable() {
-        // Intentar obtener cliente contable existente primero
-        obtenerClienteContableExistente();
+        // Intentar obtener cliente contable existente primero y devolver la promesa
+        return obtenerClienteContableExistente();
     }
 
     // Función para obtener cliente contable existente (id=999999, global para todas las empresas)
     function obtenerClienteContableExistente() {
-        fetch(`{{ route('clientes.cliente-contable') }}`, {
-            method: 'GET',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data && data.id) {
-                    // Cliente contable encontrado
-                    clienteActual = {
-                        id: data.id,
-                        tipo_documento: data.tipo_documento,
-                        numero_documento: data.numero_documento,
-                        documento: data.numero_documento,
-                        nombre: data.nombre,
-                        direccion: data.direccion || '',
-                        telefono: data.telefono || '',
-                        email: data.email || ''
-                    };
-
-                    // Actualizar UI
-                    document.getElementById('footer-cliente').innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento}`;
-                    const clienteNombre = document.getElementById('cliente-info-nombre');
-                    const clienteDoc = document.getElementById('cliente-info-documento');
-                    if (clienteNombre) clienteNombre.textContent = clienteActual.nombre;
-                    if (clienteDoc) clienteDoc.textContent = clienteActual.numero_documento;
-
-                    mostrarNotificacion('✅ Cliente contable configurado');
-                    console.log('Cliente contable encontrado:', clienteActual);
-                } else {
-                    console.error('Cliente contable (id=999999) no encontrado en BD');
-                    clienteTemporalContable();
+        return new Promise((resolve, reject) => {
+            fetch(`{{ route('clientes.cliente-contable') }}`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 }
             })
-            .catch(error => {
-                console.error('Error buscando cliente contable:', error);
-                clienteTemporalContable();
-            });
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.id) {
+                        // Cliente contable encontrado
+                        clienteActual = {
+                            id: data.id,
+                            tipo_documento: data.tipo_documento,
+                            numero_documento: data.numero_documento,
+                            documento: data.numero_documento,
+                            nombre: data.nombre,
+                            direccion: data.direccion || '',
+                            telefono: data.telefono || '',
+                            email: data.email || ''
+                        };
+
+                        // Actualizar UI
+                        document.getElementById('footer-cliente').innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento}`;
+                        const clienteNombre = document.getElementById('cliente-info-nombre');
+                        const clienteDoc = document.getElementById('cliente-info-documento');
+                        if (clienteNombre) clienteNombre.textContent = clienteActual.nombre;
+                        if (clienteDoc) clienteDoc.textContent = clienteActual.numero_documento;
+
+                        mostrarNotificacion('✅ Cliente contable configurado');
+                        console.log('Cliente contable encontrado:', clienteActual);
+                        resolve(clienteActual);
+                    } else {
+                        console.error('Cliente contable (id=999999) no encontrado en BD');
+                        clienteActual = clienteTemporalContable();
+                        resolve(clienteActual);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error buscando cliente contable:', error);
+                    clienteActual = clienteTemporalContable();
+                    resolve(clienteActual);
+                });
+        });
     }
 
-    // Función para crear nuevo cliente contable en base de datos
-    function crearNuevoClienteContable() {
-        const datosClienteContable = {
-            tipo_documento: 'dni',
+    // Función para crear cliente contable temporal (fallback)
+    function clienteTemporalContable() {
+        const clienteTemp = {
+            id: 999999, // ID temporal alto para evitar conflictos
+            documento: '00000000',
             numero_documento: '00000000',
             nombre: 'CLIENTE CONTABLE',
             direccion: 'SIN DIRECCION',
@@ -355,76 +361,31 @@
             email: ''
         };
 
-        fetch('{{ route('clientes.store') }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: JSON.stringify(datosClienteContable)
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Cliente contable creado exitosamente
-                    clienteActual = {
-                        id: data.cliente ? data.cliente.id : data.data.id,
-                        documento: '00000000',
-                        nombre: 'CLIENTE CONTABLE',
-                        direccion: 'SIN DIRECCION',
-                        telefono: '',
-                        email: ''
-                    };
-
-                    // Actualizar UI
-                    document.getElementById('cliente-info-nombre').textContent = 'CLIENTE CONTABLE';
-                    document.getElementById('cliente-info-documento').textContent = '00000000';
-
-                    console.log('Cliente contable creado exitosamente:', clienteActual);
-                    mostrarNotificacion('✅ Cliente contable creado y configurado');
-                } else {
-                    // Error al crear, usar cliente temporal para continuar
-                    console.error('Error creando cliente contable:', data.message || 'Error desconocido');
-                    clienteTemporalContable();
-                }
-            })
-            .catch(error => {
-                console.error('Error de conexión creando cliente contable:', error);
-                clienteTemporalContable();
-            });
-    }
-
-    // Función para crear cliente contable temporal (fallback)
-    function clienteTemporalContable() {
-        clienteActual = {
-            id: 999999, // ID temporal alto para evitar conflictos
-            documento: '00000000',
-            nombre: 'CLIENTE CONTABLE',
-            direccion: 'SIN DIRECCION',
-            telefono: '',
-            email: ''
-        };
-
         // Actualizar UI
-        document.getElementById('cliente-info-nombre').textContent = 'CLIENTE CONTABLE';
-        document.getElementById('cliente-info-documento').textContent = '00000000';
+        const clienteNombre = document.getElementById('cliente-info-nombre');
+        const clienteDoc = document.getElementById('cliente-info-documento');
+        if (clienteNombre) clienteNombre.textContent = 'CLIENTE CONTABLE';
+        if (clienteDoc) clienteDoc.textContent = '00000000';
+
+        const footerCliente = document.getElementById('footer-cliente');
+        if (footerCliente) footerCliente.innerText = 'CLIENTE CONTABLE - 00000000';
 
         console.log('Cliente contable temporal configurado');
         mostrarNotificacion('⚠️ Cliente contable temporal configurado');
+        return clienteTemp;
     }
 
     // Función para usar cliente contable directamente
-    function usarClienteContado() {
+    async function usarClienteContado() {
         // Crear/obtener cliente contable de la base de datos
-        crearClienteContable();
+        mostrarNotificacion('🔄 Configurando cliente contable...');
+        await crearClienteContable();
 
         // Cerrar modal si está abierto
         const modal = document.getElementById('modal-buscar-clientes');
         if (modal) modal.style.display = 'none';
 
-        mostrarNotificacion('🔄 Configurando cliente contable...');
-
-        console.log('Configurando cliente contable...');
+        console.log('Cliente contable configurado por usuario.');
     }
 
 </script>
