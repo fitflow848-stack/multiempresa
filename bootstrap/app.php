@@ -11,6 +11,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Permitir logout sin token (evita error 419 si expira la sesión)
+        $middleware->validateCsrfTokens(except: [
+            '/logout',
+        ]);
+
         // Alias para usar en rutas específicas si se necesita
         $middleware->alias([
             'company.scope' => \App\Http\Middleware\EnsureCompanyScope::class,
