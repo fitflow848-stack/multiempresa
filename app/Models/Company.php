@@ -40,6 +40,8 @@ class Company extends Model
 
         'sol_user',
         'sol_password',
+        'sunat_client_id',
+        'sunat_client_secret',
         'sunat_local_code',
         'ose_provider',
         'ose_user',

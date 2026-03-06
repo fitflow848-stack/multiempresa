@@ -389,8 +389,8 @@ class Sunat
             "ruc" => $empresa->ruc,
             "usuario" => $empresa->sol_user,
             "clave" => $empresa->sol_password,
-            "client_id" => "test-85e5b0ae-255c-4891-a595-0b98c65c9854",
-            "secret_client" => "test-Hty/M6QshYvPgItX2P0+Kw==",
+            "client_id" => $empresa->sunat_client_id ?? "test-85e5b0ae-255c-4891-a595-0b98c65c9854",
+            "secret_client" => $empresa->sunat_client_secret ?? "test-Hty/M6QshYvPgItX2P0+Kw==",
             "nombre_documento" => $nombre_documento,
             "contenido_documento" => $contenido_documento
         ];

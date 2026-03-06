@@ -100,17 +100,30 @@ class CompanyForm
 
                         Section::make('Facturación y Certificado')
                             ->schema([
-                                TextInput::make('sol_user')->label('Usuario SOL'),
-                                TextInput::make('sol_password')
-                                    ->label('Clave SOL')
-                                    ->password(),
-                                TextInput::make('sunat_local_code')->label('Código Local')->default('0000'),
                                 FileUpload::make('cert_file')
-                                    ->label('Archivo del Certificado')
+                                    ->label('Subir Firma Electrónica')
                                     ->directory('sunat/certificados')
-                                    ->visibility('private'),
-                                TextInput::make('cert_password')->label('Contraseña del Certificado')->password(),
-                                DatePicker::make('cert_expires_at')->label('Vencimiento'),
+                                    ->visibility('private')
+                                    ->columnSpanFull()
+                                    ->helperText('Puede arrastrar la firma aquí o dar click para subirlo'),
+                                TextInput::make('sol_user')
+                                    ->label('Usuario Sunat')
+                                    ->placeholder('Usuario Sunat')
+                                    ->prefixIcon('heroicon-m-user'),
+                                TextInput::make('sol_password')
+                                    ->label('Clave Sunat')
+                                    ->placeholder('Clave Sunat')
+                                    ->password()
+                                    ->prefixIcon('heroicon-m-lock-closed'),
+                                TextInput::make('sunat_client_id')
+                                    ->label('Client ID (API SUNAT)')
+                                    ->placeholder('Client ID (API SUNAT)')
+                                    ->prefixIcon('heroicon-m-identification'),
+                                TextInput::make('sunat_client_secret')
+                                    ->label('Client Secret (API SUNAT)')
+                                    ->placeholder('Client Secret (API SUNAT)')
+                                    ->password()
+                                    ->prefixIcon('heroicon-m-key'),
                             ])->columns(2),
 
                         Section::make('Régimen y Bancos')
