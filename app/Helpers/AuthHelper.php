@@ -21,9 +21,17 @@ class AuthHelper
                 $user = User::withoutGlobalScopes()->find($userId);
                 
                 if ($user) {
-                    // Si el usuario es super_admin y tiene una empresa en sesión, la usamos como su "contexto"
-                    // Esto permite que el trait BelongsToCompany aplique filtros incluso para el super_admin
-                    if (($user->hasRole('super_admin') || !$user->company_id) && session('active_company_id')) {
+                    // Si el usuario es super_admin y tiene empresa/sucursal en sesión, las inyectamos como su "contexto"
+                    // Esto asegura que los Global Scopes funcionen correctamente para el Super Admin
+                    if ($user->hasRole('super_admin')) {
+                        if (session('active_company_id')) {
+                            $user->company_id = session('active_company_id');
+                        }
+                        if (session('active_branch_id')) {
+                            $user->branch_id = session('active_branch_id');
+                        }
+                    } elseif (!$user->company_id && session('active_company_id')) {
+                        // Caso para usuarios sin empresa asignada (si existieran)
                         $user->company_id = session('active_company_id');
                     }
                 }

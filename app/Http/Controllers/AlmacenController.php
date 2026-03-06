@@ -696,4 +696,47 @@ class AlmacenController extends Controller
             return back()->withErrors('Error al actualizar: ' . $e->getMessage())->withInput();
         }
     }
+
+    public function destroy($id)
+    {
+        try {
+            DB::beginTransaction();
+            
+            // Recibimos el ID de almacen_ingreso_detalle (que es lo que listamos en la tabla)
+            $detalle = AlmacenIngresoDetalle::find($id);
+            if (!$detalle) {
+                return response()->json(['success' => false, 'message' => 'Producto no encontrado en almacén.'], 404);
+            }
+
+            $productoId = $detalle->producto_id;
+            
+            // Verificar si tiene ventas vinculadas
+            $hasSales = DB::table('venta_detalles')->where('servicio_id', $productoId)->exists();
+            if ($hasSales) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'No se puede eliminar el producto porque tiene ventas (historial) asociadas. Considere ajustarlo a stock 0.'
+                ], 400);
+            }
+
+            // Eliminar registros relacionados del inventario para este producto
+            DB::table('almacen_ingreso_detalle')->where('producto_id', $productoId)->delete();
+            
+            // Borrar líneas del producto
+            DB::table('producto_lineas')->where('producto_id', $productoId)->delete();
+            
+            // Borrar transferencias relacionadas
+            DB::table('almacen_transferencias')->where('producto_id', $productoId)->delete();
+
+            // Borrar el producto de la tabla base
+            DB::table('productos')->where('id', $productoId)->delete();
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Producto eliminado correctamente de todo el sistema.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error eliminando producto: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error al eliminar: ' . $e->getMessage()], 500);
+        }
+    }
 }

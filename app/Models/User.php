@@ -60,6 +60,21 @@ class User extends Authenticatable implements FilamentUser
     }
 
     /**
+     * Accessor para obtener la empresa activa desde la sesión si es el usuario autenticado.
+     * Esto permite que $user->company_id devuelva la empresa en la que el super_admin está trabajando.
+     */
+    public function getCompanyIdAttribute($value)
+    {
+        if (auth()->check() && auth()->id() === $this->id) {
+            // Si el usuario es super_admin y tiene una empresa en sesión, la usamos como su "contexto"
+            if (($this->hasRole('super_admin') || !$value) && session('active_company_id')) {
+                return session('active_company_id');
+            }
+        }
+        return $value;
+    }
+
+    /**
      * Accessor para obtener la sucursal activa desde la sesión si es el usuario autenticado.
      */
     public function getBranchIdAttribute($value)

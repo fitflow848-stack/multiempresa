@@ -113,7 +113,8 @@ class ClienteController extends Controller
         }
 
         // 2. Verificar existencia (Evitar back() en AJAX)
-        $existeCliente = Cliente::where('company_id', $user->company_id)
+        $existeCliente = Cliente::withoutGlobalScopes()
+            ->where('company_id', $user->company_id)
             ->where('sucursal_id', $user->branch_id)
             ->where('numero_documento', $request->numero_documento)
             ->first();
@@ -206,7 +207,8 @@ class ClienteController extends Controller
         ]);
 
         // Verificar si ya existe otro cliente con ese documento
-        $existeCliente = Cliente::where('company_id', Auth::user()->company_id)
+        $existeCliente = Cliente::withoutGlobalScopes()
+            ->where('company_id', Auth::user()->company_id)
             ->where('sucursal_id', Auth::user()->branch_id)
             ->where('numero_documento', $request->numero_documento)
             ->where('id', '!=', $cliente->id)
@@ -264,8 +266,9 @@ class ClienteController extends Controller
         $documento = $request->documento;
         $tipoDocumento = strlen($documento) === 8 ? 'DNI' : 'RUC';
 
-        // Verificar si ya existe el cliente
-        $existeCliente = Cliente::where('company_id', $user->company_id)
+        // Verificar si ya existe el cliente (Bypass global scopes to prevent duplicates across context)
+        $existeCliente = Cliente::withoutGlobalScopes()
+            ->where('company_id', $user->company_id)
             ->where('sucursal_id', $user->branch_id)
             ->where('numero_documento', $documento)
             ->first();

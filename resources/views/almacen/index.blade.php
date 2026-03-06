@@ -184,9 +184,14 @@
                                                 <i class="bx bx-edit"></i>
                                             </a>
                                             <a href="{{ route('almacen.ajustar-existencias', $p->id) }}"
-                                                class="btn btn-sm btn-white border shadow-sm px-2 rounded-pill text-primary fw-bold">
+                                                class="btn btn-sm btn-white border shadow-sm px-2 rounded-pill text-primary fw-bold" title="Ajustar Stock">
                                                 <i class="bx bx-slider"></i>
                                             </a>
+                                            <button type="button" 
+                                                class="btn btn-sm btn-white border shadow-sm px-2 rounded-pill text-danger fw-bold btn-delete-product" 
+                                                data-id="{{ $p->id }}" data-name="{{ $p->producto }}" title="Eliminar Producto">
+                                                <i class="bx bx-trash"></i>
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>
@@ -302,6 +307,62 @@
                     </html>
                 `);
                 printWindow.document.close();
+            });
+
+            // Lógica para eliminar producto
+            document.querySelectorAll('.btn-delete-product').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = this.getAttribute('data-id');
+                    const name = this.getAttribute('data-name');
+
+                    Swal.fire({
+                        title: '¿Estás seguro?',
+                        text: `Vas a eliminar el producto "${name}" de todo el sistema. Esta acción no se puede deshacer y borrará el stock en todos los locales.`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Sí, eliminar',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            fetch(`{{ url('almacen/destroy') }}/${id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json'
+                                }
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    Swal.fire(
+                                        '¡Eliminado!',
+                                        data.message,
+                                        'success'
+                                    ).then(() => {
+                                        location.reload();
+                                    });
+                                } else {
+                                    Swal.fire(
+                                        'Error',
+                                        data.message,
+                                        'error'
+                                    );
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                Swal.fire(
+                                    'Error',
+                                    'Ocurrió un error inesperado al intentar eliminar el producto.',
+                                    'error'
+                                );
+                            });
+                        }
+                    });
+                });
             });
         });
     </script>
