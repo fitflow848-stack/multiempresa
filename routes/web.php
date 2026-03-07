@@ -51,6 +51,7 @@ Route::get('/logout', [AuthController::class, 'logout'])->name('logout.get');
 Route::middleware(['auth'])->group(function () {
     Route::get('/select-branch', [BranchSelectionController::class, 'index'])->name('branch.select');
     Route::post('/select-branch', [BranchSelectionController::class, 'select'])->name('branch.select.post');
+    Route::post('/api/branch/change', [BranchSelectionController::class, 'changeBranch'])->name('branch.change.api');
     Route::post('/caja/select', [CajaSessionController::class, 'select'])->name('caja.select');
 });
 

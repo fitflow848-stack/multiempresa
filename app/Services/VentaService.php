@@ -71,6 +71,11 @@ class VentaService
         }
 
         DB::beginTransaction();
+        Log::info('VentaService: Iniciando creación de venta', [
+            'meta' => $meta,
+            'ticket_count' => count($ticket)
+        ]);
+
         try {
             // 1. Priorizar caja seleccionada en sesión
             $selectedCajaId = session('selected_caja_id');
@@ -113,13 +118,16 @@ class VentaService
             foreach ($ticket as $item) {
                 if (isset($item['precio']) && isset($item['cantidad'])) {
                     $precio_original = floatval($item['precio']);
-                    $cantidad = intval($item['cantidad']);
+                    $cantidad = floatval($item['cantidad']); // Cambio intval -> floatval just in case
                     $importe_pagado = floatval($item['importe'] ?? ($precio_original * $cantidad));
 
                     $importe_original = $precio_original * $cantidad;
                     $total_descuento += ($importe_original - $importe_pagado);
 
                     $total += $importe_pagado;
+                    
+                    $itemName = $item['nombre'] ?? 'S/N';
+                    Log::debug("Item sumado al total: {$itemName} | P: {$precio_original} | C: {$cantidad} | Imp: {$importe_pagado} | Total acumulado: {$total}");
 
                     // Determinar tipo de impuesto del producto
                     $tipoImpuesto = 10; // Por defecto Gravado - Operación Onerosa
@@ -144,6 +152,8 @@ class VentaService
                         $op_gravadas += $base;
                         $igv_total += $igv_item;
                     }
+                } else {
+                    Log::warning("Item SKIPPED en total calculation (falta precio o cantidad):", ['item' => $item]);
                 }
             }
 
@@ -222,7 +232,7 @@ class VentaService
             }
             // Crear detalles y actualizar stock
             foreach ($ticket as $index => $item) {
-                $cantidad = intval($item['cantidad'] ?? 1);
+                $cantidad = floatval($item['cantidad'] ?? 1);
                 $precio_original = floatval($item['precio'] ?? 0);
                 $importe_pagado = floatval($item['importe'] ?? ($precio_original * $cantidad));
 

@@ -15,11 +15,19 @@ class ProductRepository
     public function buscar(string $q, ?int $sucursalId = null): array
     {
         $sucursalId = $sucursalId ?? session('active_branch_id');
-        $joinIngresos = $sucursalId ? "INNER JOIN almacen_ingresos ai ON ai.id = ad.ingreso_id AND ai.sucursal_id = ?" : "";
-        $params = ["%{$q}%", "%{$q}%"];
+        $companyId = session('active_company_id') ?? (auth()->check() ? auth()->user()->company_id : null);
+        
+        $joinIngresos = "INNER JOIN almacen_ingresos ai ON ai.id = ad.ingreso_id AND ai.company_id = ?";
         if ($sucursalId) {
-            array_unshift($params, $sucursalId); // Goes into the join
+            $joinIngresos .= " AND ai.sucursal_id = ?";
         }
+        
+        $params = [$companyId];
+        if ($sucursalId) {
+            $params[] = $sucursalId;
+        }
+        $params[] = "%{$q}%";
+        $params[] = "%{$q}%";
 
         return DB::select("
             SELECT
@@ -74,9 +82,18 @@ class ProductRepository
     public function obtenerLotes(int $productoId, ?int $sucursalId = null): array
     {
         $sucursalId = $sucursalId ?? session('active_branch_id');
+        $companyId = session('active_company_id') ?? (auth()->check() ? auth()->user()->company_id : null);
         
-        $joinIngresos = $sucursalId ? "INNER JOIN almacen_ingresos ai ON ai.id = ad.ingreso_id AND ai.sucursal_id = ?" : "";
-        $params = $sucursalId ? [$sucursalId, $productoId] : [$productoId];
+        $joinIngresos = "INNER JOIN almacen_ingresos ai ON ai.id = ad.ingreso_id AND ai.company_id = ?";
+        if ($sucursalId) {
+            $joinIngresos .= " AND ai.sucursal_id = ?";
+        }
+        
+        $params = [$companyId];
+        if ($sucursalId) {
+            $params[] = $sucursalId;
+        }
+        $params[] = $productoId;
         
         return DB::select("SELECT
                     ad.id,
@@ -101,8 +118,18 @@ class ProductRepository
     public function elegirStock(int $productoId, ?int $sucursalId = null): array
     {
         $sucursalId = $sucursalId ?? session('active_branch_id');
-        $joinIngresos = $sucursalId ? "INNER JOIN almacen_ingresos ai ON ai.id = ad.ingreso_id AND ai.sucursal_id = ?" : "";
-        $params = $sucursalId ? [$sucursalId, $productoId] : [$productoId];
+        $companyId = session('active_company_id') ?? (auth()->check() ? auth()->user()->company_id : null);
+        
+        $joinIngresos = "INNER JOIN almacen_ingresos ai ON ai.id = ad.ingreso_id AND ai.company_id = ?";
+        if ($sucursalId) {
+            $joinIngresos .= " AND ai.sucursal_id = ?";
+        }
+        
+        $params = [$companyId];
+        if ($sucursalId) {
+            $params[] = $sucursalId;
+        }
+        $params[] = $productoId;
 
         return DB::select("SELECT
                     ad.id,

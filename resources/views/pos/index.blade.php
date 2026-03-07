@@ -70,9 +70,11 @@
     <div class="pos-header">
         <div class="header-left">
             <img src="{{ $logo }}" alt="Logo" style="height: 30px; margin-right: 15px;">
-            <select name="sucursal" id="sucursal-select" class="header-select">
+            <select name="sucursal" id="sucursal-select" class="header-select" onchange="cambiarSucursal(this.value)">
                 @foreach ($sucursales as $sucursal)
-                    <option value="{{ $sucursal->id }}">{{ $sucursal->nombre }}</option>
+                    <option value="{{ $sucursal->id }}" {{ session('active_branch_id') == $sucursal->id ? 'selected' : '' }}>
+                        {{ $sucursal->nombre }}
+                    </option>
                 @endforeach
             </select>
         </div>
@@ -2270,6 +2272,7 @@
 </script>
 @include('pos.partials.modals.context-menu-ticket')
 @include('pos.partials.js.finalizar-venta')
+@include('pos.partials.js.sucursal-toggle')
 
 @if (session('error'))
     <script>

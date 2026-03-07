@@ -138,20 +138,25 @@
                     <div class="col-md-2">
                         <label class="small fw-bold">LOCAL</label>
                         <select class="form-select form-select-sm" name="local">
-                            <option value="PURINA">PURINA</option>
+                            <option value="">TODOS</option>
+                            @foreach ($sucursales as $sucursal)
+                                <option value="{{ $sucursal->id }}" {{ request('local') == $sucursal->id ? 'selected' : '' }}>
+                                    {{ $sucursal->nombre }}
+                                </option>
+                            @endforeach
                         </select>
                     </div>
                     <div class="col-md-2">
                         <label class="small fw-bold">DESDE</label>
-                        <input type="date" class="form-control form-control-sm" name="desde">
+                        <input type="date" class="form-control form-control-sm" name="desde" value="{{ request('desde') }}">
                     </div>
                     <div class="col-md-2">
                         <label class="small fw-bold">HASTA</label>
-                        <input type="date" class="form-control form-control-sm" name="hasta">
+                        <input type="date" class="form-control form-control-sm" name="hasta" value="{{ request('hasta') }}">
                     </div>
                     <div class="col-md-2">
                         <label class="small fw-bold">PROVEEDOR</label>
-                        <input type="text" class="form-control form-control-sm" placeholder="Nombre...">
+                        <input type="text" class="form-control form-control-sm" name="proveedor" placeholder="Nombre..." value="{{ request('proveedor') }}">
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary btn-sm w-100 fw-bold">BUSCAR</button>

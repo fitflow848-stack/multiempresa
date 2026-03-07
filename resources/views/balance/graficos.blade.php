@@ -16,6 +16,15 @@
             <div class="card-body py-2">
                 <form action="{{ route('balance.graficos') }}" method="GET" class="form-inline justify-content-end"
                     style="display: flex; gap: 10px; align-items: center;">
+                    <label class="mr-2 fw-bold">Local:</label>
+                    <select name="sucursal_id" class="form-control form-control-sm mr-2" onchange="this.form.submit()">
+                        <option value="">TODOS</option>
+                        @foreach ($sucursales as $s)
+                            <option value="{{ $s->id }}" {{ $sucursal_id == $s->id ? 'selected' : '' }}>
+                                {{ $s->nombre }}
+                            </option>
+                        @endforeach
+                    </select>
                     <label class="mr-2 fw-bold">Fecha de Corte:</label>
                     <input type="date" name="fecha" class="form-control form-control-sm mr-2"
                         value="{{ $fecha }}">

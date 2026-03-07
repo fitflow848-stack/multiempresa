@@ -14,12 +14,37 @@ use Illuminate\Support\Facades\DB;
 
 class RecibirProductoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
         $company = Company::find($user->company_id);
-        $compras = Compra::with(['proveedor', 'usuario', 'almacen'])->where('recibido', 0)->get();
-        return view('recibir-productos.index', compact('user', 'company', 'compras'));
+        $sucursales = \App\Models\Sucursal::where('company_id', $user->company_id)->activas()->get();
+
+        $query = Compra::with(['proveedor', 'usuario', 'almacen'])
+            ->where('recibido', 0)
+            ->where('company_id', $user->company_id);
+
+        if ($request->has('local') && $request->local != '') {
+            $query->where('local_destino', $request->local);
+        }
+
+        if ($request->has('desde') && $request->desde != '') {
+            $query->whereDate('created_at', '>=', $request->desde);
+        }
+
+        if ($request->has('hasta') && $request->hasta != '') {
+            $query->whereDate('created_at', '<=', $request->hasta);
+        }
+
+        if ($request->has('proveedor') && $request->proveedor != '') {
+            $query->whereHas('proveedor', function ($q) use ($request) {
+                $q->where('nombre_comercial', 'LIKE', '%' . $request->proveedor . '%');
+            });
+        }
+
+        $compras = $query->latest()->get();
+
+        return view('recibir-productos.index', compact('user', 'company', 'compras', 'sucursales'));
     }
 
     public function detalle($id)

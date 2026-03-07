@@ -77,4 +77,35 @@ class BranchSelectionController extends Controller
 
         return redirect()->route('principal.index');
     }
+
+    public function changeBranch(Request $request)
+    {
+        $request->validate([
+            'branch_id' => 'required|exists:sucursales,id',
+        ]);
+
+        $user = Auth::user();
+        $branch = Sucursal::find($request->branch_id);
+
+        // Security check
+        if ($user->isAdminEmpresa()) {
+            $hasAccess = $branch && $branch->company_id == $user->company_id;
+        } elseif ($user->hasRole('super_admin')) {
+            $hasAccess = true;
+        } else {
+            $hasAccess = $user->branches->contains($request->branch_id);
+        }
+
+        if (!$hasAccess) {
+            return response()->json(['success' => false, 'message' => 'No tienes acceso a esta sucursal.'], 403);
+        }
+
+        session([
+            'active_branch_id' => $request->branch_id,
+            'active_company_id' => $branch->company_id,
+            'branch_selected' => true
+        ]);
+
+        return response()->json(['success' => true]);
+    }
 }

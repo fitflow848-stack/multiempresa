@@ -47,9 +47,18 @@ class AlmacenController extends Controller
         // Seguridad: Filtro por Empresa
         $query->where('i.company_id', $user->company_id);
 
-        // Seguridad: Filtro por Sucursal (excepto super_admin)
+        // Seguridad: Filtro por Sucursal
         if (!$user->isSuperAdmin()) {
-            $query->where('i.sucursal_id', $user->branch_id);
+            if ($user->isAdminEmpresa()) {
+                // El admin de empresa puede ver todo o filtrar por la sucursal seleccionada
+                $branchId = $request->get('sucursal') ?: session('active_branch_id');
+                if ($branchId) {
+                    $query->where('i.sucursal_id', $branchId);
+                }
+            } else {
+                // Usuarios limitados a su sucursal
+                $query->where('i.sucursal_id', $user->branch_id);
+            }
         }
 
         // Filtros

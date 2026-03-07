@@ -10,6 +10,16 @@
             <div class="col-md-6">
                 <form action="{{ route('balance.index') }}" method="GET"
                     class="d-flex justify-content-md-end align-items-center">
+                    <label for="sucursal_id" class="me-2 fw-bold text-muted">Local:</label>
+                    <select name="sucursal_id" id="sucursal_id" class="form-select me-2 w-auto" onchange="this.form.submit()">
+                        <option value="">TODOS</option>
+                        @foreach ($sucursales as $s)
+                            <option value="{{ $s->id }}" {{ $sucursal_id == $s->id ? 'selected' : '' }}>
+                                {{ $s->nombre }}
+                            </option>
+                        @endforeach
+                    </select>
+
                     <label for="fecha" class="me-2 fw-bold text-muted">A la fecha:</label>
                     <div class="input-group w-auto me-2">
                         <input type="date" name="fecha" id="fecha" class="form-control"
@@ -18,11 +28,11 @@
                             <i class="bx bx-refresh me-1"></i> Actualizar
                         </button>
                     </div>
-                    <a href="{{ route('balance.export', ['fecha' => $fecha]) }}"
+                    <a href="{{ route('balance.export', ['fecha' => $fecha, 'sucursal_id' => $sucursal_id]) }}"
                         class="btn btn-success px-4 bg-gradient-success me-2 text-white">
                         <i class="bx bx-spreadsheet me-1"></i> Exportar
                     </a>
-                    <a href="{{ route('balance.graficos', ['fecha' => $fecha]) }}"
+                    <a href="{{ route('balance.graficos', ['fecha' => $fecha, 'sucursal_id' => $sucursal_id]) }}"
                         class="btn btn-info px-4 bg-gradient-info text-white">
                         <i class="bx bx-pie-chart-alt-2 me-1"></i> Ver Gráficos
                     </a>

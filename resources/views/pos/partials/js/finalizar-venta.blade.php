@@ -35,6 +35,7 @@
 
                 // LIMPIAR VENTA PERSISTENTE
                 localStorage.removeItem(AUTOSAVE_KEY);
+                sessionStorage.removeItem(AUTOSAVE_KEY);
 
                 // Detener auto-guardado
                 if (autoSaveInterval) {
@@ -117,6 +118,9 @@
                 // Limpiar storage del ticket
                 sessionStorage.removeItem('ticketGuardadoPOS');
                 localStorage.removeItem('ticketPOS');
+                
+                // TAMBIÉN LIMPIAR PERSISTENCIA
+                localStorage.removeItem(AUTOSAVE_KEY);
 
                 // Renderizar ticket vacío
                 renderTicket();
