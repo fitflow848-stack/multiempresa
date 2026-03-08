@@ -37,6 +37,10 @@ use App\Http\Controllers\PdfController;
 use App\Http\Controllers\ProvinciaController;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/prueba', function () {
+    return view('prueba');
+});
+
 Route::get('/', function () {
     return redirect('/login');
 });
@@ -277,8 +281,13 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::get('/api/lotes', [AlmacenController::class, 'getLotesAvailable'])->name('api.lotes');
         Route::get('/edit/{id}', [AlmacenController::class, 'edit'])->name('edit')->middleware('can:inventario.ajustar');
         Route::post('/edit-detailed/{id}', [AlmacenController::class, 'editDetailed'])->name('edit-detailed')->middleware('can:inventario.ajustar');
+        Route::get('/update/{id}', [AlmacenController::class, 'update'])->name('update')->middleware('can:inventario.ajustar');
         Route::post('/update/{id}', [AlmacenController::class, 'update'])->name('update')->middleware('can:inventario.ajustar');
         Route::delete('/destroy/{id}', [AlmacenController::class, 'destroy'])->name('destroy')->middleware('can:inventario.ajustar');
+        
+        // Rutas de Importación
+        Route::get('/import-template', [AlmacenController::class, 'downloadTemplate'])->name('import-template');
+        Route::post('/import', [AlmacenController::class, 'import'])->name('import');
     });
 
     Route::prefix('guia')->middleware('can:guias_remision.ver')->group(function () {

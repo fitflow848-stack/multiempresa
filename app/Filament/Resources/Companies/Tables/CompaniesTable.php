@@ -39,7 +39,14 @@ class CompaniesTable
                 TextColumn::make('users_count')
                     ->label('Usuarios')
                     ->counts('users')
-                    ->sortable(),
+                    ->sortable()
+                    ->alignCenter(),
+                    
+                TextColumn::make('sucursales_count')
+                    ->label('Sucursales')
+                    ->counts('sucursales')
+                    ->sortable()
+                    ->alignCenter(),
                     
                 IconColumn::make('is_active')
                     ->label('Estado')

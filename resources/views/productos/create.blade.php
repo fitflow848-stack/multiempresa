@@ -1831,8 +1831,10 @@
             // ===== FUNCIONALIDAD DE IMÁGENES =====
 
             // Imagen principal
-            $('#main-upload-area').on('click', function() {
-                $('#imagen-principal').click();
+            $('#main-upload-area').on('click', function(e) {
+                if (!$(e.target).is('#imagen-principal')) {
+                    $('#imagen-principal').click();
+                }
             });
 
             $('#imagen-principal').on('change', function(e) {
@@ -1855,10 +1857,13 @@
             });
 
             // Imágenes adicionales
-            $(document).on('click', '[data-gallery-item]', function() {
+            $(document).on('click', '[data-gallery-item]', function(e) {
+                const $target = $(e.target);
                 const $this = $(this);
-                const $input = $this.find('input[type="file"]');
-                $input.click();
+                if (!$target.is('input[type="file"]')) {
+                    const $input = $this.find('input[type="file"]');
+                    $input.click();
+                }
             });
 
             $(document).on('change', '[data-gallery-item] input[type="file"]', function(e) {

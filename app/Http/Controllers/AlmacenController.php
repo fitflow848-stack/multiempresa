@@ -7,17 +7,21 @@ use App\Models\Company;
 use App\Models\AlmacenIngresoDetalle;
 use App\Models\Producto;
 use App\Models\ProductoLinea;
+use App\Exports\ProductosPlantillaExport;
+use App\Imports\ProductosImport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 use Carbon\Carbon;
 
 class AlmacenController extends Controller
 {
     public function index(Request $request)
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         $company = Company::find($user->company_id);
         $sucursales = DB::table('sucursales')
@@ -99,6 +103,7 @@ class AlmacenController extends Controller
 
     public function ajustarExistencias($id)
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         $company = $user->company ?? null;
 
@@ -129,6 +134,7 @@ class AlmacenController extends Controller
 
     public function altaRapida()
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         $company = $user->company ?? null;
 
@@ -137,6 +143,7 @@ class AlmacenController extends Controller
 
     public function buscar(Request $request)
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         $query = DB::table('almacen_ingreso_detalle as d')
             ->join('productos as p', 'p.id', '=', 'd.producto_id')
@@ -308,6 +315,7 @@ class AlmacenController extends Controller
     }
     public function kardex(Request $request)
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         $company = $user->company ?? Company::find($user->company_id);
         $sucursal_id = $request->get('sucursal_id', $user->branch_id);
@@ -411,6 +419,7 @@ class AlmacenController extends Controller
 
     public function transferir()
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         $company = $user->company ?? Company::find($user->company_id);
 
@@ -528,6 +537,7 @@ class AlmacenController extends Controller
     public function edit($id)
     {
         $detalle = AlmacenIngresoDetalle::with(['producto.laboratorio', 'producto.marca', 'producto.unidadMedida', 'ingreso'])->findOrFail($id);
+        /** @var \App\Models\User $user */
         $user = Auth::user();
 
         // Seguridad: Filtro por Sucursal (excepto super_admin)
@@ -773,6 +783,26 @@ class AlmacenController extends Controller
             DB::rollBack();
             Log::error('Error eliminando producto: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Error al eliminar: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function downloadTemplate()
+    {
+        return Excel::download(new ProductosPlantillaExport, 'plantilla_productos.xlsx');
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'excel_file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+        ]);
+
+        try {
+            Excel::import(new ProductosImport, $request->file('excel_file'));
+            return redirect()->route('almacen.index')->with('success', 'Productos importados correctamente.');
+        } catch (\Exception $e) {
+            Log::error('Error importando productos: ' . $e->getMessage());
+            return back()->withErrors('Error al importar productos: ' . $e->getMessage());
         }
     }
 }

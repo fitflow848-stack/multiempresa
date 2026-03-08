@@ -25,11 +25,12 @@ class EnsureCompanyScope
             return $next($request);
         }
 
-        // Super Admin: acceso total sin restricciones
+        // Super Admin: acceso total sin restricciones, pero compartimos contexto si lo tiene
         if ($user->hasRole('super_admin')) {
+            $activeCompanyId = session('active_company_id');
             view()->share('is_super_admin', true);
-            view()->share('current_company_id', null);
-            view()->share('current_branch_id', null);
+            view()->share('current_company_id', $activeCompanyId);
+            view()->share('current_branch_id', session('active_branch_id'));
             view()->share('current_user_cajas', collect());
             return $next($request);
         }

@@ -31,8 +31,8 @@ trait BelongsToCompany
         static::addGlobalScope('company', function (Builder $query) {
             $user = \App\Helpers\AuthHelper::resolveAuthenticatedUser();
 
-            // SÍ aplicamos el scope si el usuario tiene empresa (incluyendo super_admin con contexto de sesión)
-            if ($user && $user->company_id) {
+            // SÍ aplicamos el scope si el usuario tiene empresa (excepto para super_admin que debe ver todo)
+            if ($user && $user->company_id && !$user->isSuperAdmin()) {
                 $instance = new static;
                 $column = $instance->getCompanyForeignKey();
                 $query->where($query->getModel()->getTable() . '.' . $column, $user->company_id);

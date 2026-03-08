@@ -64,6 +64,38 @@
     .action-bar {
         flex-shrink: 0;
     }
+
+    /* Estilos para icono de foto y vista previa */
+    .photo-icon {
+        font-size: 14px;
+        margin-right: 8px;
+        cursor: pointer;
+        display: inline-block;
+        transition: transform 0.2s;
+    }
+    .photo-icon:hover {
+        transform: scale(1.2);
+    }
+    .photo-icon.has-photo { color: #28a745; }
+    .photo-icon.no-photo { color: #dc3545; }
+
+    .image-preview-tooltip {
+        position: fixed;
+        z-index: 10000;
+        display: none;
+        background: white;
+        border: 2px solid #6b2e51;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        padding: 5px;
+        border-radius: 8px;
+        pointer-events: none;
+    }
+    .image-preview-tooltip img {
+        max-width: 250px;
+        max-height: 250px;
+        display: block;
+        border-radius: 4px;
+    }
 </style>
 
 <div class="pos-container">
@@ -79,14 +111,14 @@
             </select>
         </div>
         <div class="header-right">
-            <div class="nav-item" onclick="mostrarModalAtajos()"><i class="fa-solid fa-keyboard"></i> Atajos</div>
-            <div class="nav-item" onclick="navegarAClientes()"><i class="fa-solid fa-user-group"></i> Clientes</div>
-            <div class="nav-item"><a href="{{ route('comprobantes.index') }}"><i class="fa-solid fa-book-open"></i>
+            <div class="nav-item" onclick="mostrarModalAtajos()"><i class="bx bx-keyboard"></i> Atajos</div>
+            <div class="nav-item" onclick="navegarAClientes()"><i class="bx bx-group"></i> Clientes</div>
+            <div class="nav-item"><a href="{{ route('comprobantes.index') }}"><i class="bx bx-book-open"></i>
                     Comprobantes</a></div>
-            <div class="nav-item"><a href="{{ route('cierre-caja.index') }}"><i class="fa-solid fa-money-bill-wave"></i>
+            <div class="nav-item"><a href="{{ route('cierre-caja.index') }}"><i class="bx bx-money"></i>
                     Caja</a></div>
-            <div class="nav-info"><i class="fa-solid fa-user"></i> {{ Auth::user()->name }}</div>
-            <div class="nav-info"><i class="fa-solid fa-shop"></i> TPV VD</div>
+            <div class="nav-info"><i class="bx bx-user"></i> {{ Auth::user()->name }}</div>
+            <div class="nav-info"><i class="bx bx-store"></i> TPV VD</div>
         </div>
     </div>
 
@@ -243,6 +275,11 @@
             <span id="footer-cliente">CLIENTE CONTABLE</span>
         </div>
     </div>
+
+    <!-- Div para previsualización de imagen -->
+    <div id="image-preview-tooltip" class="image-preview-tooltip">
+        <img src="" alt="Vista previa" id="tooltip-img">
+    </div>
 </div>
 
 <!-- Modal de Atajos de Teclado -->
@@ -351,6 +388,47 @@
     window.currentProduct = null;
     window.cotizacionId = null;
     window.selectedIndex = -1;
+
+    // Funciones para previsualización de imágenes
+    function showImagePreview(event, imgSrc) {
+        if (!imgSrc) return;
+        const tooltip = document.getElementById('image-preview-tooltip');
+        const img = document.getElementById('tooltip-img');
+        
+        img.src = '/storage/' + imgSrc;
+        tooltip.style.display = 'block';
+        
+        // Posicionar el tooltip cerca del cursor
+        const x = event.clientX + 15;
+        const y = event.clientY + 15;
+        
+        // Ajustar si se sale de la pantalla (tooltip tiene max-width 250px)
+        const tooltipWidth = 260; 
+        const tooltipHeight = 260;
+        
+        let finalX = x;
+        let finalY = y;
+        
+        if (x + tooltipWidth > window.innerWidth) {
+            finalX = x - tooltipWidth - 30;
+        }
+        
+        if (y + tooltipHeight > window.innerHeight) {
+            finalY = y - tooltipHeight - 30;
+        }
+        
+        tooltip.style.left = finalX + 'px';
+        tooltip.style.top = finalY + 'px';
+    }
+
+    function hideImagePreview() {
+        const tooltip = document.getElementById('image-preview-tooltip');
+        if (tooltip) {
+            tooltip.style.display = 'none';
+            const img = document.getElementById('tooltip-img');
+            if (img) img.src = '';
+        }
+    }
 </script>
 
 <script src="{{ asset('assets/js/helpers.js') }}"></script>
@@ -392,7 +470,8 @@
                         es_lote_especifico: !!p.lote,
                         descuento: p.descuento || 0,
                         descuentoFijo: 0,
-                        descuentoTexto: (p.descuento ? p.descuento + '%' : '0%')
+                        descuentoTexto: (p.descuento ? p.descuento + '%' : '0%'),
+                        imagen_principal: p.imagen_principal || ''
                     });
                 });
             }
@@ -1668,6 +1747,7 @@
                     descuentoFijo: 0,
                     descuentoTexto: '0%',
                     fecha_vencimiento: p.fecha_vencimiento,
+                    imagen_principal: p.imagen_principal || ''
                 };
 
                 if (almacenDetalleId) {
@@ -1713,10 +1793,17 @@
 
             tr.innerHTML = `
                                                 <td style="position: relative; padding: 6px 8px;">
-                                                    <div style="font-weight: 500; color: #333;">
-                                                        <div>${nombreProducto}</div>
-                                                        ${detalleInfo ? `<div style="font-size: 11px; color: #666;">${detalleInfo}</div>` : ''}
-                                                        ${p.total_lotes > 1 ? '<span style="color: #2196f3; font-size: 12px; margin-left: 5px;">🔄</span>' : ''}
+                                                    <div style="display: flex; align-items: flex-start; gap: 4px;">
+                                                        <span class="photo-icon ${p.imagen_principal ? 'has-photo' : 'no-photo'}" 
+                                                              onmouseover="showImagePreview(event, '${p.imagen_principal || ''}')" 
+                                                              onmouseout="hideImagePreview()">
+                                                            <i class="bx bx-image"></i>
+                                                        </span>
+                                                        <div style="font-weight: 500; color: #333; flex: 1;">
+                                                            <div>${nombreProducto}</div>
+                                                            ${detalleInfo ? `<div style="font-size: 11px; color: #666;">${detalleInfo}</div>` : ''}
+                                                            ${p.total_lotes > 1 ? '<span style="color: #2196f3; font-size: 12px; margin-left: 5px;">🔄</span>' : ''}
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td style="padding: 6px 8px; text-align: center; font-weight: 500; color: #555;">${p.marca || '-'}</td>
@@ -1840,8 +1927,17 @@
                                     <tr style="background:${bgColor}; ${borderStyle} cursor: pointer;" onclick="editarLinea(${idx})" oncontextmenu='mostrarMenuTicket(event, ${JSON.stringify(p)})'>
                                         <td>${idx + 1}</td>
                                         <td title="${p.nombre}${titleLote}">
-                                            <div style="font-weight: 600;">${p.nombre.length > 100 ? p.nombre.substring(0, 25) + '...' : p.nombre}</div>
-                                            <div style="font-size: 10px; color: #666;">Marca: ${p.marca || '-'}</div>
+                                            <div style="display: flex; align-items: flex-start; gap: 4px;">
+                                                <span class="photo-icon ${p.imagen_principal ? 'has-photo' : 'no-photo'}" 
+                                                      onmouseover="showImagePreview(event, '${p.imagen_principal || ''}')" 
+                                                      onmouseout="hideImagePreview()">
+                                                    <i class="bx bx-image"></i>
+                                                </span>
+                                                <div style="flex: 1;">
+                                                    <div style="font-weight: 600;">${p.nombre.length > 100 ? p.nombre.substring(0, 25) + '...' : p.nombre}</div>
+                                                    <div style="font-size: 10px; color: #666;">Marca: ${p.marca || '-'}</div>
+                                                </div>
+                                            </div>
                                         </td>
                                         <td>${fechaVencimiento}</td>
                                         <td>
@@ -1866,7 +1962,7 @@
                                             <button onclick="event.stopPropagation(); eliminarLinea(${idx})" 
                                                     style="background: none; border: none; color: #dc3545; cursor: pointer; padding: 2px 5px;"
                                                     title="Eliminar este producto">
-                                                <i class="fa-solid fa-trash-can"></i>
+                                                <i class="bx bx-trash"></i>
                                             </button>
                                         </td>
                                     </tr>

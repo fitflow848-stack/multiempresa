@@ -29,6 +29,8 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->brandName('WOLVIX - ERP')
+            ->brandLogo(asset('assets/img/logo.png'))
+            ->brandLogoHeight('3rem')
             ->favicon(asset('favicon.ico'))
             ->maxContentWidth('full')
             ->darkMode(false)
@@ -70,10 +72,22 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(
                 'panels::user-menu.before',
                 function () {
-                    $user = auth()->guard('admin')->user() ?? auth()->guard('web')->user();
+                    $user = \App\Helpers\AuthHelper::resolveAuthenticatedUser();
                     if (!$user) return '';
-                    $empresa = $user->company?->razon_social ?? 'Genack Core';
-                    return '<div class="hidden lg:block text-xs text-gray-400 mr-4">Empresa: <span class="font-bold text-indigo-500">' . e($empresa) . '</span></div>';
+                    
+                    if ($user->roles()->where('name', 'super_admin')->exists()) {
+                        $activeCompanyId = session('active_company_id');
+                        $empresaName = $activeCompanyId ? (\App\Models\Company::find($activeCompanyId)?->razon_social) : null;
+                        
+                        return '<div class="hidden lg:flex items-center text-xs text-gray-400 mr-4">
+                                    <span class="mr-2">Administrador:</span>
+                                    <span class="font-bold text-indigo-500 uppercase">WOLVIX</span>' . 
+                                    ($empresaName ? '<span class="mx-2 text-gray-300">|</span><span class="text-gray-500">Filtro: ' . e($empresaName) . '</span>' : '') . 
+                                '</div>';
+                    }
+
+                    $empresa = $user->company?->razon_social ?? 'WOLVIX';
+                    return '<div class="hidden lg:block text-xs text-gray-400 mr-4">Software: <span class="font-bold text-indigo-500">' . e($empresa) . '</span></div>';
                 }
             )
             ->middleware([

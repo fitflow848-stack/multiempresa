@@ -29,10 +29,12 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-bold">Local:</label>
-                            <select class="form-select form-select-sm" name="local_id">
-                                <option value="">Actual</option>
+                            <select class="form-select form-select-sm" name="local_id" id="localSelector">
+                                <option value="">Todas las sucursales</option>
                                 @foreach ($locales as $local)
-                                    <option value="{{ $local->id }}">{{ $local->nombre ?? $local->razon_social }}
+                                    <option value="{{ $local->id }}"
+                                        {{ session('active_branch_id') == $local->id ? 'selected' : '' }}>
+                                        {{ $local->nombre ?? $local->razon_social }}
                                     </option>
                                 @endforeach
                             </select>

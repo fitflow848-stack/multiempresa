@@ -51,9 +51,8 @@ class SucursalResource extends Resource
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
     {
         $query = parent::getEloquentQuery();
-        $user = auth()->guard('admin')->user() ?? auth()->guard('web')->user();
-
-        if ($user && !$user->hasRole('super_admin')) {
+        $user = \App\Helpers\AuthHelper::resolveAuthenticatedUser();
+        if ($user && !$user->roles()->where('name', 'super_admin')->exists()) {
             $query->where('company_id', $user->company_id);
         }
 

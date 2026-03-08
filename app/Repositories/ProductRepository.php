@@ -52,6 +52,7 @@ class ProductRepository
                 MAX(p.ficha_tecnica) AS ficha_tecnica,
                 MAX(p.almacenamiento) AS almacenamiento,
                 MAX(p.codigo_barras) AS codigo_barras,
+                MAX(p.imagen_principal) AS imagen_principal,
                 SUM(ad.cantidad) AS cantidad_total,
                 MAX(ad.costo) AS costo,
                 MAX(ad.pvp) AS pvp,

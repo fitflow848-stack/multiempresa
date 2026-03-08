@@ -21,7 +21,7 @@ class CompanyForm
 {
     public static function schema(): array
     {
-        $isNotSuperAdmin = fn () => ! (auth()->user())?->hasRole('super_admin');
+        $isNotSuperAdmin = fn () => ! (\App\Helpers\AuthHelper::resolveAuthenticatedUser())?->hasRole('super_admin');
 
         return [
             Wizard::make([

@@ -95,7 +95,7 @@
                                         <tr>
                                             <td class="ps-4">
                                                 <div class="fw-semibold text-dark">{{ $tipo->nombre }}</div>
-                                                @if ($tipo->descripcion)
+                                                @if ($tipo->descripcion ?? null)
                                                     <small class="text-muted">{{ $tipo->descripcion }}</small>
                                                 @endif
                                             </td>
@@ -158,7 +158,7 @@
                                             <tr>
                                                 <td class="ps-4">
                                                     <div class="fw-semibold text-dark">{{ $tipo->nombre }}</div>
-                                                    @if ($tipo->descripcion)
+                                                    @if ($tipo->descripcion ?? null)
                                                         <small class="text-muted">{{ $tipo->descripcion }}</small>
                                                     @endif
                                                 </td>

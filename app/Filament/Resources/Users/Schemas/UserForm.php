@@ -68,9 +68,10 @@ class UserForm
                         ->preload()
                         ->native(false)
                         ->reactive()
-                        ->required()
-                        ->hidden(fn() => !auth()->user()->hasRole('super_admin'))
-                        ->default(fn() => auth()->user()->company_id)
+                        ->required(fn ($get) => !auth()->user()->isSuperAdmin())
+                        ->nullable()
+                        ->hidden(fn () => !auth()->user()->isSuperAdmin())
+                        ->default(fn () => auth()->user()->company_id)
                         ->afterStateUpdated(function (callable $set) {
                             $set('branches', []);
                             $set('cajas', []);
@@ -85,21 +86,31 @@ class UserForm
                                 // Deshabilitar el GlobalScope de empresa para que el Super Admin pueda ver sucursales de otras empresas
                                 $query->withoutGlobalScopes();
 
-                                // Priorizar la empresa seleccionada en el select, si no hay (no es super admin), usar la del usuario logueado
-                                $companyId = $get('company_id') ?: auth()->user()->company_id;
+                                // Priorizar la empresa seleccionada en el select
+                                $companyId = $get('company_id');
+
+                                // Si no hay seleccionada y es Super Admin, mostrar todas las sucursales
+                                if (!$companyId && auth()->user()->isSuperAdmin()) {
+                                    return $query;
+                                }
+
+                                // Si no hay seleccionada y es usuario normal, usar su propia empresa
+                                if (!$companyId) {
+                                    $companyId = auth()->user()->company_id;
+                                }
 
                                 if ($companyId) {
                                     return $query->where('company_id', $companyId);
                                 }
 
-                                return $query->whereRaw('1 = 0'); // No mostrar nada si no hay empresa
+                                return $query->whereRaw('1 = 0');
                             }
                         )
                         ->multiple()
                         ->searchable()
                         ->preload()
                         ->native(false)
-                        ->required()
+                        ->required(fn () => !auth()->user()->isSuperAdmin())
                         ->placeholder(fn($get) => $get('company_id') ? 'Seleccione sucursales' : 'Seleccione una empresa primero')
                         ->reactive()
                         ->afterStateUpdated(fn(callable $set) => $set('cajas', [])),
@@ -109,7 +120,7 @@ class UserForm
                         ->relationship(
                             'roles',
                             'name',
-                            fn($query) => auth()->user()->hasRole('super_admin') ? $query : $query->where('name', '!=', 'super_admin')
+                            fn($query) => auth()->user()->isSuperAdmin() ? $query : $query->where('name', '!=', 'super_admin')
                         )
                         ->multiple()
                         ->preload()

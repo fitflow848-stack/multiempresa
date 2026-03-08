@@ -65,10 +65,12 @@ class User extends Authenticatable implements FilamentUser
      */
     public function getCompanyIdAttribute($value)
     {
-        if (auth()->check() && auth()->id() === $this->id) {
-            // Si el usuario es super_admin y tiene una empresa en sesión, la usamos como su "contexto"
-            if (($this->hasRole('super_admin') || !$value) && session('active_company_id')) {
-                return session('active_company_id');
+        // Solo aplicar lógica de sesión para el usuario que está navegando
+        $authenticatedUserId = auth()->guard('admin')->id() ?? auth()->guard('web')->id();
+        
+        if ($authenticatedUserId === $this->id) {
+            if ($this->hasRole('super_admin')) {
+                return session('active_company_id', $value);
             }
         }
         return $value;
@@ -129,7 +131,15 @@ class User extends Authenticatable implements FilamentUser
      */
     public function isSuperAdmin(): bool
     {
-        return $this->hasRole('super_admin');
+        return $this->roles()->where('name', 'super_admin')->exists();
+    }
+
+    /**
+     * ¿Es administrador (empresa o general)?
+     */
+    public function isAdmin(): bool
+    {
+        return $this->roles()->whereIn('name', ['admin', 'admin_empresa', 'super_admin'])->exists();
     }
 
     /**

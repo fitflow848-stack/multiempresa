@@ -40,6 +40,7 @@ class PosController extends Controller
 
     public function index(Request $request)
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         $company = $user->company;
 
@@ -70,14 +71,15 @@ class PosController extends Controller
                             'descuento' => $detalle->descuento,
                             'importe' => $detalle->subtotal,
                             'lote' => $detalle->lote,
-                            'fecha_vencimiento' => $detalle->fecha_vencimiento
+                            'fecha_vencimiento' => $detalle->fecha_vencimiento,
+                            'imagen_principal' => $detalle->producto->imagen_principal ?? ''
                         ];
                     })
                 ];
             }
         }
 
-        $isAdmin = $user->hasAnyRole(['super_admin', 'admin_empresa', 'supervisor', 'Admin']);
+        $isAdmin = $user->isAdmin();
 
         return view('pos.index', compact('user', 'company', 'sucursales', 'cotizacionData', 'logo', 'isAdmin'));
     }

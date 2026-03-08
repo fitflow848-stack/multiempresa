@@ -24,11 +24,15 @@ class AuthHelper
                     // Si el usuario es super_admin y tiene empresa/sucursal en sesión, las inyectamos como su "contexto"
                     // Esto asegura que los Global Scopes funcionen correctamente para el Super Admin
                     if ($user->hasRole('super_admin')) {
-                        if (session('active_company_id')) {
-                            $user->company_id = session('active_company_id');
-                        }
-                        if (session('active_branch_id')) {
-                            $user->branch_id = session('active_branch_id');
+                        // En el admin panel, el super_admin debe tener un contexto global (sin empresa prefijada)
+                        // solo inyectamos la empresa de sesión si estamos fuera del admin (ej. en el POS)
+                        if (!request()->is('admin*')) {
+                            if (session('active_company_id')) {
+                                $user->company_id = session('active_company_id');
+                            }
+                            if (session('active_branch_id')) {
+                                $user->branch_id = session('active_branch_id');
+                            }
                         }
                     } elseif (!$user->company_id && session('active_company_id')) {
                         // Caso para usuarios sin empresa asignada (si existieran)

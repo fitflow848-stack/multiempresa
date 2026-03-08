@@ -22,7 +22,7 @@ class CajaPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasRole('admin_empresa');
+        return $user->isAdmin();
     }
 
     /**
@@ -30,7 +30,7 @@ class CajaPolicy
      */
     public function view(User $user, Caja $caja): bool
     {
-        return $user->hasRole('admin_empresa') && $user->company_id === $caja->company_id;
+        return $user->isAdmin() && $user->company_id === $caja->company_id;
     }
 
     /**
@@ -38,7 +38,7 @@ class CajaPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasRole('admin_empresa');
+        return $user->isAdmin();
     }
 
     /**
@@ -46,7 +46,7 @@ class CajaPolicy
      */
     public function update(User $user, Caja $caja): bool
     {
-        return $user->hasRole('admin_empresa') && $user->company_id === $caja->company_id;
+        return $user->isAdmin() && $user->company_id === $caja->company_id;
     }
 
     /**
@@ -54,6 +54,6 @@ class CajaPolicy
      */
     public function delete(User $user, Caja $caja): bool
     {
-        return $user->hasRole('admin_empresa') && $user->company_id === $caja->company_id;
+        return $user->isAdmin() && $user->company_id === $caja->company_id;
     }
 }

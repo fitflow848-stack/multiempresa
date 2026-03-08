@@ -128,7 +128,7 @@ class BalanceController extends Controller
 
         // 1. ACTIVO CORRIENTE
         // CAJA: Dinero efectivo en todas las cajas de la empresa (abiertas y último cierre de las cerradas)
-        $cajasQuery = Caja::where('company_id', $user->company_id);
+        $cajasQuery = Caja::withoutGlobalScopes()->where('company_id', $user->company_id);
         if ($sucursalId) {
             $cajasQuery->where('sucursal_id', $sucursalId);
         }
@@ -137,7 +137,8 @@ class BalanceController extends Controller
 
         foreach ($cajas as $cajaModel) {
             // Buscar el último cierre/sesión de esta caja hasta la fecha consultada
-            $box = CierreCaja::where('caja_id', $cajaModel->id)
+            $box = CierreCaja::withoutGlobalScopes()
+                ->where('caja_id', $cajaModel->id)
                 ->whereDate('created_at', '<=', $fecha)
                 ->orderBy('created_at', 'desc')
                 ->first();
@@ -155,7 +156,8 @@ class BalanceController extends Controller
                 $subtotal = floatval($box->monto_apertura);
 
                 // Ventas en efectivo asociadas a esta caja hasta la fecha
-                $ventasEfectivo = Venta::where('cierre_caja_id', $box->id)
+                $ventasEfectivo = Venta::withoutGlobalScopes()
+                    ->where('cierre_caja_id', $box->id)
                     ->whereDate('created_at', '<=', $fecha)
                     ->whereHas('tipoPago', function ($q) {
                         $q->where('es_efectivo', true);
@@ -166,7 +168,8 @@ class BalanceController extends Controller
                 $subtotal += floatval($ventasEfectivo);
 
                 // Operaciones de caja (Ingresos/Aportes) hasta la fecha
-                $ingresosExtra = OperacionCaja::where('cierre_caja_id', $box->id)
+                $ingresosExtra = OperacionCaja::withoutGlobalScopes()
+                    ->where('cierre_caja_id', $box->id)
                     ->whereDate('created_at', '<=', $fecha)
                     ->whereIn('tipo', ['ingreso', 'aportacion', 'aporte'])
                     ->where('es_efectivo', 1)
@@ -175,7 +178,8 @@ class BalanceController extends Controller
                 $subtotal += floatval($ingresosExtra);
 
                 // Operaciones de caja (Egresos/Gastos/Sustracciones) hasta la fecha
-                $egresosExtra = OperacionCaja::where('cierre_caja_id', $box->id)
+                $egresosExtra = OperacionCaja::withoutGlobalScopes()
+                    ->where('cierre_caja_id', $box->id)
                     ->whereIn('tipo', ['egreso', 'gasto', 'sustraccion', 'retiro'])
                     ->whereDate('created_at', '<=', $fecha)
                     ->where('es_efectivo', 1)
@@ -188,9 +192,10 @@ class BalanceController extends Controller
         }
 
         // INVENTARIO: Valorizado al costo promedio o costo de entrada (Sistema)
-        $inventario = AlmacenIngresoDetalle::where('cantidad', '>', 0)
+        $inventario = AlmacenIngresoDetalle::withoutGlobalScopes()
+            ->where('cantidad', '>', 0)
             ->whereHas('ingreso', function ($q) use ($user, $sucursalId) {
-                $q->where('empresa_id', $user->company_id);
+                $q->withoutGlobalScopes()->where('empresa_id', $user->company_id);
                 if ($sucursalId) {
                     $q->where('sucursal_id', $sucursalId);
                 }
@@ -198,7 +203,8 @@ class BalanceController extends Controller
             ->sum(DB::raw('cantidad * costo'));
 
         // CUENTAS POR COBRAR: Monto de deuda pendiente de clientes
-        $cxcQuery = Deuda::where('company_id', $user->company_id)
+        $cxcQuery = Deuda::withoutGlobalScopes()
+            ->where('company_id', $user->company_id)
             ->whereIn('estado', [Deuda::ESTADO_PENDIENTE, Deuda::ESTADO_PARCIAL])
             ->whereDate('fecha_venta', '<=', $fecha);
 
@@ -209,9 +215,9 @@ class BalanceController extends Controller
         $cxc = $cxcQuery->sum(DB::raw('monto_deuda'));
 
         // ACTIVOS CORRIENTES (Desde el nuevo módulo)
-        $tiposActivosCorrientes = \App\Models\TipoActivoCorriente::withSum([
+        $tiposActivosCorrientes = \App\Models\TipoActivoCorriente::withoutGlobalScopes()->withSum([
             'activos' => function ($q) use ($user, $fecha, $sucursalId) {
-                $q->where('company_id', $user->company_id)
+                $q->withoutGlobalScopes()->where('company_id', $user->company_id)
                     ->whereDate('fecha_registro', '<=', $fecha);
                 if ($sucursalId) {
                     $q->where('sucursal_id', $sucursalId);
@@ -238,9 +244,9 @@ class BalanceController extends Controller
         $total_activo_corriente = $caja + $inventario + $tiposActivosCorrientes->sum('activos_sum_monto');
 
         // 2. ACTIVO NO CORRIENTE
-        $tiposActivosNoCorrientes = \App\Models\TipoActivo::withSum([
+        $tiposActivosNoCorrientes = \App\Models\TipoActivo::withoutGlobalScopes()->withSum([
             'activos' => function ($q) use ($user, $fecha, $sucursalId) {
-                $q->where('company_id', $user->company_id)
+                $q->withoutGlobalScopes()->where('company_id', $user->company_id)
                     ->whereDate('fecha_adquisicion', '<=', $fecha);
                 if ($sucursalId) {
                     $q->where('sucursal_id', $sucursalId);
@@ -255,7 +261,8 @@ class BalanceController extends Controller
         $compras_credito_auto = 0;
         try {
             if (class_exists('App\Models\Compra')) {
-                $comprasCreditoQuery = Compra::where('company_id', $user->company_id)
+                $comprasCreditoQuery = Compra::withoutGlobalScopes()
+                    ->where('company_id', $user->company_id)
                     ->where('credito', true)
                     ->whereDate('fecha_emision', '<=', $fecha);
                 
@@ -270,9 +277,9 @@ class BalanceController extends Controller
         }
 
         // Obtener Pasivos Manuales
-        $tiposPasivosCorrientes = \App\Models\TipoPasivo::withSum([
+        $tiposPasivosCorrientes = \App\Models\TipoPasivo::withoutGlobalScopes()->withSum([
             'pasivos' => function ($q) use ($user, $fecha, $sucursalId) {
-                $q->where('company_id', $user->company_id)
+                $q->withoutGlobalScopes()->where('company_id', $user->company_id)
                     ->whereDate('fecha_registro', '<=', $fecha);
                 if ($sucursalId) {
                     $q->where('sucursal_id', $sucursalId);
@@ -280,7 +287,7 @@ class BalanceController extends Controller
             }
         ], 'monto')->withSum([
             'pasivos' => function ($q) use ($user, $fecha, $sucursalId) {
-                $q->where('company_id', $user->company_id)
+                $q->withoutGlobalScopes()->where('company_id', $user->company_id)
                     ->whereDate('fecha_registro', '<=', $fecha);
                 if ($sucursalId) {
                     $q->where('sucursal_id', $sucursalId);

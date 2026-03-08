@@ -86,6 +86,12 @@
                 <p class="text-muted mb-0">Monitorización de activos y existencias en tiempo real</p>
             </div>
             <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                <a href="{{ route('almacen.import-template') }}" class="btn btn-outline-success me-2 border-0 shadow-sm" style="background: #f0fdf4; color: #15803d;">
+                    <i class="fas fa-file-download me-2"></i>Plantilla Excel
+                </a>
+                <button type="button" class="btn btn-outline-primary me-2 border-0 shadow-sm" style="background: #eff6ff; color: #1d4ed8;" data-bs-toggle="modal" data-bs-target="#importModal">
+                    <i class="fas fa-file-upload me-2"></i>Importar Excel
+                </button>
                 <a href="{{ route('almacen.alta-rapida') }}"
                     class="btn btn-primary px-4 py-2 shadow-sm bg-gradient-inventory border-0">
                     <i class="fas fa-bolt me-2"></i>Alta Rápida de Stock
@@ -246,6 +252,46 @@
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para Importar Excel -->
+    <div class="modal fade" id="importModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0" style="border-radius: 1.5rem;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold">Importar Productos desde Excel</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="{{ route('almacen.import') }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="modal-body p-4">
+                        <div class="alert alert-info border-0 shadow-none mb-4" style="background: #f0f9ff; color: #0c4a6e; border-radius: 1rem;">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-info-circle me-3 fa-lg"></i>
+                                <div>
+                                    <p class="mb-1 fw-bold">Guía Rápida:</p>
+                                    <p class="small mb-2">1. Descarga la <a href="{{ route('almacen.import-template') }}" class="fw-bold text-decoration-underline">plantilla oficial</a>.</p>
+                                    <p class="small mb-2">2. Completa los datos requeridos (Nombre, EAN, Precios).</p>
+                                    <p class="small mb-0">3. Sube el archivo para procesar masivamente.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Seleccionar archivo Excel</label>
+                            <input type="file" name="excel_file" class="form-control" accept=".xlsx,.xls,.csv" required>
+                            <div class="form-text mt-2" style="font-size: 0.75rem;">Máximo 10MB (Formatos: .xlsx, .xls, .csv)</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 p-4 pt-0">
+                        <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary px-4 bg-gradient-inventory border-0">
+                            <i class="fas fa-rocket me-2"></i>Iniciar Importación
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

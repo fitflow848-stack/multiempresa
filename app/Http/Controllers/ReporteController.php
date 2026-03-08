@@ -952,7 +952,7 @@ class ReporteController extends Controller
     private function reporteStockConsolidado(Request $request)
     {
         $user = Auth::user();
-        $sucursalId = $request->input('local_id') ?? $user->branch_id;
+        $sucursalId = $request->input('local_id') ?: null;
 
         $query = AlmacenIngresoDetalle::withoutGlobalScopes()
             ->where('almacen_ingreso_detalle.cantidad', '>', 0)
@@ -984,7 +984,7 @@ class ReporteController extends Controller
     private function reporteStockPorLocal(Request $request)
     {
         $user = Auth::user();
-        $sucursalId = $request->input('local_id') ?? $user->branch_id;
+        $sucursalId = $request->input('local_id') ?: null;
 
         $query = AlmacenIngresoDetalle::withoutGlobalScopes()->where('almacen_ingreso_detalle.cantidad', '>', 0)
             ->whereHas('ingreso', function ($q) use ($user, $sucursalId) {
@@ -1014,7 +1014,7 @@ class ReporteController extends Controller
     private function reporteStockPorReferencia(Request $request)
     {
         $user = Auth::user();
-        $sucursalId = $request->input('local_id') ?? $user->branch_id;
+        $sucursalId = $request->input('local_id') ?: null;
 
         $query = AlmacenIngresoDetalle::withoutGlobalScopes()->where('almacen_ingreso_detalle.cantidad', '>', 0)
             ->whereHas('ingreso', function ($q) use ($user, $sucursalId) {
@@ -1055,7 +1055,7 @@ class ReporteController extends Controller
         $meses = $request->input('meses', 3);
         $fechaLimite = now()->addMonths($meses);
 
-        $sucursalId = $request->input('local_id') ?? $user->branch_id;
+        $sucursalId = $request->input('local_id') ?: null;
         $query = AlmacenIngresoDetalle::withoutGlobalScopes()
             ->with(['producto.familia', 'ingreso'])
             ->whereHas('ingreso', function ($q) use ($user, $sucursalId) {
