@@ -422,7 +422,7 @@ class DeudaController extends Controller
     public function generarComprobantePago($pago_id)
     {
         $pago = DeudaPago::with(['deuda.cliente', 'user'])->findOrFail($pago_id);
-        $empresa = Company::first();
+        $empresa = Company::find(Auth::user()->company_id);
         $cliente = $pago->deuda->cliente;
 
         // Calcular el saldo total del cliente DESPUÉS del pago (ya está restado en la BD)

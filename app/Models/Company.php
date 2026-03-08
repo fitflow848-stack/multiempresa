@@ -5,10 +5,128 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class Company extends Model
 {
     use HasFactory;
+
+    /**
+     * Eliminación en cascada de todos los datos de la empresa.
+     * El orden respeta las restricciones de foreign key:
+     * primero los registros más dependientes, luego los contenedores.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function (Company $company) {
+            DB::transaction(function () use ($company) {
+                $companyId = $company->id;
+
+                // ── Obtener IDs de apoyo ─────────────────────────────────────
+                $sucursalIds    = DB::table('sucursales')->where('company_id', $companyId)->pluck('id');
+                $cajaIds        = DB::table('cajas')->where('company_id', $companyId)->pluck('id');
+                $cierreCajaIds  = DB::table('cierre_cajas')->where('id_empresa', $companyId)->pluck('id');
+                $ventaIds       = DB::table('ventas')->where('company_id', $companyId)->pluck('id_venta');
+                $compraIds      = DB::table('compras')->where('company_id', $companyId)->pluck('id');
+                $ingresoIds     = DB::table('almacen_ingresos')->where('empresa_id', $companyId)->pluck('id');
+                $deudaIds       = DB::table('deudas')->where('company_id', $companyId)->pluck('id');
+                $pasivoIds      = DB::table('pasivos')->where('company_id', $companyId)->pluck('id');
+                $cotizacionIds  = DB::table('cotizaciones')->where('company_id', $companyId)->pluck('id');
+                $guiaIds        = DB::table('guia_remision')->where('company_id', $companyId)->pluck('id');
+
+                // 1. Registros que referencian cierre_cajas (más profundos)
+                if ($cierreCajaIds->isNotEmpty()) {
+                    DB::table('pasivos')->whereIn('cierre_caja_id', $cierreCajaIds)->delete();
+                    DB::table('arqueo_cajas')->whereIn('cierre_id', $cierreCajaIds)->delete();
+                    DB::table('operaciones_caja')->whereIn('cierre_caja_id', $cierreCajaIds)->delete();
+                }
+
+                // 2. Pagos de deudas y pasivos
+                if ($deudaIds->isNotEmpty()) {
+                    DB::table('deuda_pagos')->whereIn('deuda_id', $deudaIds)->delete();
+                }
+                if ($pasivoIds->isNotEmpty()) {
+                    DB::table('pasivo_pagos')->whereIn('pasivo_id', $pasivoIds)->delete();
+                }
+
+                // 3. Detalles de ventas
+                if ($ventaIds->isNotEmpty()) {
+                    DB::table('venta_detalles')->whereIn('id_venta', $ventaIds)->delete();
+                    DB::table('ventas_sunat')->whereIn('venta_id', $ventaIds)->delete();
+                }
+
+                // 4. Líneas de compras y detalles de almacén
+                if ($compraIds->isNotEmpty()) {
+                    DB::table('compra_lineas')->whereIn('compra_id', $compraIds)->delete();
+                }
+                if ($ingresoIds->isNotEmpty()) {
+                    DB::table('almacen_ingreso_detalle')->whereIn('ingreso_id', $ingresoIds)->delete();
+                }
+
+                // 5. Detalles de cotizaciones y guías
+                if ($cotizacionIds->isNotEmpty()) {
+                    DB::table('cotizacion_detalles')->whereIn('cotizacion_id', $cotizacionIds)->delete();
+                }
+                if ($guiaIds->isNotEmpty()) {
+                    DB::table('guia_remision_producto')->whereIn('guia_id', $guiaIds)->delete();
+                    DB::table('guia_destinatario')->whereIn('guia_id', $guiaIds)->delete();
+                }
+
+                // 6. Tablas principales de operaciones
+                DB::table('ventas')->where('company_id', $companyId)->delete();
+                DB::table('deudas')->where('company_id', $companyId)->delete();
+                DB::table('compras')->where('company_id', $companyId)->delete();
+                DB::table('cotizaciones')->where('company_id', $companyId)->delete();
+                DB::table('guia_remision')->where('company_id', $companyId)->delete();
+                DB::table('almacen_ingresos')->where('empresa_id', $companyId)->delete();
+                DB::table('almacen_transferencias')->where('empresa_id', $companyId)->delete();
+                DB::table('aportes')->where('company_id', $companyId)->delete();
+
+                // 7. Módulos financieros (nombres REALES de tablas en BD)
+                DB::table('pasivos')->where('company_id', $companyId)->delete();
+                DB::table('activo_corrientes')->where('company_id', $companyId)->delete();
+                DB::table('activos_fijos')->where('company_id', $companyId)->delete();
+
+                // 8. Cierre_cajas y cajas
+                DB::table('cierre_cajas')->where('id_empresa', $companyId)->delete();
+                if ($cajaIds->isNotEmpty()) {
+                    DB::table('caja_user')->whereIn('caja_id', $cajaIds)->delete();
+                }
+                DB::table('cajas')->where('company_id', $companyId)->delete();
+
+                // 9. Clientes, proveedores, productos
+                DB::table('clientes')->where('company_id', $companyId)->delete();
+                DB::table('proveedores')->where('company_id', $companyId)->delete();
+                DB::table('productos')->where('company_id', $companyId)->delete();
+
+                // 10. Catálogos de la empresa (nombres REALES de tablas en BD)
+                DB::table('tipo_activos')->where('company_id', $companyId)->delete();
+                DB::table('tipo_activo_corrientes')->where('company_id', $companyId)->delete();
+                DB::table('tipo_pasivos')->where('company_id', $companyId)->delete();
+                DB::table('tipo_aportes')->where('company_id', $companyId)->delete();
+                DB::table('tipos_pagos')->where('company_id', $companyId)->delete();
+                DB::table('marcas')->where('company_id', $companyId)->delete();
+                DB::table('laboratorios')->where('company_id', $companyId)->delete();
+                DB::table('unidades_medida')->where('company_id', $companyId)->delete();
+                DB::table('presentaciones')->where('company_id', $companyId)->delete();
+                DB::table('concentraciones')->where('company_id', $companyId)->delete();
+
+                // 11. Sucursales y usuarios
+                if ($sucursalIds->isNotEmpty()) {
+                    DB::table('branch_user')->whereIn('sucursal_id', $sucursalIds)->delete();
+                }
+                DB::table('sucursales')->where('company_id', $companyId)->delete();
+                DB::table('users')->where('company_id', $companyId)->delete();
+
+                // 12. Documentos y configuración de la empresa
+                DB::table('company_documents')->where('company_id', $companyId)->delete();
+                DB::table('documentos_empresas')->where('company_id', $companyId)->delete();
+                DB::table('documentos_sunat')->where('company_id', $companyId)->delete();
+            });
+        });
+    }
 
     protected $fillable = [
         'ruc',

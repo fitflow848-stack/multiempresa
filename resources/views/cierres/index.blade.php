@@ -117,12 +117,25 @@
                                                 <i class="bx bx-box me-1"></i>{{ optional($cierre->caja)->nombre ?? '-' }}
                                             </span>
                                         </td>
-                                        <td>{{ optional($cierre->fecha_cierre) ? \Carbon\Carbon::parse($cierre->fecha_cierre)->format('d/m/Y H:i') : '-' }}
+                                        <td>{{ $cierre->fecha_cierre
+                                            ? \Carbon\Carbon::parse($cierre->fecha_cierre)->format('d/m/Y H:i')
+                                            : \Carbon\Carbon::parse($cierre->created_at)->format('d/m/Y H:i') }}
                                         </td>
                                         <td>S/ {{ number_format($cierre->monto_apertura, 2) }}</td>
-                                        <td class="fw-bold">S/ {{ number_format($cierre->monto_cierre, 2) }}</td>
-                                        <td>S/ {{ number_format($cierre->ingresos, 2) }}</td>
-                                        <td>S/ {{ number_format($cierre->egresos, 2) }}</td>
+                                        {{-- Si está abierta mostramos el teórico acumulado; si está cerrada el monto real --}}
+                                        <td class="fw-bold">
+                                            @if($cierre->fecha_cierre)
+                                                S/ {{ number_format($cierre->monto_cierre, 2) }}
+                                            @else
+                                                <span class="text-warning" title="Teórico (caja abierta)">
+                                                    ~S/ {{ number_format($cierre->teorico_acumulado ?? $cierre->monto_apertura, 2) }}
+                                                </span>
+                                            @endif
+                                        </td>
+                                        {{-- Ingresos: ventas en efectivo + aportaciones --}}
+                                        <td>S/ {{ number_format(($cierre->ingresos ?? 0) + ($cierre->aportaciones ?? 0), 2) }}</td>
+                                        {{-- Egresos: gastos + sustracciones/retiros --}}
+                                        <td>S/ {{ number_format(($cierre->egresos ?? 0) + ($cierre->sustracciones ?? 0), 2) }}</td>
                                         <td>{{ \Illuminate\Support\Str::limit($cierre->observaciones, 60) }}</td>
                                         <td>
                                             <div style="display:flex; gap:8px; align-items:center;">

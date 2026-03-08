@@ -93,10 +93,16 @@ class CierreCajaController extends Controller
         foreach ($cierres as $cierre) {
             if (is_null($cierre->fecha_cierre)) {
                 $totales = $cierre->calcularTotalesDinamicos();
-                $cierre->ingresos = $totales['ingresos_efectivo'];
-                $cierre->egresos = $totales['egresos_efectivo'];
-                $cierre->aportaciones = $totales['aportaciones_efectivo'];
+                $cierre->ingresos    = $totales['ingresos_efectivo'];
+                $cierre->egresos     = $totales['egresos_efectivo'];
+                $cierre->aportaciones  = $totales['aportaciones_efectivo'];
                 $cierre->sustracciones = $totales['sustracciones_efectivo'];
+                // Teórico acumulado para mostrar en la columna Cierre
+                $cierre->teorico_acumulado = $cierre->monto_apertura
+                    + $cierre->ingresos
+                    + $cierre->aportaciones
+                    - $cierre->egresos
+                    - $cierre->sustracciones;
             }
         }
 
