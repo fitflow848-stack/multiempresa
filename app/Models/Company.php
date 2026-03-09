@@ -28,7 +28,7 @@ class Company extends Model
                 $sucursalIds    = DB::table('sucursales')->where('company_id', $companyId)->pluck('id');
                 $cajaIds        = DB::table('cajas')->where('company_id', $companyId)->pluck('id');
                 $cierreCajaIds  = DB::table('cierre_cajas')->where('id_empresa', $companyId)->pluck('id');
-                $ventaIds       = DB::table('ventas')->where('company_id', $companyId)->pluck('id_venta');
+                $ventaIds       = DB::table('ventas')->where('id_empresa', $companyId)->pluck('id_venta');
                 $compraIds      = DB::table('compras')->where('company_id', $companyId)->pluck('id');
                 $ingresoIds     = DB::table('almacen_ingresos')->where('empresa_id', $companyId)->pluck('id');
                 $deudaIds       = DB::table('deudas')->where('company_id', $companyId)->pluck('id');
@@ -75,7 +75,7 @@ class Company extends Model
                 }
 
                 // 6. Tablas principales de operaciones
-                DB::table('ventas')->where('company_id', $companyId)->delete();
+                DB::table('ventas')->where('id_empresa', $companyId)->delete();
                 DB::table('deudas')->where('company_id', $companyId)->delete();
                 DB::table('compras')->where('company_id', $companyId)->delete();
                 DB::table('cotizaciones')->where('company_id', $companyId)->delete();
