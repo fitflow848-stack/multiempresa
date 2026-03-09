@@ -191,7 +191,7 @@
     </table>
 
     <div class="monto-letras">
-        SON: <span class="uppercase">{{ $venta->monto_letras ?? 'CERO CON 00/100 SOLES' }}</span>
+        SON: <span class="uppercase">{{ $venta->monto_letras ?? numeroALetras($venta->total) }}</span>
     </div>
 
     @if (isset($venta->cuotas))
