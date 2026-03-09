@@ -212,7 +212,7 @@
                                 placeholder="Ej. Préstamo BCP, Aporte Socio" required>
                         </div>
                         <div class="form-row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
                                 <label>Monto (Valor) <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <div class="input-group-prepend">
@@ -222,7 +222,16 @@
                                         class="form-control" placeholder="0.00" required>
                                 </div>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
+                                <label>Método de Pago</label>
+                                <select name="metodo_pago" class="form-select">
+                                    <option value="Efectivo">Efectivo</option>
+                                    <option value="Transferencia">Transferencia</option>
+                                    <option value="Tarjeta">Tarjeta</option>
+                                    <option value="Yape/Plin">Yape/Plin</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
                                 <label>Fecha Registro <span class="text-danger">*</span></label>
                                 <input type="date" name="fecha_registro" class="form-control"
                                     value="{{ date('Y-m-d') }}" required>

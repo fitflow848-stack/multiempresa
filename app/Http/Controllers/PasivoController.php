@@ -59,6 +59,9 @@ class PasivoController extends Controller
             // Si es Adelanto de Cliente o Aporte, registrar en Caja
             $tipo = $pasivo->tipo->nombre;
             if (in_array(strtolower($tipo), ['adelanto de clientes', 'aporte'])) {
+                $metodoPago = $request->input('metodo_pago', 'Efectivo');
+                $esEfectivo = (strtolower($metodoPago) === 'efectivo' || $metodoPago === '1' || $metodoPago === 1) ? 1 : 0;
+
                 $selectedCajaId = session('selected_caja_id');
                 $cajaAbierta = null;
 
@@ -77,8 +80,10 @@ class PasivoController extends Controller
                     throw new \Exception('No se puede registrar este ' . $tipo . ' porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
                 }
 
-                $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $pasivo->monto;
-                $cajaAbierta->save();
+                if ($esEfectivo) {
+                    $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $pasivo->monto;
+                    $cajaAbierta->save();
+                }
 
                 OperacionCaja::create([
                     'cierre_caja_id' => $cajaAbierta->id,
@@ -87,6 +92,8 @@ class PasivoController extends Controller
                     'partida' => $tipo,
                     'concepto' => 'Registro de ' . $tipo . ': ' . $pasivo->nombre,
                     'importe' => $pasivo->monto,
+                    'metodo_pago' => $metodoPago,
+                    'es_efectivo' => $esEfectivo,
                 ]);
             }
 
@@ -212,20 +219,26 @@ class PasivoController extends Controller
                     throw new \Exception('No se puede registrar el pago porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
                 }
 
+                $metodoPago = $request->metodo_pago ?? 'Efectivo';
+                $esEfectivo = (strtolower($metodoPago) === 'efectivo' || $metodoPago === '1' || $metodoPago === 1) ? 1 : 0;
+
                 if ($pasivo->tipo->nombre === 'Adelantos personal') {
-                    $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $monto;
+                    if ($esEfectivo) $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $monto;
                     $tipoOp = 'ingreso';
                     $partida = 'Liquidación Adelanto';
                 } elseif (in_array($pasivo->tipo->nombre, ['Adelanto clientes', 'Adelanto de clientes'])) {
-                    $cajaAbierta->sustracciones = ($cajaAbierta->sustracciones ?? 0) + $monto;
+                    if ($esEfectivo) $cajaAbierta->sustracciones = ($cajaAbierta->sustracciones ?? 0) + $monto;
                     $tipoOp = 'sustraccion';
                     $partida = 'Entrega Producto (Adelanto)';
                 } else {
-                    $cajaAbierta->egresos = ($cajaAbierta->egresos ?? 0) + $monto;
+                    if ($esEfectivo) $cajaAbierta->egresos = ($cajaAbierta->egresos ?? 0) + $monto;
                     $tipoOp = 'gasto';
                     $partida = 'Pago Pasivo';
                 }
-                $cajaAbierta->save();
+                
+                if ($esEfectivo) {
+                    $cajaAbierta->save();
+                }
 
                 OperacionCaja::create([
                     'cierre_caja_id' => $cajaAbierta->id,
@@ -234,6 +247,8 @@ class PasivoController extends Controller
                     'partida' => $partida,
                     'concepto' => ($tipoOp === 'ingreso' ? 'Recepción de pago/saldado: ' : 'Pago de ') . $pasivo->tipo->nombre . ': ' . $pasivo->nombre,
                     'importe' => $monto,
+                    'metodo_pago' => $metodoPago,
+                    'es_efectivo' => $esEfectivo,
                 ]);
             }
 
