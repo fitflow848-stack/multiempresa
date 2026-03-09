@@ -25,6 +25,7 @@ class Company extends Model
                 $companyId = $company->id;
 
                 // ── Obtener IDs de apoyo ─────────────────────────────────────
+                $userIds        = DB::table('users')->where('company_id', $companyId)->pluck('id');
                 $sucursalIds    = DB::table('sucursales')->where('company_id', $companyId)->pluck('id');
                 $cajaIds        = DB::table('cajas')->where('company_id', $companyId)->pluck('id');
                 $cierreCajaIds  = DB::table('cierre_cajas')->where('id_empresa', $companyId)->pluck('id');
@@ -33,7 +34,11 @@ class Company extends Model
                 $ingresoIds     = DB::table('almacen_ingresos')->where('empresa_id', $companyId)->pluck('id');
                 $deudaIds       = DB::table('deudas')->where('company_id', $companyId)->pluck('id');
                 $pasivoIds      = DB::table('pasivos')->where('company_id', $companyId)->pluck('id');
-                $cotizacionIds  = DB::table('cotizaciones')->where('company_id', $companyId)->pluck('id');
+                $cotizacionIds  = DB::table('cotizaciones')
+                    ->where('company_id', $companyId)
+                    ->when($userIds->isNotEmpty(), function ($query) use ($userIds) {
+                        return $query->orWhereIn('usuario_id', $userIds);
+                    })->pluck('id');
                 $guiaIds        = DB::table('guia_remision')->where('company_id', $companyId)->pluck('id');
 
                 // 1. Registros que referencian cierre_cajas (más profundos)
@@ -50,11 +55,15 @@ class Company extends Model
                 if ($pasivoIds->isNotEmpty()) {
                     DB::table('pasivo_pagos')->whereIn('pasivo_id', $pasivoIds)->delete();
                 }
+                if ($userIds->isNotEmpty()) {
+                    DB::table('pasivo_pagos')->whereIn('user_id', $userIds)->delete();
+                    DB::table('deuda_pagos')->whereIn('user_id', $userIds)->delete();
+                }
 
                 // 3. Detalles de ventas
                 if ($ventaIds->isNotEmpty()) {
                     DB::table('venta_detalles')->whereIn('id_venta', $ventaIds)->delete();
-                    DB::table('ventas_sunat')->whereIn('venta_id', $ventaIds)->delete();
+                    DB::table('ventas_sunat')->whereIn('id_venta', $ventaIds)->delete();
                 }
 
                 // 4. Líneas de compras y detalles de almacén
@@ -70,18 +79,23 @@ class Company extends Model
                     DB::table('cotizacion_detalles')->whereIn('cotizacion_id', $cotizacionIds)->delete();
                 }
                 if ($guiaIds->isNotEmpty()) {
-                    DB::table('guia_remision_producto')->whereIn('guia_id', $guiaIds)->delete();
-                    DB::table('guia_destinatario')->whereIn('guia_id', $guiaIds)->delete();
+                    DB::table('guia_remision_producto')->whereIn('id_guia', $guiaIds)->delete();
+                    DB::table('guia_destinatario')->whereIn('id_guia', $guiaIds)->delete();
                 }
 
                 // 6. Tablas principales de operaciones
                 DB::table('ventas')->where('id_empresa', $companyId)->delete();
                 DB::table('deudas')->where('company_id', $companyId)->delete();
                 DB::table('compras')->where('company_id', $companyId)->delete();
+                if ($userIds->isNotEmpty()) {
+                    DB::table('cotizaciones')->whereIn('usuario_id', $userIds)->delete();
+                }
                 DB::table('cotizaciones')->where('company_id', $companyId)->delete();
                 DB::table('guia_remision')->where('company_id', $companyId)->delete();
                 DB::table('almacen_ingresos')->where('empresa_id', $companyId)->delete();
-                DB::table('almacen_transferencias')->where('empresa_id', $companyId)->delete();
+                if ($sucursalIds->isNotEmpty()) {
+                    DB::table('almacen_transferencias')->whereIn('sucursal_origen_id', $sucursalIds)->delete();
+                }
                 DB::table('aportes')->where('company_id', $companyId)->delete();
 
                 // 7. Módulos financieros (nombres REALES de tablas en BD)
@@ -98,15 +112,14 @@ class Company extends Model
 
                 // 9. Clientes, proveedores, productos
                 DB::table('clientes')->where('company_id', $companyId)->delete();
-                DB::table('proveedores')->where('company_id', $companyId)->delete();
-                DB::table('productos')->where('company_id', $companyId)->delete();
+                DB::table('proveedores')->where('id_empresa', $companyId)->delete();
+                DB::table('productos')->where('id_empresa', $companyId)->delete();
 
                 // 10. Catálogos de la empresa (nombres REALES de tablas en BD)
                 DB::table('tipo_activos')->where('company_id', $companyId)->delete();
                 DB::table('tipo_activo_corrientes')->where('company_id', $companyId)->delete();
                 DB::table('tipo_pasivos')->where('company_id', $companyId)->delete();
                 DB::table('tipo_aportes')->where('company_id', $companyId)->delete();
-                DB::table('tipos_pagos')->where('company_id', $companyId)->delete();
                 DB::table('marcas')->where('company_id', $companyId)->delete();
                 DB::table('laboratorios')->where('company_id', $companyId)->delete();
                 DB::table('unidades_medida')->where('company_id', $companyId)->delete();
@@ -122,8 +135,7 @@ class Company extends Model
 
                 // 12. Documentos y configuración de la empresa
                 DB::table('company_documents')->where('company_id', $companyId)->delete();
-                DB::table('documentos_empresas')->where('company_id', $companyId)->delete();
-                DB::table('documentos_sunat')->where('company_id', $companyId)->delete();
+                DB::table('documentos_empresas')->where('id_empresa', $companyId)->delete();
             });
         });
     }

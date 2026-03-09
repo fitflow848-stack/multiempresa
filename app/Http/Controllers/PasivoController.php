@@ -245,8 +245,8 @@ class PasivoController extends Controller
 
     public function ticketPago($id)
     {
-        $pago = PasivoPago::with(['pasivo.tipo', 'user'])->findOrFail($id);
-        $company = Company::first();
+        $pago = PasivoPago::with(['pasivo.tipo', 'pasivo.company', 'user'])->findOrFail($id);
+        $company = $pago->pasivo->company ?? Company::first();
 
         $pdf = Pdf::loadView('pasivos.ticket', compact('pago', 'company'))
             ->setPaper([0, 0, 226, 600], 'portrait'); // Tamaño térmico aprox
@@ -256,8 +256,8 @@ class PasivoController extends Controller
 
     public function ticketRegistro($id)
     {
-        $pasivo = Pasivo::with(['tipo', 'sucursal'])->findOrFail($id);
-        $company = Company::first();
+        $pasivo = Pasivo::with(['tipo', 'sucursal', 'company'])->findOrFail($id);
+        $company = $pasivo->company ?? Company::first();
 
         $pdf = Pdf::loadView('pasivos.ticket_registro', compact('pasivo', 'company'))
             ->setPaper([0, 0, 226, 600], 'portrait');
