@@ -10,6 +10,9 @@ class ActivoFijoController extends Controller
 {
     public function index(Request $request)
     {
+        // Asegurar que la empresa tenga los tipos por defecto
+        \App\Helpers\AccountingHelper::ensureDefaults(auth()->user()->company_id);
+
         $tipos = TipoActivo::orderBy('nombre')->get();
 
         $query = ActivoFijo::with('tipo')->orderBy('fecha_adquisicion', 'desc');

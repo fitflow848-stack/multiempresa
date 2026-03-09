@@ -21,6 +21,10 @@ class BalanceController extends Controller
     {
         $fecha = $request->input('fecha', now()->format('Y-m-d'));
         $sucursal_id = $request->input('sucursal_id');
+
+        // Asegurar que la empresa tenga los tipos por defecto para evitar errores de visualización y permitir registros
+        \App\Helpers\AccountingHelper::ensureDefaults(auth()->user()->company_id);
+
         $baseData = $this->calculateData($fecha, $sucursal_id);
         $data = $this->refineData($baseData);
         $data['fecha'] = $fecha;
@@ -48,6 +52,10 @@ class BalanceController extends Controller
     {
         $fecha = $request->input('fecha', now()->format('Y-m-d'));
         $sucursal_id = $request->input('sucursal_id');
+
+        // Asegurar valores por defecto
+        \App\Helpers\AccountingHelper::ensureDefaults(auth()->user()->company_id);
+
         $baseData = $this->calculateData($fecha, $sucursal_id);
         $data = $this->refineData($baseData);
         $data['fecha'] = $fecha;
@@ -61,28 +69,34 @@ class BalanceController extends Controller
         $tiposPasivos = $data['tiposPasivosCorrientes'];
         $tiposActivos = $data['tiposActivosCorrientes'];
 
-        // 1. Mover "Adelantos Personal" de Pasivos a Activos (es una cuenta por cobrar a empleados)
-        $idxPersonal = $tiposPasivos->search(function ($item) {
+        // 1. Mover TODOS los items del tipo "Adelantos Personal" que se registraron como Pasivos a Activos
+        $indicesPersonal = $tiposPasivos->filter(function ($item) {
             $name = strtolower($item->nombre);
-            return str_contains($name, 'adelanto') && str_contains($name, 'personal');
+            return (str_contains($name, 'adelanto') && str_contains($name, 'personal')) || 
+                   (str_contains($name, 'adelanto') && str_contains($name, 'trabajador'));
         });
 
-        if ($idxPersonal !== false) {
-            $personalObj = $tiposPasivos->pull($idxPersonal);
-            $monto = $personalObj->pasivos_sum_monto ?? 0;
+        if ($indicesPersonal->isNotEmpty()) {
+            $montoPersonalMoved = $indicesPersonal->sum('pasivos_sum_monto');
+            
+            // Eliminar de pasivos
+            $data['tiposPasivosCorrientes'] = $tiposPasivos->reject(function ($item) use ($indicesPersonal) {
+                return $indicesPersonal->pluck('id')->contains($item->id);
+            });
 
-            // Buscar si ya existe en activos
-            $existente = $tiposActivos->first(function ($item) {
+            // Agregar a activos
+            $existenteActivo = $tiposActivos->first(function ($item) {
                 $name = strtolower($item->nombre);
                 return str_contains($name, 'adelanto') && str_contains($name, 'personal');
             });
 
-            if ($existente) {
-                $existente->activos_sum_monto = ($existente->activos_sum_monto ?? 0) + $monto;
+            if ($existenteActivo) {
+                $existenteActivo->activos_sum_monto = ($existenteActivo->activos_sum_monto ?? 0) + $montoPersonalMoved;
             } else {
-                $new = new \App\Models\TipoActivoCorriente();
-                $new->nombre = 'Adelantos a Personal';
-                $new->activos_sum_monto = $monto;
+                $new = (object) [
+                    'nombre' => 'Adelantos a Personal',
+                    'activos_sum_monto' => $montoPersonalMoved
+                ];
                 $tiposActivos->push($new);
             }
         }

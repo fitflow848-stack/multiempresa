@@ -105,7 +105,7 @@ class FinanzasEspecialesController extends Controller
         try {
             // 1. Obtener o crear el tipo "Adelanto de Clientes"
             $tipo = TipoPasivo::firstOrCreate(
-                ['nombre' => 'Adelanto de Clientes'],
+                ['nombre' => 'Adelanto de Clientes', 'company_id' => Auth::user()->company_id],
                 ['descripcion' => 'Pagos adelantados por clientes']
             );
 
@@ -208,7 +208,7 @@ class FinanzasEspecialesController extends Controller
         DB::beginTransaction();
         try {
             $tipo = TipoPasivo::firstOrCreate(
-                ['nombre' => 'Compras a Crédito'],
+                ['nombre' => 'Compras a Crédito', 'company_id' => Auth::user()->company_id],
                 ['descripcion' => 'Deudas con proveedores por compras a crédito']
             );
 

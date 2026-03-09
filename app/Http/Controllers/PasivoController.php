@@ -17,6 +17,9 @@ class PasivoController extends Controller
 {
     public function index(Request $request)
     {
+        // Asegurar que la empresa tenga los tipos por defecto
+        \App\Helpers\AccountingHelper::ensureDefaults(auth()->user()->company_id);
+
         $tipos = TipoPasivo::orderBy('nombre')
             ->get();
 
