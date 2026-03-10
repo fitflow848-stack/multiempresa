@@ -345,6 +345,67 @@
     </div>
 </div>
 
+<!-- Modal Editar Pasivo -->
+<div class="modal fade" id="modalEditarPasivo" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form id="formEditarPasivo" method="POST">
+                @csrf
+                @method('POST')
+                <div class="modal-header bg-warning text-white">
+                    <h5 class="modal-title">Editar Pasivo</h5>
+                    <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group mb-3">
+                        <label>Tipo de Pasivo <span class="text-danger">*</span></label>
+                        <select name="tipo_pasivo_id" id="edit_tipo_pasivo_id" class="form-control" required>
+                            @foreach ($tipos as $tipo)
+                                <option value="{{ $tipo->id }}">{{ $tipo->nombre }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label>Nombre / Descripción Corta <span class="text-danger">*</span></label>
+                        <input type="text" name="nombre" id="edit_nombre" class="form-control" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="col-md-6 mb-3">
+                            <label>Monto (Valor) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">S/</span>
+                                </div>
+                                <input type="number" step="0.01" min="0" name="monto" id="edit_monto"
+                                    class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Fecha Registro <span class="text-danger">*</span></label>
+                            <input type="date" name="fecha_registro" id="edit_fecha_registro" class="form-control"
+                                required>
+                        </div>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label>Documento Referencia</label>
+                        <input type="text" name="documento" id="edit_documento" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Observaciones</label>
+                        <textarea name="observaciones" id="edit_observaciones" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Actualizar Registro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
     <script>
         function abrirModalPagoPasivo(id, nombre, saldo) {
@@ -422,70 +483,6 @@
                     }
                 });
             });
-    <!-- Modal Editar Pasivo -->
-    <div class="modal fade" id="modalEditarPasivo" tabindex="-1" role="dialog" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <form id="formEditarPasivo" method="POST">
-                    @csrf
-                    @method('POST')
-                    <div class="modal-header bg-warning text-white">
-                        <h5 class="modal-title">Editar Pasivo</h5>
-                        <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="form-group mb-3">
-                            <label>Tipo de Pasivo <span class="text-danger">*</span></label>
-                            <select name="tipo_pasivo_id" id="edit_tipo_pasivo_id" class="form-control" required>
-                                @foreach ($tipos as $tipo)
-                                    <option value="{{ $tipo->id }}">{{ $tipo->nombre }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="form-group mb-3">
-                            <label>Nombre / Descripción Corta <span class="text-danger">*</span></label>
-                            <input type="text" name="nombre" id="edit_nombre" class="form-control" required>
-                        </div>
-                        <div class="form-row">
-                            <div class="col-md-6 mb-3">
-                                <label>Monto (Valor) <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text">S/</span>
-                                    </div>
-                                    <input type="number" step="0.01" min="0" name="monto" id="edit_monto"
-                                        class="form-control" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label>Fecha Registro <span class="text-danger">*</span></label>
-                                <input type="date" name="fecha_registro" id="edit_fecha_registro" class="form-control"
-                                    required>
-                            </div>
-                        </div>
-                        <div class="form-group mb-3">
-                            <label>Documento Referencia</label>
-                            <input type="text" name="documento" id="edit_documento" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label>Observaciones</label>
-                            <textarea name="observaciones" id="edit_observaciones" class="form-control" rows="2"></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-warning">Actualizar Registro</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // ... existing scripts ...
             
             // Logic for Edit Pasivo
             const modalEditarPasivo = new bootstrap.Modal(document.getElementById('modalEditarPasivo'));
@@ -511,6 +508,8 @@
                         })
                         .catch(error => alert('Error al cargar datos'));
                 });
+            });
+
             // Confirmación genérica
             document.querySelectorAll('.confirm-form').forEach(form => {
                 form.addEventListener('submit', function(e) {

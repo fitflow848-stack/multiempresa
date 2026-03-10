@@ -356,18 +356,27 @@ class BalanceController extends Controller
             $tiposPasivosCorrientes->push($newType);
         }
 
-        // Patrimonio: Aportes
-        $tipoAporteObj = $tiposPasivosCorrientes->first(function ($item) {
-            return strtolower($item->nombre) === 'aporte';
-        });
+        // Patrimonio: Aportes (Calculado independientemente para incluir todos, incluso los pagados)
+        $total_aportes = \App\Models\Pasivo::withoutGlobalScopes()
+            ->where('company_id', $user->company_id)
+            ->whereHas('tipo', function($q) {
+                // Buscamos cualquier tipo que contenga "Aporte"
+                $q->where('nombre', 'Aporte')
+                  ->orWhere('nombre', 'like', 'Aportes%');
+            })
+            ->whereDate('fecha_registro', '<=', $fecha);
 
-        $total_aportes = 0;
-        if ($tipoAporteObj) {
-            $total_aportes = $tipoAporteObj->pasivos_sum_monto ?? 0;
-            $tiposPasivosCorrientes = $tiposPasivosCorrientes->reject(function ($item) use ($tipoAporteObj) {
-                return $item->id === $tipoAporteObj->id;
-            });
+        if ($sucursalId) {
+            $total_aportes->where('sucursal_id', $sucursalId);
         }
+
+        $total_aportes = $total_aportes->sum('monto');
+
+        // Remover el tipo "Aporte" de los Pasivos Corrientes para que no se duplique como deuda
+        $tiposPasivosCorrientes = $tiposPasivosCorrientes->reject(function ($item) {
+            $name = strtolower($item->nombre);
+            return $name === 'aporte' || str_starts_with($name, 'aportes');
+        });
 
         $total_pasivo_corriente = $tiposPasivosCorrientes->sum('pasivos_sum_monto');
 

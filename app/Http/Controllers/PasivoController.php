@@ -234,6 +234,10 @@ class PasivoController extends Controller
                     if ($esEfectivo) $cajaAbierta->sustracciones = ($cajaAbierta->sustracciones ?? 0) + $monto;
                     $tipoOp = 'sustraccion';
                     $partida = 'Entrega Producto (Adelanto)';
+                } elseif (in_array($pasivo->tipo->nombre, ['Aporte', 'Aportes'])) {
+                    if ($esEfectivo) $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $monto;
+                    $tipoOp = 'aporte';
+                    $partida = 'Aporte de Capital';
                 } else {
                     if ($esEfectivo) $cajaAbierta->egresos = ($cajaAbierta->egresos ?? 0) + $monto;
                     $tipoOp = 'gasto';
