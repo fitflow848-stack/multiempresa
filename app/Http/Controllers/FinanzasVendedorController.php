@@ -42,12 +42,8 @@ class FinanzasVendedorController extends Controller
                 }
             });
 
-        // "Una vez saldado debería desaparecer el registro" - Para Adelantos Personal y Clientes
-        $query->where(function ($q) {
-            $q->whereDoesntHave('tipo', function ($t) {
-                $t->whereIn('nombre', ['Adelantos personal', 'Adelanto clientes', 'Adelanto de clientes']);
-            })->orWhere('estado', '!=', 'pagado');
-        });
+        // Quitamos el filtro que ocultaba los saldados para que el usuario pueda ver el historial
+        // y realizar acciones como imprimir ticket o editar/eliminar si fuera necesario.
 
         // Filtros adicionales
         if ($fechaDesde) {
@@ -71,8 +67,8 @@ class FinanzasVendedorController extends Controller
             $activosQuery = ActivoCorriente::where('sucursal_id', Auth::user()->branch_id)
                 ->whereHas('tipo', function ($q) {
                     $q->where('nombre', 'Adelantos a Personal');
-                })
-                ->where('is_settled', false); // solo no saldados
+                });
+                // ->where('is_settled', false); // Permitir ver los saldados
 
             if ($fechaDesde) {
                 $activosQuery->whereDate('fecha_registro', '>=', $fechaDesde);
@@ -89,6 +85,8 @@ class FinanzasVendedorController extends Controller
 
             // Convertir a formato compatible con la vista (similar a Pasivo)
             $activosPersonalItems = $activosQuery->with('tipo')->get()->map(function ($activo) {
+                $monto_pagado = $activo->is_settled ? $activo->monto : 0;
+                $saldo = $activo->is_settled ? 0 : $activo->monto;
                 return (object) [
                     'id'              => 'activo_' . $activo->id,
                     '_activo_id'      => $activo->id,
@@ -99,9 +97,9 @@ class FinanzasVendedorController extends Controller
                     'nombre'          => $activo->observaciones ?? 'Adelanto desde caja',
                     'documento'       => $activo->documento,
                     'monto'           => $activo->monto,
-                    'monto_pagado'    => '0.00',
-                    'saldo'           => $activo->monto,
-                    'estado'          => 'aprobado',
+                    'monto_pagado'    => $monto_pagado,
+                    'saldo'           => $saldo,
+                    'estado'          => $activo->is_settled ? 'pagado' : 'aprobado',
                     'pagos'           => collect(),
                 ];
             });
@@ -514,6 +512,32 @@ class FinanzasVendedorController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Error al procesar el pago: ' . $e->getMessage());
+        }
+    }
+
+    public function destroy($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            if (str_starts_with($id, 'activo_')) {
+                $realId = str_replace('activo_', '', $id);
+                $activo = \App\Models\ActivoCorriente::findOrFail($realId);
+                
+                // Si tiene operación en caja asociada, tal vez deberíamos revertirla?
+                // El usuario no lo pidió explícitamente, pero es buena práctica.
+                // Por ahora solo eliminamos el registro financiero.
+                $activo->delete();
+            } else {
+                $operacion = Pasivo::withoutGlobalScopes()->findOrFail($id);
+                $operacion->delete();
+            }
+
+            DB::commit();
+            return back()->with('success', 'Operación eliminada correctamente.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Error al eliminar: ' . $e->getMessage());
         }
     }
 }

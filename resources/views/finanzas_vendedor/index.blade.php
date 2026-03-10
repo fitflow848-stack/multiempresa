@@ -254,11 +254,22 @@
                                                     </div>
                                                 @endif
 
-                                            <button type="button"
+                                                <button type="button"
                                                     class="btn btn-sm btn-icon btn-edit-operacion shadow-none"
                                                     data-id="{{ $op->id }}" title="Editar Operación">
                                                     <i class="bx bx-edit text-warning fs-4"></i>
                                                 </button>
+
+                                                <form action="{{ route('finanzas_vendedor.destroy', $op->id) }}"
+                                                    method="POST" class="d-inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-icon shadow-none"
+                                                        title="Eliminar Operación"
+                                                        onclick="return confirm('¿Está seguro de eliminar esta operación? Esta acción no se puede deshacer.')">
+                                                        <i class="bx bx-trash text-danger fs-4"></i>
+                                                    </button>
+                                                </form>
  
                                                 @php
                                                     $printRoute = isset($op->_es_activo) && $op->_es_activo
@@ -283,13 +294,30 @@
                                                         </button>
                                                     </form>
                                                 @endif
- 
+
+                                                <button type="button"
+                                                    class="btn btn-sm btn-icon btn-edit-operacion shadow-none"
+                                                    data-id="{{ $op->id }}" title="Editar Operación">
+                                                    <i class="bx bx-edit text-warning fs-4"></i>
+                                                </button>
+
+                                                <form action="{{ route('finanzas_vendedor.destroy', $op->id) }}"
+                                                    method="POST" class="d-inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-icon shadow-none"
+                                                        title="Eliminar Operación"
+                                                        onclick="return confirm('¿Está seguro de eliminar esta operación? Esta acción no se puede deshacer.')">
+                                                        <i class="bx bx-trash text-danger fs-4"></i>
+                                                    </button>
+                                                </form>
+
                                                 <a href="{{ route('finanzas.ticket-personal', $op->_activo_id) }}"
                                                     target="_blank" class="btn btn-sm btn-icon shadow-none"
                                                     title="Imprimir Ticket">
                                                     <i class="bx bx-printer text-primary fs-4"></i>
                                                 </a>
- 
+
                                                 <small class="text-muted d-block mt-1" title="Registrado desde Caja"><i
                                                         class="bx bx-store-alt"></i> Caja</small>
                                             @endif
