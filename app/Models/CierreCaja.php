@@ -74,7 +74,7 @@ class CierreCaja extends Model
                 v.created_at AS fecha_emision,
                 'Ingreso - Venta' AS operacion,
                 'ingreso' AS tipo_movimiento,
-                c.nombre AS cliente_nombre,
+                COALESCE(c.nombre, 'Cliente Contable') AS cliente_nombre,
                 CONCAT( v.serie, ' ', v.numero ) AS concepto,
                 tp.nombre AS metodo_pago,
                 tp.es_efectivo,
@@ -87,7 +87,7 @@ class CierreCaja extends Model
                 'venta' AS origen_movimiento
                 FROM
                     ventas v
-                    INNER JOIN clientes c ON c.id = v.id_cliente
+                    LEFT JOIN clientes c ON c.id = v.id_cliente
                     INNER JOIN users u ON u.id = v.id_usuario 
                     LEFT JOIN tipos_pagos tp ON tp.id = v.id_tipo_pago
                     LEFT JOIN deudas d ON d.venta_id = v.id_venta

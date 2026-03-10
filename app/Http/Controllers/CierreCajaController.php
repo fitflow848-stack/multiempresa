@@ -93,13 +93,13 @@ class CierreCajaController extends Controller
         foreach ($cierres as $cierre) {
             if (is_null($cierre->fecha_cierre)) {
                 $totales = $cierre->calcularTotalesDinamicos();
-                $cierre->ingresos    = $totales['ingresos_efectivo'];
+                $cierre->ingresos    = $totales['ingresos_total']; // Cambiado a total para que el usuario vea la suma completa
                 $cierre->egresos     = $totales['egresos_efectivo'];
                 $cierre->aportaciones  = $totales['aportaciones_efectivo'];
                 $cierre->sustracciones = $totales['sustracciones_efectivo'];
-                // Teórico acumulado para mostrar en la columna Cierre
+                // Teórico acumulado para mostrar en la columna Cierre (SOLO EFECTIVO)
                 $cierre->teorico_acumulado = $cierre->monto_apertura
-                    + $cierre->ingresos
+                    + $totales['ingresos_efectivo']
                     + $cierre->aportaciones
                     - $cierre->egresos
                     - $cierre->sustracciones;
@@ -287,13 +287,15 @@ class CierreCajaController extends Controller
 
         // Si el cierre está abierto, usamos los totales dinámicos (calculados al vuelo)
         if (!$cierre->fecha_cierre) {
-            $cierre->ingresos = $totalesDin['ingresos_efectivo'];
+            $cierre->ingresos = $totalesDin['ingresos_total']; // Cambiado a total
+            $cierre->ingresos_efectivo = $totalesDin['ingresos_efectivo']; // Nuevo para JS
+            $cierre->ingresos_digital = $totalesDin['ingresos_total'] - $totalesDin['ingresos_efectivo']; // Nuevo para JS
             $cierre->egresos = $totalesDin['egresos_efectivo'];
             $cierre->aportaciones = $totalesDin['aportaciones_efectivo'];
             $cierre->sustracciones = $totalesDin['sustracciones_efectivo'];
 
-            // Calculamos el teórico acumulado para el balance
-            $cierre->teorico_acumulado = $cierre->monto_apertura + $cierre->ingresos - $cierre->egresos + $cierre->aportaciones - $cierre->sustracciones;
+            // Calculamos el teórico acumulado para el balance (SOLO EFECTIVO)
+            $cierre->teorico_acumulado = $cierre->monto_apertura + $cierre->ingresos_efectivo - $cierre->egresos + $cierre->aportaciones - $cierre->sustracciones;
             $cierre->descuatdre_calculado = $cierre->monto_cierre - $cierre->teorico_acumulado;
         }
 

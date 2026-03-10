@@ -102,6 +102,7 @@
                                 <input type="number" id="ingresos"
                                     class="form-control form-control-sm border-success bg-light"
                                     value="{{ $cierre->ingresos }}" readonly>
+                                <input type="hidden" id="ingresos_digital" value="{{ $cierre->ingresos_digital ?? 0 }}">
                             </div>
                             <div class="col-6">
                                 <label class="label-custom text-danger">(-) Gastos</label>
@@ -643,12 +644,13 @@
 
             const saldoIni = getVal('saldo_inicial');
             const ingresos = getVal('ingresos');
+            const ingresosDigital = getVal('ingresos_digital');
             const gastos = getVal('gastos');
             const aportes = getVal('aportaciones');
             const sustrac = getVal('sustracciones');
             const cierreReal = getVal('cierre_caja');
 
-            const teorico = saldoIni + ingresos - gastos + aportes - sustrac;
+            const teorico = saldoIni + (ingresos - ingresosDigital) - gastos + aportes - sustrac;
             const diferencia = cierreReal - teorico;
 
             // Actualizar displays
