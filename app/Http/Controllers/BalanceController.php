@@ -125,9 +125,16 @@ class BalanceController extends Controller
         }
 
         // Recalcular Totales
-        $data['tiposActivosCorrientes'] = $tiposActivos;
-        $data['total_activo_corriente'] = $data['caja'] + $data['inventario'] + $tiposActivos->sum('activos_sum_monto');
+        $data['tiposActivosCorrientes'] = $tiposActivos->reject(function ($item) {
+            return ($item->activos_sum_monto ?? 0) <= 0;
+        });
+
+        $data['total_activo_corriente'] = $data['caja'] + $data['inventario'] + $data['tiposActivosCorrientes']->sum('activos_sum_monto');
         $data['total_activo'] = $data['total_activo_corriente'] + $data['total_activo_no_corriente'];
+
+        $data['tiposPasivosCorrientes'] = $data['tiposPasivosCorrientes']->reject(function ($item) {
+            return ($item->pasivos_sum_monto ?? 0) <= 0;
+        });
 
         $data['total_pasivo_corriente'] = $data['tiposPasivosCorrientes']->sum('pasivos_sum_monto');
         $data['total_pasivo'] = $data['total_pasivo_corriente'] + $data['total_pasivo_no_corriente'];

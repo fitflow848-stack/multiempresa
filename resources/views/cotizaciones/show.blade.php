@@ -22,7 +22,7 @@
                 </button>
             @endif
             <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
-                <i class="fas fa-print me-2"></i>Imprimir
+                <i class="bx bx-printer me-2"></i>Imprimir
             </button>
             <a href="{{ route('cotizaciones.index') }}" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left me-2"></i>Volver

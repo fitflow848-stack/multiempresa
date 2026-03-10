@@ -259,6 +259,11 @@ class CierreCajaController extends Controller
 
         CierreCaja::create($data);
 
+        // Auto-seleccionar la caja para la sesión del usuario si no es tesorería
+        if (!$isTesoreria) {
+            session(['selected_caja_id' => $data['caja_id']]);
+        }
+
         $redirectParams = $isTesoreria ? ['tipo' => 'tesoreria'] : [];
         return redirect()->route('cierre-caja.index', $redirectParams)->with('success', 'Arqueo de ' . ($isTesoreria ? 'Bóveda' : 'Caja') . ' registrado correctamente.');
     }

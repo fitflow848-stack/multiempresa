@@ -17,10 +17,6 @@ class ActivoCorrienteController extends Controller
             ->get();
 
         $query = ActivoCorriente::with('tipo')
-            ->where(function($q) {
-                $q->where('tipo_adelanto', '!=', 'personal')
-                  ->orWhereNull('tipo_adelanto');
-            })
             ->orderBy('fecha_registro', 'desc');
 
         if ($request->filled('tipo_id')) {

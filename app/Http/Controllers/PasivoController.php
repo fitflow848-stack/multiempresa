@@ -70,7 +70,9 @@ class PasivoController extends Controller
                         ->where('caja_id', $selectedCajaId)
                         ->whereNull('fecha_cierre')
                         ->first();
-                } else {
+                }
+
+                if (!$cajaAbierta) {
                     $cajaAbierta = CierreCaja::where('user_id', Auth::id())
                         ->whereNull('fecha_cierre')
                         ->first();
@@ -209,7 +211,9 @@ class PasivoController extends Controller
                         ->where('caja_id', $selectedCajaId)
                         ->whereNull('fecha_cierre')
                         ->first();
-                } else {
+                }
+
+                if (!$cajaAbierta) {
                     $cajaAbierta = CierreCaja::where('user_id', Auth::id())
                         ->whereNull('fecha_cierre')
                         ->first();

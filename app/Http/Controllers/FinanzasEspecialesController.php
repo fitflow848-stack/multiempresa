@@ -84,10 +84,24 @@ class FinanzasEspecialesController extends Controller
     {
         // Validar caja abierta
         $user = auth()->user();
-        $sucursalId = session('sucursal_id') ?? ($user->sucursal_id ?? null);
-        $cajaAbierta = \App\Models\CierreCaja::where('sucursal_id', $sucursalId)
-            ->where('estado', 'abierto')
-            ->first();
+        
+        // Primero intentar con la caja seleccionada en sesión
+        $selectedCajaId = session('selected_caja_id');
+        $cajaAbierta = null;
+
+        if ($selectedCajaId) {
+            $cajaAbierta = \App\Models\CierreCaja::where('user_id', $user->id)
+                ->where('caja_id', $selectedCajaId)
+                ->whereNull('fecha_cierre')
+                ->first();
+        }
+
+        // Si no hay seleccionada o no está abierta, buscar cualquier caja abierta del usuario
+        if (!$cajaAbierta) {
+            $cajaAbierta = \App\Models\CierreCaja::where('user_id', $user->id)
+                ->whereNull('fecha_cierre')
+                ->first();
+        }
 
         if (!$cajaAbierta) {
             if (request()->expectsJson()) {

@@ -108,7 +108,7 @@
                                                  @if(str_contains(strtolower($activo->tipo->nombre), 'adelanto'))
                                                      <a href="{{ route('finanzas.ticket-personal', $activo->id) }}" target="_blank"
                                                         class="btn btn-info btn-circle btn-sm" title="Ver Ticket">
-                                                         <i class="fas fa-print"></i>
+                                                         <i class="bx bx-printer"></i>
                                                      </a>
                                                  @endif
 

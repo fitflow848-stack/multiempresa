@@ -248,7 +248,7 @@
                     </div>
                     <div class="d-grid gap-2">
                         <button type="button" class="btn btn-primary" id="btn-print-barcode">
-                            <i class="fas fa-print me-2"></i>Imprimir Etiqueta
+                            <i class="bx bx-printer me-2"></i>Imprimir Etiqueta
                         </button>
                     </div>
                 </div>
