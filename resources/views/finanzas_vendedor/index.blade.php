@@ -254,21 +254,28 @@
                                                     </div>
                                                 @endif
 
-                                                <button type="button"
+                                            <button type="button"
                                                     class="btn btn-sm btn-icon btn-edit-operacion shadow-none"
                                                     data-id="{{ $op->id }}" title="Editar Operación">
                                                     <i class="bx bx-edit text-warning fs-4"></i>
                                                 </button>
-
-                                                <a href="{{ route('pasivos.ticket_registro', $op->id) }}" target="_blank"
+ 
+                                                @php
+                                                    $printRoute = isset($op->_es_activo) && $op->_es_activo
+                                                        ? route('finanzas.ticket-personal', $op->_activo_id)
+                                                        : route('pasivos.ticket_registro', $op->id);
+                                                @endphp
+                                                <a href="{{ $printRoute }}" target="_blank"
                                                     class="btn btn-sm btn-icon shadow-none"
                                                     title="Imprimir Comprobante de Registro">
                                                     <i class="bx bx-printer text-primary fs-4"></i>
                                                 </a>
                                             @else
-                                                {{-- Acciones para adelantos de personal registrados desde Caja --}}
+                                                {{-- Acciones para adelantos de personal activos (ActivoCorriente) --}}
                                                 @if ($op->saldo > 0)
-                                                    <form action="{{ route('finanzas.saldar-adelanto-personal', $op->_activo_id) }}" method="POST" class="d-inline">
+                                                    <form
+                                                        action="{{ route('finanzas.saldar-adelanto-personal', $op->_activo_id) }}"
+                                                        method="POST" class="d-inline">
                                                         @csrf
                                                         <button type="submit" class="btn btn-sm btn-outline-warning"
                                                             onclick="return confirm('¿Marcar este adelanto como saldado?')">
@@ -276,15 +283,15 @@
                                                         </button>
                                                     </form>
                                                 @endif
-
-                                                <a href="{{ route('finanzas.ticket-personal', $op->_activo_id) }}" target="_blank"
-                                                    class="btn btn-sm btn-icon shadow-none"
+ 
+                                                <a href="{{ route('finanzas.ticket-personal', $op->_activo_id) }}"
+                                                    target="_blank" class="btn btn-sm btn-icon shadow-none"
                                                     title="Imprimir Ticket">
                                                     <i class="bx bx-printer text-primary fs-4"></i>
                                                 </a>
-
-                                                <small class="text-muted d-block mt-1"
-                                                    title="Registrado desde Caja"><i class="bx bx-store-alt"></i> Caja</small>
+ 
+                                                <small class="text-muted d-block mt-1" title="Registrado desde Caja"><i
+                                                        class="bx bx-store-alt"></i> Caja</small>
                                             @endif
                                         </td>
                                     </tr>
@@ -609,6 +616,9 @@
             document.addEventListener('DOMContentLoaded', function() {
                 @if (session('imprimir_pasivo_id'))
                     window.open("{{ route('pasivos.ticket_registro', session('imprimir_pasivo_id')) }}", "_blank");
+                @endif
+                @if (session('imprimir_adelanto_id'))
+                    window.open("{{ route('finanzas.ticket-personal', session('imprimir_adelanto_id')) }}", "_blank");
                 @endif
 
                 const modalEditar = new bootstrap.Modal(document.getElementById('modalEditar'));

@@ -106,11 +106,11 @@ class AccountingHelper
                             'company_id' => $pasivo->company_id,
                             'sucursal_id' => $pasivo->sucursal_id,
                             'tipo_activo_corriente_id' => $tipoCorrecto->id,
-                            'nombre' => $pasivo->nombre,
+                            'nombre' => $pasivo->empresa_persona,
                             'monto' => $montoPendiente,
                             'fecha_registro' => $pasivo->fecha_registro,
                             'documento' => $pasivo->documento,
-                            'observaciones' => $pasivo->observaciones,
+                            'observaciones' => $pasivo->nombre,
                             'user_id' => $pasivo->user_id,
                             'is_settled' => ($pasivo->estado === 'pagado' || $pasivo->is_settled),
                             'tipo_adelanto' => 'personal'

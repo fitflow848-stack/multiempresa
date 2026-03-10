@@ -97,7 +97,7 @@ class FinanzasVendedorController extends Controller
                     'tipo'            => (object) ['nombre' => 'Adelantos personal'],
                     'empresa_persona' => $activo->nombre,
                     'nombre'          => $activo->observaciones ?? 'Adelanto desde caja',
-                    'documento'       => null,
+                    'documento'       => $activo->documento,
                     'monto'           => $activo->monto,
                     'monto_pagado'    => '0.00',
                     'saldo'           => $activo->monto,
@@ -211,19 +211,7 @@ class FinanzasVendedorController extends Controller
                     ['descripcion' => 'Tipo de operación: ' . $nombreTipo]
                 );
 
-            $pasivo = Pasivo::create([
-                'company_id' => Auth::user()->company_id,
-                'sucursal_id' => Auth::user()->branch_id,
-                'tipo_pasivo_id' => $tipoPasivo->id,
-                'nombre' => $nombre,
-                'empresa_persona' => $empresaPersona,
-                'monto' => $monto,
-                'monto_pagado' => 0,
-                'estado' => 'aprobado',
-                'fecha_registro' => $fecha,
-                'documento' => $documento,
-                'observaciones' => $observaciones
-            ]);
+            $pasivo = null; // Se creará después de la lógica de caja
 
             // Lógica de Caja
             $selectedCajaId = session('selected_caja_id');
@@ -246,13 +234,16 @@ class FinanzasVendedorController extends Controller
                 throw new \Exception('No se puede registrar esta operación porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
             }
 
+            $operacionCajaId = null;
             if ($cajaAbierta) {
                 // Adelanto clientes: Entra dinero (Ingreso)
                 if ($tipoOperacion === 'adelanto_clientes') {
                     $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $monto;
                     $cajaAbierta->save();
 
-                    OperacionCaja::create([
+                    $opCaja = OperacionCaja::create([
+                        'company_id' => Auth::user()->company_id,
+                        'sucursal_id' => Auth::user()->branch_id,
                         'cierre_caja_id' => $cajaAbierta->id,
                         'user_id' => Auth::id(),
                         'tipo' => 'ingreso',
@@ -260,13 +251,16 @@ class FinanzasVendedorController extends Controller
                         'concepto' => 'Adelanto de cliente: ' . $nombre,
                         'importe' => $monto,
                     ]);
+                    $operacionCajaId = $opCaja->id;
                 }
                 // Adelantos personal: Sale dinero (Sustracción)
                 elseif ($tipoOperacion === 'adelanto_personal') {
                     $cajaAbierta->sustracciones = ($cajaAbierta->sustracciones ?? 0) + $monto;
                     $cajaAbierta->save();
 
-                    OperacionCaja::create([
+                    $opCaja = OperacionCaja::create([
+                        'company_id' => Auth::user()->company_id,
+                        'sucursal_id' => Auth::user()->branch_id,
                         'cierre_caja_id' => $cajaAbierta->id,
                         'user_id' => Auth::id(),
                         'tipo' => 'sustraccion',
@@ -274,15 +268,58 @@ class FinanzasVendedorController extends Controller
                         'concepto' => 'Adelanto a personal: ' . $nombre,
                         'importe' => $monto,
                     ]);
+                    $operacionCajaId = $opCaja->id;
                 }
+            }
+
+            // Crear el registro financiero principal (Pasivo o ActivoCorriente)
+            if ($tipoOperacion === 'adelanto_personal') {
+                $tipoActivoCorr = \App\Models\TipoActivoCorriente::withoutGlobalScopes()
+                    ->firstOrCreate(
+                        ['nombre' => 'Adelantos a Personal', 'company_id' => Auth::user()->company_id],
+                        ['descripcion' => 'Adelantos de sueldo entregados al personal']
+                    );
+
+                $pasivo = \App\Models\ActivoCorriente::create([
+                    'company_id' => Auth::user()->company_id,
+                    'sucursal_id' => Auth::user()->branch_id,
+                    'tipo_activo_corriente_id' => $tipoActivoCorr->id,
+                    'nombre' => $empresaPersona,
+                    'monto' => $monto,
+                    'fecha_registro' => $fecha,
+                    'documento' => $documento,
+                    'observaciones' => $nombre,
+                    'user_id' => Auth::id(),
+                    'cierre_caja_id' => $cajaAbierta ? $cajaAbierta->id : null,
+                    'id_operacion_caja' => $operacionCajaId,
+                    'is_settled' => false,
+                    'tipo_adelanto' => 'personal'
+                ]);
+            } else {
+                $pasivo = Pasivo::create([
+                    'company_id' => Auth::user()->company_id,
+                    'sucursal_id' => Auth::user()->branch_id,
+                    'tipo_pasivo_id' => $tipoPasivo->id,
+                    'nombre' => $nombre,
+                    'empresa_persona' => $empresaPersona,
+                    'monto' => $monto,
+                    'monto_pagado' => 0,
+                    'estado' => 'aprobado',
+                    'fecha_registro' => $fecha,
+                    'documento' => $documento,
+                    'observaciones' => $observaciones,
+                    'cierre_caja_id' => $cajaAbierta ? $cajaAbierta->id : null,
+                    'id_operacion_caja' => $operacionCajaId,
+                ]);
             }
 
             DB::commit();
 
             if (in_array($tipoOperacion, ['adelanto_personal', 'adelanto_clientes', 'compras_credito'])) {
+                $sessionKey = ($tipoOperacion === 'adelanto_personal') ? 'imprimir_adelanto_id' : 'imprimir_pasivo_id';
                 return redirect()->route('finanzas_vendedor.index', ['tipo' => $tipoOperacion])
                     ->with('success', 'Operación registrada correctamente.')
-                    ->with('imprimir_pasivo_id', $pasivo->id);
+                    ->with($sessionKey, $pasivo->id);
             }
 
             return redirect()->route('finanzas_vendedor.index')
@@ -292,15 +329,35 @@ class FinanzasVendedorController extends Controller
             return back()->with('error', 'Error al registrar la operación: ' . $e->getMessage());
         }
     }
+
     public function edit($id)
     {
-        $operacion = Pasivo::with('tipo')->findOrFail($id);
+        if (str_starts_with($id, 'activo_')) {
+            $realId = str_replace('activo_', '', $id);
+            $activo = \App\Models\ActivoCorriente::with('tipo')->findOrFail($realId);
+
+            return response()->json([
+                'success' => true,
+                'operacion' => [
+                    'id' => $id,
+                    'empresa_persona' => $activo->nombre,
+                    'nombre' => $activo->observaciones ?? 'Adelanto desde caja',
+                    'monto' => $activo->monto,
+                    'fecha_registro' => $activo->fecha_registro->format('Y-m-d'),
+                    'documento' => $activo->documento,
+                    'observaciones' => $activo->observaciones,
+                ],
+                'tipo_operacion' => 'adelanto_personal'
+            ]);
+        }
+
+        $operacion = Pasivo::withoutGlobalScopes()->with('tipo')->findOrFail($id);
 
         // Determinar el tipo_operacion para el select
         $tipoOperacion = '';
         if ($operacion->tipo->nombre === 'Compras a crédito') {
             $tipoOperacion = 'compras_credito';
-        } elseif ($operacion->tipo->nombre === 'Adelanto clientes') {
+        } elseif ($operacion->tipo->nombre === 'Adelanto clientes' || $operacion->tipo->nombre === 'Adelanto de Clientes') {
             $tipoOperacion = 'adelanto_clientes';
         } elseif ($operacion->tipo->nombre === 'Adelantos personal') {
             $tipoOperacion = 'adelanto_personal';
@@ -328,36 +385,48 @@ class FinanzasVendedorController extends Controller
         try {
             DB::beginTransaction();
 
-            $operacion = Pasivo::findOrFail($id);
+            if (str_starts_with($id, 'activo_')) {
+                $realId = str_replace('activo_', '', $id);
+                $activo = \App\Models\ActivoCorriente::findOrFail($realId);
+                $activo->update([
+                    'nombre' => $request->empresa_persona,
+                    'monto' => $request->monto,
+                    'fecha_registro' => $request->fecha_registro,
+                    'documento' => $request->documento,
+                    'observaciones' => $request->nombre,
+                ]);
+            } else {
+                $operacion = Pasivo::withoutGlobalScopes()->findOrFail($id);
 
-            $nombreTipo = '';
-            if ($request->tipo_operacion === 'compras_credito') {
-                $nombreTipo = 'Compras a crédito';
-            } elseif ($request->tipo_operacion === 'adelanto_clientes') {
-                $nombreTipo = 'Adelanto clientes';
-            } elseif ($request->tipo_operacion === 'adelanto_personal') {
-                $nombreTipo = 'Adelantos personal';
+                $nombreTipo = '';
+                if ($request->tipo_operacion === 'compras_credito') {
+                    $nombreTipo = 'Compras a crédito';
+                } elseif ($request->tipo_operacion === 'adelanto_clientes') {
+                    $nombreTipo = 'Adelanto clientes';
+                } elseif ($request->tipo_operacion === 'adelanto_personal') {
+                    $nombreTipo = 'Adelantos personal';
+                }
+
+                $tipoPasivo = TipoPasivo::withoutGlobalScopes()
+                    ->firstOrCreate(
+                        ['nombre' => $nombreTipo, 'company_id' => Auth::user()->company_id],
+                        ['descripcion' => 'Tipo de operación: ' . $nombreTipo]
+                    );
+
+                $operacion->update([
+                    'tipo_pasivo_id' => $tipoPasivo->id,
+                    'nombre' => $request->nombre,
+                    'empresa_persona' => $request->empresa_persona,
+                    'monto' => $request->monto,
+                    'fecha_registro' => $request->fecha_registro,
+                    'documento' => $request->documento,
+                    'observaciones' => $request->observaciones
+                ]);
             }
-
-            $tipoPasivo = TipoPasivo::withoutGlobalScopes()
-                ->firstOrCreate(
-                    ['nombre' => $nombreTipo, 'company_id' => Auth::user()->company_id],
-                    ['descripcion' => 'Tipo de operación: ' . $nombreTipo]
-                );
-
-            $operacion->update([
-                'tipo_pasivo_id' => $tipoPasivo->id,
-                'nombre' => $request->nombre,
-                'empresa_persona' => $request->empresa_persona,
-                'monto' => $request->monto,
-                'fecha_registro' => $request->fecha_registro,
-                'documento' => $request->documento,
-                'observaciones' => $request->observaciones
-            ]);
 
             DB::commit();
 
-            return redirect()->route('finanzas_vendedor.index')
+            return redirect()->route('finanzas_vendedor.index', ['tipo' => $request->tipo_operacion])
                 ->with('success', 'Operación actualizada correctamente.');
         } catch (\Exception $e) {
             DB::rollBack();
