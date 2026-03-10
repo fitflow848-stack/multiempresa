@@ -234,6 +234,7 @@ class BalanceController extends Controller
         $tiposActivosCorrientes = \App\Models\TipoActivoCorriente::withoutGlobalScopes()->withSum([
             'activos' => function ($q) use ($user, $fecha, $sucursalId) {
                 $q->withoutGlobalScopes()->where('company_id', $user->company_id)
+                    ->where('is_settled', false) // Solo lo que no está saldado aún
                     ->whereDate('fecha_registro', '<=', $fecha);
                 if ($sucursalId) {
                     $q->where('sucursal_id', $sucursalId);

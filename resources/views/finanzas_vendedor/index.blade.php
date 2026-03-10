@@ -276,6 +276,13 @@
                                                         </button>
                                                     </form>
                                                 @endif
+
+                                                <a href="{{ route('finanzas.ticket-personal', $op->_activo_id) }}" target="_blank"
+                                                    class="btn btn-sm btn-icon shadow-none"
+                                                    title="Imprimir Ticket">
+                                                    <i class="bx bx-printer text-primary fs-4"></i>
+                                                </a>
+
                                                 <small class="text-muted d-block mt-1"
                                                     title="Registrado desde Caja"><i class="bx bx-store-alt"></i> Caja</small>
                                             @endif

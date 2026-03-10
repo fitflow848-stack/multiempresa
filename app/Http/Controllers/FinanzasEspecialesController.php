@@ -82,6 +82,20 @@ class FinanzasEspecialesController extends Controller
      */
     public function saldarAdelantoPersonal($id)
     {
+        // Validar caja abierta
+        $user = auth()->user();
+        $sucursalId = session('sucursal_id') ?? ($user->sucursal_id ?? null);
+        $cajaAbierta = \App\Models\CierreCaja::where('sucursal_id', $sucursalId)
+            ->where('estado', 'abierto')
+            ->first();
+
+        if (!$cajaAbierta) {
+            if (request()->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'No tienes una caja abierta.'], 422);
+            }
+            return redirect()->back()->with('error', 'No se puede saldar el adelanto porque no tienes una caja abierta en esta sucursal.');
+        }
+
         $activo = ActivoCorriente::findOrFail($id);
         $activo->is_settled = true;
         $activo->save();

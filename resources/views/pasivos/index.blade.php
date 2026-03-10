@@ -115,7 +115,7 @@
                                                         method="POST" class="d-inline confirm-form" data-msg="¿Desea marcar esta compra como PAGADA?">
                                                         @csrf
                                                         <button type="submit" class="btn btn-success btn-circle btn-sm" title="Pagar Compra">
-                                                            <i class="fas fa-hand-holding-usd"></i>
+                                                            <i class="bx bx-money"></i>
                                                         </button>
                                                     </form>
                                                 @elseif(str_contains(strtolower($pasivo->tipo->nombre), 'adelanto') && !$pasivo->is_settled)
@@ -123,14 +123,14 @@
                                                         method="POST" class="d-inline confirm-form" data-msg="¿Desea marcar este adelanto como UTILIZADO/SALDADO? (Esto generará un egreso de caja neutro)">
                                                         @csrf
                                                         <button type="submit" class="btn btn-success btn-circle btn-sm" title="Saldar Adelanto">
-                                                            <i class="fas fa-user-check"></i>
+                                                            <i class="bx bx-user-check"></i>
                                                         </button>
                                                     </form>
                                                 @endif
 
                                                 <a href="{{ route('finanzas.ticket-pasivo', $pasivo->id) }}" target="_blank"
                                                    class="btn btn-info btn-circle btn-sm" title="Ver Ticket">
-                                                    <i class="fas fa-print"></i>
+                                                    <i class="bx bx-printer"></i>
                                                 </a>
 
                                                 @if($pasivo->saldo > 0 && !str_contains(strtolower($pasivo->tipo->nombre), 'compra'))
