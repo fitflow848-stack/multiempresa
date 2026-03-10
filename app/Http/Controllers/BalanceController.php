@@ -102,7 +102,8 @@ class BalanceController extends Controller
         }
 
         // 2. Unificar "Adelanto Clientes" y "Adelanto de Clientes" en Pasivos
-        $adelantoClientes = $tiposPasivos->filter(function ($item) {
+        // Usar la colección ya modificada $data['tiposPasivosCorrientes']
+        $adelantoClientes = $data['tiposPasivosCorrientes']->filter(function ($item) {
             $name = strtolower($item->nombre);
             return str_contains($name, 'adelanto') && str_contains($name, 'cliente');
         });
@@ -112,7 +113,7 @@ class BalanceController extends Controller
             $keepId = $adelantoClientes->first()->id;
 
             // Mantener solo uno y sumar el resto
-            $data['tiposPasivosCorrientes'] = $tiposPasivos->reject(function ($item) use ($adelantoClientes, $keepId) {
+            $data['tiposPasivosCorrientes'] = $data['tiposPasivosCorrientes']->reject(function ($item) use ($adelantoClientes, $keepId) {
                 return $adelantoClientes->pluck('id')->contains($item->id) && $item->id !== $keepId;
             });
 
@@ -131,6 +132,7 @@ class BalanceController extends Controller
         $data['total_pasivo_corriente'] = $data['tiposPasivosCorrientes']->sum('pasivos_sum_monto');
         $data['total_pasivo'] = $data['total_pasivo_corriente'] + $data['total_pasivo_no_corriente'];
 
+        // Patrimonio se calcula como Activo - Pasivo, ya que los aportes no están incluidos en Pasivos
         $data['patrimonio_calculado'] = $data['total_activo'] - $data['total_pasivo'];
 
         return $data;
@@ -293,7 +295,9 @@ class BalanceController extends Controller
         // Obtener Pasivos Manuales
         $tiposPasivosCorrientes = \App\Models\TipoPasivo::withoutGlobalScopes()->withSum([
             'pasivos' => function ($q) use ($user, $fecha, $sucursalId) {
-                $q->withoutGlobalScopes()->where('company_id', $user->company_id)
+                $q->withoutGlobalScopes()
+                    ->where('company_id', $user->company_id)
+                    ->whereIn('estado', ['aprobado', 'pendiente'])
                     ->whereDate('fecha_registro', '<=', $fecha);
                 if ($sucursalId) {
                     $q->where('sucursal_id', $sucursalId);
@@ -301,7 +305,9 @@ class BalanceController extends Controller
             }
         ], 'monto')->withSum([
             'pasivos' => function ($q) use ($user, $fecha, $sucursalId) {
-                $q->withoutGlobalScopes()->where('company_id', $user->company_id)
+                $q->withoutGlobalScopes()
+                    ->where('company_id', $user->company_id)
+                    ->whereIn('estado', ['aprobado', 'pendiente'])
                     ->whereDate('fecha_registro', '<=', $fecha);
                 if ($sucursalId) {
                     $q->where('sucursal_id', $sucursalId);

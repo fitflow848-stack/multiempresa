@@ -32,6 +32,7 @@ class FinanzasVendedorController extends Controller
 
         $nombresTipos = ['Compras a crédito', 'Adelanto clientes', 'Adelantos personal'];
 
+        // ─── Pasivos (Compras crédito + Adelanto clientes + Adelantos personal desde finanzas) ───
         $query = Pasivo::where('sucursal_id', Auth::user()->branch_id)
             ->whereHas('tipo', function ($q) use ($nombresTipos, $tipoFiltro, $tipoMap) {
                 if ($tipoFiltro && isset($tipoMap[$tipoFiltro])) {
@@ -63,6 +64,49 @@ class FinanzasVendedorController extends Controller
             });
         }
 
+        // ─── ActivoCorriente de Adelantos a Personal registrados desde Caja ───
+        // Solo se muestran si el tab es "adelanto_personal" o "Todos"
+        $activosPersonalItems = collect();
+        if (!$tipoFiltro || $tipoFiltro === 'adelanto_personal') {
+            $activosQuery = ActivoCorriente::where('sucursal_id', Auth::user()->branch_id)
+                ->whereHas('tipo', function ($q) {
+                    $q->where('nombre', 'Adelantos a Personal');
+                })
+                ->where('is_settled', false); // solo no saldados
+
+            if ($fechaDesde) {
+                $activosQuery->whereDate('fecha_registro', '>=', $fechaDesde);
+            }
+            if ($fechaHasta) {
+                $activosQuery->whereDate('fecha_registro', '<=', $fechaHasta);
+            }
+            if ($search) {
+                $activosQuery->where(function ($q) use ($search) {
+                    $q->where('nombre', 'like', "%$search%")
+                        ->orWhere('observaciones', 'like', "%$search%");
+                });
+            }
+
+            // Convertir a formato compatible con la vista (similar a Pasivo)
+            $activosPersonalItems = $activosQuery->with('tipo')->get()->map(function ($activo) {
+                return (object) [
+                    'id'              => 'activo_' . $activo->id,
+                    '_activo_id'      => $activo->id,
+                    '_es_activo'      => true,
+                    'fecha_registro'  => $activo->fecha_registro,
+                    'tipo'            => (object) ['nombre' => 'Adelantos personal'],
+                    'empresa_persona' => $activo->nombre,
+                    'nombre'          => $activo->observaciones ?? 'Adelanto desde caja',
+                    'documento'       => null,
+                    'monto'           => $activo->monto,
+                    'monto_pagado'    => '0.00',
+                    'saldo'           => $activo->monto,
+                    'estado'          => 'aprobado',
+                    'pagos'           => collect(),
+                ];
+            });
+        }
+
         if ($agrupar) {
             $operaciones = $query->select(
                 'empresa_persona',
@@ -77,8 +121,44 @@ class FinanzasVendedorController extends Controller
                     $item->saldo = $item->total_monto - $item->total_pagado;
                     return $item;
                 });
+
+            // Fusionar activos de personal en la vista agrupada
+            foreach ($activosPersonalItems as $item) {
+                $existing = $operaciones->firstWhere('empresa_persona', $item->empresa_persona);
+                if ($existing) {
+                    $existing->total_monto += $item->monto;
+                    $existing->saldo += $item->saldo;
+                    $existing->cantidad_operaciones++;
+                } else {
+                    $operaciones->push((object) [
+                        'empresa_persona'      => $item->empresa_persona,
+                        'total_monto'          => $item->monto,
+                        'total_pagado'         => 0,
+                        'saldo'                => $item->saldo,
+                        'cantidad_operaciones' => 1,
+                    ]);
+                }
+            }
         } else {
-            $operaciones = $query->with(['tipo', 'pagos'])->orderBy('fecha_registro', 'desc')->paginate(20)->appends($request->query());
+            // Vista detallada: combinar pasivos + activos de personal
+            $pasivosCollection = $query->with(['tipo', 'pagos'])->orderBy('fecha_registro', 'desc')->get();
+
+            // Unir las dos colecciones y ordenar por fecha descendente
+            $merged = $pasivosCollection->concat($activosPersonalItems)
+                ->sortByDesc(fn($item) => $item->fecha_registro)
+                ->values();
+
+            // Paginar manualmente
+            $perPage = 20;
+            $currentPage = \Illuminate\Pagination\Paginator::resolveCurrentPage();
+            $currentItems = $merged->slice(($currentPage - 1) * $perPage, $perPage)->values();
+            $operaciones = new \Illuminate\Pagination\LengthAwarePaginator(
+                $currentItems,
+                $merged->count(),
+                $perPage,
+                $currentPage,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
         }
 
         $tipoActivo = $tipoFiltro;

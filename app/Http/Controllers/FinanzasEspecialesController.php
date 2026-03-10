@@ -86,7 +86,13 @@ class FinanzasEspecialesController extends Controller
         $activo->is_settled = true;
         $activo->save();
 
-        return response()->json(['success' => true]);
+        // Si la solicitud espera JSON (llamada AJAX antigua), devolver JSON
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->route('finanzas_vendedor.index', ['tipo' => 'adelanto_personal'])
+            ->with('success', 'Adelanto marcado como saldado correctamente.');
     }
 
     /**
