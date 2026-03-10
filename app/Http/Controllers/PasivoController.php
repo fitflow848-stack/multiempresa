@@ -56,9 +56,9 @@ class PasivoController extends Controller
 
             $pasivo = Pasivo::create($request->all());
 
-            // Si es Adelanto de Cliente o Aporte, registrar en Caja
+            // Si es Adelanto de Cliente, registrar en Caja (Aporte ya no afecta caja directamente)
             $tipo = $pasivo->tipo->nombre;
-            if (in_array(strtolower($tipo), ['adelanto de clientes', 'aporte'])) {
+            if (in_array(strtolower($tipo), ['adelanto de clientes'])) {
                 $metodoPago = $request->input('metodo_pago', 'Efectivo');
                 $esEfectivo = (strtolower($metodoPago) === 'efectivo' || $metodoPago === '1' || $metodoPago === 1) ? 1 : 0;
 

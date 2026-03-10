@@ -213,6 +213,19 @@ class BalanceController extends Controller
                 $caja += $subtotal;
             }
         }
+        
+        // APORTES FLOTANTES: Aportes que no entraron a la caja física (POS) pero son activos de la empresa
+        // Esto permite que el balance cuadre sin afectar el arqueo del día.
+        $aportesFlotantes = \App\Models\Pasivo::withoutGlobalScopes()
+            ->where('company_id', $user->company_id)
+            ->whereHas('tipo', function($q) {
+                $q->where('nombre', 'Aporte');
+            })
+            ->whereNull('id_operacion_caja')
+            ->whereDate('fecha_registro', '<=', $fecha)
+            ->sum(DB::raw('monto - monto_pagado'));
+            
+        $caja += floatval($aportesFlotantes);
 
         // INVENTARIO: Valorizado al costo promedio o costo de entrada (Sistema)
         $inventario = AlmacenIngresoDetalle::withoutGlobalScopes()
@@ -305,7 +318,7 @@ class BalanceController extends Controller
             'pasivos' => function ($q) use ($user, $fecha, $sucursalId) {
                 $q->withoutGlobalScopes()
                     ->where('company_id', $user->company_id)
-                    ->whereIn('estado', ['aprobado', 'pendiente'])
+                    ->whereIn('estado', ['aprobado', 'pendiente', 'parcial'])
                     ->whereDate('fecha_registro', '<=', $fecha);
                 if ($sucursalId) {
                     $q->where('sucursal_id', $sucursalId);
@@ -315,7 +328,7 @@ class BalanceController extends Controller
             'pasivos' => function ($q) use ($user, $fecha, $sucursalId) {
                 $q->withoutGlobalScopes()
                     ->where('company_id', $user->company_id)
-                    ->whereIn('estado', ['aprobado', 'pendiente'])
+                    ->whereIn('estado', ['aprobado', 'pendiente', 'parcial'])
                     ->whereDate('fecha_registro', '<=', $fecha);
                 if ($sucursalId) {
                     $q->where('sucursal_id', $sucursalId);
