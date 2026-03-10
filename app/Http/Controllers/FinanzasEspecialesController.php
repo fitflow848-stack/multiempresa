@@ -90,7 +90,7 @@ class FinanzasEspecialesController extends Controller
         $cajaAbierta = null;
 
         if ($selectedCajaId) {
-            $cajaAbierta = \App\Models\CierreCaja::where('user_id', $user->id)
+            $cajaAbierta = CierreCaja::where('user_id', $user->id)
                 ->where('caja_id', $selectedCajaId)
                 ->whereNull('fecha_cierre')
                 ->first();
@@ -98,7 +98,7 @@ class FinanzasEspecialesController extends Controller
 
         // Si no hay seleccionada o no está abierta, buscar cualquier caja abierta del usuario
         if (!$cajaAbierta) {
-            $cajaAbierta = \App\Models\CierreCaja::where('user_id', $user->id)
+            $cajaAbierta = CierreCaja::where('user_id', $user->id)
                 ->whereNull('fecha_cierre')
                 ->first();
         }

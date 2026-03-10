@@ -274,13 +274,13 @@ class FinanzasVendedorController extends Controller
 
             // Crear el registro financiero principal (Pasivo o ActivoCorriente)
             if ($tipoOperacion === 'adelanto_personal') {
-                $tipoActivoCorr = \App\Models\TipoActivoCorriente::withoutGlobalScopes()
+                $tipoActivoCorr = TipoActivoCorriente::withoutGlobalScopes()
                     ->firstOrCreate(
                         ['nombre' => 'Adelantos a Personal', 'company_id' => Auth::user()->company_id],
                         ['descripcion' => 'Adelantos de sueldo entregados al personal']
                     );
 
-                $pasivo = \App\Models\ActivoCorriente::create([
+                $pasivo = ActivoCorriente::create([
                     'company_id' => Auth::user()->company_id,
                     'sucursal_id' => Auth::user()->branch_id,
                     'tipo_activo_corriente_id' => $tipoActivoCorr->id,
@@ -334,7 +334,7 @@ class FinanzasVendedorController extends Controller
     {
         if (str_starts_with($id, 'activo_')) {
             $realId = str_replace('activo_', '', $id);
-            $activo = \App\Models\ActivoCorriente::with('tipo')->findOrFail($realId);
+            $activo = ActivoCorriente::with('tipo')->findOrFail($realId);
 
             return response()->json([
                 'success' => true,
