@@ -240,7 +240,7 @@
                             <table class="table table-hover align-middle mb-0">
                                 <thead>
                                     <tr class="text-secondary">
-                                        <th class="ps-3 py-3" style="width: 80px;">Hora</th>
+                                        <th class="ps-3 py-3" style="width: 100px;">Fecha/Hora</th>
                                         <th style="width: 150px;">Operación</th>
                                         <th>Concepto / Referencia</th>
                                         <th style="width: 120px;">Método Pago</th>
@@ -255,7 +255,7 @@
                                         <tr data-id="{{ $movimiento->id_movimiento }}"
                                             data-origen="{{ $movimiento->origen_movimiento ?? '' }}">
                                             <td class="ps-3 py-3 small text-muted">
-                                                {{ \Carbon\Carbon::parse($movimiento->fecha_emision)->format('H:i') }}
+                                                {{ \Carbon\Carbon::parse($movimiento->fecha_emision)->format('d/m H:i') }}
                                             </td>
                                             <td>
                                                 @php

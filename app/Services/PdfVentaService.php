@@ -189,18 +189,7 @@ class PdfVentaService
             return $pdfPath;
         }
 
-        // Inyectar JavaScript para impresión automática si se solicita
-        if ($autoPrint) {
-            $dompdf = $pdf->getDomPDF();
-            $canvas = $dompdf->getCanvas();
-            if (method_exists($canvas, 'get_cpdf')) {
-                $cpdf = $canvas->get_cpdf();
-                $cpdf->openObject();
-                $cpdf->add_javascript("this.print();");
-                $cpdf->closeObject();
-            }
-        }
-
+        // El auto-print ahora se maneja desde el frontend con Print.js para mayor compatibilidad
         return $pdf->stream($fileName);
     }
 

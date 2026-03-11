@@ -244,6 +244,13 @@ class ComprobantesController extends Controller
                     }
                 }
 
+                // 2.2 Anular Deuda asociada si existe (después de usar sus datos para caja)
+                $deudaAsociada = \App\Models\Deuda::where('venta_id', $venta->id_venta)->first();
+                if ($deudaAsociada) {
+                    \App\Models\DeudaPago::where('deuda_id', $deudaAsociada->id)->delete();
+                    $deudaAsociada->delete();
+                }
+
                 // 3. Generar Nota de Crédito (Solo Facturas id:2 y Boletas id:1) - Motivo 01 (Anulación)
                 if (in_array($venta->id_tido, [1, 2])) {
                     // Determinar serie NC (F... -> FC.., B... -> BC..)
@@ -396,18 +403,27 @@ class ComprobantesController extends Controller
                         throw new \Exception('No se puede procesar la devolución porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
                     }
 
-                    OperacionCaja::create([
-                        'cierre_caja_id' => $cajaAbierta->id,
-                        'user_id' => Auth::id(),
-                        'tipo' => 'gasto',
-                        'importe' => $venta->total,
-                        'partida' => 'Devolución',
-                        'concepto' => 'Devolución de venta ' . ($venta->serie . '-' . $venta->numero),
-                        'fecha' => now(),
-                    ]);
-                    // Update caja totals
-                    $cajaAbierta->egresos = floatval($cajaAbierta->egresos) + floatval($venta->total);
-                    $cajaAbierta->save();
+                    if ($cajaAbierta) {
+                        OperacionCaja::create([
+                            'cierre_caja_id' => $cajaAbierta->id,
+                            'user_id' => Auth::id(),
+                            'tipo' => 'gasto',
+                            'importe' => $venta->total,
+                            'partida' => 'Devolución',
+                            'concepto' => 'Devolución de venta ' . ($venta->serie . '-' . $venta->numero),
+                            'fecha' => now(),
+                        ]);
+                        // Update caja totals
+                        $cajaAbierta->egresos = floatval($cajaAbierta->egresos) + floatval($venta->total);
+                        $cajaAbierta->save();
+                    }
+                }
+
+                // 2.2 Anular Deuda asociada si existe
+                $deudaAsociada = \App\Models\Deuda::where('venta_id', $venta->id_venta)->first();
+                if ($deudaAsociada) {
+                    \App\Models\DeudaPago::where('deuda_id', $deudaAsociada->id)->delete();
+                    $deudaAsociada->delete();
                 }
 
                 // 3. Generar Nota de Crédito (Solo Facturas id:2 y Boletas id:1)
@@ -530,6 +546,9 @@ class ComprobantesController extends Controller
         ];
 
         foreach ($ventas as $venta) {
+            // No incluir Notas de Crédito ni ventas anuladas en el resumen
+            if ($venta->id_tido == 5 || $venta->estado == 0) continue;
+
             // Contar por tipo de documento
             switch (strtolower($venta->tipo_documento ?? 'ticket')) {
                 case 'factura':
