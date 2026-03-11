@@ -67,7 +67,9 @@ class FinanzasVendedorController extends Controller
             $activosQuery = ActivoCorriente::where('sucursal_id', Auth::user()->branch_id)
                 ->whereHas('tipo', function ($q) {
                     $q->where('nombre', 'Adelantos a Personal');
-                });
+                })
+                ->orderBy('fecha_registro', 'desc')
+                ->orderBy('id', 'desc');
                 // ->where('is_settled', false); // Permitir ver los saldados
 
             if ($fechaDesde) {
@@ -139,11 +141,28 @@ class FinanzasVendedorController extends Controller
             }
         } else {
             // Vista detallada: combinar pasivos + activos de personal
-            $pasivosCollection = $query->with(['tipo', 'pagos'])->orderBy('fecha_registro', 'desc')->get();
+            $pasivosCollection = $query->with(['tipo', 'pagos'])
+                ->orderBy('fecha_registro', 'desc')
+                ->orderBy('id', 'desc')
+                ->get();
 
-            // Unir las dos colecciones y ordenar por fecha descendente
+            // Unir las dos colecciones y ordenar por fecha descendente y ID descendente
             $merged = $pasivosCollection->concat($activosPersonalItems)
-                ->sortByDesc(fn($item) => $item->fecha_registro)
+                ->sort(function ($a, $b) {
+                    // Primero por fecha
+                    $fechaA = $a->fecha_registro;
+                    $fechaB = $b->fecha_registro;
+
+                    if ($fechaA->ne($fechaB)) {
+                        return $fechaB->gt($fechaA) ? 1 : -1;
+                    }
+
+                    // Si la fecha es igual, desempatar con ID (extrayendo el número si es activo_ID)
+                    $idA = (int) str_replace('activo_', '', (string) $a->id);
+                    $idB = (int) str_replace('activo_', '', (string) $b->id);
+
+                    return $idB <=> $idA;
+                })
                 ->values();
 
             // Paginar manualmente
