@@ -98,9 +98,10 @@
                                     <th>ID</th>
                                     <th>Usuario</th>
                                     <th>Caja</th>
-                                    <th>Fecha</th>
-                                    <th>Apertura</th>
-                                    <th>Cierre</th>
+                                    <th>F. Apertura</th>
+                                    <th>F. Cierre</th>
+                                    <th>Apertura (S/)</th>
+                                    <th>Cierre (S/)</th>
                                     <th>Ingresos</th>
                                     <th>Egresos</th>
                                     <th>Observaciones</th>
@@ -117,9 +118,13 @@
                                                 <i class="bx bx-box me-1"></i>{{ optional($cierre->caja)->nombre ?? '-' }}
                                             </span>
                                         </td>
-                                        <td>{{ $cierre->fecha_cierre
-                                            ? \Carbon\Carbon::parse($cierre->fecha_cierre)->format('d/m/Y H:i')
-                                            : \Carbon\Carbon::parse($cierre->created_at)->format('d/m/Y H:i') }}
+                                        <td>{{ \Carbon\Carbon::parse($cierre->created_at)->format('d/m/Y H:i') }}</td>
+                                        <td>
+                                            @if($cierre->fecha_cierre)
+                                                {{ \Carbon\Carbon::parse($cierre->fecha_cierre)->format('d/m/Y H:i') }}
+                                            @else
+                                                <span class="badge bg-label-success">En curso</span>
+                                            @endif
                                         </td>
                                         <td>S/ {{ number_format($cierre->monto_apertura, 2) }}</td>
                                         {{-- Si está abierta mostramos el teórico acumulado; si está cerrada el monto real --}}

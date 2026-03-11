@@ -160,10 +160,14 @@
                     <td>: {{ $venta->guia ?? '-' }}</td>
                 </tr>
                 <tr>
-                    <td style="font-weight:bold;">RUC / DNI</td>
-                    <td>: {{ $cliente->numero_documento }}</td>
                     <td style="font-weight:bold;">Cond. de Pago</td>
                     <td>: {{ $venta->condicion_pago }}</td>
+                </tr>
+                <tr>
+                    <td style="font-weight:bold;">RUC / DNI</td>
+                    <td>: {{ $cliente->numero_documento }}</td>
+                    <td style="font-weight:bold;">Método Pago</td>
+                    <td>: {{ $venta->tipoPago->nombre ?? 'EFECTIVO' }}</td>
                 </tr>
             </table>
         </div>

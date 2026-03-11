@@ -410,7 +410,8 @@ class PosController extends Controller
         }
 
         $saveOnly = $request->query('saveOnly', false); // opcional
-        return $this->pdfVentaService->pdfVenta((int) $id, $format, (bool) $saveOnly);
+        $autoPrint = $request->query('print', false); // nuevo para auto-impresión
+        return $this->pdfVentaService->pdfVenta((int) $id, $format, (bool) $saveOnly, (bool) $autoPrint);
     }
 
     public function precios(Request $request)

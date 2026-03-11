@@ -434,7 +434,7 @@
                 } else {
                     url = '{{ route('pos.pdf', ['id' => ':id', 'format' => ':format']) }}'
                         .replace(':id', ventaId)
-                        .replace(':format', format);
+                        .replace(':format', format) + '?print=1';
                 }
 
                 window.open(url, '_blank');

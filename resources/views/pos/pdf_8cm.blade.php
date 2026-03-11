@@ -121,6 +121,10 @@
             <td class="uppercase small">{{ $cliente->direccion }}</td>
         </tr>
         <tr>
+            <td class="bold">Método Pago:</td>
+            <td class="uppercase">{{ $venta->tipoPago->nombre ?? 'EFECTIVO' }}</td>
+        </tr>
+        <tr>
             <td class="bold">Cajero:</td>
             <td>{{ $venta->user->name ?? '-' }}</td>
         </tr>

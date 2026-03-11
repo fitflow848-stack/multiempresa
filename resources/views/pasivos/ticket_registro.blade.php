@@ -77,7 +77,7 @@
     <div class="divider"></div>
 
     <div>
-        <strong>Fecha:</strong> {{ $pasivo->fecha_registro->format('d/m/Y') }}<br>
+        <strong>Fecha:</strong> {{ $pasivo->created_at->format('d/m/Y H:i') }}<br>
         <strong>Persona:</strong> {{ $pasivo->empresa_persona }}<br>
         <strong>Concepto:</strong> {{ $pasivo->nombre }}<br>
         <strong>Tipo:</strong> {{ $pasivo->tipo->nombre }}<br>

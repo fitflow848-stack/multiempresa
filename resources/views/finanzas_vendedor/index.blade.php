@@ -1,6 +1,31 @@
 @extends('layout.app')
 
 @section('content')
+    <style>
+        .table-compressed th {
+            padding: 0.5rem 0.4rem !important;
+            font-size: 0.75rem !important;
+            text-transform: uppercase;
+        }
+        .table-compressed td {
+            padding: 0.4rem 0.4rem !important;
+            vertical-align: middle;
+        }
+        .btn-xs {
+            padding: 0.25rem 0.4rem;
+            font-size: 0.7rem;
+            line-height: 1;
+        }
+        .badge {
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        /* Evitar que la tabla se estire innecesariamente */
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+    </style>
     <div class="container-xxl flex-grow-1 container-p-y">
         <h4 class="fw-bold py-3 mb-4">
             <span class="text-muted fw-light">Finanzas /</span> {{ $tituloSeccion }}
@@ -91,28 +116,35 @@
 
                 @if (!$agrupar)
                     <div class="table-responsive text-nowrap">
-                        <table class="table table-hover">
+                        <table class="table table-hover table-compressed">
                             <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Tipo de Operación</th>
-                                    <th>Empresa / Persona</th>
-                                    <th>Descripción</th>
-                                    <th>Documento</th>
-                                    <th>Monto</th>
-                                    <th>Pagado</th>
-                                    <th>Saldo</th>
-                                    <th>Estado</th>
-                                    <th>Acciones</th>
+                                <tr class="text-xs">
+                                    <th style="width: 80px">Fecha</th>
+                                    <th style="width: 100px">Tipo</th>
+                                    <th style="width: 150px">Entidad</th>
+                                    <th>Concepto</th>
+                                    <th style="width: 90px">Doc.</th>
+                                    <th style="width: 90px">Monto</th>
+                                    <th style="width: 90px">Pagado</th>
+                                    <th style="width: 90px">Saldo</th>
+                                    <th style="width: 80px">Estado</th>
+                                    <th style="width: 120px">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody class="table-border-bottom-0">
                                 @forelse($operaciones as $op)
-                                    <tr>
-                                        <td>{{ $op->fecha_registro->format('d/m/Y') }}</td>
+                                    <tr style="font-size: 0.85rem;">
+                                        <td>{{ $op->created_at->format('d/m/y H:i') }}</td>
                                         <td>
                                             @php
                                                 $tipoNombreLower = strtolower($op->tipo->nombre);
+                                                $tipoDisplay = $op->tipo->nombre;
+                                                // Acortar nombres largos
+                                                $tipoDisplay = str_replace('Adelantos a Personal', 'Adel. Pers.', $tipoDisplay);
+                                                $tipoDisplay = str_replace('Adelantos Personal', 'Adel. Pers.', $tipoDisplay);
+                                                $tipoDisplay = str_replace('Compras a Crédito', 'Compras Cred.', $tipoDisplay);
+                                                $tipoDisplay = str_replace('Adelanto Clientes', 'Adel. Cli.', $tipoDisplay);
+                                                
                                                 if (str_contains($tipoNombreLower, 'compra')) {
                                                     $badgeColor = 'bg-label-primary';
                                                 } elseif (str_contains($tipoNombreLower, 'adelanto') && str_contains($tipoNombreLower, 'cliente')) {
@@ -123,204 +155,127 @@
                                                     $badgeColor = 'bg-label-secondary';
                                                 }
                                             @endphp
-                                            <span class="badge {{ $badgeColor }} me-1">{{ $op->tipo->nombre }}</span>
+                                            <span class="badge {{ $badgeColor }}" style="font-size: 0.75rem; padding: 0.35em 0.5em;">{{ $tipoDisplay }}</span>
                                         </td>
                                         <td class="fw-semibold">
-                                            <i class="bx bx-building-house me-1 text-muted"></i>
-                                            {{ $op->empresa_persona ?? '-' }}
+                                            {{ \Illuminate\Support\Str::limit($op->empresa_persona ?? '-', 20) }}
                                         </td>
-                                        <td>{{ $op->nombre }}</td>
+                                        <td class="text-truncate" style="max-width: 120px;" title="{{ $op->nombre }}">{{ $op->nombre }}</td>
                                         <td>{{ $op->documento ?? '-' }}</td>
-                                        <td class="fw-bold">S/ {{ number_format($op->monto, 2) }}</td>
-                                        <td>S/ {{ number_format($op->monto_pagado, 2) }}</td>
-                                        <td class="text-danger fw-bold">S/ {{ number_format($op->saldo, 2) }}</td>
+                                        <td class="fw-bold text-end">S/ {{ number_format($op->monto, 1) }}</td>
+                                        <td class="text-end">S/ {{ number_format($op->monto_pagado, 1) }}</td>
+                                        <td class="text-danger fw-bold text-end">S/ {{ number_format($op->saldo, 1) }}</td>
                                         <td>
-                                            @if ($op->estado == 'pendiente')
-                                                <span class="badge bg-label-warning">Pendiente</span>
-                                            @elseif($op->estado == 'aprobado')
-                                                <span class="badge bg-label-primary">Aprobado</span>
-                                            @elseif($op->estado == 'parcial')
-                                                <span class="badge bg-label-info">Parcial</span>
-                                            @elseif($op->estado == 'pagado')
-                                                <span class="badge bg-label-success">Pagado</span>
-                                            @endif
+                                            @php
+                                                $estadoColor = 'bg-label-secondary';
+                                                $estadoName = ucfirst($op->estado);
+                                                if ($op->estado == 'pendiente') $estadoColor = 'bg-label-warning';
+                                                elseif($op->estado == 'aprobado') $estadoColor = 'bg-label-primary';
+                                                elseif($op->estado == 'parcial') $estadoColor = 'bg-label-info';
+                                                elseif($op->estado == 'pagado') $estadoColor = 'bg-label-success';
+                                            @endphp
+                                            <span class="badge {{ $estadoColor }}" style="font-size: 0.7rem; padding: 0.3em 0.4em;">{{ $estadoName }}</span>
                                         </td>
-                                        <td>
-                                            @if (!isset($op->_es_activo))
-                                                {{-- Acciones para registros Pasivo --}}
-                                                @php
-                                                    $tn = strtolower($op->tipo->nombre);
-                                                    $esAdelanto = (str_contains($tn, 'adelanto') && str_contains($tn, 'personal')) ||
-                                                                  (str_contains($tn, 'adelanto') && str_contains($tn, 'cliente'));
-                                                    $esCompra = str_contains($tn, 'compra');
-                                                    $mostrarBoton = ($esAdelanto || $esCompra) && $op->saldo > 0;
-                                                @endphp
-                                                @if ($mostrarBoton)
-                                                    <button type="button" class="btn btn-sm btn-outline-primary"
-                                                        data-bs-toggle="modal" data-bs-target="#modalPagar{{ $op->id }}">
-                                                        <i class="bx bx-dollar-circle"></i>
-                                                        {{ $esAdelanto ? 'Saldar' : 'Pagar' }}
-                                                    </button>
-
-                                                    {{-- Modal Pagar --}}
-                                                    <div class="modal fade" id="modalPagar{{ $op->id }}" tabindex="-1"
-                                                        aria-hidden="true">
-                                                        <div class="modal-dialog modal-dialog-centered" role="document">
-                                                            <div class="modal-content">
-                                                                <div class="modal-header">
-                                                                    <h5 class="modal-title">Registrar Pago</h5>
-                                                                    <button type="button" class="btn-close"
-                                                                        data-bs-dismiss="modal" aria-label="Close"></button>
-                                                                </div>
-                                                                <form action="{{ route('pasivos.pagar', $op->id) }}"
-                                                                    method="POST">
-                                                                    @csrf
-                                                                    <div class="modal-body">
-                                                                        <div class="row">
-                                                                            <div class="col mb-3">
-                                                                                <label for="monto" class="form-label">Monto
-                                                                                    a Pagar (Saldo:
-                                                                                    {{ $op->saldo }})</label>
-                                                                                <input type="number" step="0.01"
-                                                                                    name="monto" class="form-control"
-                                                                                    value="{{ $op->saldo }}"
-                                                                                    max="{{ $op->saldo }}" required>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div class="row">
-                                                                            <div class="col mb-3">
-                                                                                <label for="fecha_pago"
-                                                                                    class="form-label">Fecha Pago</label>
-                                                                                <input type="date" name="fecha_pago"
-                                                                                    class="form-control"
-                                                                                    value="{{ date('Y-m-d') }}" required>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div class="row">
-                                                                            <div class="col mb-3">
-                                                                                <label for="metodo_pago"
-                                                                                    class="form-label">Método de Pago</label>
-                                                                                <select name="metodo_pago" class="form-select"
-                                                                                    required>
-                                                                                    <option value="Efectivo">Efectivo</option>
-                                                                                    <option value="Transferencia">Transferencia
-                                                                                    </option>
-                                                                                    <option value="Yape/Plin">Yape/Plin
-                                                                                    </option>
-                                                                                    <option value="Tarjeta">Tarjeta</option>
-                                                                                </select>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div class="row">
-                                                                            <div class="col mb-3">
-                                                                                <label for="observaciones"
-                                                                                    class="form-label">Observaciones</label>
-                                                                                <textarea name="observaciones" class="form-control" rows="2"></textarea>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="modal-footer">
-                                                                        <button type="button"
-                                                                            class="btn btn-outline-secondary"
-                                                                            data-bs-dismiss="modal">Cancelar</button>
-                                                                        <button type="submit" class="btn btn-primary">Guardar
-                                                                            Pago</button>
-                                                                    </div>
-                                                                </form>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                @endif
-
-                                                @if ($op->monto_pagado > 0)
-                                                    <div class="dropdown d-inline-block">
-                                                        <button class="btn btn-sm btn-icon" type="button"
-                                                            data-bs-toggle="dropdown">
-                                                            <i class="bx bx-dots-vertical-rounded"></i>
+                                        <td class="text-end">
+                                            <div class="d-flex justify-content-end gap-1">
+                                                @if (!isset($op->_es_activo))
+                                                    @php
+                                                        $tn = strtolower($op->tipo->nombre);
+                                                        $esAdelanto = (str_contains($tn, 'adelanto') && str_contains($tn, 'personal')) ||
+                                                                      (str_contains($tn, 'adelanto') && str_contains($tn, 'cliente'));
+                                                        $esCompra = str_contains($tn, 'compra');
+                                                        $mostrarBoton = ($esAdelanto || $esCompra) && $op->saldo > 0;
+                                                    @endphp
+                                                    @if ($mostrarBoton)
+                                                        <button type="button" class="btn btn-xs btn-primary p-1"
+                                                            data-bs-toggle="modal" data-bs-target="#modalPagar{{ $op->id }}" title="Registrar Pago">
+                                                            <i class="bx bx-dollar-circle"></i>
                                                         </button>
-                                                        <ul class="dropdown-menu dropdown-menu-end">
-                                                            @foreach ($op->pagos as $pago)
-                                                                <li>
-                                                                    <a class="dropdown-item"
-                                                                        href="{{ route('pasivos.ticket', $pago->id) }}"
-                                                                        target="_blank">
-                                                                        <i class="bx bx-printer me-1"></i> Ticket
-                                                                        ({{ $pago->fecha_pago->format('d/m') }} -
-                                                                        {{ $pago->monto }})
-                                                                    </a>
-                                                                </li>
-                                                            @endforeach
-                                                        </ul>
-                                                    </div>
-                                                @endif
+                                                        {{-- ... modal code stays same in terms of logic ... --}}
+    @include('finanzas_vendedor.partials.modal_pagar', ['op' => $op, 'esAdelanto' => $esAdelanto])
+                                                    @endif
 
-                                                <button type="button"
-                                                    class="btn btn-sm btn-icon btn-edit-operacion shadow-none"
-                                                    data-id="{{ $op->id }}" title="Editar Operación">
-                                                    <i class="bx bx-edit text-warning fs-4"></i>
-                                                </button>
-
-                                                <form action="{{ route('finanzas_vendedor.destroy', $op->id) }}"
-                                                    method="POST" class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-icon shadow-none"
-                                                        title="Eliminar Operación"
-                                                        onclick="return confirm('¿Está seguro de eliminar esta operación? Esta acción no se puede deshacer.')">
-                                                        <i class="bx bx-trash text-danger fs-4"></i>
+                                                    <button type="button"
+                                                        class="btn btn-xs btn-icon btn-edit-operacion text-warning"
+                                                        data-id="{{ $op->id }}" title="Editar">
+                                                        <i class="bx bx-edit fs-5"></i>
                                                     </button>
-                                                </form>
- 
-                                                @php
-                                                    $printRoute = isset($op->_es_activo) && $op->_es_activo
-                                                        ? route('finanzas.ticket-personal', $op->_activo_id)
-                                                        : route('pasivos.ticket_registro', $op->id);
-                                                @endphp
-                                                <a href="{{ $printRoute }}" target="_blank"
-                                                    class="btn btn-sm btn-icon shadow-none"
-                                                    title="Imprimir Comprobante de Registro">
-                                                    <i class="bx bx-printer text-primary fs-4"></i>
-                                                </a>
-                                            @else
-                                                {{-- Acciones para adelantos de personal activos (ActivoCorriente) --}}
-                                                @if ($op->saldo > 0)
-                                                    <form
-                                                        action="{{ route('finanzas.saldar-adelanto-personal', $op->_activo_id) }}"
+
+                                                    <form action="{{ route('finanzas_vendedor.destroy', $op->id) }}"
                                                         method="POST" class="d-inline">
                                                         @csrf
-                                                        <button type="submit" class="btn btn-sm btn-outline-warning"
-                                                            onclick="return confirm('¿Marcar este adelanto como saldado?')">
-                                                            <i class="bx bx-check-circle"></i> Saldar
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-xs btn-icon text-danger"
+                                                            title="Eliminar"
+                                                            onclick="return confirm('¿Seguro?')">
+                                                            <i class="bx bx-trash fs-5"></i>
                                                         </button>
                                                     </form>
-                                                @endif
 
-                                                <button type="button"
-                                                    class="btn btn-sm btn-icon btn-edit-operacion shadow-none"
-                                                    data-id="{{ $op->id }}" title="Editar Operación">
-                                                    <i class="bx bx-edit text-warning fs-4"></i>
-                                                </button>
+                                                    @php
+                                                        $printRoute = route('pasivos.ticket_registro', $op->id);
+                                                    @endphp
+                                                    <a href="{{ $printRoute }}" target="_blank"
+                                                        class="btn btn-xs btn-icon text-primary"
+                                                        title="Imprimir">
+                                                        <i class="bx bx-printer fs-5"></i>
+                                                    </a>
+                                                    
+                                                    @if ($op->monto_pagado > 0)
+                                                        <div class="dropdown d-inline-block">
+                                                            <button class="btn btn-xs btn-icon p-0" type="button"
+                                                                data-bs-toggle="dropdown">
+                                                                <i class="bx bx-history"></i>
+                                                            </button>
+                                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size: 0.8rem;">
+                                                                @foreach ($op->pagos as $pago)
+                                                                    <li>
+                                                                        <a class="dropdown-item py-1"
+                                                                            href="{{ route('pasivos.ticket', $pago->id) }}"
+                                                                            target="_blank">
+                                                                            <i class="bx bx-printer me-1"></i> Tkt {{ $pago->fecha_pago->format('d/m') }}
+                                                                        </a>
+                                                                    </li>
+                                                                @endforeach
+                                                            </ul>
+                                                        </div>
+                                                    @endif
+                                                @else
+                                                    @if ($op->saldo > 0)
+                                                        <form
+                                                            action="{{ route('finanzas.saldar-adelanto-personal', $op->_activo_id) }}"
+                                                            method="POST" class="d-inline">
+                                                            @csrf
+                                                            <button type="submit" class="btn btn-xs btn-warning p-1"
+                                                                onclick="return confirm('¿Saldar?')">
+                                                                <i class="bx bx-check-circle"></i>
+                                                            </button>
+                                                        </form>
+                                                    @endif
 
-                                                <form action="{{ route('finanzas_vendedor.destroy', $op->id) }}"
-                                                    method="POST" class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-icon shadow-none"
-                                                        title="Eliminar Operación"
-                                                        onclick="return confirm('¿Está seguro de eliminar esta operación? Esta acción no se puede deshacer.')">
-                                                        <i class="bx bx-trash text-danger fs-4"></i>
+                                                    <button type="button"
+                                                        class="btn btn-xs btn-icon btn-edit-operacion text-warning"
+                                                        data-id="{{ $op->id }}" title="Editar">
+                                                        <i class="bx bx-edit fs-5"></i>
                                                     </button>
-                                                </form>
 
-                                                <a href="{{ route('finanzas.ticket-personal', $op->_activo_id) }}"
-                                                    target="_blank" class="btn btn-sm btn-icon shadow-none"
-                                                    title="Imprimir Ticket">
-                                                    <i class="bx bx-printer text-primary fs-4"></i>
-                                                </a>
+                                                    <form action="{{ route('finanzas_vendedor.destroy', $op->id) }}"
+                                                        method="POST" class="d-inline">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-xs btn-icon text-danger"
+                                                            onclick="return confirm('¿Seguro?')">
+                                                            <i class="bx bx-trash fs-5"></i>
+                                                        </button>
+                                                    </form>
 
-                                                <small class="text-muted d-block mt-1" title="Registrado desde Caja"><i
-                                                        class="bx bx-store-alt"></i> Caja</small>
-                                            @endif
+                                                    <a href="{{ route('finanzas.ticket-personal', $op->_activo_id) }}"
+                                                        target="_blank" class="btn btn-xs btn-icon text-primary">
+                                                        <i class="bx bx-printer fs-5"></i>
+                                                    </a>
+                                                    <i class="bx bx-store-alt text-muted small" title="Caja"></i>
+                                                @endif
+                                            </div>
                                         </td>
                                     </tr>
                                 @empty
@@ -337,7 +292,7 @@
                 @else
                     {{-- VISTA AGRUPADA --}}
                     <div class="table-responsive text-nowrap">
-                        <table class="table table-hover">
+                        <table class="table table-hover table-compressed">
                             <thead>
                                 <tr>
                                     <th>Empresa / Persona</th>

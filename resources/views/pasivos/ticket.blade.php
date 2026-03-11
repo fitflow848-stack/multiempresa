@@ -65,7 +65,7 @@
     <div class="divider"></div>
 
     <div>
-        <strong>Fecha:</strong> {{ $pago->fecha_pago->format('d/m/Y') }}<br>
+        <strong>Fecha:</strong> {{ $pago->created_at->format('d/m/Y H:i') }}<br>
         <strong>Concepto:</strong> {{ $pago->pasivo->nombre }}<br>
         <strong>Tipo:</strong> {{ $pago->pasivo->tipo->nombre }}<br>
         <strong>Metodo:</strong> {{ $pago->metodo_pago }}<br>

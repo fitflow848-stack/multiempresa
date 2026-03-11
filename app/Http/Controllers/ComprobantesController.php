@@ -195,27 +195,52 @@ class ComprobantesController extends Controller
                 }
 
                 // 2. Descontar ingreso de caja (Si hubo pago y la caja sigue abierta)
-                if ($venta->cierre_caja_id) {
-                    $caja = \App\Models\CierreCaja::find($venta->cierre_caja_id);
-                    // Solo modificar si la caja existe y NO está cerrada (fecha_cierre null)
-                    // Si ya está cerrada, no debemos alterar sus ingresos históricos.
-                    if ($caja && is_null($caja->fecha_cierre)) {
-                        $montoADescontar = 0;
+                // 2. Descontar ingreso de caja (Si hubo pago)
+                $montoADescontar = 0;
+                if ($venta->pagado) {
+                    $montoADescontar = $venta->total;
+                } else {
+                    // Si fue pago parcial, buscar el monto inicial pagado en la deuda
+                    $deuda = \App\Models\Deuda::where('venta_id', $venta->id_venta)->first();
+                    if ($deuda) {
+                        $montoADescontar = $deuda->monto_pagado; // El abono inicial
+                    }
+                }
 
-                        if ($venta->pagado) {
-                            $montoADescontar = $venta->total;
-                        } else {
-                            // Si fue pago parcial, buscar el monto inicial pagado en la deuda
-                            $deuda = \App\Models\Deuda::where('venta_id', $venta->id_venta)->first();
-                            if ($deuda) {
-                                $montoADescontar = $deuda->monto_pagado; // El abono inicial
-                            }
-                        }
+                if ($montoADescontar > 0) {
+                    // Buscar caja para registrar la salida
+                    $selectedCajaId = session('selected_caja_id');
+                    $cajaActual = null;
 
-                        if ($montoADescontar > 0) {
-                            $caja->ingresos = floatval($caja->ingresos) - floatval($montoADescontar);
-                            $caja->save();
-                        }
+                    if ($selectedCajaId) {
+                        $cajaActual = \App\Models\CierreCaja::where('user_id', Auth::id())
+                            ->where('caja_id', $selectedCajaId)
+                            ->whereNull('fecha_cierre')
+                            ->first();
+                    } else {
+                        $cajaActual = \App\Models\CierreCaja::where('user_id', Auth::id())
+                            ->whereNull('fecha_cierre')
+                            ->first();
+                    }
+
+                    if ($cajaActual) {
+                        // Registrar como operación de caja para que sea visible
+                        \App\Models\OperacionCaja::create([
+                            'company_id' => $user->company_id,
+                            'sucursal_id' => $user->branch_id,
+                            'cierre_caja_id' => $cajaActual->id,
+                            'user_id' => Auth::id(),
+                            'tipo' => 'sustraccion',
+                            'partida' => 'Anulación de Venta',
+                            'concepto' => 'Anulación de ' . $venta->tipo_documento . ' ' . $venta->serie . '-' . $venta->numero,
+                            'importe' => $montoADescontar,
+                            'metodo_pago' => $venta->tipoPago->nombre ?? 'Efectivo',
+                            'es_efectivo' => $venta->tipoPago->es_efectivo ?? true
+                        ]);
+
+                        // Actualizar totales de la caja actual
+                        $cajaActual->sustracciones = floatval($cajaActual->sustracciones) + floatval($montoADescontar);
+                        $cajaActual->save();
                     }
                 }
 

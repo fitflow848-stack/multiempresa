@@ -77,7 +77,7 @@
     <div class="divider"></div>
 
     <div>
-        <strong>Fecha:</strong> {{ $activo->fecha_registro->format('d/m/Y') }}<br>
+        <strong>Fecha:</strong> {{ $activo->created_at->format('d/m/Y H:i') }}<br>
         <strong>Personal:</strong> {{ $activo->nombre }}<br>
         <strong>Concepto:</strong> {{ $activo->tipo->nombre }}<br>
         @if ($activo->documento)
