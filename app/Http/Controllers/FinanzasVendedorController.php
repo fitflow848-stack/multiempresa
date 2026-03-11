@@ -103,6 +103,7 @@ class FinanzasVendedorController extends Controller
                     'saldo'           => $saldo,
                     'estado'          => $activo->is_settled ? 'pagado' : 'aprobado',
                     'pagos'           => collect(),
+                    'created_at'      => $activo->created_at,
                 ];
             });
         }
