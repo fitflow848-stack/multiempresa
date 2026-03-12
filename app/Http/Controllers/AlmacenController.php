@@ -107,18 +107,30 @@ class AlmacenController extends Controller
         $user = Auth::user();
         $company = $user->company ?? null;
 
-        // Esto es lo que necesitas para "listarlo" en la tabla de existencias
+        // Registro específico (lote) que estamos editando
         $detalles = AlmacenIngresoDetalle::where('id', $id)->with('ingreso')->first();
+        if (!$detalles) {
+            abort(404);
+        }
+
         $productoModel = Producto::find($detalles->producto_id);
         $producto_lineas = ProductoLinea::where('id', $detalles->producto_linea_id)->first();
+
+        // Calculamos el TOTAL de existencias para este producto/línea en esta sucursal
+        $totalExistencias = DB::table('almacen_ingreso_detalle as d')
+            ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
+            ->where('d.producto_id', $detalles->producto_id)
+            ->where('d.producto_linea_id', $detalles->producto_linea_id)
+            ->where('i.sucursal_id', $detalles->ingreso->sucursal_id)
+            ->sum('d.cantidad') ?? 0;
 
         $producto = [
             'id' => $detalles->id,
             'codigo' => $producto_lineas->cb,
             'nombre' => $productoModel->nombre,
-            'existencias_kardex' => $detalles->cantidad,
-            'ajuste_existencias' => 0, // Esto podrías calcularlo si tienes otra tabla de salidas
-            'existencias_fisico' => $detalles->cantidad ?? 0,
+            'existencias_kardex' => $totalExistencias,
+            'ajuste_existencias' => 0,
+            'existencias_fisico' => $totalExistencias,
             'precio_compra' => $detalles->costo,
             'costo_operativo' => $detalles->costo,
             'peso' => $detalles->peso,
@@ -188,7 +200,7 @@ class AlmacenController extends Controller
     {
         // 1. Validar los datos
         $request->validate([
-            'existencias_fisico' => 'required|numeric|min:0',
+            'existencias_fisico' => 'required|numeric',
             'precio_compra' => 'required|numeric|min:0',
             'pvp' => 'required|numeric|min:0',
         ]);
@@ -198,22 +210,33 @@ class AlmacenController extends Controller
 
             // 2. Localizar el registro original de ingreso
             $detalle = AlmacenIngresoDetalle::findOrFail($id);
+            $ingreso = $detalle->ingreso;
+
+            // Calculamos el TOTAL actual para este producto/línea en esta sucursal (antes del ajuste)
+            $oldTotal = DB::table('almacen_ingreso_detalle as d')
+                ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
+                ->where('d.producto_id', $detalle->producto_id)
+                ->where('d.producto_linea_id', $detalle->producto_linea_id)
+                ->where('i.sucursal_id', $ingreso->sucursal_id)
+                ->sum('d.cantidad') ?? 0;
+
+            $newTotal = $request->existencias_fisico;
+            $diferencia = $newTotal - $oldTotal;
+
+            // El nuevo stock para ESTE lote será su cantidad actual + la diferencia global
+            $nuevaCantidadLote = $detalle->cantidad + $diferencia;
 
             // 3. Actualizar el detalle del ingreso
-            // Nota: Aquí decides si sobreescribes 'cantidad' o si manejas una columna de ajuste
             $detalle->update([
-                'cantidad' => $request->existencias_fisico,
+                'cantidad' => $nuevaCantidadLote,
                 'costo' => $request->precio_compra,
                 'peso' => $request->peso,
                 'pvp' => $request->pvp,
                 'pvpd' => $request->pvp_dcto,
                 'pvc' => $request->pvc,
-                'pvp_dto' => $request->pvc_dcto, // Asumiendo que este es el nombre en tu DB
+                'pvp_dto' => $request->pvc_dcto,
                 'pv_docena' => $request->pv_docena,
             ]);
-
-            // 4. Sincronizar con la tabla de productos (opcional)
-            // Si tu tabla 'productos' tiene un stock global, deberías recalcularlo aquí.
 
             DB::commit();
 
