@@ -223,6 +223,10 @@ class ComprobantesController extends Controller
                             ->first();
                     }
 
+                    if (!$cajaActual) {
+                        throw new \Exception("La venta {$venta->serie}-{$venta->numero} requiere una devolución de dinero (S/ {$montoADescontar}), pero no tienes una caja abierta. Por favor, abre la caja antes de realizar la anulación.");
+                    }
+
                     if ($cajaActual) {
                         // Registrar como operación de caja para que sea visible
                         \App\Models\OperacionCaja::create([
