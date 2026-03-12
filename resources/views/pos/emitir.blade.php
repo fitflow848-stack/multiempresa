@@ -420,27 +420,42 @@
 
                 if (!ventaId) return;
 
-                let url;
                 if (isProforma === '1' || isProforma === 1) {
                     if (format === '8cm') {
                         url = '{{ route('cotizaciones.pdfCotizacion8cm', ':id') }}'.replace(':id', ventaId);
                     } else {
                         url = '{{ route('cotizaciones.pdfCotizacion', ':id') }}'.replace(':id', ventaId);
-                        if (format === 'media-a4') {
-                            // Proformas no tienen media-a4 implementado en PdfVentaService según parece
-                            // pero usemos la URL normal por ahora
-                        }
                     }
                 } else {
                     url = '{{ route('pos.pdf', ['id' => ':id', 'format' => ':format']) }}'
                         .replace(':id', ventaId)
-                        .replace(':format', format);
+                        .replace(':format', format) + '?print=1';
                 }
 
-                window.open(url, '_blank');
-                limpiarYRedirigir();
+                // Método de impresión por Iframe para forzar el diálogo del navegador
+                imprimirPDFv2(url);
             }
         });
+
+        function imprimirPDFv2(url) {
+            // Print.js es más robusto para abrir el diálogo de impresión directamente
+            printJS({
+                printable: url,
+                type: 'pdf',
+                showModal: true,
+                modalMessage: 'Preparando documento...',
+                onPrintDialogClose: () => {
+                    // Una vez que el usuario interactúa con la ventana de impresión, redirigir
+                    setTimeout(limpiarYRedirigir, 1000);
+                },
+                onError: (error) => {
+                    console.error('Error con Print.js:', error);
+                    // Fallback a ventana nueva si falla
+                    window.open(url, '_blank');
+                    setTimeout(limpiarYRedirigir, 500);
+                }
+            });
+        }
 
         document.getElementById('btn-cerrar-finalizar').addEventListener('click', function() {
             limpiarYRedirigir();

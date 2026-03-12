@@ -52,7 +52,7 @@
 
 <body>
     <div class="header">
-        <strong>{{ $company->nombre_comercial ?? 'GENACK' }}</strong><br>
+        <strong>{{ $company->nombre_comercial ?? 'WOLVIX' }}</strong><br>
         RUC: {{ $company->ruc ?? '-' }}<br>
         {{ $company->direccion_fiscal ?? '' }}
     </div>
@@ -65,7 +65,7 @@
     <div class="divider"></div>
 
     <div>
-        <strong>Fecha:</strong> {{ $pago->fecha_pago->format('d/m/Y') }}<br>
+        <strong>Fecha:</strong> {{ $pago->created_at->format('d/m/Y H:i') }}<br>
         <strong>Concepto:</strong> {{ $pago->pasivo->nombre }}<br>
         <strong>Tipo:</strong> {{ $pago->pasivo->tipo->nombre }}<br>
         <strong>Metodo:</strong> {{ $pago->metodo_pago }}<br>
@@ -89,7 +89,7 @@
 
     <div class="footer">
         *** Gracias por su preferencia ***<br>
-        Sotfware de Gestión GENACK
+        Software de Gestión WOLVIX
     </div>
 </body>
 

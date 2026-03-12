@@ -111,16 +111,43 @@ class FinanzasEspecialesController extends Controller
         }
 
         $activo = ActivoCorriente::findOrFail($id);
-        $activo->is_settled = true;
-        $activo->save();
+        
+        DB::beginTransaction();
+        try {
+            $activo->is_settled = true;
+            $activo->save();
 
-        // Si la solicitud espera JSON (llamada AJAX antigua), devolver JSON
+            // Registrar en Caja como un INGRESO (retorno de dinero)
+            $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $activo->monto;
+            $cajaAbierta->save();
+
+            OperacionCaja::create([
+                'company_id' => $user->company_id,
+                'sucursal_id' => $user->branch_id,
+                'cierre_caja_id' => $cajaAbierta->id,
+                'user_id' => $user->id,
+                'tipo' => 'ingreso', // Es un ingreso porque el dinero "regresa" a la empresa
+                'partida' => 'Liquidación Adelanto',
+                'pago_id' => null,
+                'concepto' => 'Saldado de adelanto a personal: ' . $activo->nombre,
+                'importe' => $activo->monto,
+                'metodo_pago' => 'Efectivo',
+                'es_efectivo' => 1,
+            ]);
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Error al saldar: ' . $e->getMessage());
+        }
+
+        // Si la solicitud espera JSON, devolver JSON
         if (request()->expectsJson()) {
             return response()->json(['success' => true]);
         }
 
         return redirect()->route('finanzas_vendedor.index', ['tipo' => 'adelanto_personal'])
-            ->with('success', 'Adelanto marcado como saldado correctamente.');
+            ->with('success', 'Adelanto marcado como saldado correctamente y registrado en caja.');
     }
 
     /**

@@ -21,7 +21,7 @@ class PdfVentaService
      */
     private function prepareVentaData(int $id, int $qrSize = 200): ?array
     {
-        $venta = Venta::with(['deuda', 'user'])->where('id_venta', $id)->first();
+        $venta = Venta::with(['deuda', 'user', 'tipoPago'])->where('id_venta', $id)->first();
         if (!$venta) return null;
 
         $servicios = VentaDetalle::where('id_venta', $id)->ordenado()->get();
@@ -123,7 +123,7 @@ class PdfVentaService
      * @param string $format 'default' (A4) o '8cm'
      * @param bool $saveOnly si true guarda el pdf en public/ventas/pdf y retorna la ruta
      */
-    public function pdfVenta(int $id, string $format = 'default', bool $saveOnly = false)
+    public function pdfVenta(int $id, string $format = 'default', bool $saveOnly = false, bool $autoPrint = false)
     {
         $qrSize = in_array($format, ['8cm', '5.8cm']) ? 150 : 200;
         $data = $this->prepareVentaData($id, $qrSize);
@@ -189,6 +189,7 @@ class PdfVentaService
             return $pdfPath;
         }
 
+        // El auto-print ahora se maneja desde el frontend con Print.js para mayor compatibilidad
         return $pdf->stream($fileName);
     }
 

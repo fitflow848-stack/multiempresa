@@ -195,28 +195,64 @@ class ComprobantesController extends Controller
                 }
 
                 // 2. Descontar ingreso de caja (Si hubo pago y la caja sigue abierta)
-                if ($venta->cierre_caja_id) {
-                    $caja = \App\Models\CierreCaja::find($venta->cierre_caja_id);
-                    // Solo modificar si la caja existe y NO está cerrada (fecha_cierre null)
-                    // Si ya está cerrada, no debemos alterar sus ingresos históricos.
-                    if ($caja && is_null($caja->fecha_cierre)) {
-                        $montoADescontar = 0;
-
-                        if ($venta->pagado) {
-                            $montoADescontar = $venta->total;
-                        } else {
-                            // Si fue pago parcial, buscar el monto inicial pagado en la deuda
-                            $deuda = \App\Models\Deuda::where('venta_id', $venta->id_venta)->first();
-                            if ($deuda) {
-                                $montoADescontar = $deuda->monto_pagado; // El abono inicial
-                            }
-                        }
-
-                        if ($montoADescontar > 0) {
-                            $caja->ingresos = floatval($caja->ingresos) - floatval($montoADescontar);
-                            $caja->save();
-                        }
+                // 2. Descontar ingreso de caja (Si hubo pago)
+                $montoADescontar = 0;
+                if ($venta->pagado) {
+                    $montoADescontar = $venta->total;
+                } else {
+                    // Si fue pago parcial, buscar el monto inicial pagado en la deuda
+                    $deuda = \App\Models\Deuda::where('venta_id', $venta->id_venta)->first();
+                    if ($deuda) {
+                        $montoADescontar = $deuda->monto_pagado; // El abono inicial
                     }
+                }
+
+                if ($montoADescontar > 0) {
+                    // Buscar caja para registrar la salida
+                    $selectedCajaId = session('selected_caja_id');
+                    $cajaActual = null;
+
+                    if ($selectedCajaId) {
+                        $cajaActual = \App\Models\CierreCaja::where('user_id', Auth::id())
+                            ->where('caja_id', $selectedCajaId)
+                            ->whereNull('fecha_cierre')
+                            ->first();
+                    } else {
+                        $cajaActual = \App\Models\CierreCaja::where('user_id', Auth::id())
+                            ->whereNull('fecha_cierre')
+                            ->first();
+                    }
+
+                    if (!$cajaActual) {
+                        throw new \Exception("La venta {$venta->serie}-{$venta->numero} requiere una devolución de dinero (S/ {$montoADescontar}), pero no tienes una caja abierta. Por favor, abre la caja antes de realizar la anulación.");
+                    }
+
+                    if ($cajaActual) {
+                        // Registrar como operación de caja para que sea visible
+                        \App\Models\OperacionCaja::create([
+                            'company_id' => $user->company_id,
+                            'sucursal_id' => $user->branch_id,
+                            'cierre_caja_id' => $cajaActual->id,
+                            'user_id' => Auth::id(),
+                            'tipo' => 'sustraccion',
+                            'partida' => 'Anulación de Venta',
+                            'concepto' => 'Anulación de ' . $venta->tipo_documento . ' ' . $venta->serie . '-' . $venta->numero,
+                            'importe' => $montoADescontar,
+                            'metodo_pago' => $venta->tipoPago->nombre ?? 'Efectivo',
+                            'es_efectivo' => $venta->tipoPago->es_efectivo ?? true
+                        ]);
+
+                        // Actualizar totales de la caja actual
+                        $cajaActual->sustracciones = floatval($cajaActual->sustracciones) + floatval($montoADescontar);
+                        $cajaActual->save();
+                    }
+                }
+
+                // 2.2 Anular Deuda asociada si existe (después de usar sus datos para caja)
+                $deudaAsociada = \App\Models\Deuda::where('venta_id', $venta->id_venta)->first();
+                if ($deudaAsociada) {
+                    \App\Models\DeudaPago::where('deuda_id', $deudaAsociada->id)->delete();
+                    $deudaAsociada->delete();
                 }
 
                 // 3. Generar Nota de Crédito (Solo Facturas id:2 y Boletas id:1) - Motivo 01 (Anulación)
@@ -371,18 +407,27 @@ class ComprobantesController extends Controller
                         throw new \Exception('No se puede procesar la devolución porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
                     }
 
-                    OperacionCaja::create([
-                        'cierre_caja_id' => $cajaAbierta->id,
-                        'user_id' => Auth::id(),
-                        'tipo' => 'gasto',
-                        'importe' => $venta->total,
-                        'partida' => 'Devolución',
-                        'concepto' => 'Devolución de venta ' . ($venta->serie . '-' . $venta->numero),
-                        'fecha' => now(),
-                    ]);
-                    // Update caja totals
-                    $cajaAbierta->egresos = floatval($cajaAbierta->egresos) + floatval($venta->total);
-                    $cajaAbierta->save();
+                    if ($cajaAbierta) {
+                        OperacionCaja::create([
+                            'cierre_caja_id' => $cajaAbierta->id,
+                            'user_id' => Auth::id(),
+                            'tipo' => 'gasto',
+                            'importe' => $venta->total,
+                            'partida' => 'Devolución',
+                            'concepto' => 'Devolución de venta ' . ($venta->serie . '-' . $venta->numero),
+                            'fecha' => now(),
+                        ]);
+                        // Update caja totals
+                        $cajaAbierta->egresos = floatval($cajaAbierta->egresos) + floatval($venta->total);
+                        $cajaAbierta->save();
+                    }
+                }
+
+                // 2.2 Anular Deuda asociada si existe
+                $deudaAsociada = \App\Models\Deuda::where('venta_id', $venta->id_venta)->first();
+                if ($deudaAsociada) {
+                    \App\Models\DeudaPago::where('deuda_id', $deudaAsociada->id)->delete();
+                    $deudaAsociada->delete();
                 }
 
                 // 3. Generar Nota de Crédito (Solo Facturas id:2 y Boletas id:1)
@@ -505,6 +550,9 @@ class ComprobantesController extends Controller
         ];
 
         foreach ($ventas as $venta) {
+            // No incluir Notas de Crédito ni ventas anuladas en el resumen
+            if ($venta->id_tido == 5 || $venta->estado == 0) continue;
+
             // Contar por tipo de documento
             switch (strtolower($venta->tipo_documento ?? 'ticket')) {
                 case 'factura':

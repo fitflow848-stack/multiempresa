@@ -352,6 +352,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
     Route::post('/finanzas-vendedor', [App\Http\Controllers\FinanzasVendedorController::class, 'store'])->name('finanzas_vendedor.store');
     Route::get('/finanzas-vendedor/{id}/edit', [App\Http\Controllers\FinanzasVendedorController::class, 'edit'])->name('finanzas_vendedor.edit');
     Route::post('/finanzas-vendedor/{id}/update', [App\Http\Controllers\FinanzasVendedorController::class, 'update'])->name('finanzas_vendedor.update');
+    Route::delete('/finanzas-vendedor/{id}', [App\Http\Controllers\FinanzasVendedorController::class, 'destroy'])->name('finanzas_vendedor.destroy');
     Route::post('/finanzas-vendedor/pagar-acumulado', [App\Http\Controllers\FinanzasVendedorController::class, 'registrarPagoAcumulado'])->name('finanzas_vendedor.pagar_acumulado');
 
 

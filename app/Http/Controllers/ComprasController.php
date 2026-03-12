@@ -180,6 +180,10 @@ class ComprasController extends Controller
             $costos = $request->input('costo', []);
             $descs = $request->input('descuento', []);
             $vcpcs = $request->input('vcpc', []);
+            $lotes = $request->input('lote', []);
+            $vencimientos = $request->input('fecha_vencimiento', []);
+            $stockMins = $request->input('stock_min', []);
+            $stockMaxs = $request->input('stock_max', []);
 
             $n = max(
                 count($productIds),
@@ -188,7 +192,9 @@ class ComprasController extends Controller
                 count($cants),
                 count($costos),
                 count($descs),
-                count($vcpcs)
+                count($vcpcs),
+                count($lotes),
+                count($vencimientos)
             );
 
             for ($i = 0; $i < $n; $i++) {
@@ -207,14 +213,14 @@ class ComprasController extends Controller
                     'costo' => isset($costos[$i]) && $costos[$i] !== '' ? $costos[$i] : null,
                     'descuento' => isset($descs[$i]) && $descs[$i] !== '' ? $descs[$i] : 0,
                     'vcpc' => $vcpcs[$i] ?? null,
-                    'pvp' => $productLines->pvp,
-                    'pvp_dto' => $productLines->pvp_dto,
-                    'pvc' => $productLines->pvc,
-                    'pvc_dto' => $productLines->pvc_dto,
-                    'stock_min' => $productLines->stock_minimo,
-                    'stock_max' => $productLines->stock_maximo,
-                    'lote' => $productLines->lote,
-                    'fecha_vencimiento' => $productLines->fecha_venc,
+                    'pvp' => $productLines->pvp ?? 0,
+                    'pvp_dto' => $productLines->pvp_dto ?? 0,
+                    'pvc' => $productLines->pvc ?? 0,
+                    'pvc_dto' => $productLines->pvc_dto ?? 0,
+                    'stock_min' => $stockMins[$i] ?? ($productLines->stock_minimo ?? 0),
+                    'stock_max' => $stockMaxs[$i] ?? ($productLines->stock_maximo ?? 0),
+                    'lote' => $lotes[$i] ?? ($productLines->lote ?? null),
+                    'fecha_vencimiento' => $vencimientos[$i] ?? ($productLines->fecha_venc ?? null),
                 ]);
             }
 

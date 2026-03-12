@@ -19,9 +19,9 @@ class UserSeeder extends Seeder
         $company = Company::firstOrCreate([
             'ruc' => '20100190797'
         ], [
-            'razon_social' => 'GenAck Sistemas EIRL',
-            'nombre_comercial' => 'GenAck',
-            'email' => 'info@genack.com',
+            'razon_social' => 'Wolvix Sistemas EIRL',
+            'nombre_comercial' => 'Wolvix',
+            'email' => 'info@wolvix.com',
             'phone' => '01-234-5678',
             'is_active' => true,
         ]);
@@ -33,7 +33,7 @@ class UserSeeder extends Seeder
 
         // Usuario Administrador
         $admin = User::firstOrCreate([
-            'email' => 'admin@genack.com'
+            'email' => 'admin@wolvix.com'
         ], [
             'name' => 'Administrador',
             'password' => Hash::make('admin123'),
@@ -45,7 +45,7 @@ class UserSeeder extends Seeder
 
         // Usuario Vendedor
         $vendedor = User::firstOrCreate([
-            'email' => 'vendedor@genack.com'
+            'email' => 'vendedor@wolvix.com'
         ], [
             'name' => 'Vendedor',
             'password' => Hash::make('vendedor123'),
@@ -57,7 +57,7 @@ class UserSeeder extends Seeder
 
         // Usuario Supervisor
         $supervisor = User::firstOrCreate([
-            'email' => 'supervisor@genack.com'
+            'email' => 'supervisor@wolvix.com'
         ], [
             'name' => 'Supervisor',
             'password' => Hash::make('supervisor123'),
@@ -68,8 +68,8 @@ class UserSeeder extends Seeder
         $supervisor->assignRole($supervisorRole);
 
         $this->command->info('Usuarios de prueba creados exitosamente:');
-        $this->command->info('- admin@genack.com / admin123');
-        $this->command->info('- vendedor@genack.com / vendedor123');
-        $this->command->info('- supervisor@genack.com / supervisor123');
+        $this->command->info('- admin@wolvix.com / admin123');
+        $this->command->info('- vendedor@wolvix.com / vendedor123');
+        $this->command->info('- supervisor@wolvix.com / supervisor123');
     }
 }

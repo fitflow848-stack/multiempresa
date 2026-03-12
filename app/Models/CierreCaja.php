@@ -92,7 +92,7 @@ class CierreCaja extends Model
                     LEFT JOIN tipos_pagos tp ON tp.id = v.id_tipo_pago
                     LEFT JOIN deudas d ON d.venta_id = v.id_venta
                 WHERE
-                    v.cierre_caja_id = :cierre_id AND v.estado != 0 
+                    v.cierre_caja_id = :cierre_id AND v.estado != 0 AND v.id_tido != 5
                 ) UNION
                 (
                 SELECT

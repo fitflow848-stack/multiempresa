@@ -1,10 +1,10 @@
 <?php
 
 use App\Models\CompanyDocument;
-use App\Models\EmpresaGlobal;
-use App\Models\Planta;
 use Carbon\Carbon;
 use App\Helpers\CompanyInitials;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 if (!function_exists('numeroALetras')) {
     function numeroALetras($numero, $moneda = 'Soles')
@@ -46,7 +46,7 @@ if (!function_exists('numeroALetras')) {
                 if ($n == 100) return 'CIEN';
                 $c = intval($n / 100);
                 $resto = $n % 100;
-                $texto = $centena[$c];
+                $texto = ($c == 1 && $resto > 0) ? 'CIENTO' : $centena[$c];
                 if ($resto > 0) $texto .= ' ' . $convertir($resto);
                 return $texto;
             }
