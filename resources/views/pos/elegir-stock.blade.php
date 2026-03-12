@@ -3,12 +3,20 @@
 @section('content')
     <link rel="stylesheet" href="{{ asset('css/pos.css') }}">
     <style>
-        .elegir-stock-container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 20px;
-            background: #f5f5f5;
+        /* Sobrescribir el bloqueo de scroll de pos.css */
+        html, body {
+            overflow: auto !important;
+            height: auto !important;
             min-height: 100vh;
+        }
+
+        .elegir-stock-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 15px;
+            background: #f5f5f5;
+            min-height: calc(100vh - 70px);
+            padding-bottom: 80px; /* Espacio extra para asegurar visibilidad de botones */
         }
 
         .header-section {
@@ -32,12 +40,15 @@
             text-align: center;
             font-size: 18px;
             font-weight: bold;
+            border-radius: 8px 8px 0 0;
         }
 
         .product-section {
             background: white;
             padding: 20px;
             border-bottom: 3px solid #3498db;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
 
         .product-header {
@@ -58,45 +69,65 @@
             font-weight: bold;
         }
 
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 20px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+        }
+
         .stock-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            min-width: 600px;
         }
 
         .stock-table th {
             background: #3498db;
             color: white;
-            padding: 10px 8px;
+            padding: 12px 10px;
             text-align: center;
             font-size: 12px;
             font-weight: bold;
+            position: sticky;
+            top: 0;
         }
 
         .stock-table td {
-            padding: 8px;
+            padding: 10px;
             text-align: center;
-            border-bottom: 1px solid #ddd;
+            border-bottom: 1px solid #eee;
             font-size: 12px;
         }
 
         .stock-table tbody tr:hover {
-            background-color: #e8f4f8;
+            background-color: #f8fbff;
         }
 
         .cantidad-input {
-            width: 60px;
+            width: 70px;
             text-align: center;
-            border: 1px solid #ddd;
-            padding: 4px;
-            border-radius: 3px;
+            border: 2px solid #3498db;
+            padding: 6px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .cantidad-input:focus {
+            outline: none;
+            box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
         }
 
         .price-section {
             display: flex;
             gap: 20px;
-            margin: 20px 0;
+            margin: 25px 0;
             justify-content: center;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
         }
 
         .price-info {
@@ -107,71 +138,86 @@
             font-size: 12px;
             color: #666;
             margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .price-value {
-            font-size: 18px;
-            font-weight: bold;
+            font-size: 22px;
+            font-weight: 800;
             color: #2c3e50;
         }
 
         .totals-section {
             background: #ecf0f1;
-            padding: 15px;
-            border-radius: 5px;
+            padding: 20px;
+            border-radius: 8px;
             margin: 20px 0;
+            border-left: 5px solid #3498db;
         }
 
         .totals-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 12px;
+            margin-bottom: 10px;
+            font-size: 14px;
         }
 
         .totals-row.total {
-            font-weight: bold;
-            font-size: 14px;
+            font-weight: 900;
+            font-size: 18px;
             color: #2c3e50;
             border-top: 2px solid #bdc3c7;
-            padding-top: 8px;
-            margin-top: 10px;
+            padding-top: 10px;
+            margin-top: 15px;
         }
 
         .actions-section {
-            text-align: center;
-            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+            padding-bottom: 20px;
         }
 
         .btn-volver {
-            background: #3498db;
+            background: #95a5a6;
             color: white;
-            padding: 12px 30px;
+            padding: 14px 25px;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             font-size: 14px;
             font-weight: bold;
             cursor: pointer;
-            margin-right: 10px;
+            transition: all 0.2s;
         }
 
         .btn-volver:hover {
-            background: #2980b9;
+            background: #7f8c8d;
+            transform: translateY(-1px);
         }
 
         .btn-agregar {
-            background: #4CAF50;
+            background: #27ae60;
             color: white;
-            padding: 12px 30px;
+            padding: 14px 40px;
             border: none;
-            border-radius: 5px;
-            font-size: 14px;
-            font-weight: bold;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 800;
             cursor: pointer;
+            box-shadow: 0 4px 0 #219150;
+            transition: all 0.1s;
         }
 
         .btn-agregar:hover {
-            background: #45a049;
+            background: #2ecc71;
+            transform: translateY(-1px);
+        }
+
+        .btn-agregar:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #219150;
         }
 
         .stock-seleccionado {
@@ -182,6 +228,16 @@
         .stock-cero {
             color: #95a5a6;
             font-style: italic;
+        }
+
+        /* Mobile specific adjustments */
+        @media (max-width: 600px) {
+            .actions-section {
+                flex-direction: column-reverse;
+            }
+            .btn-agregar, .btn-volver {
+                width: 100%;
+            }
         }
     </style>
 
@@ -211,42 +267,44 @@
             </div>
 
             <!-- Stock Table -->
-            <table class="stock-table">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Lote</th>
-                        <th>Vencimiento</th>
-                        <th>Stock</th>
-                        <th>Empaque</th>
-                        <th>Unidades</th>
-                        <th>Cantidad</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($lotes as $index => $lote)
+            <div class="table-container">
+                <table class="stock-table">
+                    <thead>
                         <tr>
-                            <td>{{ $index + 1 }}</td>
-                            <td>{{ $lote->lote ?? 'S/N' }}</td>
-                            <td>{{ $lote->fecha_formato }}</td>
-                            <td class="{{ $lote->cantidad > 0 ? 'stock-disponible' : 'stock-cero' }}">
-                                {{ $lote->cantidad }}
-                            </td>
-                            <td>{{ $lote->empaque }}</td>
-                            <td>{{ $lote->unidades }}</td>
-                            <td>
-                                @if ($lote->cantidad > 0)
-                                    <input type="number" class="cantidad-input" min="0" max="{{ $lote->cantidad }}" value="0"
-                                        data-lote-id="{{ $lote->id }}" data-precio="{{ $lote->pvp }}"
-                                        onchange="actualizarCantidad(this)">
-                                @else
-                                    <span class="stock-cero">0</span>
-                                @endif
-                            </td>
+                            <th>#</th>
+                            <th>Lote</th>
+                            <th>Vencimiento</th>
+                            <th>Stock</th>
+                            <th>Empaque</th>
+                            <th>Unidades</th>
+                            <th>Cantidad</th>
                         </tr>
-                    @endforeach
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach ($lotes as $index => $lote)
+                            <tr>
+                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $lote->lote ?? 'S/N' }}</td>
+                                <td>{{ $lote->fecha_formato }}</td>
+                                <td class="{{ $lote->cantidad > 0 ? 'stock-disponible' : 'stock-cero' }}">
+                                    {{ $lote->cantidad }}
+                                </td>
+                                <td>{{ $lote->empaque }}</td>
+                                <td>{{ $lote->unidades }}</td>
+                                <td>
+                                    @if ($lote->cantidad > 0)
+                                        <input type="number" class="cantidad-input" min="0" max="{{ $lote->cantidad }}" value="0"
+                                            data-lote-id="{{ $lote->id }}" data-precio="{{ $lote->pvp }}"
+                                            onchange="actualizarCantidad(this)">
+                                    @else
+                                        <span class="stock-cero">0</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
 
             <!-- Price Section -->
             <div class="price-section">
@@ -277,8 +335,7 @@
                 <button class="btn-volver" onclick="window.history.back()">
                     ← Volver TPV
                 </button>
-                <button class="btn-agregar" onclick="agregarAlTicketYVolver()"
-                    style="background: #4CAF50; margin-left: 10px;">
+                <button class="btn-agregar" onclick="agregarAlTicketYVolver()">
                     ✓ Agregar al Ticket
                 </button>
             </div>
