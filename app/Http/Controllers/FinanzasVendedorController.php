@@ -13,6 +13,8 @@ use App\Models\CierreCaja;
 use App\Models\OperacionCaja;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\FinanzasExport;
 
 class FinanzasVendedorController extends Controller
 {
@@ -190,6 +192,98 @@ class FinanzasVendedorController extends Controller
         return view('finanzas_vendedor.index', compact('operaciones', 'tipoActivo', 'tituloSeccion', 'agrupar', 'fechaDesde', 'fechaHasta', 'search'));
     }
 
+    public function export(Request $request)
+    {
+        $tipoMap = [
+            'compras_credito'   => 'Compras a crédito',
+            'adelanto_clientes' => 'Adelanto clientes',
+            'adelanto_personal' => 'Adelantos personal',
+        ];
+
+        $tipoFiltro = $request->get('tipo');
+        $fechaDesde = $request->get('fecha_desde');
+        $fechaHasta = $request->get('fecha_hasta');
+        $search = $request->get('search');
+
+        $nombresTipos = ['Compras a crédito', 'Adelanto clientes', 'Adelantos personal'];
+
+        // ─── Pasivos ───
+        $query = Pasivo::where('sucursal_id', Auth::user()->branch_id)
+            ->whereHas('tipo', function ($q) use ($nombresTipos, $tipoFiltro, $tipoMap) {
+                if ($tipoFiltro && isset($tipoMap[$tipoFiltro])) {
+                    $q->where('nombre', $tipoMap[$tipoFiltro]);
+                } else {
+                    $q->whereIn('nombre', $nombresTipos);
+                }
+            });
+
+        if ($fechaDesde) $query->whereDate('fecha_registro', '>=', $fechaDesde);
+        if ($fechaHasta) $query->whereDate('fecha_registro', '<=', $fechaHasta);
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('empresa_persona', 'like', "%$search%")
+                    ->orWhere('nombre', 'like', "%$search%")
+                    ->orWhere('documento', 'like', "%$search%");
+            });
+        }
+
+        // ─── ActivoCorriente (Adelantos a Personal) ───
+        $activosPersonalItems = collect();
+        if (!$tipoFiltro || $tipoFiltro === 'adelanto_personal') {
+            $activosQuery = ActivoCorriente::where('sucursal_id', Auth::user()->branch_id)
+                ->whereHas('tipo', function ($q) {
+                    $q->where('nombre', 'Adelantos a Personal');
+                });
+
+            if ($fechaDesde) $activosQuery->whereDate('fecha_registro', '>=', $fechaDesde);
+            if ($fechaHasta) $activosQuery->whereDate('fecha_registro', '<=', $fechaHasta);
+            if ($search) {
+                $activosQuery->where(function ($q) use ($search) {
+                    $q->where('nombre', 'like', "%$search%")
+                        ->orWhere('observaciones', 'like', "%$search%");
+                });
+            }
+
+            $activosPersonalItems = $activosQuery->with('tipo')->get()->map(function ($activo) {
+                $monto_pagado = $activo->is_settled ? $activo->monto : 0;
+                $saldo = $activo->is_settled ? 0 : $activo->monto;
+                return (object) [
+                    'id'              => 'activo_' . $activo->id,
+                    '_activo_id'      => $activo->id,
+                    '_es_activo'      => true,
+                    'fecha_registro'  => $activo->fecha_registro,
+                    'tipo'            => (object) ['nombre' => 'Adelantos personal'],
+                    'empresa_persona' => $activo->nombre,
+                    'nombre'          => $activo->observaciones ?? 'Adelanto desde caja',
+                    'documento'       => $activo->documento,
+                    'monto'           => $activo->monto,
+                    'monto_pagado'    => $monto_pagado,
+                    'saldo'           => $saldo,
+                    'estado'          => $activo->is_settled ? 'pagado' : 'aprobado',
+                    'metodo_pago'     => $activo->metodo_pago,
+                    'created_at'      => $activo->created_at,
+                ];
+            });
+        }
+
+        $pasivosCollection = $query->with(['tipo'])->get();
+        $merged = $pasivosCollection->concat($activosPersonalItems)
+            ->sortByDesc('fecha_registro')
+            ->values();
+
+        $titulos = [
+            'adelanto_personal' => 'Adelantos a Personal',
+            'compras_credito'   => 'Compras a Crédito',
+            'adelanto_clientes' => 'Adelanto de Clientes',
+        ];
+        $tituloSeccion = $titulos[$tipoFiltro] ?? 'Todas las Operaciones';
+
+        return Excel::download(
+            new FinanzasExport($merged, $tituloSeccion),
+            'Export_Finanzas_' . date('Ymd_His') . '.xlsx'
+        );
+    }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -199,7 +293,8 @@ class FinanzasVendedorController extends Controller
             'nombre' => 'required|string|max:255',
             'fecha_registro' => 'required|date',
             'documento' => 'nullable|string|max:255',
-            'observaciones' => 'nullable|string'
+            'observaciones' => 'nullable|string',
+            'metodo_pago' => 'nullable|string|max:255'
         ]);
 
         $tipoOperacion = $request->input('tipo_operacion');
@@ -209,6 +304,7 @@ class FinanzasVendedorController extends Controller
         $fecha = $request->input('fecha_registro');
         $documento = $request->input('documento');
         $observaciones = $request->input('observaciones');
+        $metodoPago = $request->input('metodo_pago');
 
         try {
             DB::beginTransaction();
@@ -268,6 +364,7 @@ class FinanzasVendedorController extends Controller
                         'partida' => 'Adelanto clientes',
                         'concepto' => 'Adelanto de cliente: ' . $nombre,
                         'importe' => $monto,
+                        'metodo_pago' => $metodoPago,
                     ]);
                     $operacionCajaId = $opCaja->id;
                 }
@@ -285,6 +382,7 @@ class FinanzasVendedorController extends Controller
                         'partida' => 'Adelantos personal',
                         'concepto' => 'Adelanto a personal: ' . $nombre,
                         'importe' => $monto,
+                        'metodo_pago' => $metodoPago,
                     ]);
                     $operacionCajaId = $opCaja->id;
                 }
@@ -311,7 +409,8 @@ class FinanzasVendedorController extends Controller
                     'cierre_caja_id' => $cajaAbierta ? $cajaAbierta->id : null,
                     'id_operacion_caja' => $operacionCajaId,
                     'is_settled' => false,
-                    'tipo_adelanto' => 'personal'
+                    'tipo_adelanto' => 'personal',
+                    'metodo_pago' => $metodoPago
                 ]);
             } else {
                 $pasivo = Pasivo::create([
@@ -328,6 +427,7 @@ class FinanzasVendedorController extends Controller
                     'observaciones' => $observaciones,
                     'cierre_caja_id' => $cajaAbierta ? $cajaAbierta->id : null,
                     'id_operacion_caja' => $operacionCajaId,
+                    'metodo_pago' => ($tipoOperacion === 'compras_credito' ? null : $metodoPago)
                 ]);
             }
 
@@ -397,7 +497,8 @@ class FinanzasVendedorController extends Controller
             'nombre' => 'required|string|max:255',
             'fecha_registro' => 'required|date',
             'documento' => 'nullable|string|max:255',
-            'observaciones' => 'nullable|string'
+            'observaciones' => 'nullable|string',
+            'metodo_pago' => 'nullable|string|max:255'
         ]);
 
         try {
@@ -412,6 +513,7 @@ class FinanzasVendedorController extends Controller
                     'fecha_registro' => $request->fecha_registro,
                     'documento' => $request->documento,
                     'observaciones' => $request->nombre,
+                    'metodo_pago' => $request->metodo_pago
                 ]);
             } else {
                 $operacion = Pasivo::withoutGlobalScopes()->findOrFail($id);
@@ -438,7 +540,8 @@ class FinanzasVendedorController extends Controller
                     'monto' => $request->monto,
                     'fecha_registro' => $request->fecha_registro,
                     'documento' => $request->documento,
-                    'observaciones' => $request->observaciones
+                    'observaciones' => $request->observaciones,
+                    'metodo_pago' => ($request->tipo_operacion === 'compras_credito' ? null : $request->metodo_pago)
                 ]);
             }
 

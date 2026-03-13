@@ -30,7 +30,8 @@ class Pasivo extends Model
         'id_operacion_caja',
         'is_settled',
         'tipo_adelanto',
-        'is_compra_credito'
+        'is_compra_credito',
+        'metodo_pago'
     ];
 
     protected $casts = [

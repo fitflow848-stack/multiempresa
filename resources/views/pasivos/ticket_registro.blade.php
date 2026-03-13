@@ -84,6 +84,9 @@
         @if ($pasivo->documento)
             <strong>Referencia:</strong> {{ $pasivo->documento }}<br>
         @endif
+        @if ($pasivo->metodo_pago)
+            <strong>Método:</strong> {{ $pasivo->metodo_pago }}<br>
+        @endif
     </div>
 
     <div class="divider"></div>

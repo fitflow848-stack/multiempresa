@@ -18,6 +18,9 @@ class ProductosPlantillaExport implements FromCollection, WithHeadings
                 'LABORATORIO EJEMPLO', // LABORATORIO
                 'NIU', // UNIDAD_MEDIDA
                 'gravado', // TIPO_IMPUESTO
+                'CAJA X 100', // PRESENTACION
+                '500MG', // CONCENTRACION
+                '2026-12-31', // FECHA_VENCIMIENTO
                 '10.00', // PRECIO_COMPRA
                 '15.00', // PVP (Precio Venta Público)
                 '14.50', // PVPD (Precio Venta Público con Descuento)
@@ -38,6 +41,9 @@ class ProductosPlantillaExport implements FromCollection, WithHeadings
             'LABORATORIO',
             'UNIDAD_MEDIDA',
             'TIPO_IMPUESTO',
+            'PRESENTACION',
+            'CONCENTRACION',
+            'FECHA_VENCIMIENTO',
             'PRECIO_COMPRA',
             'PVP',
             'PVPD',

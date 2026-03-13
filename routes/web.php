@@ -353,6 +353,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
 
     // Finanzas para Vendedores
     Route::get('/finanzas-vendedor', [App\Http\Controllers\FinanzasVendedorController::class, 'index'])->name('finanzas_vendedor.index');
+    Route::get('/finanzas-vendedor/export', [App\Http\Controllers\FinanzasVendedorController::class, 'export'])->name('finanzas_vendedor.export');
     Route::post('/finanzas-vendedor', [App\Http\Controllers\FinanzasVendedorController::class, 'store'])->name('finanzas_vendedor.store');
     Route::get('/finanzas-vendedor/{id}/edit', [App\Http\Controllers\FinanzasVendedorController::class, 'edit'])->name('finanzas_vendedor.edit');
     Route::post('/finanzas-vendedor/{id}/update', [App\Http\Controllers\FinanzasVendedorController::class, 'update'])->name('finanzas_vendedor.update');

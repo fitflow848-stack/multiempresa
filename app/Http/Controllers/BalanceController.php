@@ -295,23 +295,7 @@ class BalanceController extends Controller
         $total_activo = $total_activo_corriente + $total_activo_no_corriente;
 
         // 3. PASIVO CORRIENTE
-        $compras_credito_auto = 0;
-        try {
-            if (class_exists('App\Models\Compra')) {
-                $comprasCreditoQuery = Compra::withoutGlobalScopes()
-                    ->where('company_id', $user->company_id)
-                    ->where('credito', true)
-                    ->whereDate('fecha_emision', '<=', $fecha);
-                
-                if ($sucursalId) {
-                    $comprasCreditoQuery->where('local_destino', $sucursalId);
-                }
-
-                $compras_credito_auto = $comprasCreditoQuery->sum(DB::raw('total_pagar - total_descuento'));
-            }
-        } catch (\Exception $e) {
-            $compras_credito_auto = 0;
-        }
+        $compras_credito_auto = 0; // Se desactiva la integración automática de Compras (Panel de Compras)
 
         // Obtener Pasivos Manuales
         $tiposPasivosCorrientes = \App\Models\TipoPasivo::withoutGlobalScopes()->withSum([
@@ -339,21 +323,6 @@ class BalanceController extends Controller
         // Calcular el neto de cada tipo
         foreach ($tiposPasivosCorrientes as $tipo) {
             $tipo->pasivos_sum_monto = ($tipo->pasivos_sum_monto ?? 0) - ($tipo->pasivos_sum_monto_pagado ?? 0);
-        }
-
-        // Integrar Compras a crédito automáticas
-        $tipoCC = $tiposPasivosCorrientes->first(function ($item) {
-            return str_contains(strtolower($item->nombre), 'compras a cr');
-        });
-
-        if ($tipoCC) {
-            $tipoCC->pasivos_sum_monto = ($tipoCC->pasivos_sum_monto ?? 0) + $compras_credito_auto;
-        } else if ($compras_credito_auto > 0) {
-            $newType = (object)[
-                'nombre' => 'Compras a crédito',
-                'pasivos_sum_monto' => $compras_credito_auto
-            ];
-            $tiposPasivosCorrientes->push($newType);
         }
 
         // Patrimonio: Aportes (Calculado independientemente para incluir todos, incluso los pagados)

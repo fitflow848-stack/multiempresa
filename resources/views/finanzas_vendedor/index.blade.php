@@ -107,11 +107,17 @@
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">{{ $agrupar ? 'Resumen Agrupado por Empresa/Persona' : 'Historial de Operaciones' }}
+                    <h5 class="mb-0">{{ $agrupar ? 'Resumen Agrupado por Persona' : 'Historial de Operaciones' }}
                     </h5>
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalRegistro">
-                        <i class="bx bx-plus me-1"></i> Registrar Operación
-                    </button>
+                    <div>
+                        <a href="{{ route('finanzas_vendedor.export', ['tipo' => $tipoActivo, 'search' => $search, 'fecha_desde' => $fechaDesde, 'fecha_hasta' => $fechaHasta]) }}"
+                            class="btn btn-success me-1">
+                            <i class="bx bx-export me-1"></i> Excel
+                        </a>
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalRegistro">
+                            <i class="bx bx-plus me-1"></i> Registrar
+                        </button>
+                    </div>
                 </div>
 
                 @if (!$agrupar)
@@ -156,6 +162,11 @@
                                                 }
                                             @endphp
                                             <span class="badge {{ $badgeColor }}" style="font-size: 0.75rem; padding: 0.35em 0.5em;">{{ $tipoDisplay }}</span>
+                                            @if(isset($op->metodo_pago) && $op->metodo_pago)
+                                                <div style="font-size: 0.7rem;" class="text-muted mt-1">
+                                                    <i class="bx bx-credit-card me-1"></i>{{ $op->metodo_pago }}
+                                                </div>
+                                            @endif
                                         </td>
                                         <td class="fw-semibold">
                                             {{ \Illuminate\Support\Str::limit($op->empresa_persona ?? '-', 20) }}
@@ -472,6 +483,19 @@
                             </div>
                         </div>
 
+                        {{-- Método de Pago --}}
+                        <div class="row mb-3" id="div_metodo_pago">
+                            <label for="metodo_pago" class="col-sm-3 col-form-label fw-semibold">Método de Pago</label>
+                            <div class="col-sm-9">
+                                <select class="form-select" id="metodo_pago" name="metodo_pago" required>
+                                    <option value="Efectivo" selected>Efectivo</option>
+                                    <option value="Transferencia">Transferencia</option>
+                                    <option value="Yape/Plin">Yape/Plin</option>
+                                    <option value="Tarjeta">Tarjeta</option>
+                                </select>
+                            </div>
+                        </div>
+
                         {{-- Fecha --}}
                         <div class="row mb-3">
                             <label for="fecha_registro" class="col-sm-3 col-form-label fw-semibold">Fecha</label>
@@ -559,6 +583,18 @@
                             </div>
                         </div>
 
+                        <div class="row mb-3" id="edit_div_metodo_pago">
+                            <label for="edit_metodo_pago" class="col-sm-3 col-form-label fw-semibold">Método de Pago</label>
+                            <div class="col-sm-9">
+                                <select class="form-select" id="edit_metodo_pago" name="metodo_pago" required>
+                                    <option value="Efectivo">Efectivo</option>
+                                    <option value="Transferencia">Transferencia</option>
+                                    <option value="Yape/Plin">Yape/Plin</option>
+                                    <option value="Tarjeta">Tarjeta</option>
+                                </select>
+                            </div>
+                        </div>
+
                         <div class="row mb-3">
                             <label for="edit_fecha_registro" class="col-sm-3 col-form-label fw-semibold">Fecha</label>
                             <div class="col-sm-9">
@@ -607,6 +643,40 @@
                 const modalEditar = new bootstrap.Modal(document.getElementById('modalEditar'));
                 const formEditar = document.getElementById('formEditar');
 
+                const selectTipoReg = document.getElementById('tipo_operacion');
+                const divMetodoReg = document.getElementById('div_metodo_pago');
+                const inputMetodoReg = document.getElementById('metodo_pago');
+
+                if (selectTipoReg) {
+                    selectTipoReg.addEventListener('change', function() {
+                        if (this.value === 'compras_credito') {
+                            divMetodoReg.style.display = 'none';
+                            inputMetodoReg.required = false;
+                        } else {
+                            divMetodoReg.style.display = 'flex';
+                            inputMetodoReg.required = true;
+                        }
+                    });
+                    // Trigger initial state
+                    if (selectTipoReg.value) selectTipoReg.dispatchEvent(new Event('change'));
+                }
+
+                const selectTipoEdit = document.getElementById('edit_tipo_operacion');
+                const divMetodoEdit = document.getElementById('edit_div_metodo_pago');
+                const inputMetodoEdit = document.getElementById('edit_metodo_pago');
+
+                if (selectTipoEdit) {
+                    selectTipoEdit.addEventListener('change', function() {
+                        if (this.value === 'compras_credito') {
+                            divMetodoEdit.style.display = 'none';
+                            inputMetodoEdit.required = false;
+                        } else {
+                            divMetodoEdit.style.display = 'flex';
+                            inputMetodoEdit.required = true;
+                        }
+                    });
+                }
+
                 document.querySelectorAll('.btn-edit-operacion').forEach(btn => {
                     btn.addEventListener('click', function() {
                         const id = this.getAttribute('data-id');
@@ -631,6 +701,23 @@
                                         .documento || '';
                                     document.getElementById('edit_observaciones').value = op
                                         .observaciones || '';
+                                    
+                                    const modalMetodoPago = document.getElementById('edit_metodo_pago');
+                                    if (op.metodo_pago) {
+                                        modalMetodoPago.value = op.metodo_pago;
+                                    } else {
+                                        modalMetodoPago.value = 'Efectivo';
+                                    }
+
+                                    // Mostrar/Ocultar según tipo
+                                    const divMetodo = document.getElementById('edit_div_metodo_pago');
+                                    if (data.tipo_operacion === 'compras_credito') {
+                                        divMetodo.style.display = 'none';
+                                        modalMetodoPago.required = false;
+                                    } else {
+                                        divMetodo.style.display = 'flex';
+                                        modalMetodoPago.required = true;
+                                    }
 
                                     modalEditar.show();
                                 }

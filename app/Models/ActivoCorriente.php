@@ -24,7 +24,8 @@ class ActivoCorriente extends Model
         'cierre_caja_id',
         'id_operacion_caja',
         'is_settled',
-        'tipo_adelanto'
+        'tipo_adelanto',
+        'metodo_pago'
     ];
 
     protected $casts = [

@@ -28,6 +28,19 @@ class ProductosImport implements ToCollection, WithHeadingRow
         return (float) $val;
     }
 
+    private function parseDate($val) {
+        if (empty($val)) return null;
+        try {
+            if (is_numeric($val)) {
+                // Posible fecha de Excel serializada
+                return \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($val)->format('Y-m-d');
+            }
+            return date('Y-m-d', strtotime($val));
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
     public function collection(Collection $rows)
     {
         Log::info('Import started. Initial Rows Count: ' . $rows->count());
@@ -63,6 +76,9 @@ class ProductosImport implements ToCollection, WithHeadingRow
                 'pvpd'          => ['pvpd', 'pvp_dto'],
                 'pvc'           => ['pvc'],
                 'pvcd'          => ['pvcd', 'pvc_dto'],
+                'presentacion'  => ['presentacion', 'presentation', 'formato'],
+                'concentracion' => ['concentracion', 'concentration', 'detalle'],
+                'fecha_vencimiento' => ['fecha_vencimiento', 'vencimiento', 'exp_date', 'vence'],
                 'stock_inicial' => ['stock_inicial', 'stock', 'cantidad', 'qty'],
             ];
 
@@ -117,12 +133,18 @@ class ProductosImport implements ToCollection, WithHeadingRow
                         'tipo_impuesto' => strtolower($r['tipo_impuesto'] ?? 'gravado'),
                         'condicion_venta' => 'LIBRE',
                         'codigo_barras' => $codigoBarras,
+                        'presentacion_modelo' => $r['presentacion'],
+                        'concentracion_detalle' => $r['concentracion'],
+                        'attr_fecha_vencimiento' => !empty($r['fecha_vencimiento']),
                     ]);
 
                     $linea = ProductoLinea::create([
                         'producto_id' => $producto->id,
                         'cb' => $codigoBarras,
                         'cantidad' => 0,
+                        'presentacion' => $r['presentacion'],
+                        'concentracion' => $r['concentracion'],
+                        'fecha_venc' => !empty($r['fecha_vencimiento']) ? $this->parseDate($r['fecha_vencimiento']) : null,
                         'precio_compra' => $this->parseNum($r['precio_compra']),
                         'pvp' => $this->parseNum($r['pvp']),
                         'pvp_dto' => $this->parseNum($r['pvpd'] ?? null),
@@ -151,6 +173,7 @@ class ProductosImport implements ToCollection, WithHeadingRow
                         'stock_min' => 0,
                         'stock_max' => 0,
                         'lote' => 'IMP-' . date('Ymd'),
+                        'fecha_vencimiento' => !empty($r['fecha_vencimiento']) ? $this->parseDate($r['fecha_vencimiento']) : null,
                     ]);
                     Log::info('Created Stock Entry for Product: ' . $producto->nombre);
                 }
