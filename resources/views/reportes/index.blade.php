@@ -20,7 +20,7 @@
                         <div class="col-md-3">
                             <label class="form-label small fw-bold">Desde:</label>
                             <input type="date" class="form-control form-control-sm" name="desde"
-                                value="{{ date('Y-m-d') }}">
+                                value="{{ date('Y-m-01') }}">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small fw-bold">Hasta:</label>
@@ -96,6 +96,15 @@
                         <div class="col-md-3">
                             <label class="form-label small fw-bold">Codigo Barras:</label>
                             <input type="text" class="form-control form-control-sm" name="codigo_barras">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-bold">Cliente:</label>
+                            <select class="form-select form-select-sm" name="cliente_id">
+                                <option value="">Todos</option>
+                                @foreach ($clientes as $cliente)
+                                    <option value="{{ $cliente->id }}">{{ $cliente->nombre }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div class="col-md-3" id="div_dias_vencer">
                             <label class="form-label small fw-bold">Días a vencer:</label>

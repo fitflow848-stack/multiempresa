@@ -31,6 +31,7 @@ class ReporteController extends Controller
         $vendedores = User::all();
         $locales = Sucursal::all(); 
         $tiposPago = \App\Models\TipoPago::all();
+        $clientes = \App\Models\Cliente::orderBy('nombre')->get();
 
         // Types of reports key-value fetch from DB
         $reports = DB::table('reports')->where('active', true)->orderBy('id')->get();
@@ -40,7 +41,7 @@ class ReporteController extends Controller
             $reportTypes[$r->category][$r->id] = $r->name;
         }
 
-        return view('reportes.index', compact('familias', 'vendedores', 'locales', 'reportTypes', 'tiposPago'));
+        return view('reportes.index', compact('familias', 'vendedores', 'locales', 'reportTypes', 'tiposPago', 'clientes'));
     }
 
     public function generate(Request $request)
@@ -406,7 +407,8 @@ class ReporteController extends Controller
     private function reportePorCobrar(Request $request)
     {
         // Deudas pendientes
-        $query = Deuda::with(['cliente', 'venta'])
+        $query = Deuda::withoutGlobalScope('sucursal')
+            ->with(['cliente', 'venta'])
             ->where('monto_deuda', '>', 0)
             ->whereNotIn('estado', ['pagada', 'anulada'])
             ->orderByDesc('fecha_venta');
@@ -415,8 +417,26 @@ class ReporteController extends Controller
             $query->whereDate('fecha_venta', '>=', $request->input('desde'));
         if ($request->input('hasta'))
             $query->whereDate('fecha_venta', '<=', $request->input('hasta'));
+        
+        // Filtro por sucursal (local)
+        if ($request->input('local_id')) {
+            $query->where('sucursal_id', $request->input('local_id'));
+        } else {
+            // Si no se especifica local, filtrar por la empresa del usuario
+            $query->where('company_id', Auth::user()->company_id);
+        }
 
-        $resultados = $query->limit(200)->get();
+        // Filtro por cliente
+        if ($request->input('cliente_id')) {
+            $query->where('cliente_id', $request->input('cliente_id'));
+        }
+
+        // Filtro por vendedor
+        if ($request->input('vendedor_id')) {
+            $query->where('user_id', $request->input('vendedor_id'));
+        }
+
+        $resultados = $query->limit(500)->get();
         return [
             'view' => 'reportes.partials.por_cobrar',
             'data' => compact('resultados')
@@ -426,22 +446,39 @@ class ReporteController extends Controller
     private function reportePorCobrarConsolidado(Request $request)
     {
         // Deudas pendientes agrupadas por cliente
-        $query = Deuda::select(
-            'cliente_id',
-            DB::raw('count(*) as total_documentos'),
-            DB::raw('sum(monto_deuda) as total_deuda'),
-            DB::raw('min(fecha_vencimiento) as vencimiento_mas_antiguo')
-        )
+        $query = Deuda::withoutGlobalScope('sucursal')
+            ->select(
+                'cliente_id',
+                DB::raw('count(*) as total_documentos'),
+                DB::raw('sum(monto_deuda) as total_deuda'),
+                DB::raw('min(fecha_vencimiento) as vencimiento_mas_antiguo')
+            )
             ->where('monto_deuda', '>', 0)
             ->whereNotIn('estado', ['pagada', 'anulada'])
             ->groupBy('cliente_id')
             ->orderByDesc('total_deuda');
 
+        if ($request->input('desde'))
+            $query->whereDate('fecha_venta', '>=', $request->input('desde'));
+        if ($request->input('hasta'))
+            $query->whereDate('fecha_venta', '<=', $request->input('hasta'));
+
+        // Filtro por sucursal (local)
+        if ($request->input('local_id')) {
+            $query->where('sucursal_id', $request->input('local_id'));
+        } else {
+            $query->where('company_id', Auth::user()->company_id);
+        }
+
         if ($request->input('vendedor_id')) {
             $query->where('user_id', $request->input('vendedor_id'));
         }
 
-        $resultados = $query->with('cliente')->limit(200)->get();
+        if ($request->input('cliente_id')) {
+            $query->where('cliente_id', $request->input('cliente_id'));
+        }
+
+        $resultados = $query->with('cliente')->limit(500)->get();
         return [
             'view' => 'reportes.partials.por_cobrar_consolidado',
             'data' => compact('resultados')

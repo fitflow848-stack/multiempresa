@@ -185,10 +185,10 @@ class VentaService
             $venta->fecha_vencimiento = now();
             $venta->serie = $serie;
             $venta->numero = $siguienteNumero;
-            $venta->total = (float) $total;
-            $venta->monto_recibido = (float) $entrega;
-            $venta->vuelto = (float) ($meta['cambio'] ?? 0);
-            $venta->igv = (float) $igv;
+            $venta->total = $total;
+            $venta->monto_recibido = $entrega;
+            $venta->vuelto = ($meta['cambio'] ?? 0);
+            $venta->igv = $igv;
             $venta->observacion = $observaciones;
             $venta->estado = 1;
             $venta->enviado_sunat = false;
@@ -200,8 +200,8 @@ class VentaService
             $venta->cierre_caja_id = $openCaja->id;
             $venta->id_usuario = $user->id;
             $venta->id_coti = $meta['id_coti'] ?? null;
-            $venta->descuento_monto = $total_descuento > 0 ? (float) $total_descuento : (float) 0;
-            $venta->descuento_porcentaje = ($total_descuento > 0 && ($total + $total_descuento) > 0) ? round(($total_descuento / ($total + $total_descuento)) * 100, 2) : (float) 0;
+            $venta->descuento_monto = $total_descuento > 0 ? $total_descuento : 0;
+            $venta->descuento_porcentaje = ($total_descuento > 0 && ($total + $total_descuento) > 0) ? round(($total_descuento / ($total + $total_descuento)) * 100, 2) : 0;
             $venta->save();
 
             // Si hay una deuda (pago parcial), crear registro de deuda
@@ -213,9 +213,9 @@ class VentaService
                 $deuda->venta_id = $venta->id_venta;
                 $deuda->numero_comprobante = $venta->serie . '-' . str_pad($venta->numero, 8, '0', STR_PAD_LEFT);
                 $deuda->tipo_documento = $tipoDocumento;
-                $deuda->monto_total = (float) $total;
-                $deuda->monto_pagado = (float) $entrega;
-                $deuda->monto_deuda = (float) $montoDeuda;
+                $deuda->monto_total = $total;
+                $deuda->monto_pagado = $entrega;
+                $deuda->monto_deuda = $montoDeuda;
                 $deuda->fecha_venta = now();
                 $plazo = (int) ($meta['plazo_dias'] ?? 30);
                 $deuda->fecha_vencimiento = now()->addDays($plazo); // Días especificados o 30 por defecto
@@ -259,8 +259,8 @@ class VentaService
 
                 $detalle->nombre_servicio = $nombreServicio;
                 $detalle->cantidad = $cantidad;
-                $detalle->precio_unitario = (float) $precio_original;
-                $detalle->importe = (float) $importe_pagado;
+                $detalle->precio_unitario = $precio_original;
+                $detalle->importe = $importe_pagado;
                 $detalle->orden = $index + 1;
                 $detalle->save();
 

@@ -1,6 +1,6 @@
 <div class="row mb-3">
     <div class="col-12 text-center">
-        <h5>VENTAS - POR COBRAR</h5>
+        <h5>DEUDA DE CLIENTE</h5>
     </div>
 </div>
 
