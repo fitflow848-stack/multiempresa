@@ -254,6 +254,12 @@
                             <i class="bx bx-receipt fs-1 mb-2"></i>
                             <span class="small fw-bold">Voucher 5.8cm</span>
                         </button>
+                        <button type="button"
+                            class="btn btn-success d-flex flex-column align-items-center p-3 btn-send-whatsapp shadow-sm"
+                            style="width: 120px; transition: transform 0.2s;">
+                            <i class="bx bxl-whatsapp fs-1 mb-2"></i>
+                            <span class="small fw-bold">WhatsApp</span>
+                        </button>
                     </div>
                 </div>
                 <div class="modal-footer bg-light border-0">
@@ -434,6 +440,46 @@
 
                 // Método de impresión por Iframe para forzar el diálogo del navegador
                 imprimirPDFv2(url);
+            }
+            
+            if (e.target.closest('.btn-send-whatsapp')) {
+                const ventaId = window.currentVentaId;
+                const ventaData = window.currentVentaData;
+                
+                if (!ventaId || !ventaData) return;
+                
+                let clientName = 'Cliente';
+                let phone = '';
+                
+                try {
+                    const clientObj = clienteData ? JSON.parse(clienteData) : null;
+                    clientName = clientObj ? clientName = clientObj.nombre : 'Cliente';
+                    phone = clientObj ? clientObj.telefono : '';
+                } catch(e) {}
+
+                Swal.fire({
+                    title: 'Enviar por WhatsApp',
+                    text: `Ingrese el número de teléfono para enviar el comprobante ${ventaData.numero_completo}:`,
+                    input: 'text',
+                    inputValue: phone || '',
+                    showCancelButton: true,
+                    confirmButtonText: 'Enviar',
+                    cancelButtonText: 'Cancelar',
+                    inputValidator: (value) => {
+                        if (!value) {
+                            return 'Debe ingresar un número de teléfono';
+                        }
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const targetPhone = result.value.replace(/\D/g, ''); 
+                        const pdfUrl = '{{ url("pos") }}/' + ventaId + '/pdf/default';
+                        const message = `Hola ${clientName}, le adjunto su comprobante ${ventaData.numero_completo} por un total de S/ ${ventaData.total}. Puede verlo/descargarlo aquí: ${pdfUrl}`;
+                        const waUrl = `https://wa.me/${targetPhone.startsWith('51') ? targetPhone : '51' + targetPhone}?text=${encodeURIComponent(message)}`;
+                        
+                        window.open(waUrl, '_blank');
+                    }
+                });
             }
         });
 

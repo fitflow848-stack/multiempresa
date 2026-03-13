@@ -39,27 +39,36 @@
                 const ref = p.codigo_ref || '';
                 const nombre = p.nombre || '';
                 const familia = p.familia || '';
+                const presentacion = p.presentacion || '';
+                const concentracion = p.concentracion || '';
 
                 const $item = $(`
-            <div class="list-group-item d-flex align-items-center">
+            <div class="list-group-item d-flex align-items-center py-2">
                 <div class="me-3" style="width:36px; text-align:center;">
                     <i class="bi bi-tag-fill text-secondary"></i>
                 </div>
 
                 <div class="flex-grow-1">
-                    <div><strong>${escapeHtml(cb)} ${escapeHtml(ref)}</strong> &nbsp; ${escapeHtml(nombre)}</div>
-                    <div class="small text-muted">${escapeHtml(familia)}</div>
+                    <div class="fw-bold text-dark">${escapeHtml(cb)} ${escapeHtml(ref)} &nbsp; <span class="fw-normal text-muted">${escapeHtml(nombre)}</span></div>
+                    <div class="d-flex gap-2 align-items-center mt-1">
+                        <small class="text-muted" style="font-size: 0.7rem;">${escapeHtml(familia)}</small>
+                        ${presentacion ? `<span class="badge bg-soft-info text-info border-info" style="font-size: 0.65rem; background: #e0f2fe; border: 1px solid #7dd3fc !important;">${escapeHtml(presentacion)}</span>` : ''}
+                        ${concentracion ? `<span class="badge bg-soft-primary text-primary border-primary" style="font-size: 0.65rem; background: #eef2ff; border: 1px solid #a5b4fc !important;">${escapeHtml(concentracion)}</span>` : ''}
+                    </div>
                 </div>
 
-                <div class="ms-3 d-flex gap-2">
-                    <button type="button" class="btn btn-sm btn-outline-success btn-add-product">Agregar</button>
+                <div class="ms-3 d-flex gap-2 align-items-center">
+                    <button type="button" class="btn btn-sm btn-outline-success btn-add-product fw-bold px-3">Agregar</button>
+                    
+                    <button type="button" class="btn btn-sm btn-light border btn-clone-product shadow-sm" title="Clonar Producto">
+                        <i class="bx bx-copy text-primary"></i>
+                    </button>
 
                     <div class="btn-group">
-                      <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"></button>
-                      <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item btn-open-product" href="#">Abrir</a></li>
-                        <li><a class="dropdown-item btn-edit-product" href="#">Editar</a></li>
-                        <li><a class="dropdown-item btn-copy" href="#">Copiar</a></li>
+                      <button type="button" class="btn btn-sm btn-light border dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                      <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="font-size: 0.8rem;">
+                        <li><a class="dropdown-item btn-open-product" href="#"><i class="bx bx-show me-2"></i> Abrir</a></li>
+                        <li><a class="dropdown-item btn-edit-product" href="#"><i class="bx bx-edit me-2"></i> Editar</a></li>
                       </ul>
                     </div>
                 </div>
@@ -136,6 +145,18 @@
             $results.on('click', '.btn-add-product', function() {
                 const p = $(this).closest('.list-group-item').data('product');
                 openProductDetailModal(p);
+            });
+
+            // Handle Clone
+            $results.on('click', '.btn-clone-product', function(e) {
+                e.preventDefault();
+                const p = $(this).closest('.list-group-item').data('product');
+                const cloneUrl = `{{ url('productos/clone') }}/${p.id}`;
+                if (window.openDynamicTab) {
+                    window.openDynamicTab(cloneUrl, 'Clonar: ' + p.nombre);
+                } else {
+                    window.location.href = cloneUrl;
+                }
             });
 
             // Open and populate product detail modal

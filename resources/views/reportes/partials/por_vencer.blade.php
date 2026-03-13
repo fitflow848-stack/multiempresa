@@ -1,8 +1,16 @@
 <div class="row mb-3">
     <div class="col-12 text-center">
         <h5 class="text-uppercase fw-bold text-primary">Reporte de Productos Próximos a Vencer</h5>
-        <p class="text-muted small">Mostrando productos con vencimiento menor o igual a <strong>{{ $meses }}
-                meses</strong></p>
+        <p class="text-muted small">
+            Mostrando productos con vencimiento menor o igual a 
+            <strong>
+                @if(request('dias_vencer'))
+                    {{ request('dias_vencer') }} días
+                @else
+                    {{ $meses }} meses
+                @endif
+            </strong>
+        </p>
     </div>
 </div>
 
@@ -25,7 +33,7 @@
             @php $totalValor = 0; @endphp
             @forelse($resultados as $item)
                 @php
-                    $dias = now()->diffInDays($item->fecha_vencimiento, false);
+                    $dias = floor(now()->diffInDays($item->fecha_vencimiento, false));
                     $claseFila = '';
                     if ($dias <= 0)
                         $claseFila = 'table-danger';

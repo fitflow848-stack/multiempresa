@@ -97,6 +97,10 @@
                             <label class="form-label small fw-bold">Codigo Barras:</label>
                             <input type="text" class="form-control form-control-sm" name="codigo_barras">
                         </div>
+                        <div class="col-md-3" id="div_dias_vencer">
+                            <label class="form-label small fw-bold">Días a vencer:</label>
+                            <input type="number" class="form-control form-control-sm" name="dias_vencer" placeholder="Ej: 90">
+                        </div>
                     </div>
                 </form>
             </div>
@@ -129,11 +133,53 @@
                     .then(response => response.text())
                     .then(html => {
                         document.getElementById('resultsContainer').innerHTML = html;
+                        // Guardar estado
+                        saveReportState();
                     })
                     .catch(err => {
                         document.getElementById('resultsContainer').innerHTML =
                             '<div class="alert alert-danger">Error al cargar reporte</div>';
                     });
+            });
+
+            // Función para guardar el estado de los filtros
+            function saveReportState() {
+                const form = document.getElementById('filterForm');
+                const formData = new FormData(form);
+                const state = {};
+                formData.forEach((value, key) => {
+                    state[key] = value;
+                });
+                sessionStorage.setItem('reportes_last_state', JSON.stringify(state));
+            }
+
+            // Función para restaurar el estado de los filtros
+            function restoreReportState() {
+                const stateJson = sessionStorage.getItem('reportes_last_state');
+                if (stateJson) {
+                    const state = JSON.parse(stateJson);
+                    const form = document.getElementById('filterForm');
+                    
+                    Object.keys(state).forEach(key => {
+                        const field = form.querySelector(`[name="${key}"]`);
+                        if (field) {
+                            field.value = state[key];
+                        }
+                    });
+                    
+                    // Si se restauró el estado, ejecutar la búsqueda automáticamente
+                    if (state.report_id) {
+                        setTimeout(() => {
+                            document.getElementById('btnSearch').click();
+                        }, 100);
+                    }
+                }
+            }
+
+            // Ejecutar restauración al cargar la página
+            document.addEventListener('DOMContentLoaded', function() {
+                // Pequeño delay para asegurar que otros scripts (como select2 si los hay) estén listos
+                setTimeout(restoreReportState, 200);
             });
 
             document.getElementById('btnPrint').addEventListener('click', function () {

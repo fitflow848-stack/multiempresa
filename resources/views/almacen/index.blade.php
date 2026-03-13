@@ -193,10 +193,7 @@
                                     </td>
                                     <td class="text-center">
                                         <div class="d-flex gap-1 justify-content-center">
-                                            <a href="{{ route('productos.clone', ['id' => $p->producto_id]) }}"
-                                                class="btn btn-sm btn-white border shadow-sm px-2 rounded-pill text-dark fw-bold" title="Clonar Producto">
-                                                <i class="bx bx-copy"></i>
-                                            </a>
+
                                             <a href="{{ route('almacen.kardex', ['producto_id' => $p->producto_id]) }}"
                                                 class="btn btn-sm btn-white border shadow-sm px-2 rounded-pill text-info fw-bold" title="Ver Kardex">
                                                 <i class="bx bx-history"></i>
@@ -427,6 +424,30 @@
                 });
             });
         });
+
+        // Persistencia de filtros para Almacén
+        (function() {
+            const form = document.querySelector('form[action="{{ route('almacen.index') }}"]');
+            if (form) {
+                form.addEventListener('submit', function() {
+                    const formData = new FormData(form);
+                    const params = new URLSearchParams(formData);
+                    sessionStorage.setItem('almacen_last_query', params.toString());
+                });
+            }
+
+            // Restaurar si entramos "limpio"
+            document.addEventListener('DOMContentLoaded', function() {
+                const urlParams = new URLSearchParams(window.location.search);
+                // Si no hay parámetros (excepto tal vez 'page'), restaurar el último
+                if (!urlParams.has('producto') && !urlParams.has('sucursal') && !urlParams.has('existencias') && !urlParams.has('codigo')) {
+                    const lastQuery = sessionStorage.getItem('almacen_last_query');
+                    if (lastQuery) {
+                        window.location.search = lastQuery;
+                    }
+                }
+            });
+        })();
     </script>
     @endpush
 

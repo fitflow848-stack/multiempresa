@@ -276,6 +276,15 @@
                                                     <i class="bx bxs-truck"></i>
                                                 </button>
                                                 @endif
+                                                <button type="button" class="btn btn-action-icon btn-light text-success btn-whatsapp"
+                                                    data-phone="{{ $venta->cliente->telefono ?? '' }}"
+                                                    data-client="{{ $venta->cliente->nombre ?? 'Cliente' }}"
+                                                    data-doc="{{ $venta->serie }}-{{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}"
+                                                    data-total="{{ number_format($venta->total, 2) }}"
+                                                    data-id="{{ $venta->id_venta }}"
+                                                    title="Enviar por WhatsApp">
+                                                    <i class="bx bxl-whatsapp"></i>
+                                                </button>
                                                 <button type="button"
                                                     class="btn btn-action-icon btn-light text-primary btn-detalle"
                                                     data-venta-id="{{ $venta->id_venta }}" title="Ver Detalle">
@@ -815,6 +824,44 @@
                     modalImprimir.show();
                 });
 
+                // Enviar por WhatsApp
+                $(document).on('click', '.btn-whatsapp', function(e) {
+                    e.stopPropagation();
+                    const btn = $(this);
+                    const phone = btn.data('phone');
+                    const client = btn.data('client');
+                    const doc = btn.data('doc');
+                    const total = btn.data('total');
+                    const id = btn.data('id');
+
+                    Swal.fire({
+                        title: 'Enviar por WhatsApp',
+                        text: `Ingrese el número de teléfono para enviar el comprobante ${doc}:`,
+                        input: 'text',
+                        inputValue: phone || '',
+                        showCancelButton: true,
+                        confirmButtonText: 'Enviar',
+                        cancelButtonText: 'Cancelar',
+                        inputValidator: (value) => {
+                            if (!value) {
+                                return 'Debe ingresar un número de teléfono';
+                            }
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            const targetPhone = result.value.replace(/\D/g, ''); // Solo números
+                            
+                            // Construir link del PDF (usamos formato A4 por defecto para WhatsApp)
+                            const pdfUrl = '{{ url("pos") }}/' + id + '/pdf/default';
+                            
+                            const message = `Hola ${client}, le adjunto su comprobante ${doc} por un total de S/ ${total}. Puede verlo/descargarlo aquí: ${pdfUrl}`;
+                            const waUrl = `https://wa.me/${targetPhone.startsWith('51') ? targetPhone : '51' + targetPhone}?text=${encodeURIComponent(message)}`;
+                            
+                            window.open(waUrl, '_blank');
+                        }
+                    });
+                });
+
                 // Handler para los botones de formato
                 $(document).on('click', '.btn-print-format', function() {
                     const ventaId = $('#imprimirVentaId').val();
@@ -1180,6 +1227,36 @@
                     });
                 });
                 
+                // Persistencia de filtros para Comprobantes
+                (function() {
+                    const form = document.querySelector('#form-filtros');
+                    if (form) {
+                        form.addEventListener('submit', function() {
+                            const formData = new FormData(form);
+                            const params = new URLSearchParams(formData);
+                            sessionStorage.setItem('comprobantes_last_query', params.toString());
+                        });
+                        
+                        // Capturar envíos manuales vía JS ($formFiltros.submit())
+                        $(form).on('submit', function() {
+                            const formData = new FormData(form);
+                            const params = new URLSearchParams(formData);
+                            sessionStorage.setItem('comprobantes_last_query', params.toString());
+                        });
+                    }
+
+                    // Restaurar si entramos "limpio"
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        // Si no hay parámetros (excepto tal vez 'page'), restaurar el último
+                        if (!urlParams.has('fecha_desde') && !urlParams.has('fecha_hasta') && !urlParams.has('cliente') && !urlParams.has('tipo_documento')) {
+                            const lastQuery = sessionStorage.getItem('comprobantes_last_query');
+                            if (lastQuery) {
+                                window.location.search = lastQuery;
+                            }
+                        }
+                    });
+                })();
         </script>
     @endpush
     @include('guia-transporte.partials.modal_guia')

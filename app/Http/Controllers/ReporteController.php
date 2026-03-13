@@ -1052,8 +1052,16 @@ class ReporteController extends Controller
     private function reportePorVencer(Request $request)
     {
         $user = Auth::user();
-        $meses = $request->input('meses', 3);
-        $fechaLimite = now()->addMonths($meses);
+        
+        // Priorizar filtro por días si existe, sino usar meses
+        $diasVencer = $request->input('dias_vencer');
+        if ($diasVencer) {
+            $fechaLimite = now()->addDays((int)$diasVencer);
+            $meses = round((int)$diasVencer / 30, 1);
+        } else {
+            $meses = $request->input('meses', 3);
+            $fechaLimite = now()->addMonths((int)$meses);
+        }
 
         $sucursalId = $request->input('local_id') ?: null;
         $query = AlmacenIngresoDetalle::withoutGlobalScopes()
