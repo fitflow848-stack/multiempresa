@@ -157,8 +157,11 @@
                 </div>
 
                 <!-- Campo dinámico para Plazo (Crédito) -->
-                <div id="seccion-plazo" style="display: none; margin-bottom: 12px; background: #fff8e1; padding: 10px; border-radius: 4px; border: 1px solid #ffe082;">
-                    <label style="display: block; font-size: 12px; font-weight: 600; color: #795548; margin-bottom: 5px;">PLAZO DE PAGO (DÍAS)</label>
+                <div id="seccion-plazo"
+                    style="display: none; margin-bottom: 12px; background: #fff8e1; padding: 10px; border-radius: 4px; border: 1px solid #ffe082;">
+                    <label
+                        style="display: block; font-size: 12px; font-weight: 600; color: #795548; margin-bottom: 5px;">PLAZO
+                        DE PAGO (DÍAS)</label>
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <input id="plazo_dias" type="number" value="30" min="1" max="365"
                             style="width:80px; padding:8px; border:1px solid #ccc; border-radius:4px; font-weight: bold; text-align: center;">
@@ -187,8 +190,7 @@
                 <div style="display:flex; gap:10px; margin-bottom: 12px;">
                     <div style="flex: 1;">
                         <label style="font-size: 11px; color: #666;">Serie</label>
-                        <input type="text" id="serie"
-                            value="{{ $serieDocumento ?? ($company->serie_boleta ?? 'B001') }}"
+                        <input type="text" id="serie" value="{{ $serieDocumento ?? ($company->serie_boleta ?? 'B001') }}"
                             style="width:100%; padding:6px; border:1px solid #ddd; background: #f9f9f9;" readonly>
                     </div>
                     <div style="flex: 1;">
@@ -229,7 +231,7 @@
     </div>
 
     <!-- Modal para seleccionar formato de impresión -->
-    <div class="modal fade" id="modalFormatosImpresion" tabindex="-1" aria-hidden="true" style="z-index: 2050;">
+    <div class="modal fade" id="modalFormatosImpresion" aria-hidden="true" style="z-index: 2050;">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow-lg">
                 <div class="modal-header border-bottom">
@@ -260,8 +262,7 @@
                         </button>
                         <button type="button"
                             class="btn btn-info text-white d-flex flex-column align-items-center p-3 btn-print-format shadow-sm"
-                            data-format="5.8cm"
-                            style="width: 120px; filter: brightness(0.9); transition: transform 0.2s;">
+                            data-format="5.8cm" style="width: 120px; filter: brightness(0.9); transition: transform 0.2s;">
                             <i class="bx bx-receipt fs-1 mb-2"></i>
                             <span class="small fw-bold">Voucher 5.8cm</span>
                         </button>
@@ -294,7 +295,7 @@
             const entrega = parseFloat(document.getElementById('entrega').value) || 0;
             const cambio = Math.max(0, entrega - totalVenta);
             document.getElementById('cambio').textContent = cambio.toFixed(2);
-            
+
             // Mostrar/Ocultar sección de plazo si hay deuda
             const seccionPlazo = document.getElementById('seccion-plazo');
             if (entrega < totalVenta) {
@@ -383,13 +384,13 @@
             });
 
             fetch(urlSave, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify(datosEmision)
-                })
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(datosEmision)
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -438,7 +439,7 @@
         }
 
         // Manejar el clic en los formatos de impresión
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
             if (e.target.closest('.btn-print-format')) {
                 const btn = e.target.closest('.btn-print-format');
                 const format = btn.getAttribute('data-format');
@@ -458,45 +459,65 @@
                 // Método de impresión por Iframe para forzar el diálogo del navegador
                 imprimirPDFv2(url);
             }
-            
+
             if (e.target.closest('.btn-send-whatsapp')) {
                 const ventaId = window.currentVentaId;
                 const ventaData = window.currentVentaData;
-                
+
                 if (!ventaId || !ventaData) return;
-                
+
                 let clientName = 'Cliente';
                 let phone = '';
-                
+
                 try {
                     const clientObj = clienteData ? JSON.parse(clienteData) : null;
-                    clientName = clientObj ? clientName = clientObj.nombre : 'Cliente';
+                    clientName = clientObj ? clientObj.nombre : 'Cliente';
                     phone = clientObj ? clientObj.telefono : '';
-                } catch(e) {}
+                } catch (e) { }
 
-                Swal.fire({
-                    title: 'Enviar por WhatsApp',
-                    text: `Ingrese el número de teléfono para enviar el comprobante ${ventaData.numero_completo}:`,
-                    input: 'text',
-                    inputValue: phone || '',
-                    showCancelButton: true,
-                    confirmButtonText: 'Enviar',
-                    cancelButtonText: 'Cancelar',
-                    inputValidator: (value) => {
-                        if (!value) {
-                            return 'Debe ingresar un número de teléfono';
+                window.imprimiendoRedirigiendo = true;
+
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalFormatosImpresion'));
+                modal.hide();
+
+                setTimeout(() => {
+                    Swal.fire({
+                        title: 'Enviar por WhatsApp',
+                        text: `Ingrese el número de teléfono para enviar el comprobante ${ventaData.numero_completo}:`,
+                        input: 'text',
+                        inputValue: phone || '',
+                        showCancelButton: true,
+                        confirmButtonText: 'Enviar',
+                        cancelButtonText: 'Cancelar',
+                        allowOutsideClick: false,
+                        allowEscapeKey: true,
+                        allowEnterKey: true,
+                        didOpen: () => {
+                            const input = Swal.getInput();
+                            if (input) input.focus();
+                        },
+                        inputValidator: (value) => {
+                            if (!value) {
+                                return 'Debe ingresar un número de teléfono';
+                            }
                         }
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        const targetPhone = result.value.replace(/\D/g, ''); 
-                        const pdfUrl = '{{ url("pos") }}/' + ventaId + '/pdf/default';
-                        const message = `Hola ${clientName}, le adjunto su comprobante ${ventaData.numero_completo} por un total de S/ ${ventaData.total}. Puede verlo/descargarlo aquí: ${pdfUrl}`;
-                        const waUrl = `https://wa.me/${targetPhone.startsWith('51') ? targetPhone : '51' + targetPhone}?text=${encodeURIComponent(message)}`;
-                        
-                        window.open(waUrl, '_blank');
-                    }
-                });
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            const targetPhone = result.value.replace(/\D/g, '');
+                            const pdfUrl = '{{ url("pos") }}/' + ventaId + '/pdf/default';
+                            const message = `Hola ${clientName}, le adjunto su comprobante ${ventaData.numero_completo} por un total de S/ ${ventaData.total}. Puede verlo/descargarlo aquí: ${pdfUrl}`;
+                            const waUrl = `https://wa.me/${targetPhone.startsWith('51') ? targetPhone : '51' + targetPhone}?text=${encodeURIComponent(message)}`;
+
+                            window.open(waUrl, '_blank');
+                            
+                            // Redirigir al POS después de enviar
+                            setTimeout(() => {
+                                limpiarYRedirigir();
+                            }, 1000);
+
+                        }
+                    });
+                }, 300);
             }
         });
 
@@ -520,12 +541,12 @@
             });
         }
 
-        document.getElementById('btn-cerrar-finalizar').addEventListener('click', function() {
+        document.getElementById('btn-cerrar-finalizar').addEventListener('click', function () {
             limpiarYRedirigir();
         });
 
         // También cerrar al darle a la X del modal (si se usa data-bs-dismiss)
-        document.getElementById('modalFormatosImpresion').addEventListener('hidden.bs.modal', function() {
+        document.getElementById('modalFormatosImpresion').addEventListener('hidden.bs.modal', function () {
             // Si el usuario cierra el modal sin imprimir, igual debemos redirigir para limpiar el ticket
             if (!window.imprimiendoRedirigiendo) {
                 limpiarYRedirigir();
@@ -556,7 +577,7 @@
         }
 
         // Calcular cambio inicial
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             calcularCambio();
 
             // Obtener el siguiente número de serie
@@ -568,16 +589,16 @@
             const serie = document.getElementById('serie').value;
 
             fetch('{{ route('pos.obtener-siguiente-numero') }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({
-                        serie: serie,
-                        tipo_documento: tipoDocumentoSeleccionado
-                    })
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    serie: serie,
+                    tipo_documento: tipoDocumentoSeleccionado
                 })
+            })
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('numero').value = data.numero;
