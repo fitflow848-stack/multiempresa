@@ -170,6 +170,22 @@
                 clearPOSStorage();
             }
         });
+        // Mostrar mensajes de sesión con SweetAlert2
+        @if(session('success'))
+            Swal.fire({ icon: 'success', title: '¡Éxito!', text: "{{ session('success') }}", timer: 3000 });
+        @endif
+
+        @if(session('error'))
+            Swal.fire({ icon: 'error', title: 'Error', text: "{{ session('error') }}" });
+        @endif
+
+        @if(session('warning'))
+            Swal.fire({ icon: 'warning', title: 'Advertencia', text: "{{ session('warning') }}" });
+        @endif
+
+        @if(session('info'))
+            Swal.fire({ icon: 'info', title: 'Información', text: "{{ session('info') }}" });
+        @endif
     </script>
     @stack('scripts')
 </body>

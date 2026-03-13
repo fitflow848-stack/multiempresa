@@ -77,21 +77,21 @@ class GuiaRemisionTransporteController extends Controller
                     $detalle = json_decode($detalleJson);
                     GuiaRemisionProducto::create([
                         'id_guia' => $guia->id,
-                        'cod_sap' => $detalle->cod_sap,
-                        'tipo' => $detalle->tipo,
-                        'descripcion' => $detalle->descripcion,
-                        'serie' => $detalle->serie,
-                        'cantidad' => $detalle->cantidad,
-                        'unidad_medida' => $detalle->unidad_medida,
-                        'peso' => $detalle->peso,
+                        'cod_sap' => $detalle->cod_sap ?? null,
+                        'tipo' => $detalle->tipo ?? 'producto',
+                        'descripcion' => $detalle->descripcion ?? '',
+                        'serie' => $detalle->serie ?? null,
+                        'cantidad' => $detalle->cantidad ?? 0,
+                        'unidad_medida' => $detalle->unidad_medida ?? 'NIU',
+                        'peso' => $detalle->peso ?? 0,
                     ]);
 
                     $items[] = (object) [
                         'num_item' => count($items) + 1,
-                        'cod_producto' => $detalle->cod_sap,
-                        'unidad' => $detalle->unidad_medida,
-                        'descripcion' => $detalle->descripcion,
-                        'cantidad' => $detalle->cantidad
+                        'cod_producto' => $detalle->cod_sap ?? null,
+                        'unidad' => $detalle->unidad_medida ?? 'NIU',
+                        'descripcion' => $detalle->descripcion ?? '',
+                        'cantidad' => $detalle->cantidad ?? 0
                     ];
                 }
             }
@@ -112,7 +112,10 @@ class GuiaRemisionTransporteController extends Controller
                 'nro_mtc' => $guia->transportista_mtc ?? ''
             ];
 
-            // 5. Generar JSON y Llamar API
+            // 5. Cargar relaciones para obtener códigos de UBIGEO
+            $guia->load(['distritoPartida', 'distritoLlegada']);
+
+            // 6. Generar JSON y Llamar API
             $jsonPayload = $this->sunatService->formatJsonGuiaRemision(
                 $guia,
                 $company,
@@ -139,8 +142,8 @@ class GuiaRemisionTransporteController extends Controller
                 }
 
                 // 7. Incrementar número correlativo
-                DocumentosEmpresa::where(['id_empresa' => 14, 'id_tido' => 11, 'serie' => $guia->serie])
-                    ->increment('numero');
+                CompanyDocument::where(['company_id' => Auth::user()->company_id, 'branch_id' => Auth::user()->branch_id, 'sunat_document_id' => 11, 'series' => $guia->serie])
+                    ->increment('number');
             } else {
                 Log::warning('Respuesta negativa de API Guia:', ['response' => $apiData]);
             }
@@ -190,6 +193,15 @@ class GuiaRemisionTransporteController extends Controller
             return response()->json($apiData);
         } catch (\Exception $e) {
             Log::error('Error en sendSunat GuiaRemision: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+    public function consultarTicker($ticker)
+    {
+        try {
+            $apiResponse = $this->sunatService->consultarGuiaRemision($ticker);
+            return response()->json(json_decode($apiResponse));
+        } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }

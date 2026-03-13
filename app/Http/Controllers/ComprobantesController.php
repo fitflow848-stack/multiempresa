@@ -118,7 +118,8 @@ class ComprobantesController extends Controller
             return response()->json([
                 'success' => true,
                 'venta' => $venta,
-                'detalles' => $venta->detalles
+                'detalles' => $venta->detalles,
+                'empresa' => $company
             ]);
         }
 
@@ -599,7 +600,69 @@ class ComprobantesController extends Controller
             ->where('id_empresa', $company->id)
             ->firstOrFail();
 
-        // Retornar vista de impresión o PDF
         return view('comprobantes.imprimir', compact('venta', 'company'));
+    }
+
+    public function buscarVenta(Request $request)
+    {
+        $q = trim($request->get('q', ''));
+        $tipoCode = $request->get('tipo'); // SUNAT CODE: 01 (Factura), 03 (Boleta)
+
+        if (empty($q)) {
+            return response()->json([]);
+        }
+
+        // Usamos withoutGlobalScopes para que pueda encontrar documentos de otras sucursales si es necesario
+        $query = Venta::withoutGlobalScopes()
+            ->with(['cliente'])
+            ->where('id_empresa', Auth::user()->company_id)
+            ->where('estado', '!=', 0);
+
+        // Mapeo selectivo por id_tido (más seguro que strings)
+        if ($tipoCode) {
+            $id_tido = ($tipoCode === '01') ? 2 : 1; 
+            $query->where('id_tido', $id_tido);
+        }
+
+        $query->where(function ($sub) use ($q) {
+            $cleanQ = str_replace(['-', ' '], '', $q);
+            
+            // 1. Búsqueda por número exacto o parcial
+            $sub->where('numero', 'LIKE', "%$q%")
+                ->orWhere('serie', 'LIKE', "%$q%");
+
+            // 2. Si hay guión, buscar por Serie y Número por separado
+            if (str_contains($q, '-')) {
+                $parts = explode('-', $q);
+                if (count($parts) >= 2) {
+                    $seriePart = trim($parts[0]);
+                    $numeroPart = ltrim(trim($parts[1]), '0'); // Quitar ceros a la izquierda para el LIKE
+                    
+                    $sub->orWhere(function($s) use ($seriePart, $numeroPart) {
+                        $s->where('serie', 'LIKE', "%$seriePart%")
+                          ->where('numero', 'LIKE', "%$numeroPart%");
+                    });
+                }
+            }
+
+            // 3. Búsqueda por concatenación (Serie+Número)
+            $sub->orWhere(DB::raw("CONCAT(serie, numero)"), 'LIKE', "%$cleanQ%")
+                ->orWhere(DB::raw("CONCAT(serie, '-', numero)"), 'LIKE', "%$q%");
+
+            // 4. Búsqueda por cliente
+            $sub->orWhereHas('cliente', function ($c) use ($q) {
+                $c->where('nombre', 'LIKE', "%$q%")
+                  ->orWhere('numero_documento', 'LIKE', "%$q%");
+            });
+        });
+
+        // Debug log (opcional, remover luego)
+        // \Log::info("Búsqueda Guía: q=$q, tipo=$tipoCode");
+
+        $results = $query->orderBy('id_venta', 'desc')
+            ->limit(30)
+            ->get();
+
+        return response()->json($results);
     }
 }

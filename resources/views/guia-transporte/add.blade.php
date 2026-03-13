@@ -1,880 +1,612 @@
 @extends('layout.app')
 
+@section('title', 'Generar Guía de Remisión')
+
 @section('content')
-    <style>
-        /* Estilos Generales */
-        .card {
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            margin-bottom: 1.5rem;
-        }
+<style>
+    :root {
+        --novik-green: #2ecc71;
+        --novik-light-bg: #f8fafc;
+        --novik-border: #e2e8f0;
+        --novik-text: #334155;
+    }
 
-        .card-header {
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #ebedf2 !important;
-            padding: 10px 15px;
-        }
+    body {
+        background-color: var(--novik-light-bg);
+        color: var(--novik-text);
+        font-family: 'Inter', sans-serif;
+    }
 
-        .card-header h5 {
-            margin-bottom: 0;
-            font-weight: 600;
-            color: #333;
-            font-size: 1rem;
-        }
+    .form-container {
+        max-width: 1200px;
+        margin: 1.5rem auto;
+        padding: 0 1rem;
+    }
 
-        .form-label {
-            font-weight: 600;
-            font-size: 0.85rem;
-            color: #495057;
-            margin-bottom: 4px;
-        }
+    .novik-card {
+        background: white;
+        border-radius: 20px;
+        border: 1px solid var(--novik-border);
+        box-shadow: 0 4px 15px -1px rgba(0, 0, 0, 0.03);
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+    }
 
-        .form-control-sm,
-        .form-select-sm {
-            border-radius: 4px;
-        }
+    .novik-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
 
-        /* Buscador de productos flotante */
-        #cod_sap_results {
-            position: absolute;
-            z-index: 99999;
-            width: 100%;
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
-            max-height: 260px;
-            overflow-y: auto;
-            background: #fff;
-            border: 1px solid #e6e6e6;
-            border-radius: 6px;
-            padding: 0;
-            margin-top: 6px;
-        }
+    .novik-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1e293b;
+    }
 
-        #cod_sap_results li.list-group-item {
-            background: #fff !important;
-            border: none !important;
-            border-bottom: 1px solid #f1f1f1 !important;
-            padding: 10px 12px !important;
-            cursor: pointer;
-            color: #333;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+    .label-novik {
+        display: block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: #64748b;
+        margin-bottom: 0.4rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
 
-        #cod_sap_results li.list-group-item:hover,
-        #cod_sap_results li.list-group-item:focus {
-            background: #e9f6ff !important;
-            color: #0b6bd6;
-        }
+    .novik-input-group {
+        position: relative;
+    }
 
-        /* Tabla de productos */
-        .table-custom thead {
-            background-color: #1572e8;
-            color: white;
-        }
+    .novik-control {
+        width: 100%;
+        padding: 0.65rem 0.8rem;
+        padding-left: 2.2rem;
+        border-radius: 12px;
+        border: 1px solid var(--novik-border);
+        background-color: #f8fafc;
+        transition: all 0.2s;
+        font-size: 0.9rem;
+    }
 
-        .table-custom th {
-            font-weight: 500;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-        }
+    .novik-control:focus {
+        outline: none;
+        border-color: var(--novik-green);
+        background-color: white;
+        box-shadow: 0 0 0 4px rgba(46, 204, 113, 0.05);
+    }
 
-        .destinatario-item {
-            background: #fcfcfc;
-            border: 1px solid #eee;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-        }
+    .novik-icon {
+        position: absolute;
+        left: 0.8rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        font-size: 1.1rem;
+    }
 
-        .btn-icon {
-            width: 35px;
-            height: 35px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-    </style>
+    .btn-novik-primary {
+        background-color: var(--novik-green);
+        color: white;
+        border: none;
+        padding: 0.65rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
 
-    <div class="container">
-        <div class="page-inner">
-            <div class="d-flex align-items-center justify-content-between pt-2 pb-4">
-                <h3 class="fw-bold mb-0">GUÍA DE REMISIÓN</h3>
-                <a href="{{ route('guia.index') }}" class="btn btn-secondary btn-round">
-                    <i class="bi bi-arrow-left-circle me-1"></i> Regresar
-                </a>
+    .btn-novik-primary:hover:not(:disabled) {
+        background-color: #27ae60;
+        transform: translateY(-1px);
+    }
+
+    .btn-novik-outline {
+        border: 1px solid var(--novik-border);
+        background: white;
+        color: #64748b;
+        padding: 0.65rem 1.2rem;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.2s;
+    }
+
+    .section-label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #475569;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .section-label i {
+        color: var(--novik-green);
+    }
+
+    /* Search Results */
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid var(--novik-border);
+        border-radius: 12px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        z-index: 100;
+        max-height: 200px;
+        overflow-y: auto;
+        display: none;
+    }
+
+    .search-item {
+        padding: 0.6rem 1rem;
+        cursor: pointer;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .search-item:hover {
+        background: #f8fafc;
+    }
+
+    /* Ubigeo Boxes */
+    .ubigeo-container {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .ubigeo-box {
+        flex: 1;
+    }
+
+    .novik-check-icon {
+        color: var(--novik-green);
+        display: none;
+        margin-left: 0.5rem;
+    }
+
+    /* Table */
+    .novik-table {
+        width: 100%;
+        margin-top: 1rem;
+    }
+    .novik-table th {
+        background: #f1f5f9;
+        padding: 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        border-radius: 8px;
+    }
+    .novik-table td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.85rem;
+    }
+</style>
+
+<div class="form-container">
+    <div class="novik-header">
+        <h1 class="novik-title">Crear Guía de Remisión</h1>
+        <a href="{{ route('guia.index') }}" class="btn-novik-outline">
+            <i class="bx bx-arrow-back"></i> Regresar
+        </a>
+    </div>
+
+    <!-- Buscador de Venta -->
+    <div class="novik-card border-primary" style="background: #f1f7ff; border-style: dashed;">
+        <div class="section-label"><i class="bx bx-search-alt"></i> Buscar Documento de Venta (Opcional)</div>
+        <div class="row g-2">
+            <div class="col-md-3">
+                <select class="novik-control" id="ref_tipo" style="padding-left:0.8rem">
+                    <option value="01">Factura</option>
+                    <option value="03">Boleta</option>
+                </select>
             </div>
-
-            <form id="formGuia">
-                <input type="hidden" name="serie" value="{{ $serie }}">
-                <input type="hidden" name="numero" value="{{ $numero }}">
-                <input type="hidden" name="motivo_traslado_codigo" value="01">
-                <input type="hidden" name="modalidad_traslado_codigo" value="01">
-                <div class="row">
-                    <div class="col-md-7">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5><i class="bi bi-calendar3 me-2"></i>Información del Traslado</h5>
-                            </div>
-                            <div class="card-body p-3">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Fecha de Traslado</label>
-                                        <input type="date" class="form-control" id="fecha_traslado"
-                                            name="fecha_traslado">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Peso Bruto Total (KG)</label>
-                                        <input type="number" step="0.01" class="form-control" name="peso_bruto">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card">
-                            <div class="card-header">
-                                <h5><i class="bi bi-geo-alt me-2"></i>Punto de Partida</h5>
-                            </div>
-                            <div class="card-body p-3">
-                                <div class="row g-2">
-                                    <div class="col-md-4">
-                                        <label class="form-label">RUC</label>
-                                        <div class="input-group">
-                                            <input type="text" class="form-control" id="ruc_partida" name="ruc_partida">
-                                            <button type="button" class="btn btn-primary btn-search_partida"><i
-                                                    class="bx bx-search"></i></button>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-8">
-                                        <label class="form-label">Razón Social</label>
-                                        <input type="text" class="form-control" id="razon_partida" name="razon_partida">
-                                    </div>
-                                    <div class="col-12 mt-2">
-                                        <label class="form-label">Dirección Completa</label>
-                                        <input type="text" class="form-control" id="direccion_partida"
-                                            name="direccion_partida">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Departamento</label>
-                                        <select class="form-select form-control" name="departamento_partida"
-                                            id="select_departamento">
-                                            @foreach ($departamentos as $departamento)
-                                                <option value="{{ $departamento->dep_cod }}">
-                                                    {{ strtoupper($departamento->dep_nombre) }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Provincia</label>
-                                        <select class="form-select form-control" name="provincia_partida"
-                                            id="select_provincia"></select>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Distrito</label>
-                                        <select class="form-select form-control" name="distrito_partida"
-                                            id="select_distrito"></select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card">
-                            <div class="card-header">
-                                <h5><i class="bi bi-people me-2"></i> Cliente (Destinatario)</h5>
-                            </div>
-                            <div class="card-body p-3">
-                                <div class="destinatario-item">
-                                    <div class="row g-3">
-                                        <div class="col-md-3">
-                                            <label class="form-label">DNI/RUC</label>
-                                            <div class="input-group">
-                                                <input type="text" class="form-control" name="cliente_documento"
-                                                    id="cliente_documento">
-                                                <button type="button" class="btn btn-outline-primary btn-search-cliente"><i
-                                                        class="bx bx-search"></i></button>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-9">
-                                            <label class="form-label">Apellidos y Nombres / Razón Social</label>
-                                            <input type="text" class="form-control" name="cliente_nombre"
-                                                id="cliente_nombre" readonly>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-5">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5><i class="bi bi-geo-fill me-2"></i>Punto de Llegada</h5>
-                            </div>
-                            <div class="card-body p-3">
-                                <div class="row g-2">
-                                    <div class="col-12">
-                                        <label class="form-label">Dirección de Llegada</label>
-                                        <input type="text" class="form-control" id="direccion_llegada"
-                                            name="direccion_llegada">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Dep.</label>
-                                        <select class="form-select form-control" name="departamento_llegada"
-                                            id="select_departamento_lle">
-                                            @foreach ($departamentos as $departamento)
-                                                <option value="{{ $departamento->dep_cod }}">
-                                                    {{ strtoupper($departamento->dep_nombre) }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Prov.</label>
-                                        <select class="form-select form-control" name="provincia_llegada"
-                                            id="select_provincia_lle"></select>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Dist.</label>
-                                        <select class="form-select form-control" name="distrito_llegada"
-                                            id="select_distrito_lle"></select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card">
-                            <div class="card-header">
-                                <h5><i class="bi bi-info-circle me-2"></i>Otros Datos</h5>
-                            </div>
-                            <div class="card-body p-3">
-                                <div class="mb-2">
-                                    <label class="form-label">Motivo de Traslado</label>
-                                    <input type="text" class="form-control" name="motivo_traslado"
-                                        placeholder="Ej: Venta, Compra, Traslado entre almacenes">
-                                    <input type="hidden" name="motivo_traslado_codigo" value="01">
-                                </div>
-                                <div class="mb-2">
-                                    <label class="form-label">Documento Relacionado (Opcional)</label>
-                                    <input type="text" class="form-control" name="documento_relacionado"
-                                        placeholder="Ej: F001-52">
-                                </div>
-                                <div>
-                                    <label class="form-label">Observaciones</label>
-                                    <textarea class="form-control" name="observacion" rows="2"></textarea>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="card">
-                            <div class="card-header">
-                                <h5><i class="bi bi-truck me-2"></i>Transportista</h5>
-                            </div>
-                            <div class="card-body p-3">
-                                <div class="row g-2">
-                                    <div class="col-md-12">
-                                        <label class="form-label">DNI/RUC Transportista</label>
-                                        <div class="input-group">
-                                            <input type="text" class="form-control" id="transportista_doc"
-                                                name="transportista_doc">
-                                            <button type="button" class="btn btn-primary btn-search-transportista">
-                                                <i class="bx bx-search"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-12">
-                                        <label class="form-label">Nombre / Razón Social</label>
-                                        <input type="text" class="form-control" id="transportista_nombre"
-                                            name="transportista_nombre">
-                                    </div>
-                                    <div class="col-md-12">
-                                        <label class="form-label">Nro Registro MTC</label>
-                                        <input type="text" class="form-control" name="transportista_mtc">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            <div class="col-md-5 position-relative">
+                <div class="novik-input-group">
+                    <i class="bx bx-file novik-icon"></i>
+                    <input type="text" class="novik-control" id="ref_search" placeholder="Serie y número (ej: F001-123)">
+                    <div class="search-results" id="ref_results"></div>
                 </div>
-
-
-
-                <div class="card">
-                    <div class="card-header">
-                        <h5><i class="bi bi-box-seam me-2"></i>Detalle de Productos</h5>
-                    </div>
-                    <div class="card-body p-3">
-                        <div class="row align-items-end mb-4">
-                            <div class="col-md-6 position-relative">
-                                <label class="form-label">Buscar Producto (Nombre o Código)</label>
-                                <input type="text" id="cod_sap" class="form-control"
-                                    placeholder="Escriba para buscar...">
-                                <ul id="cod_sap_results" class="list-group"></ul>
-                            </div>
-                            <div class="col-md-2" id="quantity-container" style="display:none;">
-                                <label class="form-label">Cantidad</label>
-                                <input type="number" id="product-quantity" class="form-control" min="1"
-                                    value="1">
-                            </div>
-                            <div class="col-md-3">
-                                <button type="button" id="add-product-btn" class="btn btn-primary w-100"
-                                    style="display:none;">
-                                    <i class="bi bi-cart-plus me-1"></i> Añadir a la lista
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="table-responsive">
-                            <table class="table table-bordered table-custom" id="productTable">
-                                <thead>
-                                    <tr>
-                                        <th>COD</th>
-                                        <th>TIPO</th>
-                                        <th>DESCRIPCIÓN</th>
-                                        <th>SERIE</th>
-                                        <th width="100">CANT.</th>
-                                        <th>U.M.</th>
-                                        <th width="100">PESO</th>
-                                        <th>Acción</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div class="card-footer bg-white text-end">
-                        <button type="submit" class="btn btn-success btn-lg px-5">
-                            <i class="bi bi-check-circle me-1"></i> GENERAR GUÍA DE REMISIÓN
-                        </button>
-                    </div>
-                </div>
-            </form>
+            </div>
+            <div class="col-md-4">
+                <p class="text-muted small mb-0 mt-2">
+                    <i class="bx bx-info-circle text-primary"></i> Solo se mostrarán documentos <strong>enviados a SUNAT</strong>.
+                </p>
+            </div>
         </div>
     </div>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <!-- DataTables CSS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css">
-    <!-- DataTables JS -->
-    <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.1/xlsx.full.min.js"></script>
+    <form id="formNovik">
+        @csrf
+        <input type="hidden" name="serie" value="{{ $serie }}">
+        <input type="hidden" name="numero" value="{{ $numero }}">
+        <input type="hidden" name="documento_relacionado" id="input_ref_doc">
 
+        <div class="row g-3">
+            <!-- Columna Izquierda: Traslado y Ubigeos -->
+            <div class="col-md-8">
+                <div class="novik-card">
+                    <div class="section-label"><i class="bx bx-info-circle"></i> Información del Traslado</div>
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label class="label-novik">Modalidad</label>
+                            <div class="novik-input-group">
+                                <i class="bx bx-shuffle novik-icon"></i>
+                                <select class="novik-control" name="modalidad_traslado_codigo" id="modalidad_select">
+                                    <option value="01">Transporte Público</option>
+                                    <option value="02">Transporte Privado</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="label-novik">F. Traslado</label>
+                            <div class="novik-input-group">
+                                <i class="bx bx-calendar novik-icon"></i>
+                                <input type="date" class="novik-control" name="fecha_traslado" value="{{ date('Y-m-d') }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="label-novik">Peso Total (KGM)</label>
+                            <div class="novik-input-group">
+                                <i class="bx bx-package novik-icon"></i>
+                                <input type="number" step="0.01" class="novik-control" name="peso_bruto" id="total_peso" value="1.00">
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-    <script>
-        let token = '{{ csrf_token() }}';
+                <!-- Ubigeo Salida -->
+                <div class="novik-card">
+                    <div class="section-label"><i class="bx bx-map-pin"></i> Punto de Partida</div>
+                    <div class="ubigeo-container mb-2">
+                        <div class="ubigeo-box">
+                            <label class="label-novik">Dep.</label>
+                            <select class="novik-control" style="padding-left:0.8rem" id="dep_salida" name="departamento_partida">
+                                @foreach($departamentos as $d)
+                                    <option value="{{ $d->dep_cod }}">{{ $d->dep_nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="ubigeo-box">
+                            <label class="label-novik">Prov.</label>
+                            <select class="novik-control" style="padding-left:0.8rem" id="prov_salida" name="provincia_partida"></select>
+                        </div>
+                        <div class="ubigeo-box">
+                            <label class="label-novik">Dist.</label>
+                            <select class="novik-control" style="padding-left:0.8rem" id="dist_salida" name="distrito_partida"></select>
+                        </div>
+                    </div>
+                    <div class="novik-input-group">
+                        <i class="bx bx-home novik-icon"></i>
+                        <input type="text" class="novik-control" name="direccion_partida" id="dir_salida" placeholder="Dirección exacta de salida">
+                    </div>
+                </div>
 
-        $('#select_departamento').change(function() {
-            let dep = $(this).val();
-            $.post("{{ route('provincia.get') }}", {
-                    _token: token,
-                    dep: dep
-                },
-                function(data, textStatus, jqXHR) {
-                    let opt = '';
+                <!-- Ubigeo Llegada -->
+                <div class="novik-card">
+                    <div class="section-label"><i class="bx bxs-map-pin"></i> Punto de Llegada</div>
+                    <div class="ubigeo-container mb-2">
+                        <div class="ubigeo-box">
+                            <label class="label-novik">Dep.</label>
+                            <select class="novik-control" style="padding-left:0.8rem" id="dep_llegada" name="departamento_llegada">
+                                @foreach($departamentos as $d)
+                                    <option value="{{ $d->dep_cod }}">{{ $d->dep_nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="ubigeo-box">
+                            <label class="label-novik">Prov.</label>
+                            <select class="novik-control" style="padding-left:0.8rem" id="prov_llegada" name="provincia_llegada"></select>
+                        </div>
+                        <div class="ubigeo-box">
+                            <label class="label-novik">Dist.</label>
+                            <select class="novik-control" style="padding-left:0.8rem" id="dist_llegada" name="distrito_llegada"></select>
+                        </div>
+                    </div>
+                    <div class="novik-input-group">
+                        <i class="bx bx-navigation novik-icon"></i>
+                        <input type="text" class="novik-control" name="direccion_llegada" id="dir_llegada" placeholder="Dirección exacta de destino">
+                    </div>
+                </div>
+            </div>
 
-                    $.each(data, function(i, v) {
-                        opt += `<option value="${v.pro_id}">${v.pro_nombre}</option>`;
-                    });
-                    $('#select_provincia').html(opt);
-                },
-            );
+            <!-- Columna Derecha: Destinatario y Transportista -->
+            <div class="col-md-4">
+                <div class="novik-card">
+                    <div class="section-label"><i class="bx bx-user"></i> Destinatario</div>
+                    <div class="novik-input-group mb-2">
+                        <i class="bx bx-id-card novik-icon"></i>
+                        <input type="text" class="novik-control" name="cliente_documento" id="cli_doc" placeholder="RUC/DNI">
+                    </div>
+                    <div class="novik-input-group">
+                        <i class="bx bx-user-circle novik-icon"></i>
+                        <input type="text" class="novik-control" name="cliente_nombre" id="cli_nombre" placeholder="Nombre completo">
+                    </div>
+                </div>
+
+                <div class="novik-card">
+                    <div class="section-label"><i class="bx bx-truck"></i> Transportista</div>
+                    <div id="section_publico">
+                        <div class="novik-input-group mb-2">
+                            <i class="bx bx-building novik-icon"></i>
+                            <input type="text" class="novik-control" name="transportista_doc" id="trans_ruc" placeholder="RUC Transportista">
+                        </div>
+                        <div class="novik-input-group">
+                            <i class="bx bx-briefcase novik-icon"></i>
+                            <input type="text" class="novik-control" name="transportista_nombre" id="trans_nombre" placeholder="Razón Social">
+                        </div>
+                    </div>
+                    <div id="section_privado" style="display:none">
+                        <div class="novik-input-group mb-2">
+                            <i class="bx bx-car novik-icon"></i>
+                            <input type="text" class="novik-control" name="vehiculo_placa" placeholder="Placa del Vehículo">
+                        </div>
+                        <div class="novik-input-group mb-2">
+                            <i class="bx bx-user novik-icon"></i>
+                            <input type="text" class="novik-control" name="conductor_doc_numero" placeholder="DNI Conductor">
+                        </div>
+                        <div class="novik-input-group">
+                            <i class="bx bx-id-card novik-icon"></i>
+                            <input type="text" class="novik-control" name="conductor_licencia" placeholder="Licencia de Conducir">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="novik-card">
+                    <div class="section-label"><i class="bx bx-list-check"></i> Motivo</div>
+                    <select class="novik-control" style="padding-left:0.8rem" name="motivo_traslado_codigo">
+                        <option value="01">Venta</option>
+                        <option value="14">Venta sujeta a confirmación</option>
+                        <option value="02">Compra</option>
+                        <option value="04">Traslado entre establecimientos</option>
+                        <option value="13">Otros</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Productos -->
+            <div class="col-12">
+                <div class="novik-card">
+                    <div class="section-label"><i class="bx bx-package"></i> Detalles de la Carga</div>
+                    <div class="novik-input-group mb-3" style="max-width: 500px;">
+                        <i class="bx bx-search novik-icon"></i>
+                        <input type="text" class="novik-control" id="item_search" placeholder="Añadir producto por código o nombre...">
+                        <div class="search-results" id="item_results"></div>
+                    </div>
+
+                    <table class="novik-table" id="table_items">
+                        <thead>
+                            <tr>
+                                <th>Cód.</th>
+                                <th>Descripción</th>
+                                <th>U.M.</th>
+                                <th width="100">Cantidad</th>
+                                <th width="100">Peso (Kg)</th>
+                                <th width="50"></th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="col-12 text-center pb-4">
+                <button type="submit" class="btn-novik-primary shadow-lg px-5 py-3" id="btn_submit">
+                    <i class="bx bx-check-double" style="font-size: 1.5rem"></i> EMITIR GUÍA DE REMISIÓN ELECTRÓNICA
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    const token = $('meta[name="csrf-token"]').attr('content');
+
+    // Ubigeos Dynamic
+    function loadProv(dep, targetProv, targetDist) {
+        $.post("{{ route('provincia.get') }}", { _token: token, dep: dep }).done(res => {
+            let html = '';
+            res.forEach(p => html += `<option value="${p.pro_id}">${p.pro_nombre}</option>`);
+            $(targetProv).html(html).trigger('change');
         });
+    }
 
-        $('#select_provincia').change(function() {
-            let prov = $(this).val();
-            $.post("{{ route('distrito.get') }}", {
-                    _token: token,
-                    prov: prov
-                },
-                function(data, textStatus, jqXHR) {
-                    let opt = '';
-
-                    $.each(data, function(i, v) {
-                        opt += `<option value="${v.dis_id}">${v.dis_nombre}</option>`;
-                    });
-                    $('#select_distrito').html(opt);
-                },
-            );
+    function loadDist(prov, targetDist) {
+        $.post("{{ route('distrito.get') }}", { _token: token, prov: prov }).done(res => {
+            let html = '';
+            res.forEach(d => html += `<option value="${d.dis_id}">${d.dis_nombre}</option>`);
+            $(targetDist).html(html);
         });
+    }
 
-        $('#select_departamento_lle').change(function() {
-            let dep = $(this).val();
-            $.post("{{ route('provincia.get') }}", {
-                    _token: token,
-                    dep: dep
-                },
-                function(data, textStatus, jqXHR) {
-                    let opt = '';
+    $('#dep_salida').change(function() { loadProv($(this).val(), '#prov_salida', '#dist_salida'); });
+    $('#prov_salida').change(function() { loadDist($(this).val(), '#dist_salida'); });
+    $('#dep_llegada').change(function() { loadProv($(this).val(), '#prov_llegada', '#dist_llegada'); });
+    $('#prov_llegada').change(function() { loadDist($(this).val(), '#dist_llegada'); });
 
-                    $.each(data, function(i, v) {
-                        opt += `<option value="${v.pro_id}">${v.pro_nombre}</option>`;
-                    });
-                    $('#select_provincia_lle').html(opt);
-                },
-            );
-        });
+    $('#dep_salida, #dep_llegada').trigger('change');
 
-        $('#select_provincia_lle').change(function() {
-            let prov = $(this).val();
-            $.post("{{ route('distrito.get') }}", {
-                    _token: token,
-                    prov: prov
-                },
-                function(data, textStatus, jqXHR) {
-                    let opt = '';
+    // Modalidad Toggle
+    $('#modalidad_select').change(function() {
+        if ($(this).val() === '01') { $('#section_publico').show(); $('#section_privado').hide(); }
+        else { $('#section_publico').hide(); $('#section_privado').show(); }
+    });
 
-                    $.each(data, function(i, v) {
-                        opt += `<option value="${v.dis_id}">${v.dis_nombre}</option>`;
-                    });
-                    $('#select_distrito_lle').html(opt);
-                },
-            );
-        });
-
-        // Escuchar el click en los botones de búsqueda para cada destinatario
-        $(document).on('click', '.btn-search', function() {
-            // Soportar tanto el contenedor nuevo `.destinatario` como el markup inicial `.destinatario-item`
-            const destinatarioContainer = $(this).closest('.destinatario, .destinatario-item');
-
-            // Obtener el valor del input correspondiente al botón clickeado dentro del contenedor
-            let documento = destinatarioContainer.find('input[name="documento[]"]').val();
-            let tipo = 'dni';
-
-            if (!documento) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Campo Vacío',
-                    text: 'Por favor, ingrese el RUC/DNI.'
+    // Buscar Venta para Referencia
+    $('#ref_search').on('input', function() {
+        const query = $(this).val();
+        const tipo = $('#ref_tipo').val();
+        if (query.length > 2) {
+            $.get("{{ route('comprobantes.buscar') }}", { q: query, tipo: tipo }).done(res => {
+                let html = '';
+                res.forEach(v => {
+                    html += `<div class="search-item ref-item" data-id="${v.id_venta}" data-num="${v.serie}-${v.numero}">
+                        <strong>${v.serie}-${v.numero}</strong> - ${v.cliente ? v.cliente.nombre : 'S/N'}
+                    </div>`;
                 });
-                return;
-            }
-
-            if (documento.length == 8) {
-                tipo = 'dni';
-            }
-            if (documento.length > 8) {
-                tipo = 'ruc';
-            }
-
-            // Mostrar mensaje de carga
-            Swal.fire({
-                title: 'Buscando...',
-                html: 'Por favor, espere.',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading(); // Mostrar el indicador de carga
-                }
+                $('#ref_results').html(html).show();
             });
+        } else { $('#ref_results').hide(); }
+    });
 
-            // Definir la ruta para la búsqueda según el tipo
-            let ruta = tipo == 'ruc' ? '{{ route('apidocumento.ruc') }}' : '{{ route('apidocumento.dni') }}';
+    // Cambiar tipo refresca búsqueda si hay texto
+    $('#ref_tipo').change(function() {
+        if ($('#ref_search').val().length > 2) {
+            $('#ref_search').trigger('input');
+        }
+    });
 
-            $.ajax({
-                url: ruta,
-                method: 'POST',
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    documento: documento
-                },
-                success: function(response) {
-                    Swal.close(); // Cerrar el mensaje de carga cuando la solicitud sea exitosa
-                    if (response) {
-                        // Si se encontró la respuesta, completar el campo correspondiente
-                        let datos = tipo == 'ruc' ? response.razonSocial :
-                            `${response.nombre ? response.nombre : ''} ${response.nombres} ${response.apellidoPaterno} ${response.apellidoMaterno}`;
-                        destinatarioContainer.find('input[name="datos[]"]').val(datos);
-                    } else {
-                        Swal.fire({
-                            icon: 'info',
-                            title: 'Datos no encontrados',
-                            text: 'No se encontraron datos para el DNI/RUC proporcionado.'
-                        });
-                    }
-                },
-                error: function(xhr) {
-                    Swal.close(); // Cerrar el mensaje de carga si hay un error
-                    console.error('Error:', xhr.responseText);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Hubo un error al buscar el DNI/RUC.'
-                    });
-                }
-            });
-        });
+    $(document).on('click', '.ref-item', function() {
+        const id = $(this).data('id');
+        const num = $(this).data('num');
+        $('#ref_search').val(num);
+        $('#input_ref_doc').val(num);
+        $('#ref_results').hide();
+        importVenta(id);
+    });
 
-        $(document).on('click', '.btn-search-transportista', function() {
-            const documento = $('#transportista_doc').val();
-            if (!documento) return;
+    function importVenta(id) {
+        Swal.fire({ title: 'Importando datos...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+        $.get(`{{ url('comprobantes') }}/${id}/detalle`).done(res => {
+            Swal.close();
+            if (res.success) {
+                const v = res.venta;
+                const cli = v.cliente || {};
+                const emp = res.empresa || {};
 
-            Swal.fire({
-                title: 'Buscando...',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            let tipo = documento.length > 8 ? 'ruc' : 'dni';
-            let ruta = tipo === 'ruc' ? '{{ route('apidocumento.ruc') }}' : '{{ route('apidocumento.dni') }}';
-
-            $.ajax({
-                url: ruta,
-                method: 'POST',
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    documento: documento
-                },
-                success: function(response) {
-                    Swal.close();
-                    if (response) {
-                        let nombre = tipo === 'ruc' ? response.razonSocial : (response.nombre ||
-                            `${response.nombres} ${response.apellidoPaterno} ${response.apellidoMaterno}`
-                        );
-                        $('#transportista_nombre').val(nombre);
-                    }
-                },
-                error: function() {
-                    Swal.close();
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Error al buscar transportista'
-                    });
-                }
-            });
-        });
-
-        $(document).on('click', '.btn-search_partida', function() {
-            const documento = $('#ruc_partida').val(); // Correcto
-            const tipo = 'ruc'; // Asegúrate de que sea constante o variable
-
-            if (!documento) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Campo Vacío',
-                    text: 'Por favor, ingrese el RUC/DNI.'
+                $('#cli_doc').val(cli.numero_documento || '');
+                $('#cli_nombre').val(cli.nombre || '');
+                $('#dir_salida').val(emp.direccion_fiscal || '');
+                $('#dir_llegada').val(cli.direccion || '');
+                
+                $('#table_items tbody').empty();
+                res.detalles.forEach(d => {
+                    const prod = d.producto || {};
+                    addItem(d.servicio_id, prod.nombre || d.nombre_servicio, prod.unidad_medida ? prod.unidad_medida.nombre : 'NIU', d.cantidad, prod.peso || 0);
                 });
-                return;
-            }
-
-            // Mostrar mensaje de carga
-            Swal.fire({
-                title: 'Buscando...',
-                html: 'Por favor, espere.',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading(); // Mostrar el indicador de carga
-                }
-            });
-
-            // Definir la ruta para la búsqueda según el tipo
-            let ruta = tipo === 'ruc' ? '{{ route('apidocumento.ruc') }}' : '{{ route('apidocumento.dni') }}';
-
-            $.ajax({
-                url: ruta,
-                method: 'POST',
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    documento: documento
-                },
-                success: function(response) {
-                    Swal.close(); // Cerrar el mensaje de carga cuando la solicitud sea exitosa
-                    if (response) {
-                        // Si se encontró la respuesta, completar los campos correspondientes
-                        $('#razon_partida').val(response.razonSocial);
-                        $('#direccion_partida').val(response.direccion);
-                    } else {
-                        Swal.fire({
-                            icon: 'info',
-                            title: 'Datos no encontrados',
-                            text: 'No se encontraron datos para el DNI/RUC proporcionado.'
-                        });
-                    }
-                },
-                error: function(xhr) {
-                    Swal.close(); // Cerrar el mensaje de carga si hay un error
-                    console.error('Error:', xhr.responseText);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Hubo un error al buscar el DNI/RUC.'
-                    });
-                }
-            });
-        });
-
-        let isScanning = false; // Variable para distinguir entre escaneo y envío manual
-
-        $('#formGuia').on('keydown', function(e) {
-            if (e.key === 'Enter' && !isScanning) {
-                // Permitir Enter dentro de los textareas
-                if ($(e.target).is("textarea")) {
-                    return;
-                }
-                e.preventDefault(); // Evita el envío del formulario
+                calcTotal();
             }
         });
+    }
 
-        // Detectar el evento de escaneo (pistola)
-        $('#formGuia').on('input', 'input[name="campoEscaneo"]', function(e) {
-            const valor = $(this).val();
-
-            if (valor) {
-                isScanning = true;
-                setTimeout(() => {
-                    isScanning = false;
-                }, 300); // Restablecer después de un breve momento
-            }
-        });
-
-        $('#formGuia').on('submit', function(e) {
-            if (isScanning) {
-                e.preventDefault(); // No enviar si fue un escaneo
-                return;
-            }
-
-            e.preventDefault();
-            // Crear el FormData del formulario
-            let formData = new FormData(this);
-            formData.append('_token', token); // Agregar el token CSRF
-
-            // Agregar los datos de la tabla al FormData
-            $('#productTable tbody tr').each(function(index, row) {
-                const rowData = {
-                    cod_sap: $(row).find('td:eq(0)').text(),
-                    tipo: $(row).find('td:eq(1)').text(),
-                    descripcion: $(row).find('td:eq(2)').text(),
-                    serie: $(row).find('td:eq(3)').text(),
-                    cantidad: $(row).find('td:eq(4)').text(),
-                    unidad_medida: $(row).find('td:eq(5) select').val(),
-                    peso: $(row).find('td:eq(6)').text(),
-                };
-
-                formData.append(`detalle[${index}]`, JSON.stringify(rowData));
-            });
-
-            // Realizar la solicitud AJAX
-            $.ajax({
-                url: '{{ route('guia.save') }}',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    Swal.fire({
-                        title: 'Éxito',
-                        text: 'Los datos se guardaron correctamente.',
-                        icon: 'success',
-                        confirmButtonText: 'OK'
-                    }).then(() => {
-                        window.open(
-                            `{{ env('APP_URL') }}/guia/remision/${response.id}`,
-                            '_blank');
-                        // Primero redirige al usuario a la vista
-                        window.location.href = `{{ route('guia.index') }}`;
-                    });
-                },
-                error: function(response) {
-                    Swal.fire({
-                        title: 'Error',
-                        text: 'Ocurrió un error al guardar los datos.',
-                        icon: 'error',
-                        confirmButtonText: 'Aceptar'
-                    });
-                }
-            });
-        });
-
-
-        $('#cod_sap').on('input', function() {
-            var query = $(this).val();
-            let tipo = $(this).data('tipo');
-
-            if (query.length > 3) {
-                $.ajax({
-                    url: '{{ env('APP_URL') }}/pos/buscar-productos',
-                    method: 'GET',
-                    data: {
-                        q: query,
-                        tipo: tipo
-                    },
-                    success: function(response) {
-                        $('#cod_sap_results').empty();
-                        let foundMatch = false; // Variable para verificar si encontramos coincidencias
-
-                        response.forEach(function(producto) {
-                            // Mapear campos defensivamente según el JSON retornado
-                            const codigo = producto.producto_id ?? producto.cod_sap ?? producto
-                                .codigo ?? '';
-                            const descripcion = producto.nombre ?? producto.descripcion ??
-                                producto.detalle ?? '';
-                            const serie = producto.serie ?? '-';
-                            const cantidad = producto.cantidad_total ?? producto.cantidad ?? 1;
-                            const unidad = producto.unidad ?? producto.unidad_medida ?? 'UND';
-                            const peso = producto.peso ?? producto.peso_kg ?? '-';
-                            const tipo = producto.product_linea_id ?? producto.tipo ?? '';
-                            let origen = '';
-                            if (typeof producto.origen === 'string') origen = producto.origen;
-                            if (Array.isArray(producto.origen) && producto.origen.length > 0)
-                                origen = producto.origen[0].nombre;
-
-                            $('#cod_sap_results').append(
-                                `<li class="list-group-item list-group-item-action" data-sap="${codigo}" data-descripcion="${descripcion.replace(/"/g,'&quot;')}" data-serie="${serie}" data-cantidad="${cantidad}" data-unidad="${unidad}" data-peso="${peso}" data-tipo="${tipo}">` +
-                                `${codigo} ${descripcion} ${producto.detalle ? ('• ' + producto.detalle) : ''} ${producto.fecha_vencimiento ? ('• FV: ' + producto.fecha_vencimiento) : ''}` +
-                                `</li>`
-                            );
-                            foundMatch = true; // Hay coincidencia
-                        });
-
-                        if (!foundMatch) {
-                            // Si no hay coincidencias, muestra el botón para agregar el producto
-                            $('#add-product-btn').show();
-                            $('#quantity-container').show();
-                        } else {
-                            $('#add-product-btn').hide();
-                            $('#quantity-container').hide();
-                        }
-
-                        $('#cod_sap_results').show();
-                    }
+    // Buscar Productos
+    $('#item_search').on('input', function() {
+        const q = $(this).val();
+        if (q.length > 2) {
+            $.get("{{ url('pos/buscar-productos') }}", { q: q }).done(res => {
+                let html = '';
+                res.forEach(p => {
+                    html += `<div class="search-item p-item" data-cod="${p.producto_id || p.id}" data-desc="${p.nombre || p.descripcion}" data-unit="${p.unidad_medida_nombre || 'NIU'}" data-peso="${p.peso || 0.1}">
+                        <strong>${p.producto_id || '-'}</strong> - ${p.nombre || p.descripcion}
+                    </div>`;
                 });
-            } else {
-                $('#cod_sap_results').empty().hide();
-                $('#add-product-btn').hide();
-                $('#quantity-container').hide();
-            }
-        });
-
-        $('#add-product-btn').on('click', function() {
-            let descripcion = $('#cod_sap').val();
-            let cantidad = $('#product-quantity').val();
-            let unidadOptions = `
-            <select class="form-select">
-                <option value="UND">UND</option>
-                <option value="KG">KG</option>
-                <option value="MTS">MTS</option>
-            </select>`;
-
-            if (descripcion && cantidad) {
-                const newRow = `<tr>
-                    <td></td>
-                    <td></td>
-                    <td>${descripcion}</td>
-                    <td></td>
-                    <td>${cantidad}</td>
-                    <td>${unidadOptions}</td>
-                    <td></td>
-                    <td>
-                        <button type="button" class="btn btn-danger btn-sm delete-btn"><i class="bx bx-x-circle"></i></button>
-                    </td>
-                </tr>`;
-
-                $('#productTable tbody').append(newRow);
-                $('#quantity-container').hide(); // Ocultar el input de cantidad después de agregar el producto
-                $('#cod_sap').val(''); // Limpiar el campo de búsqueda
-                $('#product-quantity').val(''); // Limpiar el campo de búsqueda
-            }
-
-            // Ocultar el botón después de añadir
-            $('#add-product-btn').hide();
-        });
-
-        // Selección de un producto de la lista de resultados
-        $(document).on('click', '#cod_sap_results li', function() {
-            var sap = $(this).data('sap');
-            var tipo = $(this).data('tipo');
-            var descripcion = $(this).data('descripcion');
-            var serie = $(this).data('serie') == 'undefined' ? '-' : $(this).data('serie');
-            serie = serie == null ? '-' : serie;
-            var cantidad = $(this).data('cantidad') == 'undefined' ? 1 : $(this).data('cantidad');
-            var unidad = $(this).data('unidad') == 'undefined' ? '-' : $(this).data('unidad');
-            var peso = $(this).data('peso') == 'undefined' ? '-' : $(this).data('peso');
-            let unidadOptions = `
-            <select class="form-select">
-                <option value="UND">UND</option>
-                <option value="KG">KG</option>
-                <option value="MTS">MTS</option>
-            </select>`;
-
-            // Añadir fila a la tabla con los valores seleccionados
-            const newRow = `<tr>
-                <td>${sap}</td>
-                <td>${tipo}</td>
-                <td>${descripcion}</td>
-                <td>${serie}</td>
-                <td>${cantidad}</td>
-                <td>${unidadOptions}</td>
-                <td>${peso}</td>
-                <td>
-                    <button type="button" class="btn btn-danger btn-sm delete-btn"><i class='bx  bx-trash-alt'></i> </button>
-                </td></tr>`;
-
-            $('#productTable tbody').append(newRow);
-            $('#cod_sap_results').empty().hide();
-            $('#add-product-btn').hide(); // Ocultar el botón de agregar producto
-            $('#cod_sap').val(''); // Limpiar el campo de búsqueda
-        });
-        // Función para eliminar un producto
-        $('#productTable').on('click', '.delete-btn', function() {
-            $(this).closest('tr').remove();
-        });
-
-
-        // Escuchar el click en los botones de búsqueda para el cliente
-        $(document).on('click', '.btn-search-cliente', function() {
-            let documento = $('#cliente_documento').val();
-            let tipo = documento.length > 8 ? 'ruc' : 'dni';
-
-            if (!documento) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Campo Vacío',
-                    text: 'Por favor, ingrese el RUC/DNI.'
-                });
-                return;
-            }
-
-            Swal.fire({
-                title: 'Buscando...',
-                html: 'Por favor, espere.',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
+                $('#item_results').html(html).show();
             });
+        } else { $('#item_results').hide(); }
+    });
 
-            let ruta = tipo == 'ruc' ? '{{ route('apidocumento.ruc') }}' : '{{ route('apidocumento.dni') }}';
+    $(document).on('click', '.p-item', function() {
+        const p = $(this).data();
+        addItem(p.cod, p.desc, p.unit, 1, p.peso);
+        $('#item_results').hide();
+        $('#item_search').val('');
+    });
 
-            $.ajax({
-                url: ruta,
-                method: 'POST',
-                data: {
-                    _token: '{{ csrf_token() }}',
-                    documento: documento
-                },
-                success: function(response) {
-                    Swal.close();
-                    if (response) {
-                        let datos = tipo == 'ruc' ? response.razonSocial :
-                            `${response.nombre ? response.nombre : ''} ${response.nombres} ${response.apellidoPaterno} ${response.apellidoMaterno}`;
-                        $('#cliente_nombre').val(datos);
-                    } else {
-                        Swal.fire({
-                            icon: 'info',
-                            title: 'Datos no encontrados',
-                            text: 'No se encontraron datos.'
-                        });
-                    }
-                },
-                error: function(xhr) {
-                    Swal.close();
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Hubo un error al buscar el DNI/RUC.'
+    function addItem(cod, desc, unit, cant, peso) {
+        const row = `<tr class="item-row">
+            <td><span class="fw-bold">${cod}</span></td>
+            <td>${desc}</td>
+            <td>${unit}</td>
+            <td><input type="number" class="form-control form-control-sm text-center row-cant" value="${cant}"></td>
+            <td><input type="number" step="0.01" class="form-control form-control-sm text-end row-peso" value="${peso}"></td>
+            <td><button type="button" class="btn btn-link text-danger p-0 btn-remove"><i class="bx bx-trash"></i></button></td>
+            <input type="hidden" class="row-data" value='${JSON.stringify({ cod_sap: cod, descripcion: desc, unidad_medida: unit, tipo: 'producto' })}'>
+        </tr>`;
+        $('#table_items tbody').append(row);
+        calcTotal();
+    }
+
+    $(document).on('click', '.btn-remove', function() { $(this).closest('tr').remove(); calcTotal(); });
+    $(document).on('input', '.row-cant, .row-peso', function() { calcTotal(); });
+
+    function calcTotal() {
+        let total = 0;
+        $('.item-row').each(function() {
+            const c = parseFloat($(this).find('.row-cant').val()) || 0;
+            const p = parseFloat($(this).find('.row-peso').val()) || 0;
+            total += (c * p);
+        });
+        $('#total_peso').val(total.toFixed(2));
+    }
+
+    // Submit
+    $('#formNovik').submit(function(e) {
+        e.preventDefault();
+        if ($('.item-row').length === 0) { Swal.fire('Error', 'Debe agregar productos.', 'warning'); return; }
+
+        const btn = $('#btn_submit');
+        btn.prop('disabled', true).html('<i class="bx bx-loader bx-spin"></i> PROCESANDO...');
+
+        let formData = new FormData(this);
+        $('.item-row').each(function(i) {
+            const base = JSON.parse($(this).find('.row-data').val());
+            const item = { ...base, cantidad: $(this).find('.row-cant').val(), peso: $(this).find('.row-peso').val() };
+            formData.append(`detalle[${i}]`, JSON.stringify(item));
+        });
+
+        $.ajax({
+            url: "{{ route('guia.save') }}",
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(res) {
+                if (res.id) {
+                    Swal.fire({ icon: 'success', title: 'Guía Emitida', timer: 2000 }).then(() => {
+                        window.open(`{{ url('guia/remision') }}/${res.id}`, '_blank');
+                        window.location.href = "{{ route('guia.index') }}";
                     });
+                } else {
+                    Swal.fire('Error', res.error || 'API Error', 'error');
+                    btn.prop('disabled', false).html('<i class="bx bx-check-double"></i> EMITIR GUÍA');
                 }
-            });
+            },
+            error: function() {
+                Swal.fire('Error', 'Fallo de conexión', 'error');
+                btn.prop('disabled', false).html('<i class="bx bx-check-double"></i> EMITIR GUÍA');
+            }
         });
-    </script>
+    });
+
+    // API Search for DNI/RUC
+    $('#cli_doc').on('input', function() {
+        const val = $(this).val();
+        if (val.length === 8 || val.length === 11) {
+            const r = val.length === 11 ? "{{ route('apidocumento.ruc') }}" : "{{ route('apidocumento.dni') }}";
+            $.post(r, { _token: token, documento: val }).done(res => {
+                if (res) $('#cli_nombre').val(res.razonSocial || (res.nombres + ' ' + res.apellidoPaterno));
+            });
+        }
+    });
+
+    $('#trans_ruc').on('input', function() {
+        if ($(this).val().length === 11) {
+            $.post("{{ route('apidocumento.ruc') }}", { _token: token, documento: $(this).val() }).done(res => {
+                if (res) $('#trans_nombre').val(res.razonSocial);
+            });
+        }
+    });
+});
+</script>
+@endpush
 @endsection

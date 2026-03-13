@@ -270,6 +270,12 @@
                                         </td>
                                         <td class="text-end pe-3">
                                             <div class="d-flex justify-content-end gap-1">
+                                                @if(strtolower($venta->tipo_documento) !== 'ticket' && !$isCancelado && ($venta->enviado_sunat || $venta->ventaSunat))
+                                                <button type="button" class="btn btn-action-icon btn-light text-warning btn-guia-remision"
+                                                        data-venta-id="{{ $venta->id_venta }}" title="Generar Guía de Remisión">
+                                                    <i class="bx bxs-truck"></i>
+                                                </button>
+                                                @endif
                                                 <button type="button"
                                                     class="btn btn-action-icon btn-light text-primary btn-detalle"
                                                     data-venta-id="{{ $venta->id_venta }}" title="Ver Detalle">
@@ -559,9 +565,6 @@
     <!-- JS dependencies -->
 
     @push('scripts')
-        <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
         <script>
             // Re-initialize dropdowns to avoid being clipped by the table's scroll container
             try {
@@ -791,6 +794,15 @@
                     e.stopPropagation();
                     const ventaId = $(this).data('venta-id');
                     fetchDetalleVenta(ventaId, true);
+                });
+
+                // Generar Guía de Remisión
+                $(document).on('click', '.btn-guia-remision', function(e) {
+                    e.stopPropagation();
+                    const ventaId = $(this).data('venta-id');
+                    if (window.abrirModalGuia) {
+                        window.abrirModalGuia(ventaId);
+                    }
                 });
 
                 // Imprimir (Abre modal de formatos)
@@ -1052,7 +1064,123 @@
                         }
                     });
                 });
-            });
+                });
+
+                // --- Lógica del Modal Guía (Consolidada Globalmente) ---
+                window.abrirModalGuia = function(ventaId) {
+                    Swal.fire({ title: 'Cargando...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                    
+                    $.get(`{{ url('comprobantes') }}/${ventaId}/detalle`)
+                        .done(function(res) {
+                            Swal.close();
+                            if (res.success) {
+                                const venta = res.venta;
+                                
+                                if (!venta.venta_sunat && !venta.enviado_sunat) {
+                                    Swal.fire('Atención', 'Este documento aún no ha sido enviado a SUNAT y no puede tener guía.', 'warning');
+                                    return;
+                                }
+                                
+                                const details = res.detalles;
+                                const emp = res.empresa || {};
+                                const cli = venta.cliente || {};
+
+                                $('#guia_doc_ref').text(`${venta.serie}-${venta.numero}`);
+                                $('#guia_venta_numero').val(`${venta.serie}-${venta.numero}`);
+                                $('#guia_venta_id').val(venta.id_venta);
+                                
+                                $('#modalGenerarGuia').data('cliente-doc', cli.numero_documento || '');
+                                $('#modalGenerarGuia').data('cliente-nombre', cli.nombre || '');
+                                
+                                $('#guia_dir_partida').val(emp.direccion_fiscal || '');
+                                
+                                $('#modal_dep_llegada').val(cli.departamento || 'LIMA');
+                                $('#modal_prov_llegada').val(cli.provincia || 'LIMA');
+                                $('#modal_dist_llegada').val(cli.distrito_nombre || 'LIMA');
+                                
+                                $('#hid_dep_lle').val(cli.departamento_id || '15');
+                                $('#hid_prov_lle').val(cli.provincia_id || '1501');
+                                $('#hid_dist_lle').val(cli.distrito_id || '150101');
+
+                                $('#guia_dir_llegada').val(cli.direccion || '-');
+
+                                let totalPeso = 0;
+                                let mappedItems = [];
+                                details.forEach(d => {
+                                    const weight = d.producto ? (d.producto.peso || 0.1) : 0.1;
+                                    totalPeso += (parseFloat(weight) * d.cantidad);
+                                    mappedItems.push({
+                                        cod_sap: d.servicio_id,
+                                        descripcion: d.producto ? d.producto.nombre : d.nombre_servicio,
+                                        unidad_medida: d.producto ? (d.producto.unidad_medida ? d.producto.unidad_medida.nombre : 'NIU') : 'NIU',
+                                        cantidad: d.cantidad,
+                                        peso: weight,
+                                        tipo: 'producto'
+                                    });
+                                });
+                                $('#guia_peso_total').val(totalPeso.toFixed(2));
+                                $('#modalGenerarGuia').data('items', mappedItems);
+
+                                $('#modalGenerarGuia').modal('show');
+                            }
+                        });
+                };
+
+                $(document).ready(function() {
+                    $('#modal_modalidad').change(function() {
+                        if ($(this).val() === '01') {
+                            $('#modal_section_publico').show();
+                            $('#modal_section_privado').hide();
+                        } else {
+                            $('#modal_section_publico').hide();
+                            $('#modal_section_privado').show();
+                        }
+                    });
+
+                    $('#guia_trans_ruc').on('input', function() {
+                        if ($(this).val().length === 11) {
+                            $.post("{{ route('apidocumento.ruc') }}", { _token: "{{ csrf_token() }}", documento: $(this).val() })
+                                .done(res => { if(res) $('#guia_trans_nombre').val(res.razonSocial); });
+                        }
+                    });
+
+                    $('#formModalGuia').submit(function(e) {
+                        e.preventDefault();
+                        const btn = $('#btn_submit_guia');
+                        btn.prop('disabled', true).html('<i class="bx bx-loader bx-spin"></i> PROCESANDO...');
+
+                        let formData = new FormData(this);
+                        const items = $('#modalGenerarGuia').data('items') || [];
+                        items.forEach((item, i) => { formData.append(`detalle[${i}]`, JSON.stringify(item)); });
+                        formData.append('cliente_documento', $('#modalGenerarGuia').data('cliente-doc'));
+                        formData.append('cliente_nombre', $('#modalGenerarGuia').data('cliente-nombre'));
+
+                        $.ajax({
+                            url: "{{ route('guia.save') }}",
+                            type: "POST",
+                            data: formData,
+                            processData: false,
+                            contentType: false,
+                            success: function(res) {
+                                if (res.id) {
+                                    Swal.fire({ icon: 'success', title: 'Guía Emitida', timer: 2000 }).then(() => {
+                                        window.open(`{{ url('guia/remision') }}/${res.id}`, '_blank');
+                                        location.reload();
+                                    });
+                                } else {
+                                    Swal.fire('Error', res.error || 'API Error', 'error');
+                                    btn.prop('disabled', false).text('EMITIR GUÍA ELECTRÓNICA');
+                                }
+                            },
+                            error: function() {
+                                Swal.fire('Error', 'Fallo de conexión', 'error');
+                                btn.prop('disabled', false).text('EMITIR GUÍA ELECTRÓNICA');
+                            }
+                        });
+                    });
+                });
+                
         </script>
     @endpush
+    @include('guia-transporte.partials.modal_guia')
 @endsection

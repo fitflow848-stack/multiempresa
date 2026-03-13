@@ -387,6 +387,20 @@ class Sunat
     {
         return $this->sendRequest('/enviar/guia/remision', 'POST', $data);
     }
+    
+    public function consultarGuiaRemision($ticker)
+    {
+        $empresa = Company::where('id', Auth::user()->company_id)->first();
+        $data = json_encode([
+            "endpoint" => "beta",
+            "ruc" => $empresa->ruc,
+            "usuario" => $empresa->sol_user,
+            "clave" => $empresa->sol_password,
+            "client_id" => $empresa->sunat_client_id ?? "test-85e5b0ae-255c-4891-a595-0b98c65c9854",
+            "secret_client" => $empresa->sunat_client_secret ?? "test-Hty/M6QshYvPgItX2P0+Kw=="
+        ]);
+        return $this->sendRequest('/consulta/documento/ticker/' . $ticker, 'POST', $data);
+    }
 
     public function formatJsonEnviarGuia($ruc, $nombre_documento, $contenido_documento)
     {
@@ -436,15 +450,19 @@ class Sunat
                 "cod_traslado" => (string)$motivo,
                 "mod_traslado" => (string)$mod_traslado,
                 "fecha_traslado" => $guia->fecha_traslado ?? date('Y-m-d'),
-                "ubigeo_llegada" => $guia->distrito_llegada ?? '150101',
-                "ubigeo_salida" => $guia->distrito_partida ?? '150101',
+                "ubigeo_llegada" => $guia->distritoLlegada->dis_codigo ?? $guia->distrito_llegada ?? '150101',
+                "ubigeo_salida" => $guia->distritoPartida->dis_codigo ?? $guia->distrito_partida ?? '150101',
                 "direccion_llegada" => $guia->direccion_llegada,
                 "direccion_salida" => $guia->direccion_partida
             ],
             "transportista" => [
                 "num_doc" => $transportista->num_doc ?? $transportista->numero_documento ?? "",
                 "rzn_social" => $transportista->rzn_social ?? $transportista->nombre ?? "",
-                "nro_mtc" => $transportista->nro_mtc ?? ""
+                "nro_mtc" => $transportista->nro_mtc ?? "",
+                "placa" => $guia->vehiculo_placa ?? "",
+                "licencia" => $guia->conductor_licencia ?? "",
+                "conductor_num_doc" => $guia->conductor_doc_numero ?? "",
+                "conductor_tipo_doc" => $guia->conductor_doc_tipo ?? "1"
             ],
             "detalles" => []
         ];

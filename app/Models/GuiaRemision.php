@@ -12,6 +12,7 @@ class GuiaRemision extends Model
     
     
     protected $table = 'guia_remision';
+    protected $sucursalForeignKey = 'branch_id';
 
     protected $fillable = [
         'company_id',
@@ -36,6 +37,11 @@ class GuiaRemision extends Model
         'transportista_doc',
         'transportista_nombre',
         'transportista_mtc',
+        'vehiculo_placa',
+        'conductor_doc_tipo',
+        'conductor_doc_numero',
+        'conductor_nombre',
+        'conductor_licencia',
         'motivo_traslado_codigo',
         'modalidad_traslado_codigo',
         'nombre_archivo',

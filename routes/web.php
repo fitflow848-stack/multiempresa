@@ -296,7 +296,9 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::resource('/', GuiaRemisionTransporteController::class)->names('guia');
         Route::post('/save', [GuiaRemisionTransporteController::class, 'store'])->name('guia.save')->middleware('can:guias_remision.crear');
         Route::post('/sendSunat/{id}', [GuiaRemisionTransporteController::class, 'sendSunat'])->name('guia.sendSunat')->middleware('can:guias_remision.enviar');
-        Route::get('/trasporte/registrar', [GuiaRemisionTransporteController::class, 'add'])->name('guia-transporte.add')->middleware('can:guias_remision.crear');
+        Route::get('/consultar-ticker/{ticker}', [GuiaRemisionTransporteController::class, 'consultarTicker'])->name('guia.consultar-ticker');
+        Route::get('/transporte/registrar', [GuiaRemisionTransporteController::class, 'add'])->name('guia-transporte.add')->middleware('can:guias_remision.crear');
+        Route::get('/buscar-venta', [ComprobantesController::class, 'buscarVenta'])->name('comprobantes.buscar');
     });
 
     Route::post('/get/provincia', [ProvinciaController::class, 'getProvincia'])->name('provincia.get');
