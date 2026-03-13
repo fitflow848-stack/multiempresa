@@ -449,22 +449,33 @@ class AlmacenController extends Controller
         $user = Auth::user();
         $company = $user->company ?? Company::find($user->company_id);
 
-        // Sucursales destino (excluyendo la del usuario actual si se quisiera, pero mejor todas)
-        $sucursales = DB::table('sucursales')
+        $originBranchId = session('active_branch_id') ?: $user->branch_id;
+        $sucursalActual = DB::table('sucursales')->where('id', $originBranchId)->first();
+
+        // Sucursales destino (excluyendo la actual)
+        $sucursalesDestino = DB::table('sucursales')
             ->where('company_id', $company->id)
+            ->where('id', '!=', $originBranchId)
             ->get();
 
-        return view('almacen.transferir', compact('user', 'company', 'sucursales'));
+        return view('almacen.transferir', compact('user', 'company', 'sucursalesDestino', 'originBranchId', 'sucursalActual'));
     }
 
     public function getLotesAvailable(Request $request)
     {
         $productoId = $request->get('producto_id');
         $lineaId = $request->get('linea_id');
+        // Usar sucursal_id del request, fallback a sesión o branch del usuario para asegurar que sea de su sucursal
+        $sucursalId = $request->get('sucursal_id') ?: (session('active_branch_id') ?: Auth::user()->branch_id);
+
         $query = DB::table('almacen_ingreso_detalle as d')
             ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
             ->leftJoin('sucursales as s', 's.id', '=', 'i.sucursal_id')
             ->where('d.cantidad', '>', 0);
+
+        if ($sucursalId && $sucursalId !== 'undefined') {
+            $query->where('i.sucursal_id', $sucursalId);
+        }
 
         if ($lineaId) {
             $query->where('d.producto_linea_id', $lineaId);
@@ -483,11 +494,18 @@ class AlmacenController extends Controller
             ->orderBy('d.fecha_vencimiento', 'asc')
             ->get();
 
-        $results = $lotes->map(function ($lote) {
+        $results = $lotes->map(function ($lote) use ($sucursalId) {
             $fecha = $lote->fecha_vencimiento ? date('d/m/Y', strtotime($lote->fecha_vencimiento)) : '-';
+            $texto = "Lote: " . ($lote->lote ?: 'S/L') . " | Vence: " . $fecha . " | Stock: " . number_format($lote->stock, 2);
+            
+            // Solo añadir ubicación si no estamos filtrando por una específica
+            if (!$sucursalId || $sucursalId === 'undefined') {
+                $texto .= " | Ubicación: " . ($lote->sucursal_nombre ?? 'General');
+            }
+
             return [
                 'id' => $lote->id,
-                'text' => "Lote: " . ($lote->lote ?: 'S/L') . " | Vence: " . $fecha . " | Stock: " . $lote->stock . " | Ubicación: " . ($lote->sucursal_nombre ?? 'General'),
+                'text' => $texto,
                 'stock' => $lote->stock,
                 'sucursal_id' => $lote->sucursal_id
             ];
@@ -499,7 +517,8 @@ class AlmacenController extends Controller
     public function storeTransferencia(Request $request)
     {
         $request->validate([
-            'sucursal_destino_id' => 'required|exists:sucursales,id',
+            'sucursal_origen_id' => 'required|exists:sucursales,id',
+            'sucursal_destino_id' => 'required|exists:sucursales,id|different:sucursal_origen_id',
             'items' => 'required|array|min:1',
             'items.*.producto_id' => 'required|exists:productos,id',
             'items.*.lote_origen_id' => 'required|exists:almacen_ingreso_detalle,id',

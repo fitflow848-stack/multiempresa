@@ -33,10 +33,18 @@
                         </div>
                         <div class="card-body">
                             <div class="mb-3">
+                                <label class="form-label fw-bold">Sucursal Origen</label>
+                                <div class="form-control bg-light border-0 py-2 shadow-none">
+                                    <i class="fas fa-store me-2 text-primary"></i>
+                                    <strong>{{ $sucursalActual->nombre }}</strong>
+                                </div>
+                                <input type="hidden" name="sucursal_origen_id" id="sucursal_origen_id" value="{{ $originBranchId }}">
+                            </div>
+                            <div class="mb-3">
                                 <label class="form-label fw-bold">Sucursal Destino <span class="text-danger">*</span></label>
-                                <select class="form-select form-select-lg shadow-sm" name="sucursal_destino_id" required>
-                                    <option value="">Seleccionar local...</option>
-                                    @foreach ($sucursales as $suc)
+                                <select class="form-select form-select-lg shadow-sm border-primary" name="sucursal_destino_id" id="sucursal_destino_id" required>
+                                    <option value="">Seleccionar local destino...</option>
+                                    @foreach ($sucursalesDestino as $suc)
                                         <option value="{{ $suc->id }}" {{ old('sucursal_destino_id') == $suc->id ? 'selected' : '' }}>
                                             {{ $suc->nombre }}
                                         </option>
@@ -178,6 +186,7 @@
                 const lineaId = $(this).val();
                 const selData = $(this).select2('data')[0];
                 const productoId = selData ? selData.producto_id : null;
+                const sucursalOrigenId = $('#sucursal_origen_id').val();
                 const $loteSelect = $('#search_lote');
                 
                 $loteSelect.empty().append('<option value="">Cargando...</option>').prop('disabled', true);
@@ -186,7 +195,8 @@
                 if (lineaId) {
                     $.get('{{ route('almacen.api.lotes') }}', { 
                         linea_id: lineaId,
-                        producto_id: productoId 
+                        producto_id: productoId,
+                        sucursal_id: sucursalOrigenId
                     }, function(data) {
                         $loteSelect.empty().append('<option value="">Seleccionar lote...</option>');
                         if (data.length > 0) {
@@ -200,6 +210,9 @@
                     });
                 }
             });
+
+            // Limpiar búsqueda actual al iniciar
+            $('#search_producto').val(null).trigger('change');
 
             $('#search_lote').on('change', function() {
                 const stock = $(this).find(':selected').data('stock');
