@@ -217,7 +217,8 @@ class VentaService
                 $deuda->monto_pagado = (float) $entrega;
                 $deuda->monto_deuda = (float) $montoDeuda;
                 $deuda->fecha_venta = now();
-                $deuda->fecha_vencimiento = now()->addDays(30); // 30 días por defecto
+                $plazo = (int) ($meta['plazo_dias'] ?? 30);
+                $deuda->fecha_vencimiento = now()->addDays($plazo); // Días especificados o 30 por defecto
                 $deuda->estado = Deuda::ESTADO_PENDIENTE;
                 $deuda->observaciones = $observaciones;
                 $deuda->user_id = $user->id;

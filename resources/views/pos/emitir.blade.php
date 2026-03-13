@@ -133,7 +133,7 @@
                     </select>
                 </div>
 
-                <div style="display: flex; gap: 10px;">
+                <div style="display: flex; gap: 10px; margin-bottom: 12px;">
                     <div style="flex: 1;">
                         <label
                             style="display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 5px;">PAGA
@@ -143,7 +143,7 @@
                             <input id="entrega" type="number" step="0.01"
                                 value="{{ ($metodoPagoInput ?? 'contado') === 'credito' ? '0.00' : $total ?? '0.00' }}"
                                 style="width:100%; padding:8px 8px 8px 30px; border:1px solid #ccc; border-radius:4px; font-weight: bold;"
-                                onkeyup="calcularCambio()">
+                                onkeyup="calcularCambio()" onchange="calcularCambio()">
                         </div>
                     </div>
                     <div style="flex: 1;">
@@ -153,6 +153,16 @@
                             style="padding: 9px; background: #e9ecef; border-radius: 4px; font-weight: bold; color: #b33; text-align: center;">
                             S/ <span id="cambio">0.00</span>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Campo dinámico para Plazo (Crédito) -->
+                <div id="seccion-plazo" style="display: none; margin-bottom: 12px; background: #fff8e1; padding: 10px; border-radius: 4px; border: 1px solid #ffe082;">
+                    <label style="display: block; font-size: 12px; font-weight: 600; color: #795548; margin-bottom: 5px;">PLAZO DE PAGO (DÍAS)</label>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input id="plazo_dias" type="number" value="30" min="1" max="365"
+                            style="width:80px; padding:8px; border:1px solid #ccc; border-radius:4px; font-weight: bold; text-align: center;">
+                        <span style="font-size: 11px; color: #8d6e63;">Días para el vencimiento de la deuda.</span>
                     </div>
                 </div>
             </div>
@@ -283,6 +293,14 @@
             const entrega = parseFloat(document.getElementById('entrega').value) || 0;
             const cambio = Math.max(0, entrega - totalVenta);
             document.getElementById('cambio').textContent = cambio.toFixed(2);
+            
+            // Mostrar/Ocultar sección de plazo si hay deuda
+            const seccionPlazo = document.getElementById('seccion-plazo');
+            if (entrega < totalVenta) {
+                seccionPlazo.style.display = 'block';
+            } else {
+                seccionPlazo.style.display = 'none';
+            }
         }
 
         function accept() {
@@ -337,6 +355,7 @@
                 guia_transporte: document.getElementById('guia-transporte').value,
                 serie: document.getElementById('serie').value,
                 numero: document.getElementById('numero').value,
+                plazo_dias: document.getElementById('plazo_dias').value || 30,
                 id_coti: idCoti || null,
                 _token: '{{ csrf_token() }}'
             };
