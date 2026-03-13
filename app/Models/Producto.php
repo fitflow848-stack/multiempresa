@@ -90,7 +90,7 @@ class Producto extends Model
 
     public function subfamilia()
     {
-        return $this->belongsTo(\App\Models\Subfamilia::class);
+        return $this->belongsTo(\App\Models\SubFamilia::class);
     }
 
     public function marca()

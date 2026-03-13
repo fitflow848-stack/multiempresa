@@ -15,7 +15,7 @@ class SubFamiliaController extends Controller
         $q = $request->get('q', '');
         $familiaId = $request->get('familia_id', null);
 
-        $query = Subfamilia::query();
+        $query = SubFamilia::query();
         if ($familiaId) {
             $query->where('familia_id', $familiaId);
         }
@@ -36,7 +36,7 @@ class SubFamiliaController extends Controller
         ]);
 
         // Evitar duplicados dentro de la misma familia (case-insensitive)
-        $existing = Subfamilia::where('familia_id', $data['familia_id'])
+        $existing = SubFamilia::where('familia_id', $data['familia_id'])
             ->whereRaw('LOWER(nombre) = ?', [mb_strtolower($data['nombre'])])
             ->first();
 
@@ -44,7 +44,7 @@ class SubFamiliaController extends Controller
             return response()->json($existing, 200);
         }
 
-        $sub = Subfamilia::create($data);
+        $sub = SubFamilia::create($data);
         return response()->json($sub, 201);
     }
 }
