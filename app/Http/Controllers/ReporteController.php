@@ -29,7 +29,8 @@ class ReporteController extends Controller
         // Load data for filters
         $familias = Familia::all();
         $vendedores = User::all();
-        $locales = Sucursal::all(); // Assuming Sucursal tracks locals, or Company if single tenant
+        $locales = Sucursal::all(); 
+        $tiposPago = \App\Models\TipoPago::all();
 
         // Types of reports key-value fetch from DB
         $reports = DB::table('reports')->where('active', true)->orderBy('id')->get();
@@ -39,7 +40,7 @@ class ReporteController extends Controller
             $reportTypes[$r->category][$r->id] = $r->name;
         }
 
-        return view('reportes.index', compact('familias', 'vendedores', 'locales', 'reportTypes'));
+        return view('reportes.index', compact('familias', 'vendedores', 'locales', 'reportTypes', 'tiposPago'));
     }
 
     public function generate(Request $request)
@@ -1147,4 +1148,100 @@ class ReporteController extends Controller
             'data' => compact('resultados')
         ];
     }
+
+    private function reporteTransferencias(Request $request)
+    {
+        $query = \App\Models\AlmacenTransferencia::with(['producto', 'sucursalOrigen', 'sucursalDestino', 'user'])
+            ->orderByDesc('created_at');
+
+        if ($request->input('desde'))
+            $query->whereDate('created_at', '>=', $request->input('desde'));
+        if ($request->input('hasta'))
+            $query->whereDate('created_at', '<=', $request->input('hasta'));
+        if ($request->input('local_id')) {
+            $localId = $request->input('local_id');
+            $query->where(function ($q) use ($localId) {
+                $q->where('sucursal_origen_id', $localId)
+                    ->orWhere('sucursal_destino_id', $localId);
+            });
+        }
+
+        $resultados = $query->get();
+
+        return [
+            'view' => 'reportes.partials.transferencias',
+            'data' => compact('resultados')
+        ];
+    }
+
+    private function reporteMovimientosBoveda(Request $request)
+    {
+        $query = \App\Models\OperacionCaja::whereHas('cierre.caja', function ($q) {
+            $q->where('is_boveda', 1);
+        })->with(['user', 'cierre.caja'])
+            ->orderByDesc('created_at');
+
+        if ($request->input('desde'))
+            $query->whereDate('created_at', '>=', $request->input('desde'));
+        if ($request->input('hasta'))
+            $query->whereDate('created_at', '<=', $request->input('hasta'));
+        if ($request->input('local_id'))
+            $query->where('sucursal_id', $request->input('local_id'));
+
+        $resultados = $query->get();
+
+        return [
+            'view' => 'reportes.partials.movimientos_boveda',
+            'data' => compact('resultados')
+        ];
+    }
+
+    private function reporteResumenFinanciero(Request $request)
+    {
+        $desde = $request->input('desde');
+        $hasta = $request->input('hasta');
+        $localId = $request->input('local_id');
+
+        // Ventas
+        $ventasQuery = Venta::where('estado', '!=', '0');
+        if ($desde)
+            $ventasQuery->whereDate('fecha_emision', '>=', $desde);
+        if ($hasta)
+            $ventasQuery->whereDate('fecha_emision', '<=', $hasta);
+        if ($localId)
+            $ventasQuery->where('sucursal', $localId);
+
+        $ventasTotal = $ventasQuery->sum('total');
+        $ventasCantidad = $ventasQuery->count();
+
+        // Gastos e Ingresos Extra (Operaciones de Caja)
+        $operacionesQuery = \App\Models\OperacionCaja::query();
+        if ($desde)
+            $operacionesQuery->whereDate('created_at', '>=', $desde);
+        if ($hasta)
+            $operacionesQuery->whereDate('created_at', '<=', $hasta);
+        if ($localId)
+            $operacionesQuery->where('sucursal_id', $localId);
+
+        $egresos = $operacionesQuery->clone()->where('tipo', 'Egreso')->sum('importe');
+        $ingresosExtra = $operacionesQuery->clone()->where('tipo', 'Ingreso')->where('partida', '!=', 'Cobro Deuda')->sum('importe');
+
+        // Compras
+        $comprasQuery = Compra::where('estado', '!=', 'anulado');
+        if ($desde)
+            $comprasQuery->whereDate('fecha_emision', '>=', $desde);
+        if ($hasta)
+            $comprasQuery->whereDate('fecha_emision', '<=', $hasta);
+        if ($localId)
+            $comprasQuery->where('local_destino', $localId);
+
+        $comprasTotal = $comprasQuery->sum('total_pagar');
+        $comprasCantidad = $comprasQuery->count();
+
+        return [
+            'view' => 'reportes.partials.resumen_financiero',
+            'data' => compact('ventasTotal', 'ventasCantidad', 'egresos', 'ingresosExtra', 'comprasTotal', 'comprasCantidad', 'desde', 'hasta')
+        ];
+    }
 }
+

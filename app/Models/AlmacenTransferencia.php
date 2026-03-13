@@ -37,6 +37,21 @@ class AlmacenTransferencia extends Model
         return $this->belongsTo(AlmacenIngresoDetalle::class, 'destino_lote_id');
     }
 
+    public function sucursalOrigen()
+    {
+        return $this->belongsTo(Sucursal::class, 'sucursal_origen_id');
+    }
+
+    public function sucursalDestino()
+    {
+        return $this->belongsTo(Sucursal::class, 'sucursal_destino_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
     public function usuario()
     {
         return $this->belongsTo(User::class, 'user_id');
