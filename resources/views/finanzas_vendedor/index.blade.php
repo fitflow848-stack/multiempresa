@@ -362,16 +362,7 @@
                                                                             value="{{ $group->saldo }}"
                                                                             max="{{ $group->saldo }}" required>
                                                                     </div>
-                                                                    <div class="mb-3">
-                                                                        <label class="form-label">Método de Pago</label>
-                                                                        <select name="metodo_pago" class="form-select"
-                                                                            required>
-                                                                            <option value="Efectivo">Efectivo</option>
-                                                                            <option value="Transferencia">Transferencia
-                                                                            </option>
-                                                                            <option value="Yape/Plin">Yape/Plin</option>
-                                                                        </select>
-                                                                    </div>
+                                                                    <input type="hidden" name="metodo_pago" value="Efectivo">
                                                                     <div class="mb-3">
                                                                         <label class="form-label">Fecha Pago</label>
                                                                         <input type="date" name="fecha_pago"

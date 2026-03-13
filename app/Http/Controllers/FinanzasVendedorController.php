@@ -612,7 +612,21 @@ class FinanzasVendedorController extends Controller
                 $montoRestante -= $pagoMonto;
             }
 
-            // Compras a crédito no afectan a caja por solicitud
+            // Afectar caja como sustracción (Efectivo) por el total pagado
+            $cajaAbierta->sustracciones = ($cajaAbierta->sustracciones ?? 0) + $montoInicial;
+            $cajaAbierta->save();
+
+            OperacionCaja::create([
+                'company_id' => Auth::user()->company_id,
+                'sucursal_id' => Auth::user()->branch_id,
+                'cierre_caja_id' => $cajaAbierta->id,
+                'user_id' => Auth::id(),
+                'tipo' => 'sustraccion',
+                'partida' => 'Pago Acumulado',
+                'concepto' => 'Pago acumulado a: ' . $empresaPersona,
+                'importe' => $montoInicial,
+                'metodo_pago' => 'Efectivo',
+            ]);
 
             DB::commit();
             return redirect()->route('finanzas_vendedor.index', ['agrupar' => 1])
