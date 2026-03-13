@@ -256,8 +256,9 @@ class ComprobantesController extends Controller
                     $deudaAsociada->delete();
                 }
 
-                // 3. Generar Nota de Crédito (Solo Facturas id:2 y Boletas id:1) - Motivo 01 (Anulación)
-                if (in_array($venta->id_tido, [1, 2])) {
+                // 3. Generar Nota de Crédito SOLO si ya se envió a SUNAT
+                $enviadoSunat = $venta->enviado_sunat || $venta->ventaSunat()->exists();
+                if (in_array($venta->id_tido, [1, 2]) && $enviadoSunat) {
                     // Determinar serie NC (F... -> FC.., B... -> BC..)
                     $serieNC = $venta->id_tido == 2 ? 'FC01' : 'BC01';
 
@@ -287,50 +288,63 @@ class ComprobantesController extends Controller
                     $nc->id_usuario = $user->id;
                     $nc->save();
 
+                    // Copiar detalles de la venta a la NC
+                    foreach ($venta->detalles as $detalle) {
+                        $ncDetalle = $detalle->replicate();
+                        $ncDetalle->id_venta = $nc->id_venta;
+                        $ncDetalle->save();
+                    }
+
                     // Generar JSON NC (Motivo 01: Anulacion de la operacion)
-                    $json = $this->sunatService->formatJsonNotaCreditoFull($nc, $venta, $venta->cliente, $venta->detalles, '01', 'Anulación de la operación');
+                    $jsonGenerar = $this->sunatService->formatJsonNotaCreditoFull($nc, $venta, $venta->cliente, $venta->detalles, '01', 'Anulación de la operación');
 
-                    $response = $this->sunatService->generarNotaCredito($json);
-                    $data = json_decode($response);
+                    $responseGenerar = $this->sunatService->generarNotaCredito($jsonGenerar);
+                    $dataGenerar = json_decode($responseGenerar);
 
-                    if ($data && isset($data->data)) {
-                        VentaSunat::create([
+                    if ($dataGenerar && isset($dataGenerar->data)) {
+                        $ventaSunat = VentaSunat::create([
                             'id_venta' => $nc->id_venta,
-                            'nombre_xml' => $data->data->nombre_archivo ?? '',
-                            'content_xml' => $data->data->contenido_xml ?? '',
-                            'hash' => $data->data->hash ?? '',
-                            'qr_data' => $data->data->qr_info ?? '',
-                            'response_api' => $response
+                            'nombre_xml' => $dataGenerar->data->nombre_archivo ?? '',
+                            'content_xml' => $dataGenerar->data->contenido_xml ?? '',
+                            'hash' => $dataGenerar->data->hash ?? '',
+                            'qr_data' => $dataGenerar->data->qr_info ?? '',
+                            'response_api' => $responseGenerar
                         ]);
+
+                        // Enviar inmediatamente a SUNAT
+                        $jsonEnviar = $this->sunatService->formatJsonFacturaBoleta($ventaSunat->nombre_xml, $ventaSunat->content_xml);
+                        $responseEnviar = $this->sunatService->sendDocumentoBoletaFactura($jsonEnviar);
+                        $dataEnviar = json_decode($responseEnviar);
+
+                        if ($dataEnviar && isset($dataEnviar->estado) && $dataEnviar->estado) {
+                            $nc->enviado_sunat = 1;
+                            $nc->save();
+                        }
 
                         // Guardar XML en storage
                         try {
                             $folder = 'xml_sunat';
-                            $fileName = ($data->data->nombre_archivo ?? 'document') . '.xml';
+                            $fileName = ($dataGenerar->data->nombre_archivo ?? 'document') . '.xml';
                             $storagePath = $folder . '/' . $fileName;
 
                             if (!Storage::disk('public')->exists($folder)) {
                                 Storage::disk('public')->makeDirectory($folder);
                             }
 
-                            $xmlContent = $data->data->contenido_xml ?? '';
-                            // Decodificar si viniera en base64? La respuesta API dice "xml en string..."
-                            // Validar encoding
+                            $xmlContent = $dataGenerar->data->contenido_xml ?? '';
                             if (!mb_check_encoding($xmlContent, 'UTF-8')) {
                                 $xmlContent = mb_convert_encoding($xmlContent, 'UTF-8', 'ISO-8859-1');
                             }
 
                             Storage::disk('public')->put($storagePath, $xmlContent);
-                            Storage::disk('public')->setVisibility($storagePath, 'public');
                         } catch (\Exception $xmlEx) {
-                            \Illuminate\Support\Facades\Log::error("Error guardando XML fisico NC: " . $xmlEx->getMessage());
-                            // No detener el proceso principal
+                            \Illuminate\Support\Facades\Log::error("Error guardando XML NC: " . $xmlEx->getMessage());
                         }
 
                         $ncsGenerated++;
                     } else {
-                        \Illuminate\Support\Facades\Log::error("Error generating NC (Cancel) for sale {$venta->id_venta}: " . $response);
-                        // Optional: throw exception
+                        \Illuminate\Support\Facades\Log::error("Error generating NC for sale {$venta->id_venta}: " . $responseGenerar);
+                        throw new \Exception("Error generando Nota de Crédito: " . ($dataGenerar->mensaje ?? 'Respuesta inválida de API'));
                     }
                 }
 
@@ -431,8 +445,9 @@ class ComprobantesController extends Controller
                     $deudaAsociada->delete();
                 }
 
-                // 3. Generar Nota de Crédito (Solo Facturas id:2 y Boletas id:1)
-                if (in_array($venta->id_tido, [1, 2])) {
+                // 3. Generar Nota de Crédito SOLO si ya se envió a SUNAT
+                $enviadoSunat = $venta->enviado_sunat || $venta->ventaSunat()->exists();
+                if (in_array($venta->id_tido, [1, 2]) && $enviadoSunat) {
                     // Determinar serie NC
                     $serieNC = $venta->id_tido == 2 ? 'FC01' : 'BC01';
                     // Obtener siguiente correlativo para NC
@@ -456,59 +471,69 @@ class ComprobantesController extends Controller
                     $nc->moneda = $venta->moneda;
                     $nc->estado = 1; // Emitida
                     $nc->enviado_sunat = 0;
-                    $nc->cierre_caja_id = $venta->cierre_caja_id; // Link to same box or current? usage: current.
+                    $nc->cierre_caja_id = $venta->cierre_caja_id; 
                     $nc->id_usuario = $user->id;
                     $nc->save();
 
-                    // Generar JSON NC
-                    $json = $this->sunatService->formatJsonNotaCreditoFull($nc, $venta, $venta->cliente, $venta->detalles, '07', 'Devolución total');
+                    // Copiar detalles
+                    foreach ($venta->detalles as $detalle) {
+                        $ncDetalle = $detalle->replicate();
+                        $ncDetalle->id_venta = $nc->id_venta;
+                        $ncDetalle->save();
+                    }
+
+                    // Generar JSON NC (07: Devolución total)
+                    $jsonGenerar = $this->sunatService->formatJsonNotaCreditoFull($nc, $venta, $venta->cliente, $venta->detalles, '07', 'Devolución total');
 
                     // Llamar API
-                    $response = $this->sunatService->generarNotaCredito($json);
-                    $data = json_decode($response);
+                    $responseGenerar = $this->sunatService->generarNotaCredito($jsonGenerar);
+                    $dataGenerar = json_decode($responseGenerar);
 
-                    if ($data && isset($data->data)) {
+                    if ($dataGenerar && isset($dataGenerar->data)) {
                         // Guardar respuesta Sunat
-                        VentaSunat::create([
+                        $ventaSunat = VentaSunat::create([
                             'id_venta' => $nc->id_venta,
-                            'nombre_xml' => $data->data->nombre_archivo ?? '',
-                            'content_xml' => $data->data->contenido_xml ?? '',
-                            'hash' => $data->data->hash ?? '',
-                            'qr_data' => $data->data->qr_info ?? '',
-                            'response_api' => $response
+                            'nombre_xml' => $dataGenerar->data->nombre_archivo ?? '',
+                            'content_xml' => $dataGenerar->data->contenido_xml ?? '',
+                            'hash' => $dataGenerar->data->hash ?? '',
+                            'qr_data' => $dataGenerar->data->qr_info ?? '',
+                            'response_api' => $responseGenerar
                         ]);
+
+                        // Enviar inmediatamente a SUNAT
+                        $jsonEnviar = $this->sunatService->formatJsonFacturaBoleta($ventaSunat->nombre_xml, $ventaSunat->content_xml);
+                        $responseEnviar = $this->sunatService->sendDocumentoBoletaFactura($jsonEnviar);
+                        $dataEnviar = json_decode($responseEnviar);
+
+                        if ($dataEnviar && isset($dataEnviar->estado) && $dataEnviar->estado) {
+                            $nc->enviado_sunat = 1;
+                            $nc->save();
+                        }
 
                         // Guardar XML en storage
                         try {
                             $folder = 'xml_sunat';
-                            $fileName = ($data->data->nombre_archivo ?? 'document') . '.xml';
+                            $fileName = ($dataGenerar->data->nombre_archivo ?? 'document') . '.xml';
                             $storagePath = $folder . '/' . $fileName;
 
                             if (!Storage::disk('public')->exists($folder)) {
                                 Storage::disk('public')->makeDirectory($folder);
                             }
 
-                            $xmlContent = $data->data->contenido_xml ?? '';
+                            $xmlContent = $dataGenerar->data->contenido_xml ?? '';
                             if (!mb_check_encoding($xmlContent, 'UTF-8')) {
                                 $xmlContent = mb_convert_encoding($xmlContent, 'UTF-8', 'ISO-8859-1');
                             }
 
                             Storage::disk('public')->put($storagePath, $xmlContent);
-                            Storage::disk('public')->setVisibility($storagePath, 'public');
                         } catch (\Exception $xmlEx) {
                             \Illuminate\Support\Facades\Log::error("Error guardando XML fisico NC: " . $xmlEx->getMessage());
                         }
 
                         $ncsGenerated++;
                     } else {
-                        // Log error but proceed with return? OR rollback?
-                        // If NC generation fails, we should probably warn.
-                        \Illuminate\Support\Facades\Log::error("Error generating NC for sale {$venta->id_venta}: " . $response);
-                        // Optional: throw exception to rollback everything
-                        // throw new \Exception("Error generando Nota de Crédito Electrónica: " . ($data->mensaje ?? 'Error desconocido'));
-                        // For now, log and continue, allowing manual retry or local return only? 
-                        // User requirement says THIS MUST GENERATE NC. So I should rollback if it fails.
-                        throw new \Exception("Error generando Nota de Crédito Electrónica: " . ($data->mensaje ?? 'Respuesta inválida de API'));
+                        \Illuminate\Support\Facades\Log::error("Error generating NC for sale {$venta->id_venta}: " . $responseGenerar);
+                        throw new \Exception("Error generando Nota de Crédito Electrónica: " . ($dataGenerar->mensaje ?? 'Respuesta inválida de API'));
                     }
                 }
 
