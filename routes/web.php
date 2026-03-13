@@ -201,6 +201,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::post('/quick-create/step2', [ProductoController::class, 'step2'])->name('step2');
         Route::post('/store/producto', [ProductoController::class, 'store'])->name('store');
         Route::get('/api/productos', [ProductoController::class, 'search'])->name('search');
+        Route::get('/clone/{id}', [ProductoController::class, 'clone'])->name('clone');
     });
 
     // API para productos y clientes

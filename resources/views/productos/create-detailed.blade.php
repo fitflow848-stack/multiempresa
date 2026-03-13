@@ -318,8 +318,9 @@
         (function($) {
             'use strict';
 
-            // Mantener un array local de líneas
+            // Mantener un array local de líneas e índice de edición
             let lines = [];
+            let editingIndex = -1;
 
             function renderLines() {
                 const $body = $('#product-lines-body');
@@ -363,7 +364,12 @@
                         );
                         $tr.append(`<td class="text-end" style="font-size:0.75rem">${ln.peso || '0'}</td>`);
                         $tr.append(
-                            `<td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-line" data-idx="${idx}" title="Eliminar"><i class="fas fa-times"></i></button></td>`
+                            `<td class="text-center">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-outline-warning btn-edit-line" data-idx="${idx}" title="Editar"><i class="bx bx-edit"></i></button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger btn-remove-line" data-idx="${idx}" title="Eliminar"><i class="bx bx-trash"></i></button>
+                                </div>
+                            </td>`
                         );
                         $body.append($tr);
                     });
@@ -387,6 +393,10 @@
                 $('#peso').val(0);
                 $('#presentacion').val('');
                 $('#concentracion').val('');
+                
+                // Reset botón de agregar
+                editingIndex = -1;
+                $('#btn-add-line').html('<i class="fas fa-plus-circle me-2"></i> Añadir a la Lista').removeClass('btn-warning').addClass('btn-primary');
             }
 
             // Función para generar código de barras EAN-13
@@ -559,7 +569,14 @@
                     return;
                 }
 
-                lines.push(ln);
+                if (editingIndex !== -1) {
+                    lines[editingIndex] = ln;
+                    editingIndex = -1;
+                    $('#btn-add-line').html('<i class="fas fa-plus-circle me-2"></i> Añadir a la Lista').removeClass('btn-warning').addClass('btn-primary');
+                } else {
+                    lines.push(ln);
+                }
+
                 renderLines();
                 clearForm();
 
@@ -568,10 +585,49 @@
                     toast: true,
                     position: 'top-end',
                     icon: 'success',
-                    title: 'Producto agregado',
+                    title: editingIndex !== -1 ? 'Producto actualizado' : 'Producto agregado',
                     showConfirmButton: false,
                     timer: 1500
                 });
+            });
+
+            // Editar línea
+            $(document).on('click', '.btn-edit-line', function() {
+                const idx = Number($(this).data('idx'));
+                if (isNaN(idx)) return;
+
+                const ln = lines[idx];
+                editingIndex = idx;
+
+                // Cargar datos al formulario
+                $('#cb').val(ln.cb);
+                $('#cantidad').val(ln.cantidad);
+                $('#registro').val(ln.registro || '');
+                $('#lote').val(ln.lote || '');
+                $('#pa1').val(ln.pa1 || '');
+                $('#pa2').val(ln.pa2 || '');
+                $('#precio_compra').val(ln.precio_compra);
+                $('#pvp').val(ln.pvp);
+                $('#pvp_dto').val(ln.pvp_dto);
+                $('#peso').val(ln.peso);
+                $('#presentacion').val(ln.presentacion);
+                $('#concentracion').val(ln.concentracion);
+                $('#stock_maximo').val(ln.stock_maximo || 0);
+                $('#stock_minimo').val(ln.stock_minimo || 0);
+                $('#costo_operativo').val(ln.costo_operativo || 0);
+                $('#pv_docena').val(ln.pv_docena || 0);
+                $('#pvc').val(ln.pvc || 0);
+                $('#pvc_dto').val(ln.pvc_dto || 0);
+                $('#pvp2').val(ln.pvp2 || 0);
+                $('#fecha_venc').val(ln.fecha_venc);
+
+                // Cambiar botón
+                $('#btn-add-line').html('<i class="fas fa-sync-alt me-2"></i> Actualizar en la Lista').removeClass('btn-primary').addClass('btn-warning');
+                
+                // Scroll al inicio del card para ver el formulario
+                $('.col-lg-8')[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                updateBarcode();
             });
 
             // Eliminar línea
@@ -696,21 +752,18 @@
             });
 
             // Cargar líneas preexistentes si las hay
-            $(function() {
-                try {
-                    const pre = $('#product_lines').val();
-                    if (pre && pre !== '[]') {
-                        const parsed = JSON.parse(pre);
-                        if (Array.isArray(parsed) && parsed.length) {
-                            lines = parsed;
-                            renderLines();
-                        }
+            try {
+                const pre = $('#product_lines').val();
+                if (pre && pre !== '[]') {
+                    const parsed = JSON.parse(pre);
+                    if (Array.isArray(parsed) && parsed.length) {
+                        lines = parsed;
                     }
-                } catch (e) {
-                    console.warn('Error cargando líneas preexistentes:', e);
                 }
-            });
-
+            } catch (e) {
+                console.warn('Error cargando líneas preexistentes:', e);
+            }
+            
             // Render inicial
             renderLines();
 

@@ -80,4 +80,4 @@
 @endif
 
 <!-- Campo para líneas de producto (disgregados) -->
-<input type="hidden" name="product_lines" id="product_lines" value="[]">
+<input type="hidden" name="product_lines" id="product_lines" value="{{ $product_lines_pre ?? '[]' }}">

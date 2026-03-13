@@ -157,7 +157,15 @@
                                     <td>
                                         <div class="product-cell">
                                             <span class="product-title">{{ $p->producto ?? '-' }}</span>
-                                            <span class="product-meta"><i class="fas fa-barcode me-1"></i>
+                                            <div class="d-flex gap-2 mt-1">
+                                                @if($p->presentacion)
+                                                    <span class="badge bg-soft-info text-info border-info" style="font-size: 0.65rem; background: #e0f2fe;">{{ $p->presentacion }}</span>
+                                                @endif
+                                                @if($p->concentracion)
+                                                    <span class="badge bg-soft-primary text-primary border-primary" style="font-size: 0.65rem; background: #eef2ff;">{{ $p->concentracion }}</span>
+                                                @endif
+                                            </div>
+                                            <span class="product-meta mt-1"><i class="fas fa-barcode me-1"></i>
                                                 {{ $p->codigo ?? 'N/A' }}</span>
                                         </div>
                                     </td>
@@ -185,7 +193,11 @@
                                     </td>
                                     <td class="text-center">
                                         <div class="d-flex gap-1 justify-content-center">
-                                            <a href="{{ route('almacen.kardex', ['producto_id' => $p->id_producto ?? $p->id]) }}"
+                                            <a href="{{ route('productos.clone', ['id' => $p->producto_id]) }}"
+                                                class="btn btn-sm btn-white border shadow-sm px-2 rounded-pill text-dark fw-bold" title="Clonar Producto">
+                                                <i class="bx bx-copy"></i>
+                                            </a>
+                                            <a href="{{ route('almacen.kardex', ['producto_id' => $p->producto_id]) }}"
                                                 class="btn btn-sm btn-white border shadow-sm px-2 rounded-pill text-info fw-bold" title="Ver Kardex">
                                                 <i class="bx bx-history"></i>
                                             </a>

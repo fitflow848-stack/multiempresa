@@ -156,10 +156,44 @@
         <form id="producto-step1-form" method="POST" action="{{ route('productos.step2') }}" enctype="multipart/form-data">
             @csrf
             <!-- Campo hidden para subfamilia_id -->
-            <input type="hidden" id="np-subfamilia" name="subfamilia_id" value="">
+            <input type="hidden" id="np-subfamilia" name="subfamilia_id" value="{{ $productoClon->subfamilia_id ?? '' }}">
             <!-- Campos hidden para presentación y concentración (se manejan en step2) -->
             <input type="hidden" id="np-presentacion" name="presentacion_id" value="">
             <input type="hidden" id="np-concentracion" name="concentracion_id" value="">
+            
+            @php
+                $linesJson = '[]';
+                if(isset($productoClon)){
+                    $lines = $productoClon->lineas->map(function($ln){
+                        return [
+                            'cb' => $ln->cb,
+                            'codigo_ref' => $ln->codigo_ref,
+                            'presentacion' => $ln->presentacion,
+                            'concentracion' => $ln->concentracion,
+                            'cantidad' => $ln->cantidad,
+                            'precio_compra' => $ln->precio_compra,
+                            'pvp' => $ln->pvp,
+                            'pvp_dto' => $ln->pvp_dto,
+                            'peso' => $ln->peso,
+                            'pa1' => $ln->pa1,
+                            'pa2' => $ln->pa2,
+                            'lote' => $ln->lote,
+                            'fecha_venc' => $ln->fecha_venc ? \Carbon\Carbon::parse($ln->fecha_venc)->format('Y-m-d') : null,
+                            'registro' => $ln->registro,
+                            'costo_operativo' => $ln->costo_operativo,
+                            'pv_docena' => $ln->pv_docena,
+                            'pvc' => $ln->pvc,
+                            'pvc_dto' => $ln->pvc_dto,
+                            'pvp2' => $ln->pvp2,
+                            'stock_maximo' => $ln->stock_maximo,
+                            'stock_minimo' => $ln->stock_minimo,
+                        ];
+                    });
+                    $linesJson = json_encode($lines);
+                }
+            @endphp
+            <input type="hidden" name="product_lines_json" value="{{ $linesJson }}">
+
             <div class="tab-content">
 
                 <!-- TAB 1 -->
@@ -190,7 +224,8 @@
                                                             <option value="">-- Seleccionar laboratorio --
                                                             </option>
                                                             @foreach ($laboratorios ?? [] as $laboratorio)
-                                                                <option value="{{ $laboratorio->id }}">
+                                                                <option value="{{ $laboratorio->id }}" 
+                                                                    {{ (isset($productoClon) && (is_object($productoClon->laboratorio) ? $productoClon->laboratorio->id : $productoClon->laboratorio) == $laboratorio->id) ? 'selected' : '' }}>
                                                                     {{ $laboratorio->nombre }}</option>
                                                             @endforeach
                                                         </select>
@@ -208,10 +243,14 @@
                                                     <div class="input-group position-relative">
                                                         <select name="familia_id" id="np-familia" class="form-select" readonly
                                                             style="pointer-events: none;">
-                                                            <option value="">-- Seleccionar --</option>
-                                                            <option value="nutrientes">NUTRIENTES</option>
-                                                            <option value="fertilizantes">FERTILIZANTES</option>
-                                                            <option value="varios">VARIOS</option>
+                                                            @if(isset($productoClon))
+                                                                <option value="{{ $productoClon->familia_id }}" selected>{{ $productoClon->familia ? $productoClon->familia->nombre : $productoClon->familia_id }}</option>
+                                                            @else
+                                                                <option value="">-- Seleccionar --</option>
+                                                                <option value="nutrientes">NUTRIENTES</option>
+                                                                <option value="fertilizantes">FERTILIZANTES</option>
+                                                                <option value="varios">VARIOS</option>
+                                                            @endif
                                                         </select>
                                                         <div class="select-overlay"
                                                             style="position: absolute; top: 0; left: 0; right: 42px; bottom: 0; z-index: 10; cursor: pointer;">
@@ -231,7 +270,7 @@
                                                         Nombre del Producto <span class="text-danger">*</span>
                                                     </label>
                                                     <textarea name="nombre" id="np-nombre" class="form-control" rows="2" required
-                                                        placeholder="Ingrese el nombre completo del producto, marca o modelo"></textarea>
+                                                        placeholder="Ingrese el nombre completo del producto, marca o modelo">{{ $productoClon->nombre ?? '' }}</textarea>
                                                 </div>
                                             </div>
 
@@ -245,7 +284,7 @@
                                                         <select id="np-marca" name="marca_id" class="form-select">
                                                             <option value="">--Elegir--</option>
                                                             @foreach ($marcas as $marca)
-                                                                <option value="{{ $marca->id }}">
+                                                                <option value="{{ $marca->id }}" {{ (isset($productoClon) && $productoClon->marca_id == $marca->id) ? 'selected' : '' }}>
                                                                     {{ $marca->nombre }}</option>
                                                             @endforeach
                                                         </select>
@@ -264,7 +303,7 @@
                                                         <select id="np-unidad" name="unidad_medida_id" class="form-select">
                                                             <option value="">--Elegir--</option>
                                                             @foreach ($unidades as $unidad)
-                                                                <option value="{{ $unidad->id }}">
+                                                                <option value="{{ $unidad->id }}" {{ (isset($productoClon) && $productoClon->unidad_medida_id == $unidad->id) ? 'selected' : '' }}>
                                                                     {{ $unidad->nombre }}</option>
                                                             @endforeach
                                                         </select>
@@ -288,18 +327,18 @@
                                                         <label class="form-label">Tipo de Impuesto</label>
                                                         <select name="tipo_impuesto" id="np-tipo-impuesto"
                                                             class="form-select">
-                                                            <option value="gravado">Gravado - Operación Onerosa
+                                                            <option value="gravado" {{ (isset($productoClon) && $productoClon->tipo_impuesto == 'gravado') ? 'selected' : '' }}>Gravado - Operación Onerosa
                                                             </option>
-                                                            <option value="exonerado">Exonerado</option>
-                                                            <option value="inafecto">Inafecto</option>
+                                                            <option value="exonerado" {{ (isset($productoClon) && $productoClon->tipo_impuesto == 'exonerado') ? 'selected' : '' }}>Exonerado</option>
+                                                            <option value="inafecto" {{ (isset($productoClon) && $productoClon->tipo_impuesto == 'inafecto') ? 'selected' : '' }}>Inafecto</option>
                                                         </select>
                                                     </div>
                                                     <div class="col-md-6">
                                                         <label class="form-label">Condición de Venta</label>
                                                         <select name="condicion_venta" id="np-condicion-venta"
                                                             class="form-select">
-                                                            <option value="sin_receta">Sin Receta Médica</option>
-                                                            <option value="con_receta">Con Receta Médica</option>
+                                                            <option value="sin_receta" {{ (isset($productoClon) && $productoClon->condicion_venta == 'sin_receta') ? 'selected' : '' }}>Sin Receta Médica</option>
+                                                            <option value="con_receta" {{ (isset($productoClon) && $productoClon->condicion_venta == 'con_receta') ? 'selected' : '' }}>Con Receta Médica</option>
                                                         </select>
                                                     </div>
                                                 </div>
@@ -308,7 +347,7 @@
                                                     <div class="col-md-12">
                                                         <div class="form-check">
                                                             <input class="form-check-input" type="checkbox"
-                                                                id="np-op-avanzadas" name="opciones_avanzadas" />
+                                                                id="np-op-avanzadas" name="opciones_avanzadas" {{ (isset($productoClon) && $productoClon->opciones_avanzadas) ? 'checked' : '' }} />
                                                             <label class="form-check-label" for="np-op-avanzadas">
                                                                 <i class="bx bx-cog me-1"></i> Mostrar Opciones
                                                                 Avanzadas
@@ -332,7 +371,7 @@
                                         <div class="card-body">
                                             <div class="form-check mb-2">
                                                 <input class="form-check-input" type="checkbox" id="np-attr-serie"
-                                                    name="attr_numero_serie">
+                                                    name="attr_numero_serie" {{ (isset($productoClon) && $productoClon->attr_numero_serie) ? 'checked' : '' }}>
                                                 <label class="form-check-label" for="np-attr-serie">
                                                     <i class="bx bx-barcode me-1"></i>
                                                     Número Serie
@@ -343,7 +382,7 @@
 
                                             <div class="form-check mb-2">
                                                 <input class="form-check-input" type="checkbox" id="np-attr-fecha-venc"
-                                                    name="attr_fecha_vencimiento">
+                                                    name="attr_fecha_vencimiento" {{ (isset($productoClon) && $productoClon->attr_fecha_vencimiento) ? 'checked' : '' }}>
                                                 <label class="form-check-label" for="np-attr-fecha-venc">
                                                     <i class="bx bx-calendar me-1"></i>
                                                     Fecha Vencimiento
@@ -354,7 +393,7 @@
 
                                             <div class="form-check mb-2">
                                                 <input class="form-check-input" type="checkbox" id="np-attr-lote"
-                                                    name="attr_lote_produccion">
+                                                    name="attr_lote_produccion" {{ (isset($productoClon) && $productoClon->attr_lote_produccion) ? 'checked' : '' }}>
                                                 <label class="form-check-label" for="np-attr-lote">
                                                     <i class="bx bx-box me-1"></i>
                                                     Lote Producción
@@ -365,7 +404,7 @@
 
                                             <div class="form-check mb-2">
                                                 <input class="form-check-input" type="checkbox"
-                                                    id="np-attr-venta-menudeo" name="attr_venta_menudeo">
+                                                    id="np-attr-venta-menudeo" name="attr_venta_menudeo" {{ (isset($productoClon) && $productoClon->attr_venta_menudeo) ? 'checked' : '' }}>
                                                 <label class="form-check-label" for="np-attr-venta-menudeo">
                                                     <i class="bx bx-shopping-bag me-1"></i>
                                                     Venta Menudeo

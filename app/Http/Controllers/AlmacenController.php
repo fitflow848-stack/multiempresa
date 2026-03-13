@@ -40,6 +40,8 @@ class AlmacenController extends Controller
                 'd.producto_linea_id',
                 'p.nombre as producto',
                 'pl.cb as codigo',
+                'pl.presentacion',
+                'pl.concentracion',
                 's.nombre as almacen_nombre',
                 DB::raw('SUM(d.cantidad) as existencias'),
                 DB::raw('AVG(d.costo) as costo'),
@@ -92,7 +94,7 @@ class AlmacenController extends Controller
         }
 
         // Aplicar la agrupación obligatoria para las funciones agregadas y evitar error 1055
-        $query->groupBy('d.producto_id', 'd.producto_linea_id', 'p.nombre', 'pl.cb', 's.nombre');
+        $query->groupBy('d.producto_id', 'd.producto_linea_id', 'p.nombre', 'pl.cb', 'pl.presentacion', 'pl.concentracion', 's.nombre');
 
         $stocks = $query->paginate(20);
 
