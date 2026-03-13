@@ -11,6 +11,9 @@
         </div>
         <div class="d-flex gap-2">
             <a href="{{ route('compras.index') }}" class="btn btn-outline-secondary">Volver</a>
+            <a href="{{ route('compras.pdf', $compra->id) }}" class="btn btn-info" target="_blank">
+                <i class="fas fa-print me-1"></i>Imprimir
+            </a>
             <a href="{{ route('compras.receive', $compra->id) }}" class="btn btn-primary">Recibir Ticket</a>
         </div>
     </div>
@@ -20,17 +23,27 @@
             <div class="card mb-4">
                 <div class="card-body">
                     <div class="row mb-2">
-                        <div class="col-md-6">
+                        <div class="col-md-5">
                             <strong>Proveedor</strong>
                             <div>{{ $compra->proveedor_nombre ?? $compra->proveedor_id ?? '—' }}</div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <strong>Fecha Emisión</strong>
                             <div>{{ $compra->fecha_emision ? \Carbon\Carbon::parse($compra->fecha_emision)->format('d/m/Y') : '—' }}</div>
                         </div>
                         <div class="col-md-3">
                             <strong>Tipo</strong>
                             <div>{{ $compra->tipo ?? '—' }} ({{ $compra->serie_comprobante }}-{{ $compra->numero_comprobante }})</div>
+                        </div>
+                        <div class="col-md-2">
+                            <strong>Condición</strong>
+                            <div>
+                                @if($compra->credito)
+                                    <span class="badge bg-info">Crédito</span>
+                                @else
+                                    <span class="badge bg-secondary">Contado</span>
+                                @endif
+                            </div>
                         </div>
                     </div>
 

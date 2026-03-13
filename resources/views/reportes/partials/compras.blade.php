@@ -11,6 +11,7 @@
                 <th>Fecha Emisión</th>
                 <th>Proveedor</th>
                 <th>Tipo Doc.</th>
+                <th>Condición</th>
                 <th>Moneda</th>
                 <th class="text-end">Total Bruto</th>
                 <th class="text-end">IGV/Imp</th>
@@ -25,6 +26,13 @@
                     <td>{{ $compra->proveedor->nombre_comercial ?? ($compra->proveedor->razon_social ?? 'Proveedor Eliminado') }}
                     </td>
                     <td>{{ $compra->tipo }}</td>
+                    <td>
+                        @if($compra->credito)
+                            <span class="badge bg-info text-dark">Crédito</span>
+                        @else
+                            <span class="badge bg-secondary text-white">Contado</span>
+                        @endif
+                    </td>
                     <td class="text-center">{{ $compra->moneda }}</td>
                     <td class="text-end">{{ number_format($compra->total_bruto, 2) }}</td>
                     <td class="text-end">{{ number_format($compra->total_impuesto, 2) }}</td>
@@ -33,7 +41,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8" class="text-center py-5">
+                    <td colspan="9" class="text-center py-5">
                         <span class="text-muted">No se encontraron compras en el periodo seleccionado</span>
                     </td>
                 </tr>

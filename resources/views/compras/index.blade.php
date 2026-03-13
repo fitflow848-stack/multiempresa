@@ -127,6 +127,7 @@
                             <th class="border-0">FECHA EMISIÓN</th>
                             <th class="border-0">DOCUMENTO</th>
                             <th class="border-0">PROVEEDOR</th>
+                            <th class="border-0 text-center">CONDICIÓN</th>
                             <th class="border-0 text-center">TOTAL</th>
                             <th class="border-0 text-center">ESTADO</th>
                             <th class="border-0 text-center">ACCIONES</th>
@@ -194,6 +195,15 @@
                             render: function(data) {
                                 return '<div class="product-info"><span class="product-name">' + (
                                     data || 'Sin proveedor') + '</span></div>';
+                            }
+                        },
+                        {
+                            data: 'condicion',
+                            name: 'condicion',
+                            className: 'text-center',
+                            render: function(data) {
+                                let badgeClass = data === 'Crédito' ? 'bg-info text-white' : 'bg-secondary text-white';
+                                return '<span class="badge ' + badgeClass + '" style="font-size: 0.75rem;">' + data + '</span>';
                             }
                         },
                         {

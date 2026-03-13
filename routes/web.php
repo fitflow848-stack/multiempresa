@@ -185,6 +185,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::post('/', [ComprasController::class, 'store'])->name('store')->middleware('can:compras.crear');
         Route::get('/{compra}/success', [ComprasController::class, 'success'])->name('success');
         Route::get('/{compra}', [ComprasController::class, 'show'])->name('show');
+        Route::get('/{compra}/pdf', [ComprasController::class, 'pdf'])->name('pdf');
         Route::post('/{compra}/update-local', [ComprasController::class, 'updateLocalDestino'])->name('update-local')->middleware('can:compras.editar');
         Route::get('/{compra}/recibir', [ComprasController::class, 'receiveForm'])->name('receive')->middleware('can:compras.recibir');
         Route::post('/{compra}/recibir', [ComprasController::class, 'storeReception'])->name('receive.store')->middleware('can:compras.recibir');

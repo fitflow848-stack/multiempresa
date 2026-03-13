@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Producto;
 use App\Models\ProductoLinea;
 use App\Models\Sucursal;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ComprasController extends Controller
 {
@@ -46,7 +47,8 @@ class ComprasController extends Controller
                 'compras.numero_comprobante',
                 'proveedores.nombre_comercial as proveedor',
                 'compras.total_neto',
-                'compras.received_at'
+                'compras.received_at',
+                'compras.credito'
             )
             ->where('compras.company_id', Auth::user()->company_id)
             ->where('compras.local_destino', Auth::user()->branch_id);
@@ -77,6 +79,7 @@ class ComprasController extends Controller
 
         $data = $rows->map(function ($r) {
             $estado = $r->received_at ? 'Recibida' : 'Pendiente';
+            $condicion = $r->credito ? 'Crédito' : 'Contado';
             $acciones = '';
             $acciones .= '<a href="' . route('compras.show', $r->id) . '" class="btn btn-sm btn-primary me-1">Ver</a>';
             if (! $r->received_at) {
@@ -87,6 +90,7 @@ class ComprasController extends Controller
                 'fecha' => $r->fecha_emision ? date('Y-m-d', strtotime($r->fecha_emision)) : null,
                 'documento' => $r->tipo . ' ' . $r->serie_comprobante . '-' . $r->numero_comprobante,
                 'proveedor' => $r->proveedor,
+                'condicion' => $condicion,
                 'total' => (float) $r->total_neto,
                 'estado' => $estado,
                 'acciones' => $acciones,
@@ -267,6 +271,33 @@ class ComprasController extends Controller
     {
         $compra->load('lineas');
         return view('compras.show', compact('compra'));
+    }
+
+    /**
+     * PDF view for compra
+     */
+    public function pdf(Compra $compra)
+    {
+        $compra->load(['lineas', 'proveedor', 'usuario']);
+        $company = Auth::user()->company;
+        
+        $logoPath = null;
+        if ($company && $company->logo) {
+            $logoFilePath = $company->logo_path;
+            if ($logoFilePath && file_exists($logoFilePath)) {
+                $logoPath = 'data:image/png;base64,' . base64_encode(file_get_contents($logoFilePath));
+            }
+        }
+        
+        if (!$logoPath) {
+            $defaultLogoPath = public_path('images/scorpion.png');
+            if (file_exists($defaultLogoPath)) {
+                $logoPath = 'data:image/png;base64,' . base64_encode(file_get_contents($defaultLogoPath));
+            }
+        }
+
+        $pdf = Pdf::loadView('compras.pdf', compact('compra', 'company', 'logoPath'));
+        return $pdf->stream('compra_' . $compra->id . '.pdf');
     }
 
     /**
