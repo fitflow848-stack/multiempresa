@@ -172,8 +172,10 @@
                 <h4 style="margin: 0 0 15px 0; font-size: 14px; color: #17a2b8; text-transform: uppercase;">Documento</h4>
 
                 <div style="background:#e3f2fd; padding:10px; border-radius:4px; margin-bottom:15px; font-size: 12px;">
-                    <strong>{{ ucfirst($tipoDocumento ?? 'boleta') }}</strong>
-                    @if ($tipoDocumento == 'ticket')
+                    <strong>{{ $isProforma ? 'PROFORMA / COTIZACIÓN' : ucfirst($tipoDocumento ?? 'boleta') }}</strong>
+                    @if ($isProforma)
+                        - Documento informativo de precios
+                    @elseif ($tipoDocumento == 'ticket')
                         - Comprobante interno
                     @elseif($tipoDocumento == 'boleta')
                         - Consumidor Final
@@ -220,8 +222,7 @@
                 <button onclick="cancel()"
                     style="flex: 1; padding: 12px; border: 1px solid #ddd; background: #fff; color: #555; border-radius: 4px; cursor: pointer; font-weight: 600;">Regresar</button>
                 <button onclick="accept()"
-                    style="flex: 2; padding: 12px; border: none; background: #6b2e51; color: #fff; border-radius: 4px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 6px rgba(107, 46, 81, 0.2);">CONFIRMAR
-                    VENTA</button>
+                    style="flex: 2; padding: 12px; border: none; background: #6b2e51; color: #fff; border-radius: 4px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 6px rgba(107, 46, 81, 0.2);">{{ $isProforma ? 'CONFIRMAR PROFORMA' : 'CONFIRMAR VENTA' }}</button>
             </div>
 
         </div>
@@ -446,11 +447,8 @@
                 if (!ventaId) return;
 
                 if (isProforma === '1' || isProforma === 1) {
-                    if (format === '8cm') {
-                        url = '{{ route('cotizaciones.pdfCotizacion8cm', ':id') }}'.replace(':id', ventaId);
-                    } else {
-                        url = '{{ route('cotizaciones.pdfCotizacion', ':id') }}'.replace(':id', ventaId);
-                    }
+                    url = '{{ route('cotizaciones.pdfCotizacion', ':id') }}'.replace(':id', ventaId);
+                    url += (url.includes('?') ? '&' : '?') + 'format=' + format;
                 } else {
                     url = '{{ route('pos.pdf', ['id' => ':id', 'format' => ':format']) }}'
                         .replace(':id', ventaId)

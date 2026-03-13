@@ -559,8 +559,10 @@ class CotizacionController extends Controller
         ]);
     }
 
-    public function pdfCotizacion($id, $saveOnly = false)
+    public function pdfCotizacion(Request $request, $id, $saveOnly = false, $format = 'default')
     {
+        // Soporte para formato vía query param o argumento
+        $format = $request->query('format', $format);
         $venta = Cotizacion::where('id', $id)->first();
 
         // Usar detalles de venta en lugar de servicios originales
@@ -598,99 +600,54 @@ class CotizacionController extends Controller
             }
         }
 
-        $tipoDocumento = match ($venta->id_tido) {
-            1 => 'boleta',
-            2 => 'factura',
-            3 => 'nota-venta',
-            4 => 'ticket',
-            default => 'boleta',
-        };
+        $tipoDocumento = 'PROFORMA';
 
         $data = [
-            'title' => 'Boleta de Pago',
+            'title' => 'PROFORMA',
             'date' => date('m/d/Y'),
-            'logo' => 'data:image/png;base64,' . $logoPath,
+            'logo' => $logoPath ? 'data:image/png;base64,' . $logoPath : null,
             'cliente' => $cliente,
             'servicios' => $servicios,
             'venta' => $venta,
             'tipoDocumento' => $tipoDocumento,
             'empresa' => $empresa,
+            'qr_image' => null, // Opcional para proformas
         ];
 
+        if ($format === '8cm' || $format === '5.8cm') {
+            $cantidadItems = count($servicios);
+            $altoCalculado = 550 + ($cantidadItems * 30);
+            $width = ($format === '5.8cm') ? 164.4 : 226.77;
+            $customPaper = [0, 0, $width, $altoCalculado];
+            
+            $pdf = Pdf::loadView('pos.pdf_8cm', $data)
+                ->setPaper($customPaper, 'portrait');
+            
+            return $pdf->stream("proforma-ticket-{$id}.pdf");
+        }
+
         $pdf = Pdf::loadView('template.documentoventa', $data);
+
+        if ($format === 'media-a4') {
+            $pdf->setPaper([0, 0, 595.28, 420.94], 'portrait');
+        } else {
+            $pdf->setPaper('a4', 'portrait');
+        }
 
         if ($saveOnly) {
             if (!file_exists(public_path('ventas/pdf'))) {
                 mkdir(public_path('ventas/pdf'), 0777, true);
             }
-            $pdfPath = public_path("ventas/pdf/venta_{$id}.pdf");
+            $pdfPath = public_path("ventas/pdf/proforma_{$id}.pdf");
             $pdf->save($pdfPath);
             return $pdfPath;
         }
 
-        return $pdf->stream('boleta-pago.pdf');
+        return $pdf->stream("proforma-{$id}.pdf");
     }
 
-    public function pdfCotizacion8cm($id)
+    public function pdfCotizacion8cm(Request $request, $id)
     {
-        $venta = Cotizacion::where('id', $id)->first();
-        if (!$venta) {
-            abort(404, 'Venta no encontrada');
-        }
-
-        $servicios = CotizacionDetalle::where('cotizacion_id', $id)->get();
-        if ($venta->cliente_id == 999999) {
-            $cliente = (object) [
-                'tipo_documento' => 'DNI',
-                'numero_documento' => '99999999',
-                'nombre' => 'CLIENTE VARIOS',
-                'direccion' => 'SIN DIRECCION',
-                'telefono' => '',
-                'email' => ''
-            ];
-        } else {
-            $cliente = Cliente::where('id', $venta->cliente_id)->first();
-        }
-
-        $empresa = Company::where('id', $venta->company_id)->first();
-
-        // Logo (base64) - reusar la lógica existente en pdfVenta
-        $logoPath = null;
-        if ($empresa && $empresa->logo) {
-            $logoFilePath = $empresa->logo_path;
-            if ($logoFilePath && file_exists($logoFilePath)) {
-                $logoPath = base64_encode(file_get_contents($logoFilePath));
-            }
-        }
-        if (!$logoPath) {
-            $defaultLogoPath = public_path('images/scorpion.png');
-            if (file_exists($defaultLogoPath)) {
-                $logoPath = base64_encode(file_get_contents($defaultLogoPath));
-            }
-        }
-
-        // QR
-        $qr_image = null;
-        $qr_hash = null;
-
-        $serie_numero = $venta->serie . '-' . str_pad($venta->numero, 8, '0', STR_PAD_LEFT);
-        $data = [
-            'empresa' => $empresa,
-            'venta' => $venta,
-            'servicios' => $servicios,
-            'cliente' => $cliente,
-            'logo' => $logoPath ? 'data:image/png;base64,' . $logoPath : null,
-            'qr_image' => $qr_image,
-        ];
-
-        $cantidadItems = count($servicios);
-        $altoCalculado = 550 + ($cantidadItems * 30);
-
-        $customPaper = [0, 0, 226.77, $altoCalculado];
-
-        $pdf = Pdf::loadView('pos.pdf_8cm', $data)
-            ->setPaper($customPaper, 'portrait');
-
-        return $pdf->stream('ticket-' . $serie_numero . '.pdf');
+        return $this->pdfCotizacion($request, $id, false, '8cm');
     }
 }

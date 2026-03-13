@@ -620,130 +620,10 @@
             crearClienteContable();
         }
 
-        // Si el checkbox de proforma está marcado, emitir como cotización directamente
+        // Si el checkbox de proforma está marcado, mostrar modal de formatos
         if (document.getElementById('proforma-checkbox') && document.getElementById('proforma-checkbox').checked) {
-            // Calcular totales considerando tipo de impuesto
-            let total_con_igv = 0;
-            let subtotal_gravado = 0;
-            let total_igv = 0;
-
-            ticket.forEach(item => {
-                const itemTotal = parseFloat(item.precio || 0) * parseFloat(item.cantidad || 0);
-                total_con_igv += itemTotal;
-
-                if (item.tipo_impuesto !== 'exonerado') {
-                    const itemGravado = itemTotal / 1.18;
-                    subtotal_gravado += itemGravado;
-                    total_igv += (itemTotal - itemGravado);
-                }
-            });
-
-            // Subtotal total es base gravada + exonerada
-            const subtotal = total_con_igv - total_igv;
-            const igv = total_igv;
-
-            const datosVenta = {
-                ticket: JSON.stringify(ticket),
-                cliente: JSON.stringify(clienteActual || {}),
-                subtotal: subtotal.toFixed(2),
-                igv: igv.toFixed(2),
-                total: total_con_igv.toFixed(2),
-                tipo_documento: 'cotizacion',
-                proforma: '1',
-                _token: '{{ csrf_token() }}'
-            };
-
-            // Deshabilitar el botón activo para evitar doble clic
-            const btnAceptar = document.activeElement || null;
-            if (btnAceptar && btnAceptar.tagName === 'BUTTON') {
-                btnAceptar.disabled = true;
-                btnAceptar.textContent = 'Procesando...';
-            }
-
-            // IMPORTANTE: Abrir la ventana ANTES del fetch para evitar bloqueo de popups
-            const pdfWindow = window.open('about:blank', '_blank');
-            if (pdfWindow) {
-                pdfWindow.document.write(
-                    '<html><head><title>Cargando...</title></head><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:Arial;"><h2>Generando documento, por favor espere...</h2></body></html>'
-                );
-            }
-
-            fetch('{{ route('cotizaciones.save-cotizacion') }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify(datosVenta)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: '¡Cotización guardada!',
-                            html: `Número: <strong>${data.data.numero_completo || data.numero_completo || 'N/A'}</strong><br>Total: S/ ${data.data.total || data.total || total_con_igv.toFixed(2)}`
-                        });
-
-                        // Obtener URL del PDF de cotización
-                        const cotizacionId = data.data.cotizacion_id || data.data.venta_id || data.data.id ||
-                            data.id;
-                        if (cotizacionId && pdfWindow && !pdfWindow.closed) {
-                            const url8cm = '{{ route('cotizaciones.pdfCotizacion8cm', ':id') }}'.replace(':id',
-                                cotizacionId);
-                            pdfWindow.location.href = url8cm;
-                        }
-
-                        // Limpiar ticket y datos temporales
-                        try {
-                            localStorage.removeItem('ticketPOS');
-                            sessionStorage.removeItem('ticketPOS');
-                            localStorage.removeItem('ventaPersistentePOS');
-                            sessionStorage.removeItem('ticketGuardadoPOS');
-                            sessionStorage.removeItem('clienteGuardadoPOS');
-                        } catch (e) {
-                            console.warn('No se pudieron limpiar algunas claves de storage:', e);
-                        }
-
-                        // Limpiar ticket actual y regresar al POS
-                        ticket = [];
-                        renderTicket();
-
-                        setTimeout(() => {
-                            window.location.href = '{{ route('pos.index') }}';
-                        }, 1000);
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: 'Error al guardar la cotización: ' + (data.message ||
-                                'Error desconocido')
-                        });
-                        if (btnAceptar) {
-                            btnAceptar.disabled = false;
-                            btnAceptar.textContent = 'Emitir';
-                        }
-                        if (pdfWindow && !pdfWindow.closed) {
-                            pdfWindow.close();
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Error guardando cotización:', error);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error de Red',
-                        text: 'Error de conexión al guardar la cotización'
-                    });
-                    if (btnAceptar) {
-                        btnAceptar.disabled = false;
-                        btnAceptar.textContent = 'Emitir';
-                    }
-                    if (pdfWindow && !pdfWindow.closed) {
-                        pdfWindow.close();
-                    }
-                });
-
+            const modalF = new bootstrap.Modal(document.getElementById('modalFormatosProforma'));
+            modalF.show();
             return;
         }
 
@@ -2367,6 +2247,7 @@
     }
 </script>
 @include('pos.partials.modals.context-menu-ticket')
+@include('pos.partials.modals.modal-formatos-proforma')
 @include('pos.partials.js.finalizar-venta')
 @include('pos.partials.js.sucursal-toggle')
 

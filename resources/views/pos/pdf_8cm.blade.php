@@ -98,15 +98,20 @@
         </div>
 
         <div class="documento-caja bold">
-            {{ 'TICKET' }}<br>
-            {{ $venta->serie }}-{{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}
+            @if(isset($venta->serie))
+                {{ $venta->tipo_documento ?? 'TICKET' }}<br>
+                {{ $venta->serie }}-{{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}
+            @else
+                {{ 'COTIZACIÓN' }}<br>
+                {{ $venta->numero }}
+            @endif
         </div>
     </div>
 
     <table>
         <tr>
             <td class="bold" width="30%">Fecha E:</td>
-            <td>{{ $venta->fecha_emision->format('d/m/Y H:i') }}</td>
+            <td>{{ ($venta->fecha_emision ?? $venta->fecha)->format('d/m/Y H:i') }}</td>
         </tr>
         <tr>
             <td class="bold">RUC/DNI:</td>
@@ -220,7 +225,7 @@
     <div class="hr"></div>
 
     <div class="center small">
-        Representación impresa de la {{ $venta->tipo_comprobante ?? 'FACTURA ELECTRÓNICA' }}<br>
+        Representación impresa de la {{ $venta->tipo_documento ?? 'COTIZACIÓN' }}<br>
         Consulte en: <strong>{{ $empresa->website ?? 'www.tuempresa.com' }}</strong>
     </div>
 
