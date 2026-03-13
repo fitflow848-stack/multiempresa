@@ -436,6 +436,16 @@ class AlmacenController extends Controller
                     'prod_id2' => $productoId, 'suc2' => $sucursal_id,
                     'prod_id3' => $productoId, 'suc3' => $sucursal_id
                 ]);
+
+                // Calcular saldos acumulados (necesario si queremos mostrar en DESC pero con balances correctos)
+                $saldoAcumulado = 0;
+                foreach ($movimientos as $mov) {
+                    $saldoAcumulado += (floatval($mov->entrada) - floatval($mov->salida));
+                    $mov->saldo_linea = $saldoAcumulado;
+                }
+
+                // Invertir para mostrar el más reciente arriba (fecha antigua abajo)
+                $movimientos = array_reverse($movimientos);
             }
         }
 

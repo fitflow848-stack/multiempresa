@@ -75,33 +75,27 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @php $saldo = 0; @endphp
                                 @forelse($movimientos as $mov)
-                                    @php
-                                        $entrada = floatval($mov->entrada);
-                                        $salida = floatval($mov->salida);
-                                        $saldo += $entrada - $salida;
-                                    @endphp
                                     <tr>
                                         <td>{{ \Carbon\Carbon::parse($mov->fecha)->format('d/m/Y H:i') }}</td>
                                         <td class="text-center">
                                             @if ($mov->tipo == 'ENTRADA')
                                                 <span class="badge bg-success">ENTRADA</span>
                                             @else
-                                                <span class="badge bg-danger">SALIDA</span>
+                                                <span class="badge bg-danger">{{ $mov->tipo }}</span>
                                             @endif
                                         </td>
                                         <td>{{ $mov->sucursal }}</td>
                                         <td>{{ $mov->detalle }}</td>
                                         <td>{{ $mov->usuario }}</td>
                                         <td class="text-right font-weight-bold text-success">
-                                            {{ $entrada > 0 ? number_format($entrada, 2) : '-' }}
+                                            {{ floatval($mov->entrada) > 0 ? number_format($mov->entrada, 2) : '-' }}
                                         </td>
                                         <td class="text-right font-weight-bold text-danger">
-                                            {{ $salida > 0 ? number_format($salida, 2) : '-' }}
+                                            {{ floatval($mov->salida) > 0 ? number_format($mov->salida, 2) : '-' }}
                                         </td>
                                         <td class="text-right font-weight-bold bg-light">
-                                            {{ number_format($saldo, 2) }}
+                                            {{ number_format($mov->saldo_linea, 2) }}
                                         </td>
                                     </tr>
                                 @empty
@@ -113,8 +107,8 @@
                             </tbody>
                             <tfoot class="bg-light font-weight-bold">
                                 <tr>
-                                    <td colspan="6" class="text-right">SALDO FINAL:</td>
-                                    <td class="text-right">{{ number_format($saldo ?? 0, 2) }}</td>
+                                    <td colspan="7" class="text-right">SALDO FINAL:</td>
+                                    <td class="text-right">{{ number_format(count($movimientos) > 0 ? $movimientos[0]->saldo_linea : 0, 2) }}</td>
                                 </tr>
                             </tfoot>
                         </table>
