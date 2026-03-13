@@ -1264,7 +1264,7 @@ class ReporteController extends Controller
         $ingresosExtra = $operacionesQuery->clone()->where('tipo', 'Ingreso')->where('partida', '!=', 'Cobro Deuda')->sum('importe');
 
         // Compras
-        $comprasQuery = Compra::where('estado', '!=', 'anulado');
+        $comprasQuery = Compra::query();
         if ($desde)
             $comprasQuery->whereDate('fecha_emision', '>=', $desde);
         if ($hasta)
