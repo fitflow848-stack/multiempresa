@@ -303,6 +303,7 @@ class FinanzasEspecialesController extends Controller
         $request->validate([
             'monto' => 'required|numeric|min:0.01',
             'fecha_pago' => 'required|date',
+            'metodo_pago' => 'nullable|string',
         ]);
 
         $pasivo = Pasivo::findOrFail($id);
@@ -313,7 +314,7 @@ class FinanzasEspecialesController extends Controller
 
         DB::beginTransaction();
         try {
-            PasivoPago::create([
+            $pago = PasivoPago::create([
                 'pasivo_id' => $pasivo->id,
                 'user_id' => Auth::id(),
                 'monto' => $request->monto,
@@ -330,6 +331,50 @@ class FinanzasEspecialesController extends Controller
                 $pasivo->estado = 'parcial';
             }
             $pasivo->save();
+
+            // REGISTRAR EN CAJA COMO SUSTRACCIÓN
+            $user = Auth::user();
+            $metodoPago = $request->metodo_pago ?? 'Efectivo';
+            $esEfectivo = (strtolower($metodoPago) === 'efectivo' || $metodoPago === '1' || $metodoPago === 1) ? 1 : 0;
+
+            if ($esEfectivo) {
+                $selectedCajaId = session('selected_caja_id');
+                $cajaAbierta = null;
+
+                if ($selectedCajaId) {
+                    $cajaAbierta = CierreCaja::where('user_id', $user->id)
+                        ->where('caja_id', $selectedCajaId)
+                        ->whereNull('fecha_cierre')
+                        ->first();
+                }
+
+                if (!$cajaAbierta) {
+                    $cajaAbierta = CierreCaja::where('user_id', $user->id)
+                        ->whereNull('fecha_cierre')
+                        ->first();
+                }
+
+                if ($cajaAbierta) {
+                    // Actualizar montos en la caja (Como sustracción por requerimiento)
+                    $cajaAbierta->sustracciones = ($cajaAbierta->sustracciones ?? 0) + $request->monto;
+                    $cajaAbierta->save();
+
+                    // Crear registro de operación
+                    OperacionCaja::create([
+                        'company_id' => $user->company_id,
+                        'sucursal_id' => $user->branch_id,
+                        'cierre_caja_id' => $cajaAbierta->id,
+                        'user_id' => $user->id,
+                        'tipo' => 'sustraccion',
+                        'partida' => 'Pago Compra Crédito',
+                        'pago_id' => $pago->id,
+                        'concepto' => 'Pago de compra a crédito: ' . $pasivo->nombre . ' (Empresa: ' . ($pasivo->empresa_persona ?? 'N/A') . ')',
+                        'importe' => $request->monto,
+                        'metodo_pago' => $metodoPago,
+                        'es_efectivo' => 1,
+                    ]);
+                }
+            }
 
             DB::commit();
             return response()->json(['success' => true]);

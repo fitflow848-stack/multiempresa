@@ -31,4 +31,9 @@ class AlmacenIngreso extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    public function sucursal()
+    {
+        return $this->belongsTo(Sucursal::class, 'sucursal_id');
+    }
 }

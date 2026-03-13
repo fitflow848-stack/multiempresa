@@ -201,8 +201,8 @@ class PasivoController extends Controller
             }
             $pasivo->save();
 
-            // Registrar en OperacionCaja si NO es Compras a Crédito
-            if ($pasivo->tipo->nombre !== 'Compras a crédito') {
+            // Registrar en OperacionCaja
+            if (true) {
                 $selectedCajaId = session('selected_caja_id');
                 $cajaAbierta = null;
 
@@ -230,11 +230,15 @@ class PasivoController extends Controller
                     if ($esEfectivo) $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $monto;
                     $tipoOp = 'ingreso';
                     $partida = 'Liquidación Adelanto';
-                } elseif (in_array($pasivo->tipo->nombre, ['Adelanto clientes', 'Adelanto de clientes'])) {
+                } elseif (in_array(strtolower($pasivo->tipo->nombre), ['adelanto clientes', 'adelanto de clientes'])) {
                     if ($esEfectivo) $cajaAbierta->sustracciones = ($cajaAbierta->sustracciones ?? 0) + $monto;
                     $tipoOp = 'sustraccion';
                     $partida = 'Entrega Producto (Adelanto)';
-                } elseif (in_array($pasivo->tipo->nombre, ['Aporte', 'Aportes'])) {
+                } elseif (in_array(strtolower($pasivo->tipo->nombre), ['compras a crédito', 'compras a credito'])) {
+                    if ($esEfectivo) $cajaAbierta->sustracciones = ($cajaAbierta->sustracciones ?? 0) + $monto;
+                    $tipoOp = 'sustraccion';
+                    $partida = 'Pago Compra Crédito';
+                } elseif (in_array(strtolower($pasivo->tipo->nombre), ['aporte', 'aportes'])) {
                     if ($esEfectivo) $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $monto;
                     $tipoOp = 'aporte';
                     $partida = 'Aporte de Capital';

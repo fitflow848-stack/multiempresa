@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 
 class AlmacenController extends Controller
@@ -459,29 +460,36 @@ class AlmacenController extends Controller
     public function getLotesAvailable(Request $request)
     {
         $productoId = $request->get('producto_id');
-        $sucursalId = $request->get('sucursal_id'); // Opcional si filtramos por sucursal origen
+        $lineaId = $request->get('linea_id');
+        $query = DB::table('almacen_ingreso_detalle as d')
+            ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
+            ->leftJoin('sucursales as s', 's.id', '=', 'i.sucursal_id')
+            ->where('d.cantidad', '>', 0);
 
-        // Buscar lotes con stock positivo
-        $query = AlmacenIngresoDetalle::where('producto_id', $productoId)
-            ->where('cantidad', '>', 0)
-            ->with(['ingreso.usuario.branch']); // Asumimos relación sucursal en usuario
+        if ($lineaId) {
+            $query->where('d.producto_linea_id', $lineaId);
+        } else {
+            $query->where('d.producto_id', $productoId);
+        }
 
-        // Si tenemos lógica de sucursal en ingreso, filtrar. 
-        // Por ahora listamos todos los lotes disponibles del producto.
-
-        $lotes = $query->orderBy('fecha_vencimiento', 'asc')->get();
+        $lotes = $query->select(
+                'd.id',
+                'd.lote',
+                'd.fecha_vencimiento',
+                'd.cantidad as stock',
+                's.nombre as sucursal_nombre',
+                'i.sucursal_id'
+            )
+            ->orderBy('d.fecha_vencimiento', 'asc')
+            ->get();
 
         $results = $lotes->map(function ($lote) {
-            $ingreso = $lote->ingreso;
-            $sucursalNombre = $ingreso && $ingreso->usuario && $ingreso->usuario->branch
-                ? $ingreso->usuario->branch->nombre
-                : 'General/Desconocida';
-
+            $fecha = $lote->fecha_vencimiento ? date('d/m/Y', strtotime($lote->fecha_vencimiento)) : '-';
             return [
                 'id' => $lote->id,
-                'text' => "Lote: " . ($lote->lote ?? 'S/L') . " | Vence: " . ($lote->fecha_vencimiento ?? '-') . " | Stock: " . $lote->cantidad . " | Ubicación: " . $sucursalNombre,
-                'stock' => $lote->cantidad,
-                'sucursal_id' => $ingreso && $ingreso->usuario ? $ingreso->usuario->branch_id : null
+                'text' => "Lote: " . ($lote->lote ?: 'S/L') . " | Vence: " . $fecha . " | Stock: " . $lote->stock . " | Ubicación: " . ($lote->sucursal_nombre ?? 'General'),
+                'stock' => $lote->stock,
+                'sucursal_id' => $lote->sucursal_id
             ];
         });
 
@@ -491,73 +499,113 @@ class AlmacenController extends Controller
     public function storeTransferencia(Request $request)
     {
         $request->validate([
-            'producto_id' => 'required|exists:productos,id',
-            'lote_origen_id' => 'required|exists:almacen_ingreso_detalle,id',
             'sucursal_destino_id' => 'required|exists:sucursales,id',
-            'cantidad' => 'required|numeric|min:0.01',
-            'observaciones' => 'nullable|string|max:255'
+            'items' => 'required|array|min:1',
+            'items.*.producto_id' => 'required|exists:productos,id',
+            'items.*.lote_origen_id' => 'required|exists:almacen_ingreso_detalle,id',
+            'items.*.cantidad' => 'required|numeric|min:0.01',
+            'observaciones' => 'nullable|string|max:1000'
         ]);
 
         try {
             DB::beginTransaction();
 
-            $loteOrigen = AlmacenIngresoDetalle::lockForUpdate()->find($request->lote_origen_id);
+            $codigoTransferencia = 'TRF-' . strtoupper(uniqid());
+            /** @var \App\Models\User $user */
+            $user = Auth::user();
 
-            // Validar stock suficiente
-            if ($loteOrigen->cantidad < $request->cantidad) {
-                throw new \Exception("Stock insuficiente en el lote seleccionado. Disponible: " . $loteOrigen->cantidad);
+            foreach ($request->items as $item) {
+                // Bloqueamos el lote de origen para evitar condiciones de carrera
+                $loteOrigen = AlmacenIngresoDetalle::lockForUpdate()->find($item['lote_origen_id']);
+
+                if (!$loteOrigen) {
+                    throw new \Exception("Uno de los lotes seleccionados ya no existe.");
+                }
+
+                if ($loteOrigen->cantidad < $item['cantidad']) {
+                    throw new \Exception("Stock insuficiente para " . ($loteOrigen->producto->nombre ?? 'un producto') . ". Disponible: " . $loteOrigen->cantidad);
+                }
+
+                $sucursalOrigenId = $loteOrigen->ingreso->sucursal_id;
+
+                // 1. Restar del origen
+                $loteOrigen->cantidad -= $item['cantidad'];
+                $loteOrigen->save();
+
+                // 2. Crear Ingreso en Destino
+                $nuevoIngreso = \App\Models\AlmacenIngreso::create([
+                    'company_id' => $user->company_id,
+                    'empresa_id' => $user->company_id,
+                    'user_id' => $user->id,
+                    'sucursal_id' => $request->sucursal_destino_id,
+                    'fecha' => now(),
+                    'observacion' => 'Transferencia ' . $codigoTransferencia . '. ' . ($request->observaciones ?? ''),
+                ]);
+
+                // Crear Detalle destino (replicamos el origen pero con la cantidad transferida)
+                $nuevoDetalle = $loteOrigen->replicate();
+                $nuevoDetalle->id = null; // Aseguramos que sea un nuevo registro
+                $nuevoDetalle->ingreso_id = $nuevoIngreso->id;
+                $nuevoDetalle->cantidad = $item['cantidad'];
+                $nuevoDetalle->save();
+
+                // 3. Registrar Transferencia Individual
+                \App\Models\AlmacenTransferencia::create([
+                    'codigo_transferencia' => $codigoTransferencia,
+                    'producto_id' => $item['producto_id'],
+                    'origen_lote_id' => $loteOrigen->id,
+                    'destino_lote_id' => $nuevoDetalle->id,
+                    'sucursal_origen_id' => $sucursalOrigenId,
+                    'sucursal_destino_id' => $request->sucursal_destino_id,
+                    'cantidad' => $item['cantidad'],
+                    'user_id' => $user->id,
+                    'observaciones' => $request->observaciones
+                ]);
             }
-
-            // Validar que no se transfiera a la misma sucursal (opcional, pero lógico)
-            // Obtenemos sucursal origen del usuario creador del lote
-            $usuarioOrigen = $loteOrigen->ingreso->usuario;
-            $sucursalOrigenId = $usuarioOrigen ? $usuarioOrigen->branch_id : null;
-
-            if ($sucursalOrigenId == $request->sucursal_destino_id) {
-                // throw new \Exception("La sucursal de destino es la misma que la de origen.");
-                // Permitir si es solo movimiento lógico o reubicación
-            }
-
-            // 1. Restar del origen
-            $loteOrigen->cantidad -= $request->cantidad;
-            $loteOrigen->save();
-
-            // 2. Crear Ingreso en Destino
-            $nuevoIngreso = \App\Models\AlmacenIngreso::create([
-                'company_id' => Auth::user()->company_id,
-                'empresa_id' => Auth::user()->company_id,
-                'user_id' => Auth::id(),
-                'sucursal_id' => $request->sucursal_destino_id,
-                'fecha' => now(),
-                'observacion' => 'Transferencia desde Lote #' . $loteOrigen->id . '. ' . ($request->observaciones ?? ''),
-            ]);
-
-            // Crear Detalle destino (copia del origen pero con nueva cantidad)
-            $nuevoDetalle = $loteOrigen->replicate();
-            $nuevoDetalle->ingreso_id = $nuevoIngreso->id;
-            $nuevoDetalle->cantidad = $request->cantidad;
-            $nuevoDetalle->save();
-
-            // 3. Registrar Transferencia
-            \App\Models\AlmacenTransferencia::create([
-                'producto_id' => $request->producto_id,
-                'origen_lote_id' => $loteOrigen->id,
-                'destino_lote_id' => $nuevoDetalle->id,
-                'sucursal_origen_id' => $sucursalOrigenId,
-                'sucursal_destino_id' => $request->sucursal_destino_id,
-                'cantidad' => $request->cantidad,
-                'user_id' => Auth::id(), // Quien ejecuta la acción
-                'observaciones' => $request->observaciones
-            ]);
 
             DB::commit();
 
-            return redirect()->route('almacen.kardex', ['producto_id' => $request->producto_id])
+            return redirect()->route('almacen.transferencia.success', ['codigo' => $codigoTransferencia])
                 ->with('success', 'Transferencia realizada con éxito.');
+
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Error en transferencia masiva: ' . $e->getMessage());
             return back()->withErrors('Error en transferencia: ' . $e->getMessage())->withInput();
         }
+    }
+
+    public function transferenciaSuccess($codigo)
+    {
+        $transferencias = \App\Models\AlmacenTransferencia::where('codigo_transferencia', $codigo)
+            ->with(['producto', 'sucursalOrigen', 'sucursalDestino'])
+            ->get();
+
+        if ($transferencias->isEmpty()) {
+            abort(404);
+        }
+
+        return view('almacen.transferencia_success', compact('transferencias', 'codigo'));
+    }
+
+    public function transferenciaPdf($codigo)
+    {
+        $transferencias = \App\Models\AlmacenTransferencia::where('codigo_transferencia', $codigo)
+            ->with(['producto', 'sucursalOrigen', 'sucursalDestino', 'usuario', 'origenLote'])
+            ->get();
+
+        if ($transferencias->isEmpty()) {
+            abort(404);
+        }
+
+        $user = Auth::user();
+        $company = Company::find($user->company_id);
+        $fecha = $transferencias->first()->created_at;
+        $sucursalOrigen = $transferencias->first()->sucursalOrigen;
+        $sucursalDestino = $transferencias->first()->sucursalDestino;
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('almacen.transferencia_pdf', compact('transferencias', 'codigo', 'company', 'fecha', 'sucursalOrigen', 'sucursalDestino'));
+        return $pdf->stream("Transferencia-{$codigo}.pdf");
     }
     public function edit($id)
     {

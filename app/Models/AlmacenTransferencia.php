@@ -12,6 +12,7 @@ class AlmacenTransferencia extends Model
     protected $table = 'almacen_transferencias';
 
     protected $fillable = [
+        'codigo_transferencia',
         'producto_id',
         'origen_lote_id',
         'destino_lote_id',
