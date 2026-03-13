@@ -170,11 +170,11 @@
     <div class="deuda-resumen">
         <div class="deuda-row">
             <div class="dl">Debe:</div>
-            <div class="dv">{{ number_format($saldoTotal + $pago->monto, 2) }}</div>
+            <div class="dv">{{ number_format($saldoTotal + $montoAbonado, 2) }}</div>
         </div>
         <div class="deuda-row">
             <div class="dl">Abonado:</div>
-            <div class="dv">{{ number_format($pago->monto, 2) }}</div>
+            <div class="dv">{{ number_format($montoAbonado, 2) }}</div>
         </div>
         <div class="deuda-row pendiente-row">
             <div class="dl">Pendiente:</div>
@@ -206,6 +206,13 @@
                 <div class="label bold">SALDO DEUDOR:</div>
                 <div class="value bold">S/ {{ number_format($saldoTotal, 2) }}</div>
             </div>
+        </div>
+    @endif
+
+    @if ($esPagoAcumulado)
+        <div class="divider"></div>
+        <div class="center" style="font-size: 9px; margin-top: 5px;">
+            <strong>Pago acumulado de varias deudas</strong>
         </div>
     @endif
 

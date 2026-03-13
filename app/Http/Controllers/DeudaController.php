@@ -192,7 +192,7 @@ class DeudaController extends Controller
 
             if ($cajaAbierta) {
                 $mP = $request->metodo_pago ?? 'Efectivo';
-                $tipoPago = \DB::table('tipos_pagos')->where('nombre', $mP)->first();
+                $tipoPago = DB::table('tipos_pagos')->where('nombre', $mP)->first();
                 $esEfectivo = $tipoPago ? $tipoPago->es_efectivo : ($mP === 'Efectivo' ? 1 : 0);
 
                 if ($esEfectivo) {
@@ -308,6 +308,8 @@ class DeudaController extends Controller
             }
 
             $pagoIds = [];
+            $batchId = 'BT-' . strtoupper(Str::random(10));
+
             foreach ($deudas as $deuda) {
                 if ($montoRestante <= 0)
                     break;
@@ -324,6 +326,7 @@ class DeudaController extends Controller
                     'metodo_pago' => $request->metodo_pago ?? 'Efectivo',
                     'referencia' => $request->referencia ?? null,
                     'codigo_comprobante' => 'PAY-AC-' . strtoupper(Str::random(8)),
+                    'batch_id' => $batchId,
                     'observaciones' => $request->observaciones ? "Pago Acumulado: " . $request->observaciones : "Pago acumulado de cliente"
                 ]);
                 $pagoIds[] = $pago->id;
@@ -351,7 +354,7 @@ class DeudaController extends Controller
 
             if ($cajaAbierta) {
                 $mP = $request->metodo_pago ?? 'Efectivo';
-                $tipoPago = \DB::table('tipos_pagos')->where('nombre', $mP)->first();
+                $tipoPago = DB::table('tipos_pagos')->where('nombre', $mP)->first();
                 $esEfectivo = $tipoPago ? $tipoPago->es_efectivo : ($mP === 'Efectivo' ? 1 : 0);
 
                 if ($esEfectivo) {
@@ -377,7 +380,8 @@ class DeudaController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Pago acumulado aplicado correctamente distribuyéndose en ' . $deudas->count() . ' documentos.',
-                'pago_ids' => $pagoIds
+                'pago_ids' => $pagoIds,
+                'batch_id' => $batchId
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -437,13 +441,24 @@ class DeudaController extends Controller
             $logo = 'data:image/' . $logoType . ';base64,' . $logoData;
         }
 
+        // Check if this payment is part of a batch
+        $montoAbonado = $pago->monto;
+        $esPagoAcumulado = false;
+        
+        if ($pago->batch_id) {
+            $esPagoAcumulado = true;
+            $montoAbonado = DeudaPago::where('batch_id', $pago->batch_id)->sum('monto');
+        }
+
         $data = [
             'pago' => $pago,
             'deuda' => $pago->deuda,
             'cliente' => $cliente,
             'empresa' => $empresa,
             'logo' => $logo,
-            'saldoTotal' => $saldoTotal
+            'saldoTotal' => $saldoTotal,
+            'montoAbonado' => $montoAbonado,
+            'esPagoAcumulado' => $esPagoAcumulado
         ];
 
         $pdf = Pdf::loadView('deudas.comprobante_pago', $data)

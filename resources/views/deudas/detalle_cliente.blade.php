@@ -376,12 +376,9 @@
                                 if (confirm('¿Desea imprimir el recibo de pago?')) {
                                     if (data.pago_id) {
                                         window.open(`{{ url('deudas/pago') }}/${data.pago_id}/comprobante`, '_blank');
-                                    } else if (data.pago_ids && data.pago_ids.length > 0) {
-                                        data.pago_ids.forEach((id, index) => {
-                                            setTimeout(() => {
-                                                window.open(`{{ url('deudas/pago') }}/${id}/comprobante`, '_blank');
-                                            }, index * 500);
-                                        });
+                                    } else if (data.batch_id && data.pago_ids && data.pago_ids.length > 0) {
+                                        // Para pagos acumulados, el primer ID sirve para cargar el batch completo
+                                        window.open(`{{ url('deudas/pago') }}/${data.pago_ids[0]}/comprobante`, '_blank');
                                     }
                                 }
                                 setTimeout(() => location.reload(), 500);
@@ -390,12 +387,8 @@
                             if (confirm(data.message + '. ¿Desea imprimir el recibo?')) {
                                 if (data.pago_id) {
                                     window.open(`{{ url('deudas/pago') }}/${data.pago_id}/comprobante`, '_blank');
-                                } else if (data.pago_ids && data.pago_ids.length > 0) {
-                                    data.pago_ids.forEach((id, index) => {
-                                        setTimeout(() => {
-                                            window.open(`{{ url('deudas/pago') }}/${id}/comprobante`, '_blank');
-                                        }, index * 500);
-                                    });
+                                } else if (data.batch_id && data.pago_ids && data.pago_ids.length > 0) {
+                                    window.open(`{{ url('deudas/pago') }}/${data.pago_ids[0]}/comprobante`, '_blank');
                                 }
                             }
                             location.reload();

@@ -21,6 +21,7 @@ class DeudaPago extends Model
         'metodo_pago',
         'referencia',
         'codigo_comprobante',
+        'batch_id',
         'observaciones'
     ];
 
