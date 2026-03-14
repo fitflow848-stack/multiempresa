@@ -777,6 +777,11 @@ class ReporteController extends Controller
         if ($request->input('hasta'))
             $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
 
+        // Filtro por sucursal (local) usando el almacén de destino
+        if ($request->input('local_id')) {
+            $query->where('local_destino', $request->input('local_id'));
+        }
+
         $resultados = $query->limit(200)->get();
         return [
             'view' => 'reportes.partials.compras',
@@ -800,6 +805,11 @@ class ReporteController extends Controller
             $query->whereDate('compras.fecha_emision', '>=', $request->input('desde'));
         if ($request->input('hasta'))
             $query->whereDate('compras.fecha_emision', '<=', $request->input('hasta'));
+
+        // Filtro por sucursal (local) de la compra
+        if ($request->input('local_id')) {
+            $query->where('compras.local_destino', $request->input('local_id'));
+        }
 
         $resultados = $query->with('producto')->limit(100)->get();
         return [
