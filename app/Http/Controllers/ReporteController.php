@@ -180,10 +180,23 @@ class ReporteController extends Controller
             $costoUnitario = $cantidadTotal > 0 ? $costoTotalGrupo / $cantidadTotal : 0;
             $subtotalVenta = $grupo->sum('importe'); // total con IGV (si aplica)
 
-            // Usar el IGV guardado por línea para separar base imponible e impuesto.
-            // Para productos exonerados, el IGV en las líneas será 0.
-            $igvGrupo = $grupo->sum('igv');
-            $valorVenta = $subtotalVenta - $igvGrupo; // base imponible (venta sin IGV)
+            // IGV: si las líneas tienen igv guardado, usarlo; si no, repartir el IGV de la venta proporcionalmente.
+            // En ventas creadas por caja normalmente no se guarda igv en detalle, solo en ventas.igv.
+            $igvEnLineas = $grupo->sum('igv');
+            $venta = $primero->venta;
+            $totalVenta = (float) ($venta->total ?? 0);
+            $igvVenta = (float) ($venta->igv ?? 0);
+
+            if ($igvEnLineas > 0) {
+                $igvGrupo = $igvEnLineas;
+                $valorVenta = $subtotalVenta - $igvGrupo;
+            } elseif ($totalVenta > 0 && $igvVenta > 0) {
+                $igvGrupo = round($igvVenta * ($subtotalVenta / $totalVenta), 2);
+                $valorVenta = $subtotalVenta - $igvGrupo;
+            } else {
+                $igvGrupo = 0;
+                $valorVenta = $subtotalVenta;
+            }
 
             $ganancia = $subtotalVenta - $costoTotalGrupo;
 
