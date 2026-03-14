@@ -650,4 +650,10 @@ class CotizacionController extends Controller
     {
         return $this->pdfCotizacion($request, $id, false, '8cm');
     }
+
+    public function pdfCotizacionPublic(Request $request, $id, $format = 'default')
+    {
+        // Esta ruta es pública para que los clientes vean su proforma vía WhatsApp
+        return $this->pdfCotizacion($request, $id, false, $format);
+    }
 }

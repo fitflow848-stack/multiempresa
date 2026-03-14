@@ -10,6 +10,7 @@
         <thead class="table-dark">
             <tr class="text-center">
                 <th>FECHA</th>
+                <th>CAJA</th>
                 <th>OPERACIÓN</th>
                 <th>TIPO</th>
                 <th>DETALLE</th>
@@ -33,7 +34,8 @@
                     else $totalEgresos += $importe;
                 @endphp
                 <tr>
-                    <td class="small">{{ \Carbon\Carbon::parse($item->fecha)->format('d/m/Y H:i') }}</td>
+                    <td class="small text-nowrap">{{ \Carbon\Carbon::parse($item->fecha)->format('d/m/Y H:i') }}</td>
+                    <td class="small fw-bold text-primary">{{ $item->caja ?? 'N/A' }}</td>
                     <td class="small">{{ $item->operacion }}</td>
                     <td class="text-center">
                         <span class="badge {{ $esIngreso ? 'bg-success' : 'bg-danger' }}">
@@ -53,7 +55,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="9" class="text-center py-5">
+                    <td colspan="10" class="text-center py-5">
                         <span class="text-muted">No se encontraron movimientos en el rango seleccionado</span>
                     </td>
                 </tr>
@@ -62,7 +64,7 @@
         @if($resultados->count() > 0)
         <tfoot class="table-light">
             <tr class="fw-bold">
-                <td colspan="6" class="text-end text-uppercase">Totales del Periodo:</td>
+                <td colspan="7" class="text-end text-uppercase">Totales del Periodo:</td>
                 <td class="text-end text-success">S/ {{ number_format($totalIngresos, 2) }}</td>
                 <td class="text-end text-danger">S/ {{ number_format($totalEgresos, 2) }}</td>
                 <td class="text-center bg-dark text-white">SALDO: S/ {{ number_format($totalIngresos - $totalEgresos, 2) }}</td>

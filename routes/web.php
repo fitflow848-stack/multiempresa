@@ -51,6 +51,10 @@ Route::post('/login', [AuthController::class, 'login'])->name('login.post');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/logout', [AuthController::class, 'logout'])->name('logout.get');
 
+// Ruta pública para ver comprobantes (WhatsApp)
+Route::get('/pos/v/{id}/pdf/{format?}', [PosController::class, 'pdfVentaPublic'])->where('format', '8cm|5.8cm|media-a4|default')->name('pos.pdf.public');
+Route::get('/cotizacion/v/{id}/pdf/{format?}', [CotizacionController::class, 'pdfCotizacionPublic'])->where('format', '8cm|5.8cm|media-a4|default')->name('cotizacion.pdf.public');
+
 // Rutas de selección de sucursal
 Route::middleware(['auth'])->group(function () {
     Route::get('/select-branch', [BranchSelectionController::class, 'index'])->name('branch.select');

@@ -1136,6 +1136,7 @@ class ReporteController extends Controller
         $queryVentas = DB::table('ventas as v')
             ->select(
                 'v.created_at as fecha',
+                'cj.nombre as caja',
                 DB::raw("'Ingreso - Venta' as operacion"),
                 DB::raw("'ingreso' as tipo"),
                 'c.nombre as detalle',
@@ -1147,11 +1148,14 @@ class ReporteController extends Controller
             ->join('clientes as c', 'c.id', '=', 'v.id_cliente')
             ->join('users as u', 'u.id', '=', 'v.id_usuario')
             ->leftJoin('tipos_pagos as tp', 'tp.id', '=', 'v.id_tipo_pago')
+            ->leftJoin('cierre_cajas as cc', 'cc.id', '=', 'v.cierre_caja_id')
+            ->leftJoin('cajas as cj', 'cj.id', '=', 'cc.caja_id')
             ->where('v.estado', '!=', '0');
 
         $queryOperaciones = DB::table('operaciones_caja as o')
             ->select(
                 'o.created_at as fecha',
+                'cj.nombre as caja',
                 'o.partida as operacion',
                 'o.tipo as tipo',
                 DB::raw("o.tipo as detalle"),
@@ -1160,7 +1164,9 @@ class ReporteController extends Controller
                 'o.importe',
                 'u.name as usuario'
             )
-            ->join('users as u', 'u.id', '=', 'o.user_id');
+            ->join('users as u', 'u.id', '=', 'o.user_id')
+            ->leftJoin('cierre_cajas as cc', 'cc.id', '=', 'o.cierre_caja_id')
+            ->leftJoin('cajas as cj', 'cj.id', '=', 'cc.caja_id');
 
         if ($request->input('desde')) {
             $queryVentas->whereDate('v.fecha_emision', '>=', $request->input('desde'));
@@ -1260,8 +1266,8 @@ class ReporteController extends Controller
         if ($localId)
             $operacionesQuery->where('sucursal_id', $localId);
 
-        $egresos = $operacionesQuery->clone()->where('tipo', 'Egreso')->sum('importe');
-        $ingresosExtra = $operacionesQuery->clone()->where('tipo', 'Ingreso')->where('partida', '!=', 'Cobro Deuda')->sum('importe');
+        $egresos = $operacionesQuery->clone()->whereIn('tipo', ['Egreso', 'egreso', 'sustraccion', 'gasto', 'retiro'])->sum('importe');
+        $ingresosExtra = $operacionesQuery->clone()->whereIn('tipo', ['Ingreso', 'ingreso', 'aportacion', 'aporte'])->where('partida', '!=', 'Cobro Deuda')->sum('importe');
 
         // Compras
         $comprasQuery = Compra::query();

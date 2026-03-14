@@ -852,7 +852,7 @@
                             const targetPhone = result.value.replace(/\D/g, ''); // Solo números
                             
                             // Construir link del PDF (usamos formato A4 por defecto para WhatsApp)
-                            const pdfUrl = '{{ url("pos") }}/' + id + '/pdf/default';
+                            const pdfUrl = '{{ url("pos/v") }}/' + id + '/pdf/default';
                             
                             const message = `Hola ${client}, le adjunto su comprobante ${doc} por un total de S/ ${total}. Puede verlo/descargarlo aquí: ${pdfUrl}`;
                             const waUrl = `https://wa.me/${targetPhone.startsWith('51') ? targetPhone : '51' + targetPhone}?text=${encodeURIComponent(message)}`;

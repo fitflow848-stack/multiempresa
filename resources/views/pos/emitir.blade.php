@@ -504,7 +504,7 @@
                     }).then((result) => {
                         if (result.isConfirmed) {
                             const targetPhone = result.value.replace(/\D/g, '');
-                            const pdfUrl = '{{ url("pos") }}/' + ventaId + '/pdf/default';
+                            const pdfUrl = '{{ url("pos/v") }}/' + ventaId + '/pdf/default';
                             const message = `Hola ${clientName}, le adjunto su comprobante ${ventaData.numero_completo} por un total de S/ ${ventaData.total}. Puede verlo/descargarlo aquí: ${pdfUrl}`;
                             const waUrl = `https://wa.me/${targetPhone.startsWith('51') ? targetPhone : '51' + targetPhone}?text=${encodeURIComponent(message)}`;
 

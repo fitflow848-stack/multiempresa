@@ -414,6 +414,12 @@ class PosController extends Controller
         return $this->pdfVentaService->pdfVenta((int) $id, $format, (bool) $saveOnly, (bool) $autoPrint);
     }
 
+    public function pdfVentaPublic(Request $request, $id, $format = 'default')
+    {
+        // Esta ruta es pública para que los clientes vean su comprobante vía WhatsApp
+        return $this->pdfVentaService->pdfVenta((int) $id, $format, false, false);
+    }
+
     public function precios(Request $request)
     {
         $user = Auth::user();
