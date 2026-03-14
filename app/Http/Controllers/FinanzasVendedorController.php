@@ -343,15 +343,21 @@ class FinanzasVendedorController extends Controller
                     ->first();
             }
 
-            // Validar que haya caja para operaciones que mueven efectivo (ahora todas)
-            if (!$cajaAbierta) {
+            // Validar que haya caja para operaciones que mueven efectivo (adelantos)
+            // Las compras a crédito no afectan caja inicialmente, así que no requieren caja abierta obligatoria
+            if (!$cajaAbierta && $tipoOperacion !== 'compras_credito') {
                 throw new \Exception('No se puede registrar esta operación porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
             }
 
             $operacionCajaId = null;
-            if ($cajaAbierta) {
-                // Todas estas operaciones ahora son sustracciones de efectivo por requerimiento
-                $cajaAbierta->sustracciones = ($cajaAbierta->sustracciones ?? 0) + $monto;
+            if ($cajaAbierta && $tipoOperacion !== 'compras_credito') {
+                $tipoMov = 'sustraccion';
+                if ($tipoOperacion === 'adelanto_clientes') {
+                    $tipoMov = 'ingreso';
+                    $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $monto;
+                } else {
+                    $cajaAbierta->sustracciones = ($cajaAbierta->sustracciones ?? 0) + $monto;
+                }
                 $cajaAbierta->save();
 
                 $partida = '';
@@ -364,7 +370,7 @@ class FinanzasVendedorController extends Controller
                     'sucursal_id' => Auth::user()->branch_id,
                     'cierre_caja_id' => $cajaAbierta->id,
                     'user_id' => Auth::id(),
-                    'tipo' => 'sustraccion',
+                    'tipo' => $tipoMov,
                     'partida' => $partida,
                     'concepto' => $partida . ': ' . $nombre,
                     'importe' => $monto,
@@ -410,7 +416,7 @@ class FinanzasVendedorController extends Controller
                     'fecha_registro' => $fecha,
                     'documento' => $documento,
                     'observaciones' => $observaciones,
-                    'cierre_caja_id' => $cajaAbierta ? $cajaAbierta->id : null,
+                    'cierre_caja_id' => ($cajaAbierta && $tipoOperacion !== 'compras_credito') ? $cajaAbierta->id : null,
                     'id_operacion_caja' => $operacionCajaId,
                     'metodo_pago' => 'Efectivo'
                 ]);
