@@ -15,6 +15,8 @@
                 <th class="text-end">P. Compra</th>
                 <th class="text-end">P. Venta</th>
                 <th class="text-end">Total Venta</th>
+                <th class="text-end">Valor Venta</th>
+                <th class="text-end">IGV</th>
                 <th class="text-end">Costo</th>
                 <th class="text-end">Ganancia</th>
                 <th>Vendedor</th>
@@ -30,6 +32,8 @@
                     <td class="text-end">{{ number_format($detalle->costo_unitario, 2) }}</td>
                     <td class="text-end">{{ number_format($detalle->precio_unitario, 2) }}</td>
                     <td class="text-end text-primary fw-bold">{{ number_format($detalle->subtotal, 2) }}</td>
+                    <td class="text-end">{{ number_format($detalle->valor_venta, 2) }}</td>
+                    <td class="text-end">{{ number_format($detalle->igv, 2) }}</td>
                     <td class="text-end text-danger">{{ number_format($detalle->costo_total, 2) }}</td>
                     <td class="text-end {{ $detalle->ganancia >= 0 ? 'text-success' : 'text-danger' }} fw-bold">
                         {{ number_format($detalle->ganancia, 2) }}
@@ -52,6 +56,8 @@
                     <th></th>
                     <th></th>
                     <th class="text-end">S/ {{ number_format($totales->subtotal, 2) }}</th>
+                    <th class="text-end">S/ {{ number_format($totales->valor_venta, 2) }}</th>
+                    <th class="text-end">S/ {{ number_format($totales->igv, 2) }}</th>
                     <th class="text-end">S/ {{ number_format($totales->costo_total, 2) }}</th>
                     <th class="text-end {{ $totales->ganancia >= 0 ? 'text-success' : 'text-danger' }}">
                         S/ {{ number_format($totales->ganancia, 2) }}
