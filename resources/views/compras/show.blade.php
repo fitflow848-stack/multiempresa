@@ -80,14 +80,31 @@
             <div class="card">
                 <div class="card-header">Resumen</div>
                 <div class="card-body">
-                    <p class="mb-1"><strong>Total Bruto:</strong></p>
-                    <div class="mb-2 h5">S/ {{ number_format($compra->total_bruto ?? 0, 2) }}</div>
+                    @php
+                        $tasa = 0.18;
+                        $totalPagar = $compra->total_pagar ?? 0;
+                        $brutoGuardado = $compra->total_bruto ?? 0;
+                        $descuento = $compra->total_descuento ?? 0;
+                        $impuestoGuardado = $compra->total_impuesto ?? 0;
+
+                        // Para compras antiguas donde no se calculó impuesto, lo recalculamos desde el total
+                        if ($impuestoGuardado == 0 && $totalPagar > 0) {
+                            $base = $totalPagar / (1 + $tasa);
+                            $impuesto = $totalPagar - $base;
+                        } else {
+                            $base = $brutoGuardado;
+                            $impuesto = $impuestoGuardado;
+                        }
+                    @endphp
+
+                    <p class="mb-1"><strong>Precio sin IGV:</strong></p>
+                    <div class="mb-2 h5">S/ {{ number_format($base, 2) }}</div>
 
                     <p class="mb-1"><strong>Total Descuento:</strong></p>
-                    <div class="mb-2">S/ {{ number_format($compra->total_descuento ?? 0, 2) }}</div>
+                    <div class="mb-2">S/ {{ number_format($descuento, 2) }}</div>
 
-                    <p class="mb-1"><strong>Total Impuesto:</strong></p>
-                    <div class="mb-2">S/ {{ number_format($compra->total_impuesto ?? 0, 2) }}</div>
+                    <p class="mb-1"><strong>IGV (18%):</strong></p>
+                    <div class="mb-2">S/ {{ number_format($impuesto, 2) }}</div>
 
                     <hr>
                     <p class="mb-1"><strong>Total a Pagar</strong></p>

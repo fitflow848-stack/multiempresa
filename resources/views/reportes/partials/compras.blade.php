@@ -25,12 +25,27 @@
                 $totalImpuesto = 0;
                 $totalNeto = 0;
                 $isExcel = !empty($is_excel);
+                $tasa = 0.18;
             @endphp
             @forelse($resultados as $compra)
                 @php
-                    $totalBruto += $compra->total_bruto;
-                    $totalImpuesto += $compra->total_impuesto;
-                    $totalNeto += $compra->total_pagar;
+                    $bruto = $compra->total_bruto ?? 0;
+                    $impuesto = $compra->total_impuesto ?? 0;
+                    $total = $compra->total_pagar ?? 0;
+
+                    // Compatibilidad con compras antiguas: si el impuesto está en cero pero hay total,
+                    // recalculamos base e IGV a partir del total.
+                    if ($impuesto == 0 && $total > 0) {
+                        $base = $total / (1 + $tasa);
+                        $igv = $total - $base;
+                    } else {
+                        $base = $bruto;
+                        $igv = $impuesto;
+                    }
+
+                    $totalBruto += $base;
+                    $totalImpuesto += $igv;
+                    $totalNeto += $total;
                 @endphp
                 <tr>
                     <td>{{ $compra->fecha_emision }}</td>
@@ -45,9 +60,9 @@
                         @endif
                     </td>
                     <td class="text-center">{{ $compra->moneda }}</td>
-                    <td class="text-end">{{ moneda($compra->total_bruto, $isExcel, !$isExcel) }}</td>
-                    <td class="text-end">{{ moneda($compra->total_impuesto, $isExcel, !$isExcel) }}</td>
-                    <td class="text-end fw-bold">{{ moneda($compra->total_pagar, $isExcel, !$isExcel) }}</td>
+                    <td class="text-end">{{ moneda($base, $isExcel, !$isExcel) }}</td>
+                    <td class="text-end">{{ moneda($igv, $isExcel, !$isExcel) }}</td>
+                    <td class="text-end fw-bold">{{ moneda($total, $isExcel, !$isExcel) }}</td>
                     <td>{{ $compra->usuario->name ?? '' }}</td>
                 </tr>
             @empty

@@ -158,22 +158,38 @@
         </tbody>
     </table>
 
+    @php
+        $tasa = 0.18;
+        $totalPagar = $compra->total_pagar ?? 0;
+        $brutoGuardado = $compra->total_bruto ?? 0;
+        $descuento = $compra->total_descuento ?? 0;
+        $impuestoGuardado = $compra->total_impuesto ?? 0;
+
+        if ($impuestoGuardado == 0 && $totalPagar > 0) {
+            $base = $totalPagar / (1 + $tasa);
+            $impuesto = $totalPagar - $base;
+        } else {
+            $base = $brutoGuardado;
+            $impuesto = $impuestoGuardado;
+        }
+    @endphp
+
     <table class="totals-table">
         <tr>
-            <td>Subtotal:</td>
-            <td class="text-right">S/ {{ number_format($compra->total_bruto, 2) }}</td>
+            <td>Precio sin IGV:</td>
+            <td class="text-right">S/ {{ number_format($base, 2) }}</td>
         </tr>
         <tr>
             <td>Descuento:</td>
-            <td class="text-right">S/ {{ number_format($compra->total_descuento, 2) }}</td>
+            <td class="text-right">S/ {{ number_format($descuento, 2) }}</td>
         </tr>
         <tr>
-            <td>Impuesto ({{ $compra->inc_impuesto ? 'Incl.' : 'Excl.' }}):</td>
-            <td class="text-right">S/ {{ number_format($compra->total_impuesto, 2) }}</td>
+            <td>IGV (18%):</td>
+            <td class="text-right">S/ {{ number_format($impuesto, 2) }}</td>
         </tr>
         <tr class="total-row">
             <td><strong>TOTAL A PAGAR:</strong></td>
-            <td class="text-right"><strong>S/ {{ number_format($compra->total_pagar, 2) }}</strong></td>
+            <td class="text-right"><strong>S/ {{ number_format($totalPagar, 2) }}</strong></td>
         </tr>
     </table>
 

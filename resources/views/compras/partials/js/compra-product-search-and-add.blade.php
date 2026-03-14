@@ -416,10 +416,28 @@
                     productCount++;
                 });
 
-                const brutoNeto = totalBruto - totalDescuento;
+                // brutoNeto representa el total ingresado por el usuario (sumatoria líneas - descuentos)
+                let brutoNeto = totalBruto - totalDescuento;
                 const incImpuesto = $('#inc_impuesto').is(':checked');
-                const totalImpuesto = incImpuesto ? brutoNeto * TAX_RATE : 0;
-                const totalNeto = brutoNeto + totalImpuesto;
+
+                let totalImpuesto;
+                let totalNeto;
+
+                if (incImpuesto) {
+                    // Los precios ya incluyen IGV: separar base e impuesto
+                    // brutoNeto es el total CON IGV
+                    const baseSinIGV = brutoNeto / (1 + TAX_RATE);
+                    totalImpuesto = brutoNeto - baseSinIGV;
+                    totalNeto = brutoNeto; // total con IGV
+
+                    // Para el subtotal mostramos la base sin IGV
+                    totalBruto = baseSinIGV;
+                } else {
+                    // Los precios NO incluyen IGV: calcular impuesto sobre brutoNeto
+                    totalImpuesto = brutoNeto * TAX_RATE;
+                    totalNeto = brutoNeto + totalImpuesto;
+                }
+
                 const flete = parseFloat($flete.val()) || 0;
                 const totalPagar = totalNeto + flete;
 
