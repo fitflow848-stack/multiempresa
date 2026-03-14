@@ -17,7 +17,10 @@
             </tr>
         </thead>
         <tbody>
-            @php $totalGeneral = 0; @endphp
+            @php 
+                $totalGeneral = 0; 
+                $isExcel = !empty($is_excel);
+            @endphp
             @forelse($resultados as $index => $row)
                 <tr>
                     <td class="text-center">{{ $index + 1 }}</td>
@@ -27,7 +30,7 @@
                     <td class="{{ $row->vencimiento_mas_antiguo < now() ? 'text-danger fw-bold' : '' }}">
                         {{ \Carbon\Carbon::parse($row->vencimiento_mas_antiguo)->format('d/m/Y') }}
                     </td>
-                    <td class="text-end fw-bold text-danger">{{ number_format($row->total_deuda, 2) }}</td>
+                    <td class="text-end fw-bold text-danger">{{ moneda($row->total_deuda, $isExcel, !$isExcel) }}</td>
                 </tr>
                 @php $totalGeneral += $row->total_deuda; @endphp
             @empty
@@ -42,7 +45,7 @@
         <tfoot class="bg-light">
             <tr>
                 <td colspan="5" class="text-end fw-bold">TOTAL GENERAL POR COBRAR:</td>
-                <td class="text-end fw-bold text-danger fs-5">{{ number_format($totalGeneral, 2) }}</td>
+                <td class="text-end fw-bold text-danger fs-5">{{ moneda($totalGeneral, $isExcel, !$isExcel) }}</td>
             </tr>
         </tfoot>
     </table>

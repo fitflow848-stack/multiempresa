@@ -25,6 +25,7 @@
             @php 
                 $totalIngresos = 0; 
                 $totalEgresos = 0; 
+                $isExcel = !empty($is_excel);
             @endphp
             @forelse($resultados as $item)
                 @php
@@ -46,10 +47,18 @@
                     <td class="small">{{ $item->concepto }}</td>
                     <td class="text-center small">{{ $item->metodo_pago }}</td>
                     <td class="text-end font-monospace {{ $esIngreso ? 'text-success' : 'text-muted' }}">
-                        {{ $esIngreso ? number_format($importe, 2) : '0.00' }}
+                        @if($isExcel)
+                            {{ $esIngreso ? $importe : 0 }}
+                        @else
+                            {{ $esIngreso ? number_format($importe, 2) : '0.00' }}
+                        @endif
                     </td>
                     <td class="text-end font-monospace {{ !$esIngreso ? 'text-danger' : 'text-muted' }}">
-                        {{ !$esIngreso ? number_format($importe, 2) : '0.00' }}
+                        @if($isExcel)
+                            {{ !$esIngreso ? $importe : 0 }}
+                        @else
+                            {{ !$esIngreso ? number_format($importe, 2) : '0.00' }}
+                        @endif
                     </td>
                     <td class="small text-center">{{ $item->usuario }}</td>
                 </tr>
@@ -65,9 +74,27 @@
         <tfoot class="table-light">
             <tr class="fw-bold">
                 <td colspan="7" class="text-end text-uppercase">Totales del Periodo:</td>
-                <td class="text-end text-success">S/ {{ number_format($totalIngresos, 2) }}</td>
-                <td class="text-end text-danger">S/ {{ number_format($totalEgresos, 2) }}</td>
-                <td class="text-center bg-dark text-white">SALDO: S/ {{ number_format($totalIngresos - $totalEgresos, 2) }}</td>
+                <td class="text-end text-success">
+                    @if($isExcel)
+                        {{ $totalIngresos }}
+                    @else
+                        S/ {{ number_format($totalIngresos, 2) }}
+                    @endif
+                </td>
+                <td class="text-end text-danger">
+                    @if($isExcel)
+                        {{ $totalEgresos }}
+                    @else
+                        S/ {{ number_format($totalEgresos, 2) }}
+                    @endif
+                </td>
+                <td class="text-center bg-dark text-white">
+                    @if($isExcel)
+                        {{ $totalIngresos - $totalEgresos }}
+                    @else
+                        SALDO: S/ {{ number_format($totalIngresos - $totalEgresos, 2) }}
+                    @endif
+                </td>
             </tr>
         </tfoot>
         @endif

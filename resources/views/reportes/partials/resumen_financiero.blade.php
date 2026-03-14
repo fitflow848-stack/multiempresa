@@ -1,3 +1,5 @@
+@php $isExcel = !empty($is_excel); @endphp
+
 <div class="row mb-4">
     <div class="col-12 text-center border-bottom pb-3">
         <h4 class="text-uppercase fw-bold text-primary">Resumen Financiero</h4>
@@ -15,7 +17,13 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="card-title text-uppercase opacity-75 mb-1">Ingresos por Ventas</h6>
-                        <h3 class="fw-bold mb-0">S/ {{ number_format($ventasTotal, 2) }}</h3>
+                        <h3 class="fw-bold mb-0">
+                            @if($isExcel)
+                                {{ $ventasTotal }}
+                            @else
+                                S/ {{ number_format($ventasTotal, 2) }}
+                            @endif
+                        </h3>
                         <small>{{ $ventasCantidad }} comprobantes emitidos</small>
                     </div>
                     <i class="bx bx-trending-up fs-1 opacity-25"></i>
@@ -31,7 +39,13 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="card-title text-uppercase opacity-75 mb-1">Inversión en Compras</h6>
-                        <h3 class="fw-bold mb-0">S/ {{ number_format($comprasTotal, 2) }}</h3>
+                        <h3 class="fw-bold mb-0">
+                            @if($isExcel)
+                                {{ $comprasTotal }}
+                            @else
+                                S/ {{ number_format($comprasTotal, 2) }}
+                            @endif
+                        </h3>
                         <small>{{ $comprasCantidad }} órdenes de compra</small>
                     </div>
                     <i class="bx bx-cart fs-1 opacity-25"></i>
@@ -47,7 +61,13 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="card-title text-uppercase opacity-75 mb-1">Gastos Operativos</h6>
-                        <h3 class="fw-bold mb-0">S/ {{ number_format($egresos, 2) }}</h3>
+                        <h3 class="fw-bold mb-0">
+                            @if($isExcel)
+                                {{ $egresos }}
+                            @else
+                                S/ {{ number_format($egresos, 2) }}
+                            @endif
+                        </h3>
                         <small>Egresos registrados en caja</small>
                     </div>
                     <i class="bx bx-money fs-1 opacity-25"></i>
@@ -66,19 +86,27 @@
             <div class="card-body py-4">
                 <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
                     <span>Ventas (Ingresos):</span>
-                    <span class="fw-bold text-success">+ S/ {{ number_format($ventasTotal, 2) }}</span>
+                    <span class="fw-bold text-success">
+                        + @if($isExcel) {{ $ventasTotal }} @else S/ {{ number_format($ventasTotal, 2) }} @endif
+                    </span>
                 </div>
                 <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
                     <span>Otros Ingresos (Caja):</span>
-                    <span class="fw-bold text-success">+ S/ {{ number_format($ingresosExtra, 2) }}</span>
+                    <span class="fw-bold text-success">
+                        + @if($isExcel) {{ $ingresosExtra }} @else S/ {{ number_format($ingresosExtra, 2) }} @endif
+                    </span>
                 </div>
                 <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
                     <span>Compras (Inversión):</span>
-                    <span class="fw-bold text-danger">- S/ {{ number_format($comprasTotal, 2) }}</span>
+                    <span class="fw-bold text-danger">
+                        - @if($isExcel) {{ $comprasTotal }} @else S/ {{ number_format($comprasTotal, 2) }} @endif
+                    </span>
                 </div>
                 <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
                     <span>Gastos (Operativos):</span>
-                    <span class="fw-bold text-danger">- S/ {{ number_format($egresos, 2) }}</span>
+                    <span class="fw-bold text-danger">
+                        - @if($isExcel) {{ $egresos }} @else S/ {{ number_format($egresos, 2) }} @endif
+                    </span>
                 </div>
                 
                 @php
@@ -88,7 +116,11 @@
                 <div class="d-flex justify-content-between mt-4">
                     <h5 class="fw-bold">BALANCE NETO ESTIMADO:</h5>
                     <h5 class="fw-bold {{ $flujoCaja >= 0 ? 'text-success' : 'text-danger' }}">
-                        S/ {{ number_format($flujoCaja, 2) }}
+                        @if($isExcel)
+                            {{ $flujoCaja }}
+                        @else
+                            S/ {{ number_format($flujoCaja, 2) }}
+                        @endif
                     </h5>
                 </div>
             </div>

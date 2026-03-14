@@ -83,6 +83,31 @@ if (!function_exists('numeroALetras')) {
     }
 }
 
+if (!function_exists('moneda')) {
+    /**
+     * Formatea valores monetarios para web y exportación Excel.
+     *
+     * - En vistas normales: devuelve "S/ 1,234.56"
+     * - En export a Excel (cuando $isExcel = true): devuelve 1234.56 como número crudo
+     */
+    function moneda($valor, bool $isExcel = false, bool $conSimbolo = true)
+    {
+        if ($valor === null || $valor === '') {
+            return $isExcel ? 0 : ($conSimbolo ? 'S/ 0.00' : '0.00');
+        }
+
+        $numero = is_numeric($valor) ? (float) $valor : floatval(str_replace(',', '', $valor));
+
+        if ($isExcel) {
+            // Devolver número puro para que Excel pueda operar
+            return $numero;
+        }
+
+        $base = number_format($numero, 2);
+        return $conSimbolo ? 'S/ ' . $base : $base;
+    }
+}
+
 if (!function_exists('agregarCerosIzquierda')) {
     /**
      * Agregar ceros a la izquierda de un número.

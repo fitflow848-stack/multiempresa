@@ -30,7 +30,10 @@
             </tr>
         </thead>
         <tbody>
-            @php $totalValor = 0; @endphp
+            @php 
+                $totalValor = 0; 
+                $isExcel = !empty($is_excel);
+            @endphp
             @forelse($resultados as $item)
                 @php
                     $dias = floor(now()->diffInDays($item->fecha_vencimiento, false));
@@ -64,10 +67,10 @@
                         @endif
                     </td>
                     <td class="text-center small">{{ $item->producto->familia->nombre ?? '-' }}</td>
-                    <td class="text-end font-monospace">{{ number_format($item->cantidad, 2) }}</td>
-                    <td class="text-end">{{ number_format($item->costo, 2) }}</td>
-                    <td class="text-end">{{ number_format($item->pvp, 2) }}</td>
-                    <td class="text-end fw-bold">{{ number_format($valor, 2) }}</td>
+                    <td class="text-end font-monospace">{{ $isExcel ? $item->cantidad : number_format($item->cantidad, 2) }}</td>
+                    <td class="text-end">{{ moneda($item->costo, $isExcel, !$isExcel) }}</td>
+                    <td class="text-end">{{ moneda($item->pvp, $isExcel, !$isExcel) }}</td>
+                    <td class="text-end fw-bold">{{ moneda($valor, $isExcel, !$isExcel) }}</td>
                 </tr>
             @empty
                 <tr>
@@ -82,8 +85,13 @@
             <tfoot class="table-light">
                 <tr>
                     <td colspan="8" class="text-end fw-bold text-uppercase">Valor Total de Productos en Riesgo:</td>
-                    <td class="text-end fw-bold text-danger" style="font-size: 1.1rem;">S/
-                        {{ number_format($totalValor, 2) }}</td>
+                    <td class="text-end fw-bold text-danger" style="font-size: 1.1rem;">
+                        @if($isExcel)
+                            {{ $totalValor }}
+                        @else
+                            S/ {{ number_format($totalValor, 2) }}
+                        @endif
+                    </td>
                 </tr>
             </tfoot>
         @endif

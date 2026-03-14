@@ -21,24 +21,37 @@
             </tr>
         </thead>
         <tbody>
-            @php $totalIngresos = 0; $totalEgresos = 0; @endphp
+            @php 
+                $totalIngresos = 0; 
+                $totalEgresos = 0; 
+                $isExcel = !empty($is_excel);
+            @endphp
             @forelse($resultados as $item)
                 @php
-                    if($item->tipo == 'Ingreso') $totalIngresos += $item->importe;
-                    else $totalEgresos += $item->importe;
+                    $tipoNormalizado = strtolower(trim($item->tipo));
+                    $esIngreso = in_array($tipoNormalizado, ['ingreso', 'aporte', 'aportacion']);
+                    if ($esIngreso) {
+                        $totalIngresos += $item->importe;
+                    } else {
+                        $totalEgresos += $item->importe;
+                    }
                 @endphp
                 <tr>
                     <td class="text-center small">{{ $item->created_at->format('d/m/Y H:i') }}</td>
                     <td class="text-center small">{{ $item->cierre->caja->nombre ?? 'Bóveda' }}</td>
                     <td class="text-center">
-                        <span class="badge {{ $item->tipo == 'Ingreso' ? 'bg-success' : 'bg-danger' }}">
+                        <span class="badge {{ $esIngreso ? 'bg-success' : 'bg-danger' }}">
                             {{ $item->tipo }}
                         </span>
                     </td>
                     <td class="text-center small">{{ $item->partida }}</td>
                     <td class="small">{{ $item->concepto }}</td>
-                    <td class="text-end fw-bold {{ $item->tipo == 'Ingreso' ? 'text-success' : 'text-danger' }}">
-                        S/ {{ number_format($item->importe, 2) }}
+                    <td class="text-end fw-bold {{ $esIngreso ? 'text-success' : 'text-danger' }}">
+                        @if($isExcel)
+                            {{ $item->importe }}
+                        @else
+                            S/ {{ number_format($item->importe, 2) }}
+                        @endif
                     </td>
                     <td class="text-center small">{{ $item->user->name ?? 'N/A' }}</td>
                 </tr>
@@ -54,17 +67,35 @@
             <tfoot class="table-light">
                 <tr>
                     <td colspan="5" class="text-end fw-bold">TOTAL INGRESOS:</td>
-                    <td class="text-end fw-bold text-success">S/ {{ number_format($totalIngresos, 2) }}</td>
+                    <td class="text-end fw-bold text-success">
+                        @if($isExcel)
+                            {{ $totalIngresos }}
+                        @else
+                            S/ {{ number_format($totalIngresos, 2) }}
+                        @endif
+                    </td>
                     <td></td>
                 </tr>
                 <tr>
                     <td colspan="5" class="text-end fw-bold">TOTAL EGRESOS:</td>
-                    <td class="text-end fw-bold text-danger">S/ {{ number_format($totalEgresos, 2) }}</td>
+                    <td class="text-end fw-bold text-danger">
+                        @if($isExcel)
+                            {{ $totalEgresos }}
+                        @else
+                            S/ {{ number_format($totalEgresos, 2) }}
+                        @endif
+                    </td>
                     <td></td>
                 </tr>
                 <tr>
                     <td colspan="5" class="text-end fw-bold">SALDO NETO:</td>
-                    <td class="text-end fw-bold text-primary">S/ {{ number_format($totalIngresos - $totalEgresos, 2) }}</td>
+                    <td class="text-end fw-bold text-primary">
+                        @if($isExcel)
+                            {{ $totalIngresos - $totalEgresos }}
+                        @else
+                            S/ {{ number_format($totalIngresos - $totalEgresos, 2) }}
+                        @endif
+                    </td>
                     <td></td>
                 </tr>
             </tfoot>

@@ -20,7 +20,18 @@
             </tr>
         </thead>
         <tbody>
+            @php
+                $totalBruto = 0;
+                $totalImpuesto = 0;
+                $totalNeto = 0;
+                $isExcel = !empty($is_excel);
+            @endphp
             @forelse($resultados as $compra)
+                @php
+                    $totalBruto += $compra->total_bruto;
+                    $totalImpuesto += $compra->total_impuesto;
+                    $totalNeto += $compra->total_pagar;
+                @endphp
                 <tr>
                     <td>{{ $compra->fecha_emision }}</td>
                     <td>{{ $compra->proveedor->nombre_comercial ?? ($compra->proveedor->razon_social ?? 'Proveedor Eliminado') }}
@@ -34,9 +45,9 @@
                         @endif
                     </td>
                     <td class="text-center">{{ $compra->moneda }}</td>
-                    <td class="text-end">{{ number_format($compra->total_bruto, 2) }}</td>
-                    <td class="text-end">{{ number_format($compra->total_impuesto, 2) }}</td>
-                    <td class="text-end fw-bold">{{ number_format($compra->total_pagar, 2) }}</td>
+                    <td class="text-end">{{ moneda($compra->total_bruto, $isExcel, !$isExcel) }}</td>
+                    <td class="text-end">{{ moneda($compra->total_impuesto, $isExcel, !$isExcel) }}</td>
+                    <td class="text-end fw-bold">{{ moneda($compra->total_pagar, $isExcel, !$isExcel) }}</td>
                     <td>{{ $compra->usuario->name ?? '' }}</td>
                 </tr>
             @empty
@@ -47,5 +58,16 @@
                 </tr>
             @endforelse
         </tbody>
+        @if($resultados->count() > 0)
+            <tfoot class="table-light">
+                <tr class="fw-bold">
+                    <td colspan="5" class="text-end text-uppercase">Totales del periodo:</td>
+                    <td class="text-end">{{ moneda($totalBruto, $isExcel, !$isExcel) }}</td>
+                    <td class="text-end">{{ moneda($totalImpuesto, $isExcel, !$isExcel) }}</td>
+                    <td class="text-end text-primary">{{ moneda($totalNeto, $isExcel, !$isExcel) }}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        @endif
     </table>
 </div>

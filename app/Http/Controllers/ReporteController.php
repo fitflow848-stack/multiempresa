@@ -1152,6 +1152,8 @@ class ReporteController extends Controller
             ->leftJoin('cajas as cj', 'cj.id', '=', 'cc.caja_id')
             ->where('v.estado', '!=', '0');
 
+        $localId = $request->input('local_id');
+
         $queryOperaciones = DB::table('operaciones_caja as o')
             ->select(
                 'o.created_at as fecha',
@@ -1167,6 +1169,17 @@ class ReporteController extends Controller
             ->join('users as u', 'u.id', '=', 'o.user_id')
             ->leftJoin('cierre_cajas as cc', 'cc.id', '=', 'o.cierre_caja_id')
             ->leftJoin('cajas as cj', 'cj.id', '=', 'cc.caja_id');
+
+        if ($localId) {
+            // Filtrar ventas por sucursal del cierre de caja asociado
+            $queryVentas->where('cc.sucursal_id', $localId);
+
+            // Filtrar operaciones de caja por sucursal directa o del cierre asociado
+            $queryOperaciones->where(function ($q) use ($localId) {
+                $q->where('o.sucursal_id', $localId)
+                  ->orWhere('cc.sucursal_id', $localId);
+            });
+        }
 
         if ($request->input('desde')) {
             $queryVentas->whereDate('v.fecha_emision', '>=', $request->input('desde'));
