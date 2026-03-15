@@ -213,8 +213,8 @@ class ReporteController extends Controller
                 $valorVenta = $subtotalVenta;
             }
 
-            // Ganancia = Valor Venta (sin IGV) - Costo (sin IGV)
-            $ganancia = $valorVenta - $costoTotalGrupo;
+            // Ganancia = Total Venta (con IGV) - Costo (según se ingresó)
+            $ganancia = $subtotalVenta - $costoTotalGrupo;
 
             return (object) [
                 'venta' => $primero->venta,
@@ -233,9 +233,16 @@ class ReporteController extends Controller
             ];
         })->values();
 
-        // Ordenar de forma ascendente por nombre del producto completo
-        $resultados = $agrupados->sortBy(function($item) {
-            return $item->nombre_completo;
+        // Ordenar de forma ascendente por nombre del producto completo y fecha
+        $resultados = $agrupados->sort(function($a, $b) {
+            // Comparar por nombre (sin distinguir mayúsculas/minúsculas)
+            $cmpName = strcasecmp($a->nombre_completo, $b->nombre_completo);
+            if ($cmpName !== 0) return $cmpName;
+
+            // Si el nombre es igual, comparar por fecha
+            $fechaA = $a->venta->fecha_emision ?? 0;
+            $fechaB = $b->venta->fecha_emision ?? 0;
+            return $fechaA <=> $fechaB;
         });
 
         // Calcular totales
