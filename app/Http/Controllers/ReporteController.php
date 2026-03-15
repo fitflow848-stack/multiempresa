@@ -1160,7 +1160,7 @@ class ReporteController extends Controller
 
         $sucursalId = $request->input('local_id') ?: null;
         $query = AlmacenIngresoDetalle::withoutGlobalScopes()
-            ->with(['producto.familia', 'ingreso'])
+            ->with(['producto.familia', 'ingreso', 'productoLinea'])
             ->whereHas('ingreso', function ($q) use ($user, $sucursalId) {
                 $q->withoutGlobalScopes()
                   ->where('empresa_id', $user->company_id);

@@ -49,7 +49,17 @@
                     $totalValor += $valor;
                 @endphp
                 <tr class="{{ $claseFila }}">
-                    <td class="small">{{ $item->producto->nombre ?? 'N/A' }}</td>
+                    <td class="small">
+                        @php
+                            $nombreFull = $item->producto->nombre ?? 'N/A';
+                            $linea = $item->productoLinea;
+                            if ($linea) {
+                                if ($linea->presentacion) $nombreFull .= ' / ' . $linea->presentacion;
+                                if ($linea->concentracion) $nombreFull .= ' / ' . $linea->concentracion;
+                            }
+                        @endphp
+                        {{ $nombreFull }}
+                    </td>
                     <td class="text-center font-monospace small">{{ $item->lote ?? '-' }}</td>
                     <td class="text-center">
                         {{ $item->fecha_vencimiento ? \Carbon\Carbon::parse($item->fecha_vencimiento)->format('d/m/Y') : '-' }}
