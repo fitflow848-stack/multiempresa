@@ -399,83 +399,12 @@
                 }
             });
 
-            // recalc totals function
-            function recalcTotals() {
-                let totalBruto = 0;
-                let totalDescuento = 0;
-                let productCount = 0;
-
-                $('#productos-tbody tr:not(#no-products)').each(function() {
-                    const $tr = $(this);
-                    const qty = parseFloat($tr.find('.cantidad-input').val()) || 0;
-                    const cost = parseFloat($tr.find('.costo-input').val()) || 0;
-                    const disc = parseFloat($tr.find('.descuento-input').val()) || 0;
-                    const lineBruto = qty * cost;
-                    totalBruto += lineBruto;
-                    totalDescuento += isNaN(disc) ? 0 : disc;
-                    productCount++;
-                });
-
-                // brutoNeto representa el total ingresado por el usuario (sumatoria líneas - descuentos)
-                let brutoNeto = totalBruto - totalDescuento;
-                const incImpuesto = $('#inc_impuesto').is(':checked');
-
-                let totalImpuesto;
-                let totalNeto;
-
-                if (incImpuesto) {
-                    // Los precios ya incluyen IGV: separar base e impuesto
-                    // brutoNeto es el total CON IGV
-                    const baseSinIGV = brutoNeto / (1 + TAX_RATE);
-                    totalImpuesto = brutoNeto - baseSinIGV;
-                    totalNeto = brutoNeto; // total con IGV
-
-                    // Para el subtotal mostramos la base sin IGV
-                    totalBruto = baseSinIGV;
-                } else {
-                    // Los precios NO incluyen IGV: calcular impuesto sobre brutoNeto
-                    totalImpuesto = brutoNeto * TAX_RATE;
-                    totalNeto = brutoNeto + totalImpuesto;
-                }
-
-                const flete = parseFloat($flete.val()) || 0;
-                const totalPagar = totalNeto + flete;
-
-                // Update displays using the global elements
-                $('#subtotal-display').text('S/ ' + totalBruto.toFixed(2));
-                $('#descuento-display').text('S/ ' + totalDescuento.toFixed(2));
-                $('#impuestos-display').text('S/ ' + totalImpuesto.toFixed(2));
-                $('#total-display').text('S/ ' + totalNeto.toFixed(2));
-                $('#productos-count').text(productCount);
-
-                // Update hidden form inputs
-                $totalBruto.val(Number(totalBruto).toFixed(2));
-                $totalDescuento.val(Number(totalDescuento).toFixed(2));
-                $brutoNeto.val(Number(brutoNeto).toFixed(2));
-                $totalImpuesto.val(Number(totalImpuesto).toFixed(2));
-                $totalNeto.val(Number(totalNeto).toFixed(2));
-                if ($totalPagar.length) {
-                    $totalPagar.val(Number(totalPagar).toFixed(2));
-                }
-
-                // Show/hide no products message
-                if (productCount === 0) {
-                    $('#no-products').show();
-                } else {
-                    $('#no-products').hide();
-                }
-            }
-
             // Connect with flete input if exists
             if ($flete.length) {
                 $flete.on('input change', function() {
-                    recalcTotals();
+                    if (window.calculateTotals) window.calculateTotals();
                 });
             }
-
-            $(document).on('change', '#inc_impuesto', function() {
-                recalcTotals();
-            });
 
             $('#compra-form').on('submit', function(e) {
                 const lines = $('#productos-tbody tr:not(#no-products)').length;

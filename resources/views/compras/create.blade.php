@@ -142,7 +142,7 @@
                             </div>
                             <div class="summary-item">
                                 <span>Descuentos</span>
-                                <span class="text-danger">- S/ 0.00</span>
+                                <span id="descuento-display" class="text-danger">- S/ 0.00</span>
                             </div>
                             <div class="summary-item">
                                 <span>Impuestos (IGV)</span>
@@ -385,39 +385,60 @@
 
             // Calculate totals function
             function calculateTotals() {
-                let subtotal = 0;
-                let descuento = 0;
-                let impuestos = 0;
+                let totalBruto = 0;
+                let totalDescuento = 0;
                 let productCount = 0;
+                const TAX_RATE = 0.18;
 
                 $('#productos-tbody tr:not(#no-products)').each(function() {
                     const cantidad = parseFloat($(this).find('.cantidad-input').val()) || 0;
                     const costo = parseFloat($(this).find('.costo-input').val()) || 0;
                     const desc = parseFloat($(this).find('.descuento-input').val()) || 0;
 
-                    const lineTotal = (cantidad * costo) - desc;
-                    subtotal += lineTotal;
-                    descuento += desc;
+                    const lineBruto = cantidad * costo;
+                    totalBruto += lineBruto;
+                    totalDescuento += desc;
                     productCount++;
                 });
 
+                let brutoNeto = totalBruto - totalDescuento;
+                const incImpuesto = $('#inc_impuesto').is(':checked');
+
+                let totalImpuesto;
+                let totalNeto;
+                let subtotalDisplay;
+
+                if (incImpuesto) {
+                    // El usuario solicita que si incluye IGV: Total = Suma de líneas, IGV = 18% del Total, Subtotal = Diferencia
+                    // Ejemplo: Total 200 -> IGV 36, Subtotal 164
+                    totalNeto = brutoNeto;
+                    totalImpuesto = totalNeto * TAX_RATE;
+                    subtotalDisplay = totalNeto - totalImpuesto;
+                } else {
+                    // Si NO incluye IGV: Subtotal = Suma de líneas, IGV = 18% del Subtotal, Total = Suma + IGV
+                    // Ejemplo: Subtotal 200 -> IGV 36, Total 236
+                    subtotalDisplay = brutoNeto;
+                    totalImpuesto = subtotalDisplay * TAX_RATE;
+                    totalNeto = subtotalDisplay + totalImpuesto;
+                }
+
+                const fleteVal = parseFloat($('#flete').val()) || 0;
+                const totalPagar = totalNeto + fleteVal;
+
                 // Update displays
-                $('#subtotal-display').text('S/ ' + subtotal.toFixed(2));
-                $('#descuento-display').text('S/ ' + descuento.toFixed(2));
-                $('#impuestos-display').text('S/ ' + impuestos.toFixed(2));
-                $('#total-display').text('S/ ' + subtotal.toFixed(2));
+                $('#subtotal-display').text('S/ ' + subtotalDisplay.toFixed(2));
+                $('#descuento-display').text('- S/ ' + totalDescuento.toFixed(2));
+                $('#impuestos-display').text('S/ ' + totalImpuesto.toFixed(2));
+                $('#total-display').text('S/ ' + totalNeto.toFixed(2));
                 $('#productos-count').text(productCount);
 
                 // Update hidden inputs
-                $('#total_bruto').val(subtotal.toFixed(2));
-                $('#total_descuento').val(descuento.toFixed(2));
-                $('#total_impuesto').val(impuestos.toFixed(2));
-                $('#total_neto').val(subtotal.toFixed(2));
-
-                // bruto_neto and total_pagar (consider flete if present)
-                $('#bruto_neto').val(subtotal.toFixed(2));
-                const fleteVal = parseFloat($('#flete').val()) || 0;
-                $('#total_pagar').val((subtotal + fleteVal).toFixed(2));
+                $('#total_bruto').val(totalBruto.toFixed(2));
+                $('#total_descuento').val(totalDescuento.toFixed(2));
+                $('#bruto_neto').val(brutoNeto.toFixed(2));
+                $('#total_impuesto').val(totalImpuesto.toFixed(2));
+                $('#total_neto').val(totalNeto.toFixed(2));
+                $('#total_pagar').val(totalPagar.toFixed(2));
 
                 // Show/hide no products message
                 if (productCount === 0) {
@@ -487,8 +508,12 @@
                     .on('change', debounce(autoSaveCompraData, 500));
 
                 // Auto-guardar cuando cambien las opciones
+                const debouncedAutoSave = debounce(autoSaveCompraData, 500);
                 $('input[name="moneda"], #credito, #percepcion, #inc_impuesto')
-                    .on('change', debounce(autoSaveCompraData, 500));
+                    .on('change', function() {
+                        calculateTotals();
+                        debouncedAutoSave();
+                    });
 
                 // Auto-guardar cuando cambien los productos (incluyendo nuevos campos)
                 $(document).on('input change',
