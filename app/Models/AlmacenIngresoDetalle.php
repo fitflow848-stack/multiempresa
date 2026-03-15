@@ -46,4 +46,9 @@ class AlmacenIngresoDetalle extends Model
     {
         return $this->belongsTo(\App\Models\Producto::class, 'producto_id');
     }
+
+    public function productoLinea()
+    {
+        return $this->belongsTo(ProductoLinea::class, 'producto_linea_id');
+    }
 }

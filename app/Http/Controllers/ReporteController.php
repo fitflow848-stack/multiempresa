@@ -127,7 +127,7 @@ class ReporteController extends Controller
     private function reportePorProducto(Request $request)
     {
         // Logic for "Por Producto" - agrupado por comprobante y producto
-        $query = VentaDetalle::with(['venta.user', 'producto', 'almacenIngresoDetalle'])
+        $query = VentaDetalle::with(['venta.user', 'producto', 'almacenIngresoDetalle.productoLinea'])
             ->whereHas('venta', function ($q) use ($request) {
                 $q->where('estado', '!=', '0');
                 // Apply date filters
@@ -157,15 +157,32 @@ class ReporteController extends Controller
         $detalles = $query->orderBy('id_venta')->get();
 
         // Agrupar por comprobante y nombre del producto para sumar cantidades
-        // Usamos el nombre del producto porque diferentes lotes pueden tener diferentes servicio_id
         $agrupados = $detalles->groupBy(function ($item) {
-            $nombreProducto = $item->producto->nombre ?? $item->nombre_servicio ?? 'Sin nombre';
-            return $item->id_venta . '|||' . $nombreProducto;
+            $nombreBase = $item->producto->nombre ?? $item->nombre_servicio ?? 'Sin nombre';
+            $linea = $item->almacenIngresoDetalle->productoLinea ?? null;
+            $nombreFull = $nombreBase;
+            if ($linea) {
+                if ($linea->presentacion) $nombreFull .= ' / ' . $linea->presentacion;
+                if ($linea->concentracion) $nombreFull .= ' / ' . $linea->concentracion;
+            }
+            return $item->id_venta . '|||' . $nombreFull;
         })->map(function ($grupo) {
             $primero = $grupo->first();
             $cantidadTotal = $grupo->sum('cantidad');
 
-            // Calcular el costo promedio ponderado de todos los items del grupo
+            $nombreBase = $primero->producto->nombre ?? $primero->nombre_servicio ?? 'Sin nombre';
+            $linea = $primero->almacenIngresoDetalle->productoLinea ?? null;
+            $nombreFull = $nombreBase;
+            $pres = '';
+            $conc = '';
+            if ($linea) {
+                $pres = $linea->presentacion ?? '';
+                $conc = $linea->concentracion ?? '';
+                if ($pres) $nombreFull .= ' / ' . $pres;
+                if ($conc) $nombreFull .= ' / ' . $conc;
+            }
+
+            // Calcular el costo total sumando cada item individualmente
             $costoTotalGrupo = 0;
             foreach ($grupo as $item) {
                 $costoItem = 0;
@@ -180,8 +197,6 @@ class ReporteController extends Controller
             $costoUnitario = $cantidadTotal > 0 ? $costoTotalGrupo / $cantidadTotal : 0;
             $subtotalVenta = $grupo->sum('importe'); // total con IGV (si aplica)
 
-            // IGV: si las líneas tienen igv guardado, usarlo; si no, repartir el IGV de la venta proporcionalmente.
-            // En ventas creadas por caja normalmente no se guarda igv en detalle, solo en ventas.igv.
             $igvEnLineas = $grupo->sum('igv');
             $venta = $primero->venta;
             $totalVenta = (float) ($venta->total ?? 0);
@@ -198,11 +213,15 @@ class ReporteController extends Controller
                 $valorVenta = $subtotalVenta;
             }
 
-            $ganancia = $subtotalVenta - $costoTotalGrupo;
+            // Ganancia = Valor Venta (sin IGV) - Costo (sin IGV)
+            $ganancia = $valorVenta - $costoTotalGrupo;
 
             return (object) [
                 'venta' => $primero->venta,
                 'producto' => $primero->producto,
+                'nombre_completo' => $nombreFull,
+                'presentacion' => $pres,
+                'concentracion' => $conc,
                 'cantidad' => $cantidadTotal,
                 'precio_unitario' => $primero->precio_unitario,
                 'costo_unitario' => $costoUnitario,
@@ -214,17 +233,22 @@ class ReporteController extends Controller
             ];
         })->values();
 
+        // Ordenar de forma ascendente por nombre del producto completo
+        $resultados = $agrupados->sortBy(function($item) {
+            return $item->nombre_completo;
+        });
+
         // Calcular totales
         $totales = (object) [
-            'cantidad' => $agrupados->sum('cantidad'),
-            'subtotal' => $agrupados->sum('subtotal'),
-            'valor_venta' => $agrupados->sum('valor_venta'),
-            'igv' => $agrupados->sum('igv'),
-            'costo_total' => $agrupados->sum('costo_total'),
-            'ganancia' => $agrupados->sum('ganancia'),
+            'cantidad' => $resultados->sum('cantidad'),
+            'subtotal' => $resultados->sum('subtotal'),
+            'valor_venta' => $resultados->sum('valor_venta'),
+            'igv' => $resultados->sum('igv'),
+            'costo_total' => $resultados->sum('costo_total'),
+            'ganancia' => $resultados->sum('ganancia'),
         ];
 
-        $resultados = $agrupados;
+        // $resultados ya contiene agrupados ordenado
 
         return [
             'view' => 'reportes.partials.por_producto',
