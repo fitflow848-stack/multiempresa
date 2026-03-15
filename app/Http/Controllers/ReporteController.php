@@ -792,7 +792,7 @@ class ReporteController extends Controller
     private function reporteCompras(Request $request)
     {
         // Listado de compras (ingresos)
-        $query = Compra::with(['proveedor', 'usuario'])
+        $query = Compra::with(['proveedor', 'usuario', 'lineas.producto'])
             ->orderByDesc('fecha_emision');
 
         if ($request->input('desde'))
