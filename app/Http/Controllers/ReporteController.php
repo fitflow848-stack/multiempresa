@@ -233,16 +233,16 @@ class ReporteController extends Controller
             ];
         })->values();
 
-        // Ordenar de forma ascendente por nombre del producto completo y fecha
+        // Ordenar principalmente por fecha de emisión (descendente - más reciente primero)
         $resultados = $agrupados->sort(function($a, $b) {
-            // Comparar por nombre (sin distinguir mayúsculas/minúsculas)
-            $cmpName = strcasecmp($a->nombre_completo, $b->nombre_completo);
-            if ($cmpName !== 0) return $cmpName;
+            $fechaA = $a->venta->fecha_emision ? $a->venta->fecha_emision->timestamp : 0;
+            $fechaB = $b->venta->fecha_emision ? $b->venta->fecha_emision->timestamp : 0;
+            
+            if ($fechaA !== $fechaB) {
+                return $fechaB <=> $fechaA; // Invierte para más reciente primero
+            }
 
-            // Si el nombre es igual, comparar por fecha
-            $fechaA = $a->venta->fecha_emision ?? 0;
-            $fechaB = $b->venta->fecha_emision ?? 0;
-            return $fechaA <=> $fechaB;
+            return strcasecmp($a->nombre_completo, $b->nombre_completo);
         });
 
         // Calcular totales
