@@ -164,7 +164,10 @@
                 // populate fields
                 $('#detail-product-id').val(product.id || '');
                 $('#detail-codigo').text(product.cb || product.codigo_ref || '');
-                $('#detail-nombre').text(product.nombre || '');
+                let nombreFull = product.nombre || '';
+                if (product.presentacion) nombreFull += ' / ' + product.presentacion;
+                if (product.concentracion) nombreFull += ' / ' + product.concentracion;
+                $('#detail-nombre').text(nombreFull);
 
                 const costo = (product.precio_compra !== null && product.precio_compra !== undefined) ?
                     Number(product.precio_compra) : (product.precio_linea && product.precio_linea.precio_compra ? Number(product.precio_linea.precio_compra) : 0);
@@ -289,7 +292,8 @@
                 </td>
                 <td>
                     <input name="descripcion[]" type="text" class="form-control form-control-sm" 
-                           value="${escapeHtml(product.nombre || '')}" readonly>
+                           value="${escapeHtml(product.nombre || '')}" 
+                           title="${escapeHtml(product.nombre || '')}" readonly>
                 </td>
                 <td>
                     <input name="cantidad[]" type="number" step="1" min="1" 

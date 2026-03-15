@@ -82,7 +82,7 @@
                                     <label class="form-check-label small fw-bold" for="credito">CRÉDITO</label>
                                 </div>
                                 <div class="form-check form-switch pt-1">
-                                    <input class="form-check-input" type="checkbox" id="inc_impuesto" name="inc_impuesto">
+                                    <input class="form-check-input" type="checkbox" id="inc_impuesto" name="inc_impuesto" checked>
                                     <label class="form-check-label small fw-bold" for="inc_impuesto">INC. IGV</label>
                                 </div>
                             </div>
@@ -767,7 +767,8 @@
                         </td>
                         <td>
                             <input name="descripcion[]" type="text" class="form-control form-control-sm" 
-                                   value="${producto.descripcion || ''}" readonly>
+                                   value="${producto.descripcion || ''}" 
+                                   title="${producto.descripcion || ''}" readonly>
                         </td>
                         <td>
                             <input name="cantidad[]" type="number" step="1" min="1" 
@@ -1026,7 +1027,7 @@
                                 linea_id: linea.linea_id, // Corregido: antes decía .id
                                 producto_id: producto.id,
                                 codigo: linea.cb || 'S/N',
-                                descripcion: `${producto.nombre} (${linea.presentacion} - ${linea.concentracion})`,
+                                descripcion: `${producto.nombre}${linea.presentacion ? ' / ' + linea.presentacion : ''}${linea.concentracion ? ' / ' + linea.concentracion : ''}`,
                                 cantidad: cantidad,
                                 costo: costo,
                                 descuento: 0,
