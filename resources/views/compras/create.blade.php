@@ -409,14 +409,16 @@
                 let subtotalDisplay;
 
                 if (incImpuesto) {
-                    // El usuario solicita que si incluye IGV: Total = Suma de líneas, IGV = 18% del Total, Subtotal = Diferencia
-                    // Ejemplo: Total 200 -> IGV 36, Subtotal 164
+                    // Si incluye IGV: El monto ingresado ya tiene el 18%.
+                    // Subtotal = Total / 1.18
+                    // IGV = Total - Subtotal
                     totalNeto = brutoNeto;
-                    totalImpuesto = totalNeto * TAX_RATE;
-                    subtotalDisplay = totalNeto - totalImpuesto;
+                    subtotalDisplay = totalNeto / (1 + TAX_RATE);
+                    totalImpuesto = totalNeto - subtotalDisplay;
                 } else {
-                    // Si NO incluye IGV: Subtotal = Suma de líneas, IGV = 18% del Subtotal, Total = Suma + IGV
-                    // Ejemplo: Subtotal 200 -> IGV 36, Total 236
+                    // Si NO incluye IGV: Subtotal es el monto base.
+                    // IGV = Subtotal * 0.18
+                    // Total = Subtotal + IGV
                     subtotalDisplay = brutoNeto;
                     totalImpuesto = subtotalDisplay * TAX_RATE;
                     totalNeto = subtotalDisplay + totalImpuesto;

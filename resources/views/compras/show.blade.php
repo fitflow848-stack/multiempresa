@@ -92,12 +92,13 @@
                         $descuento = $compra->total_descuento ?? 0;
 
                         if ($compra->inc_impuesto) {
-                            // Si incluyó IGV: IGV es el 18% del total, Subtotal es el resto
-                            $impuesto = $totalPagar * $tasa;
-                            $base = $totalPagar - $impuesto;
+                            // Si incluyó IGV: El total ya tiene el 18%.
+                            // Base = Total / 1.18
+                            // IGV = Total - Base
+                            $base = $totalPagar / (1 + $tasa);
+                            $impuesto = $totalPagar - $base;
                         } else {
-                            // Si NO incluyó IGV: Subtotal es el neto, IGV es el 18% sobre eso
-                            // Nota: En este caso el total_pagar ya debería tener el IGV sumado desde el guardado
+                            // Si NO incluyó IGV: Subtotal es el neto
                             $base = $compra->total_bruto - $descuento; 
                             $impuesto = $base * $tasa;
                         }
