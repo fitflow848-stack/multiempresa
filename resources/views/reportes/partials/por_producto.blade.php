@@ -27,7 +27,7 @@
                 <tr>
                     <td>{{ $detalle->venta->fecha_emision ? $detalle->venta->fecha_emision->format('d/m/Y H:i') : '' }}</td>
                     <td>{{ $detalle->venta->serie ?? '' }}-{{ $detalle->venta->numero ?? '' }}</td>
-                    <td>{{ $detalle->producto->nombre ?? 'Producto Eliminado' }}</td>
+                    <td class="small">{{ $detalle->nombre_completo }}</td>
                     <td class="text-center">{{ number_format($detalle->cantidad, 2) }}</td>
                     <td class="text-end">{{ number_format($detalle->costo_unitario, 2) }}</td>
                     <td class="text-end">{{ number_format($detalle->precio_unitario, 2) }}</td>
@@ -42,7 +42,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="10" class="text-center py-5">
+                    <td colspan="12" class="text-center py-5">
                         <span class="text-muted">El listado resultó vacío</span>
                     </td>
                 </tr>

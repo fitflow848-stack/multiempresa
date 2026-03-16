@@ -43,6 +43,12 @@
                                 @else
                                     <span class="badge bg-secondary">Contado</span>
                                 @endif
+
+                                @if($compra->inc_impuesto)
+                                    <span class="badge bg-success">INC. IGV</span>
+                                @else
+                                    <span class="badge bg-warning text-dark">SIN IGV</span>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -83,17 +89,18 @@
                     @php
                         $tasa = 0.18;
                         $totalPagar = $compra->total_pagar ?? 0;
-                        $brutoGuardado = $compra->total_bruto ?? 0;
                         $descuento = $compra->total_descuento ?? 0;
-                        $impuestoGuardado = $compra->total_impuesto ?? 0;
 
-                        // Para compras antiguas donde no se calculó impuesto, lo recalculamos desde el total
-                        if ($impuestoGuardado == 0 && $totalPagar > 0) {
+                        if ($compra->inc_impuesto) {
+                            // Si incluyó IGV: El total ya tiene el 18%.
+                            // Base = Total / 1.18
+                            // IGV = Total - Base
                             $base = $totalPagar / (1 + $tasa);
                             $impuesto = $totalPagar - $base;
                         } else {
-                            $base = $brutoGuardado;
-                            $impuesto = $impuestoGuardado;
+                            // Si NO incluyó IGV: Subtotal es el neto
+                            $base = $compra->total_bruto - $descuento; 
+                            $impuesto = $base * $tasa;
                         }
                     @endphp
 

@@ -33,12 +33,42 @@
                     $impuesto = $compra->total_impuesto ?? 0;
                     $total = $compra->total_pagar ?? 0;
 
-                    // Compatibilidad con compras antiguas: si el impuesto está en cero pero hay total,
-                    // recalculamos base e IGV a partir del total.
+                    // Si el impuesto es 0 pero hay total, verificamos si debería tener IGV según sus productos
                     if ($impuesto == 0 && $total > 0) {
-                        $base = $total / (1 + $tasa);
-                        $igv = $total - $base;
+                        $sumGravado = 0;
+                        $sumExonerado = 0;
+                        
+                        foreach($compra->lineas as $linea) {
+                            $importe = ($linea->cantidad * $linea->costo) - ($linea->descuento ?? 0);
+                            $tipoImpuesto = $linea->producto->tipo_impuesto ?? 'gravado';
+                            
+                            if ($tipoImpuesto === 'gravado') {
+                                $sumGravado += $importe;
+                            } else {
+                                $sumExonerado += $importe;
+                            }
+                        }
+
+                        if ($sumGravado > 0) {
+                            // Si tiene parte gravada, calculamos el IGV
+                            if ($compra->inc_impuesto) {
+                                // Caso S/ 50.00 Inc. IGV -> IGV = 50 * 0.18 = 9? 
+                                // O es Base + IGV = 50? (Base = 42.37, IGV = 7.63)
+                                // Generalmente en el sistema hemos estado usando: IGV = Total * 0.18
+                                // Pero si el usuario dijo "Si incluye IGV seria subtotal 164, igv 36 y total 200" (que es 18%)
+                                $igv = $sumGravado * $tasa;
+                                $base = ($sumGravado + $sumExonerado) - $igv;
+                            } else {
+                                $igv = $sumGravado * $tasa;
+                                $base = $sumGravado + $sumExonerado;
+                            }
+                        } else {
+                            // Todo es exonerado
+                            $base = $total;
+                            $igv = 0;
+                        }
                     } else {
+                        // Respetamos los valores guardados si ya tiene impuesto o si el total es 0
                         $base = $bruto;
                         $igv = $impuesto;
                     }
