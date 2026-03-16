@@ -83,6 +83,18 @@ class Sucursal extends Model
         return asset('storage/' . $this->logo);
     }
 
+    /**
+     * Obtener la ruta completa del archivo del logo para uso interno
+     */
+    public function getLogoPathAttribute(): ?string
+    {
+        if (!$this->logo) {
+            return null;
+        }
+
+        return storage_path('app/public/' . $this->logo);
+    }
+
     // ─── Scopes ─────────────────────────────────────────────────
 
     /**

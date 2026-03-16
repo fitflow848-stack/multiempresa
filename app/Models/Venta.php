@@ -182,6 +182,14 @@ class Venta extends Model
     }
 
     /**
+     * Relación con la sucursal
+     */
+    public function sucursal_ref()
+    {
+        return $this->belongsTo(Sucursal::class, 'sucursal');
+    }
+
+    /**
      * Relación con el cierre de caja
      */
     public function cierreCaja()

@@ -49,6 +49,14 @@ class Cotizacion extends Model
     }
 
     /**
+     * Relación con la sucursal
+     */
+    public function sucursal_ref()
+    {
+        return $this->belongsTo(Sucursal::class, 'sucursal_id');
+    }
+
+    /**
      * Relación con el cliente
      */
     public function cliente()

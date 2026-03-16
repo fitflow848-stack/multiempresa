@@ -49,7 +49,10 @@ class PosController extends Controller
             ->get();
 
         $cotizacionData = null;
-        $logo = $company->logo ? asset('storage/' . $company->logo) : asset('assets/img/logo.png');
+        $sucursal = \App\Models\Sucursal::find($user->branch_id);
+        $logo = ($sucursal && $sucursal->logo) 
+            ? asset('storage/' . $sucursal->logo) 
+            : ($company->logo ? asset('storage/' . $company->logo) : asset('assets/img/logo.png'));
         // Si se pasa una cotización, cargar sus datos
         if ($request->has('cotizacion_id')) {
             $cotizacion = Cotizacion::with(['cliente', 'detalles.producto.marca'])

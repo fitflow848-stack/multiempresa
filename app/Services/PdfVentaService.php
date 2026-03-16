@@ -21,7 +21,7 @@ class PdfVentaService
      */
     private function prepareVentaData(int $id, int $qrSize = 200): ?array
     {
-        $venta = Venta::with(['deuda', 'user', 'tipoPago'])->where('id_venta', $id)->first();
+        $venta = Venta::with(['deuda', 'user', 'tipoPago', 'sucursal_ref'])->where('id_venta', $id)->first();
         if (!$venta) return null;
 
         $servicios = VentaDetalle::where('id_venta', $id)->ordenado()->get();
@@ -41,10 +41,21 @@ class PdfVentaService
         }
 
         $empresa = Company::where('id', $venta->id_empresa)->first();
+        $sucursal = $venta->sucursal_ref;
 
-        // Obtener logo en base64 (empresa o default)
+        // Obtener logo en base64 (sucursal, empresa o default)
         $logoBase64 = null;
-        if ($empresa && $empresa->logo) {
+
+        // 1. Prioridad: Logo de la sucursal
+        if ($sucursal && $sucursal->logo) {
+            $logoFilePath = $sucursal->logo_path ?? null;
+            if ($logoFilePath && file_exists($logoFilePath)) {
+                $logoBase64 = base64_encode(file_get_contents($logoFilePath));
+            }
+        }
+
+        // 2. Si no hay logo de sucursal, usar logo de la empresa
+        if (!$logoBase64 && $empresa && $empresa->logo) {
             $logoFilePath = $empresa->logo_path ?? null;
             if ($logoFilePath && file_exists($logoFilePath)) {
                 $logoBase64 = base64_encode(file_get_contents($logoFilePath));

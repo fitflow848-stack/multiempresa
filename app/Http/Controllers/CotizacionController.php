@@ -162,10 +162,10 @@ class CotizacionController extends Controller
             $venta->numero = $this->generarNumero();
             $venta->fecha = now();
             $venta->vigencia = now()->addDays($request->vigencia_dias ?? 30);
-            $venta->subtotal = $subtotal;
-            $venta->descuento_total = $request->descuento_total ?? 0;
-            $venta->igv = $igv;
-            $venta->total = $total;
+            $venta->subtotal = (float) $subtotal;
+            $venta->descuento_total = (float) ($request->descuento_total ?? 0);
+            $venta->igv = (float) $igv;
+            $venta->total = (float) $total;
             $venta->observaciones = $request->observaciones ?? '';
             $venta->estado = 'pendiente';
             $venta->save();
@@ -186,9 +186,9 @@ class CotizacionController extends Controller
                     $detalle->producto_id = $item['producto_id'] ?? null;
                     $detalle->descripcion = $item['nombre'] ?? 'Producto sin nombre';
                     $detalle->cantidad = $cantidad;
-                    $detalle->precio_unitario = $precio_unitario;
-                    $detalle->descuento = $item['descuento'] ?? 0;
-                    $detalle->subtotal = $precio_total;
+                    $detalle->precio_unitario = (float) $precio_unitario;
+                    $detalle->descuento = (float) ($item['descuento'] ?? 0);
+                    $detalle->subtotal = (float) $precio_total;
                     $detalle->lote = $item['lote'] ?? null;
                     $detalle->fecha_vencimiento = $item['fecha_vencimiento'] ?? null;
                     $detalle->save();
@@ -581,18 +581,28 @@ class CotizacionController extends Controller
         }
 
         $empresa = Company::where('id', $venta->company_id)->first();
+        $sucursal = $venta->sucursal_ref;
 
-        // Obtener logo de la empresa o usar logo por defecto
+        // Obtener logo en base64 (sucursal, empresa o default)
         $logoPath = null;
-        if ($empresa && $empresa->logo) {
-            // Intentar usar el logo de la empresa
-            $logoFilePath = $empresa->logo_path;
+
+        // 1. Prioridad: Logo de la sucursal
+        if ($sucursal && $sucursal->logo) {
+            $logoFilePath = $sucursal->logo_path ?? null;
             if ($logoFilePath && file_exists($logoFilePath)) {
                 $logoPath = base64_encode(file_get_contents($logoFilePath));
             }
         }
 
-        // Si no hay logo de empresa o no existe el archivo, usar logo por defecto
+        // 2. Si no hay logo de sucursal, usar logo de la empresa
+        if (!$logoPath && $empresa && $empresa->logo) {
+            $logoFilePath = $empresa->logo_path ?? null;
+            if ($logoFilePath && file_exists($logoFilePath)) {
+                $logoPath = base64_encode(file_get_contents($logoFilePath));
+            }
+        }
+
+        // 3. Logo por defecto
         if (!$logoPath) {
             $defaultLogoPath = public_path('images/scorpion.png');
             if (file_exists($defaultLogoPath)) {

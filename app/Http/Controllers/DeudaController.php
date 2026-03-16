@@ -432,9 +432,27 @@ class DeudaController extends Controller
         // Calcular el saldo total del cliente DESPUÉS del pago (ya está restado en la BD)
         $saldoTotal = $cliente->debe;
 
-        // Check for Logo
-        $logoPath = $empresa && $empresa->logo ? public_path('storage/' . $empresa->logo) : null;
+        // Check for Logo (Prioritize sucursal)
+        $sucursal = $pago->deuda->sucursal;
         $logo = null;
+        $logoPath = null;
+
+        // 1. Prioridad: Logo de la sucursal
+        if ($sucursal && $sucursal->logo) {
+            $path = $sucursal->logo_path;
+            if ($path && file_exists($path)) {
+                $logoPath = $path;
+            }
+        }
+
+        // 2. Fallback: Logo de la empresa
+        if (!$logoPath && $empresa && $empresa->logo) {
+            $path = $empresa->logo_path;
+            if ($path && file_exists($path)) {
+                $logoPath = $path;
+            }
+        }
+
         if ($logoPath && file_exists($logoPath)) {
             $logoData = base64_encode(file_get_contents($logoPath));
             $logoType = pathinfo($logoPath, PATHINFO_EXTENSION);

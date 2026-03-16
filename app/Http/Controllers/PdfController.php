@@ -35,14 +35,28 @@ class PdfController extends Controller
             $destinatariosHtml .= $destinatario->datos . ' - DNI: ' . $destinatario->documento . '.<br>';
         }
 
-        // Obtener logo en base64 (empresa o default)
+        $sucursal = $guia->branch;
+
+        // Obtener logo en base64 (sucursal, empresa o default)
         $logoBase64 = null;
-        if ($empresa && $empresa->logo) {
+
+        // 1. Prioridad: Logo de la sucursal
+        if ($sucursal && $sucursal->logo) {
+            $logoFilePath = $sucursal->logo_path ?? null;
+            if ($logoFilePath && file_exists($logoFilePath)) {
+                $logoBase64 = base64_encode(file_get_contents($logoFilePath));
+            }
+        }
+
+        // 2. Si no hay logo de sucursal, usar logo de la empresa
+        if (!$logoBase64 && $empresa && $empresa->logo) {
             $logoFilePath = $empresa->logo_path ?? null;
             if ($logoFilePath && file_exists($logoFilePath)) {
                 $logoBase64 = base64_encode(file_get_contents($logoFilePath));
             }
         }
+
+        // 3. Logo por defecto
         if (!$logoBase64) {
             $defaultLogoPath = public_path('images/scorpion.png');
             if (file_exists($defaultLogoPath)) {
