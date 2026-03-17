@@ -157,7 +157,8 @@ class PdfVentaService
             $altoCalculado = 550 + ($cantidadItems * 30);
             
             // 80mm = 226.77pt, 58mm = 164.4pt
-            $width = ($format === '5.8cm') ? 164.4 : 226.77;
+            // Ajustamos ligeramente hacia abajo (215pt ≈ 76mm) para dar margen seguro
+            $width = ($format === '5.8cm') ? 158 : 215;
             $customPaper = [0, 0, $width, $altoCalculado];
 
             $pdf = Pdf::loadView('pos.pdf_8cm', $viewData)

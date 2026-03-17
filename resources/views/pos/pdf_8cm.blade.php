@@ -11,9 +11,9 @@
         body {
             font-family: "Lucida Console", Monaco, monospace;
             /* Fuente tipo ticketera */
-            font-size: 8.5pt;
+            font-size: 8pt;
             margin: 0;
-            padding: 8px;
+            padding: 4px; /* Reducido de 8px para mejor aprovechamiento */
             line-height: 1.2;
         }
 
@@ -138,11 +138,11 @@
     <table class="table-items">
         <thead>
             <tr class="bold">
-                <td width="10%">CNT</td>
-                <td width="40%">DESCRIPCION</td>
-                <td width="15%" class="text-right">DESC.</td>
-                <td width="15%" class="text-right">P.U.</td>
-                <td width="20%" class="text-right">IMPR.</td>
+                <td width="8%">CNT</td>
+                <td width="42%">DESCRIPCIÓN</td>
+                <td width="10%" class="text-right">DESC.</td>
+                <td width="18%" class="text-right">P.U.</td>
+                <td width="22%" class="text-right">IMPORTE</td>
             </tr>
         </thead>
         <tbody>

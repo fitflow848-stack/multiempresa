@@ -480,7 +480,7 @@ class DeudaController extends Controller
         ];
 
         $pdf = Pdf::loadView('deudas.comprobante_pago', $data)
-            ->setPaper([0, 0, 226, 600], 'portrait');
+            ->setPaper([0, 0, 215, 600], 'portrait');
         return $pdf->stream('recibo_pago_' . $pago->codigo_comprobante . '.pdf');
     }
 }
