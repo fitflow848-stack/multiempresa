@@ -7,19 +7,15 @@
         height: calc(100vh - 65px) !important;
         display: flex;
         flex-direction: row !important;
-        /* Forzar horizontal */
         background: #f4f6f9;
         overflow: hidden;
     }
 
-    /* Estructura Base POS - 3 Columnas Desktop */
-    .pos-container {
-        height: calc(100vh - 65px) !important;
-        display: flex;
-        flex-direction: row !important;
-        background: #f4f6f9;
-        overflow: hidden;
+    /* Si el navbar está oculto, usamos el 100% del alto */
+    .nav-is-hidden .pos-container {
+        height: 100vh !important;
     }
+
 
     .pos-left-sidebar {
         width: 320px;
@@ -108,6 +104,11 @@
             position: relative;
         }
 
+        .nav-is-hidden .pos-container {
+            height: 100vh !important;
+        }
+
+
         .pos-left-sidebar, .pos-center-content, .pos-right-sidebar {
             width: 100% !important;
             min-width: 100% !important;
@@ -184,6 +185,16 @@
         .pos-mobile-nav { display: none !important; }
     }
 </style>
+<script>
+    // Ocultar navbar por defecto en POS
+    (function() {
+        // Forzamos el estado oculto en localStorage para que el script de include/sidebar lo procese
+        localStorage.setItem('navbarHidden', 'true');
+        // Aplicamos la clase al documentElement de inmediato para evitar el salto de altura en el CSS
+        document.documentElement.classList.add('nav-is-hidden');
+    })();
+</script>
+
 
 <!-- NAV INFERIOR PARA MÓVIL -->
 <div class="pos-mobile-nav">
