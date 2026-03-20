@@ -47,7 +47,7 @@
                             <label class="form-label">Usuario</label>
                             <select name="user_id" class="form-select">
                                 <option value="">Todos</option>
-                                @foreach (App\Models\User::orderBy('name')->get() as $u)
+                                @foreach (App\Models\User::where('company_id', auth()->user()->company_id)->orderBy('name')->get() as $u)
                                     <option value="{{ $u->id }}" {{ request('user_id') == $u->id ? 'selected' : '' }}>
                                         {{ $u->name }}
                                     </option>

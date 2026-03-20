@@ -251,16 +251,18 @@ class BalanceController extends Controller
         $cxc = $cxcQuery->sum(DB::raw('monto_deuda'));
 
         // ACTIVOS CORRIENTES (Desde el nuevo módulo)
-        $tiposActivosCorrientes = \App\Models\TipoActivoCorriente::withoutGlobalScopes()->withSum([
-            'activos' => function ($q) use ($user, $fecha, $sucursalId) {
-                $q->withoutGlobalScopes()->where('company_id', $user->company_id)
-                    ->where('is_settled', false) // Solo lo que no está saldado aún
-                    ->whereDate('fecha_registro', '<=', $fecha);
-                if ($sucursalId) {
-                    $q->where('sucursal_id', $sucursalId);
+        $tiposActivosCorrientes = \App\Models\TipoActivoCorriente::withoutGlobalScopes()
+            ->where('company_id', $user->company_id)
+            ->withSum([
+                'activos' => function ($q) use ($user, $fecha, $sucursalId) {
+                    $q->withoutGlobalScopes()->where('company_id', $user->company_id)
+                        ->where('is_settled', false) // Solo lo que no está saldado aún
+                        ->whereDate('fecha_registro', '<=', $fecha);
+                    if ($sucursalId) {
+                        $q->where('sucursal_id', $sucursalId);
+                    }
                 }
-            }
-        ], 'monto')->get();
+            ], 'monto')->get();
 
         // Integrar CxC Automático al tipo correspondiente
         $tipoCxC = $tiposActivosCorrientes->first(function ($item) {
@@ -281,15 +283,17 @@ class BalanceController extends Controller
         $total_activo_corriente = $caja + $inventario + $tiposActivosCorrientes->sum('activos_sum_monto');
 
         // 2. ACTIVO NO CORRIENTE
-        $tiposActivosNoCorrientes = \App\Models\TipoActivo::withoutGlobalScopes()->withSum([
-            'activos' => function ($q) use ($user, $fecha, $sucursalId) {
-                $q->withoutGlobalScopes()->where('company_id', $user->company_id)
-                    ->whereDate('fecha_adquisicion', '<=', $fecha);
-                if ($sucursalId) {
-                    $q->where('sucursal_id', $sucursalId);
+        $tiposActivosNoCorrientes = \App\Models\TipoActivo::withoutGlobalScopes()
+            ->where('company_id', $user->company_id)
+            ->withSum([
+                'activos' => function ($q) use ($user, $fecha, $sucursalId) {
+                    $q->withoutGlobalScopes()->where('company_id', $user->company_id)
+                        ->whereDate('fecha_adquisicion', '<=', $fecha);
+                    if ($sucursalId) {
+                        $q->where('sucursal_id', $sucursalId);
+                    }
                 }
-            }
-        ], 'monto')->get();
+            ], 'monto')->get();
 
         $total_activo_no_corriente = $tiposActivosNoCorrientes->sum('activos_sum_monto');
         $total_activo = $total_activo_corriente + $total_activo_no_corriente;
@@ -298,27 +302,29 @@ class BalanceController extends Controller
         $compras_credito_auto = 0; // Se desactiva la integración automática de Compras (Panel de Compras)
 
         // Obtener Pasivos Manuales
-        $tiposPasivosCorrientes = \App\Models\TipoPasivo::withoutGlobalScopes()->withSum([
-            'pasivos' => function ($q) use ($user, $fecha, $sucursalId) {
-                $q->withoutGlobalScopes()
-                    ->where('company_id', $user->company_id)
-                    ->whereIn('estado', ['aprobado', 'pendiente', 'parcial'])
-                    ->whereDate('fecha_registro', '<=', $fecha);
-                if ($sucursalId) {
-                    $q->where('sucursal_id', $sucursalId);
+        $tiposPasivosCorrientes = \App\Models\TipoPasivo::withoutGlobalScopes()
+            ->where('company_id', $user->company_id)
+            ->withSum([
+                'pasivos' => function ($q) use ($user, $fecha, $sucursalId) {
+                    $q->withoutGlobalScopes()
+                        ->where('company_id', $user->company_id)
+                        ->whereIn('estado', ['aprobado', 'pendiente', 'parcial'])
+                        ->whereDate('fecha_registro', '<=', $fecha);
+                    if ($sucursalId) {
+                        $q->where('sucursal_id', $sucursalId);
+                    }
                 }
-            }
-        ], 'monto')->withSum([
-            'pasivos' => function ($q) use ($user, $fecha, $sucursalId) {
-                $q->withoutGlobalScopes()
-                    ->where('company_id', $user->company_id)
-                    ->whereIn('estado', ['aprobado', 'pendiente', 'parcial'])
-                    ->whereDate('fecha_registro', '<=', $fecha);
-                if ($sucursalId) {
-                    $q->where('sucursal_id', $sucursalId);
+            ], 'monto')->withSum([
+                'pasivos' => function ($q) use ($user, $fecha, $sucursalId) {
+                    $q->withoutGlobalScopes()
+                        ->where('company_id', $user->company_id)
+                        ->whereIn('estado', ['aprobado', 'pendiente', 'parcial'])
+                        ->whereDate('fecha_registro', '<=', $fecha);
+                    if ($sucursalId) {
+                        $q->where('sucursal_id', $sucursalId);
+                    }
                 }
-            }
-        ], 'monto_pagado')->get();
+            ], 'monto_pagado')->get();
 
         // Calcular el neto de cada tipo
         foreach ($tiposPasivosCorrientes as $tipo) {

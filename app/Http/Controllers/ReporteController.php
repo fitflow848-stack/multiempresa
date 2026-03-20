@@ -27,11 +27,12 @@ class ReporteController extends Controller
     public function index()
     {
         // Load data for filters
-        $familias = Familia::all();
-        $vendedores = User::all();
-        $locales = Sucursal::all(); 
+        $company_id = Auth::user()->company_id;
+        $familias = Familia::all(); // Familia has BelongsToCompany trait
+        $vendedores = User::where('company_id', $company_id)->get();
+        $locales = Sucursal::all(); // Sucursal has BelongsToCompany trait
         $tiposPago = \App\Models\TipoPago::all();
-        $clientes = \App\Models\Cliente::orderBy('nombre')->get();
+        $clientes = \App\Models\Cliente::orderBy('nombre')->get(); // Cliente has BelongsToCompany trait
 
         // Types of reports key-value fetch from DB
         $reports = DB::table('reports')->where('active', true)->orderBy('id')->get();
