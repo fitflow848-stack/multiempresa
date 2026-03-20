@@ -2195,12 +2195,13 @@
 
         // Focus al buscador de Nombre/Marca después de agregar producto
         setTimeout(() => {
-            const searchInput = document.querySelector('.secondary-search');
+            const searchInput = document.getElementById('main-search-input');
             if (searchInput) {
                 searchInput.focus();
-                searchInput.select();
+                searchInput.value = ''; // Opcional: limpiar búsqueda anterior
             }
-        }, 100);
+        }, 150);
+
     }
 
     function renderTicket() {
@@ -2270,13 +2271,14 @@
                            onclick="event.stopPropagation()">
                 </td>
                 <td>
-                    <div class="input-group input-group-sm" onclick="event.stopPropagation()">
-                        <span class="input-group-text" style="padding: 2px 4px; font-size: 10px;">S/</span>
+                    <div style="display: flex; align-items: center; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; height: 32px;" onclick="event.stopPropagation()">
+                        <span style="background: #f1f5f9; padding: 0 6px; font-size: 10px; color: #64748b; font-weight: 700; height: 100%; display: flex; align-items: center; border-right: 1px solid #ddd;">S/</span>
                         <input type="number" value="${parseFloat(p.precio || 0).toFixed(2)}" step="0.01" 
-                               style="width: 70px; border: 1px solid #ddd; border-radius: 4px; text-align: center; padding: 2px; font-weight: 600;"
+                               style="width: 70px; border: none; text-align: center; padding: 2px 4px; font-weight: 700; color: #334155; height: 100%; font-size: 13px;"
                                onchange="actualizarPrecio(${idx}, this.value)">
                     </div>
                 </td>
+
                 <td style="font-weight: 800; color: #22c55e;">S/ ${parseFloat(p.importe || 0).toFixed(2)}</td>
                 <td style="text-align: center;">
                     <button onclick="event.stopPropagation(); eliminarLinea(${idx})" 
