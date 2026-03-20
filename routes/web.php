@@ -199,6 +199,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::post('/recibir/seleccionados', [ComprasController::class, 'startBatchReception'])->name('receive.start_batch')->middleware('can:compras.recibir');
         Route::get('/recibir/batch', [ComprasController::class, 'processBatch'])->name('receive.batch')->middleware('can:compras.recibir');
         Route::post('/recibir/batch/next', [ComprasController::class, 'receiveAndNext'])->name('receive.batch.next')->middleware('can:compras.recibir');
+        Route::delete('/{id}', [ComprasController::class, 'destroy'])->name('destroy')->middleware('can:compras.eliminar');
     });
 
     Route::prefix('productos')->name('productos.')->group(function () {

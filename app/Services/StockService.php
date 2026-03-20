@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Log;
 
 class StockService
 {
-    public function decrementarStock(int $almacenDetalleId, int $cantidad): bool
+    public function decrementarStock(int $almacenDetalleId, $cantidad): bool
     {
         if ($cantidad <= 0) return false;
 

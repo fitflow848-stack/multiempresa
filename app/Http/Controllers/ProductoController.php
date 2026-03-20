@@ -252,6 +252,35 @@ class ProductoController extends Controller
             $linesJson = $request->input('product_lines', '[]');
             $lines = json_decode($linesJson, true);
 
+            // Validar códigos duplicados antes de crear cualquier cosa
+            if (is_array($lines) && count($lines) > 0) {
+                foreach ($lines as $ln) {
+                    $cb = $ln['cb'] ?? null;
+                    if (!empty($cb)) {
+                        $companyId = Auth::user()->company_id;
+                        $duplicated = ProductoLinea::where('cb', $cb)
+                            ->whereHas('producto', function ($q) use ($companyId) {
+                                $q->where('id_empresa', $companyId);
+                            })->first();
+
+                        if ($duplicated) {
+                            $prodName = $duplicated->producto->nombre;
+                            $msg = "El código de barras '{$cb}' ya está registrado para otro producto: '{$prodName}'.";
+                            
+                            if (request()->ajax()) {
+                                return response()->json([
+                                    'success' => false,
+                                    'message' => $msg
+                                ], 422);
+                            }
+                            
+                            DB::rollBack();
+                            return redirect()->back()->withInput()->withErrors(['general' => $msg]);
+                        }
+                    }
+                }
+            }
+
             if (is_array($lines) && count($lines) > 0) {
                 // Crear líneas
                 foreach ($lines as $ln) {

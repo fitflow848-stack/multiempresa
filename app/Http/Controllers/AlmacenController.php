@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Models\AlmacenIngreso;
 use App\Models\AlmacenIngresoDetalle;
 use App\Models\Producto;
 use App\Models\ProductoLinea;
@@ -206,45 +207,73 @@ class AlmacenController extends Controller
             'existencias_fisico' => 'required|numeric',
             'precio_compra' => 'required|numeric|min:0',
             'pvp' => 'required|numeric|min:0',
+            'observacion' => 'nullable|string|max:1000',
         ]);
 
         try {
             DB::beginTransaction();
 
             // 2. Localizar el registro original de ingreso
-            $detalle = AlmacenIngresoDetalle::findOrFail($id);
-            $ingreso = $detalle->ingreso;
+            $detalleOriginal = AlmacenIngresoDetalle::findOrFail($id);
+            $ingresoOriginal = $detalleOriginal->ingreso;
 
             // Calculamos el TOTAL actual para este producto/línea en esta sucursal (antes del ajuste)
             $oldTotal = DB::table('almacen_ingreso_detalle as d')
                 ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
-                ->where('d.producto_id', $detalle->producto_id)
-                ->where('d.producto_linea_id', $detalle->producto_linea_id)
-                ->where('i.sucursal_id', $ingreso->sucursal_id)
+                ->where('d.producto_id', $detalleOriginal->producto_id)
+                ->where('d.producto_linea_id', $detalleOriginal->producto_linea_id)
+                ->where('i.sucursal_id', $ingresoOriginal->sucursal_id)
                 ->sum('d.cantidad') ?? 0;
 
-            $newTotal = $request->existencias_fisico;
-            $diferencia = $newTotal - $oldTotal;
+            $newTotal = (float)$request->existencias_fisico;
+            $diferencia = $newTotal - (float)$oldTotal;
 
-            // El nuevo stock para ESTE lote será su cantidad actual + la diferencia global
-            $nuevaCantidadLote = $detalle->cantidad + $diferencia;
+            // SOLO si hay una diferencia en cantidad, creamos un registro de ajuste para el Kardex
+            if (abs($diferencia) > 0.001) {
+                // Generamos un nuevo ingreso tipo 'Ajuste'
+                $ingresoAjuste = AlmacenIngreso::create([
+                    'company_id' => $ingresoOriginal->company_id,
+                    'empresa_id' => $ingresoOriginal->empresa_id,
+                    'sucursal_id' => $ingresoOriginal->sucursal_id,
+                    'user_id' => Auth::id(),
+                    'fecha' => now(),
+                    'observacion' => '[AJUSTE] ' . ($request->observacion ?? 'Ajuste manual de stock')
+                ]);
 
-            // 3. Actualizar el detalle del ingreso
-            $detalle->update([
-                'cantidad' => $nuevaCantidadLote,
-                'costo' => $request->precio_compra,
-                'peso' => $request->peso,
-                'pvp' => $request->pvp,
-                'pvpd' => $request->pvp_dcto,
-                'pvc' => $request->pvc,
-                'pvp_dto' => $request->pvc_dcto,
-                'pv_docena' => $request->pv_docena,
-            ]);
+                AlmacenIngresoDetalle::create([
+                    'ingreso_id' => $ingresoAjuste->id,
+                    'producto_id' => $detalleOriginal->producto_id,
+                    'producto_linea_id' => $detalleOriginal->producto_linea_id,
+                    'cantidad' => $diferencia,
+                    'costo' => $request->precio_compra,
+                    'peso' => $request->peso,
+                    'pvp' => $request->pvp,
+                    'pvpd' => $request->pvp_dcto,
+                    'pvc' => $request->pvc,
+                    'pvc_dto' => $request->pvc_dcto,
+                    'pv_docena' => $request->pv_docena,
+                    'lote' => $detalleOriginal->lote,
+                    'fecha_vencimiento' => $detalleOriginal->fecha_vencimiento,
+                    'stock_min' => $detalleOriginal->stock_min,
+                    'stock_max' => $detalleOriginal->stock_max,
+                ]);
+            } else {
+                // Si la cantidad es la misma, solo actualizamos los datos del registro existente
+                $detalleOriginal->update([
+                    'costo' => $request->precio_compra,
+                    'peso' => $request->peso,
+                    'pvp' => $request->pvp,
+                    'pvpd' => $request->pvp_dcto,
+                    'pvc' => $request->pvc,
+                    'pvc_dto' => $request->pvc_dcto,
+                    'pv_docena' => $request->pv_docena,
+                ]);
+            }
 
             DB::commit();
 
             return redirect()->route('almacen.index')
-                ->with('success', 'El ajuste de existencias se realizó correctamente.');
+                ->with('success', 'El ajuste de existencias se registró correctamente.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors('Error al procesar el ajuste: ' . $e->getMessage());
@@ -352,7 +381,10 @@ class AlmacenController extends Controller
 
         $movimientos = [];
         $producto = null;
-        $fecha_desde = $request->get('fecha_desde', Carbon::now()->subMonths(3)->format('Y-m-d'));
+        $linea_id = $request->get('linea_id');
+        
+        // Por defecto mostramos movimientos de los últimos 30 días si no se especifica
+        $fecha_desde = $request->get('fecha_desde', Carbon::now()->subDays(30)->format('Y-m-d'));
         $fecha_hasta = $request->get('fecha_hasta', Carbon::now()->format('Y-m-d'));
 
         if ($request->has('producto_id')) {
@@ -368,25 +400,56 @@ class AlmacenController extends Controller
                 // Consulta UNION para Entradas, Salidas (Ventas) y Transferencias
                 $movimientos = DB::select("
                     SELECT * FROM (
-                        -- INGRESOS (Compras / Inventario)
+                        -- INGRESOS (Compras / Inventario / Ajustes)
                         SELECT 
                             ai.created_at as fecha,
-                            'ENTRADA' as tipo,
+                            CASE 
+                                WHEN ai.observacion LIKE '[AJUSTE]%' THEN 
+                                    (CASE WHEN (aid.cantidad + 
+                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
+                                        COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
+                                    ) < 0 THEN 'SALIDA (AJUSTE)' ELSE 'ENTRADA (AJUSTE)' END)
+                                ELSE 'ENTRADA' 
+                            END as tipo,
                             s.nombre as sucursal,
-                            CONCAT('Lote: ', COALESCE(aid.lote, '-'), ' / Ingreso #', ai.id, ' ', COALESCE(ai.observacion, '')) as detalle,
-                            (aid.cantidad + 
-                                COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
-                                COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
-                            ) as entrada,
-                            CAST(0 AS DECIMAL(10,2)) as salida,
+                            CONCAT(
+                                'LOTE: ', COALESCE(aid.lote, '-'), 
+                                ' / ', COALESCE(pl.presentacion, ''), 
+                                ' ', COALESCE(pl.concentracion, ''),
+                                ' / ', COALESCE(ai.observacion, 'Ingreso')
+                            ) as detalle,
+                            CASE 
+                                WHEN (aid.cantidad + 
+                                    COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
+                                    COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
+                                ) >= 0 THEN 
+                                    (aid.cantidad + 
+                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
+                                        COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
+                                    ) 
+                                ELSE 0 
+                            END as entrada,
+                            CASE 
+                                WHEN (aid.cantidad + 
+                                    COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
+                                    COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
+                                ) < 0 THEN 
+                                    ABS(aid.cantidad + 
+                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
+                                        COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
+                                    )
+                                ELSE 0 
+                            END as salida,
                             COALESCE(aid.costo, 0) as precio_unitario,
                             u.name as usuario
                         FROM almacen_ingreso_detalle aid
                         JOIN almacen_ingresos ai ON ai.id = aid.ingreso_id
+                        LEFT JOIN producto_lineas pl ON pl.id = aid.producto_linea_id
                         LEFT JOIN sucursales s ON s.id = ai.sucursal_id
                         LEFT JOIN users u ON u.id = ai.user_id
                         WHERE aid.producto_id = :prod_id1
                         AND ai.sucursal_id = :suc1
+                        AND (:line1_check = 0 OR aid.producto_linea_id = :line1_id)
                         {$dateFilter}
 
                         UNION ALL
@@ -396,19 +459,22 @@ class AlmacenController extends Controller
                             v.created_at as fecha,
                             'SALIDA' as tipo,
                             COALESCE(s.nombre, 'N/A') as sucursal,
-                            CONCAT('Venta: ', COALESCE(v.serie, ''), '-', LPAD(COALESCE(v.numero, 0), 8, '0'), ' / ', COALESCE(c.nombre, 'Cliente General')) as detalle,
+                            CONCAT('Venta: ', COALESCE(v.serie, ''), '-', LPAD(COALESCE(v.numero, 0), 8, '0'), ' / ', COALESCE(pl.presentacion, ''), ' ', COALESCE(pl.concentracion, ''), ' / ', COALESCE(c.nombre, 'Cliente General')) as detalle,
                             CAST(0 AS DECIMAL(10,2)) as entrada,
                             CAST(vd.cantidad AS DECIMAL(10,2)) as salida,
                             vd.precio_unitario,
                             u.name as usuario
                         FROM venta_detalles vd
                         JOIN ventas v ON v.id_venta = vd.id_venta
+                        LEFT JOIN almacen_ingreso_detalle aid_lote_v ON aid_lote_v.id = vd.almacen_ingreso_detalle_id
+                        LEFT JOIN producto_lineas pl ON pl.id = aid_lote_v.producto_linea_id
                         LEFT JOIN sucursales s ON s.id = v.sucursal
                         LEFT JOIN clientes c ON c.id = v.id_cliente
                         LEFT JOIN users u ON u.id = v.id_usuario
                         WHERE vd.servicio_id = :prod_id2 
                         AND v.sucursal = :suc2
                         AND v.estado != 0
+                        AND (:line2_check = 0 OR aid_lote_v.producto_linea_id = :line2_id)
                         {$dateFilterV}
 
                         UNION ALL
@@ -418,7 +484,7 @@ class AlmacenController extends Controller
                             t.created_at as fecha,
                             'SALIDA TRANSFERENCIA' as tipo,
                             'SALIDA' as sucursal,
-                            CONCAT('Transferencia a: ', COALESCE(s_dest.nombre, 'Sucursal Destino')) as detalle,
+                            CONCAT('Transferencia a: ', COALESCE(s_dest.nombre, 'Sucursal Destino'), ' / ', COALESCE(pl.presentacion, '')) as detalle,
                             CAST(0 AS DECIMAL(10,2)) as entrada,
                             t.cantidad as salida,
                             CAST(0 AS DECIMAL(10,2)) as precio_unitario,
@@ -426,15 +492,18 @@ class AlmacenController extends Controller
                         FROM almacen_transferencias t
                         LEFT JOIN sucursales s_dest ON s_dest.id = t.sucursal_destino_id
                         LEFT JOIN users u ON u.id = t.user_id
+                        LEFT JOIN almacen_ingreso_detalle aid_lote_t ON aid_lote_t.id = t.origen_lote_id
+                        LEFT JOIN producto_lineas pl ON pl.id = aid_lote_t.producto_linea_id
                         WHERE t.producto_id = :prod_id3
                         AND t.sucursal_origen_id = :suc3
+                        AND (:line3_check = 0 OR aid_lote_t.producto_linea_id = :line3_id)
                         {$dateFilterT}
                     ) as historial
                     ORDER BY fecha ASC
                 ", [
-                    'prod_id1' => $productoId, 'suc1' => $sucursal_id,
-                    'prod_id2' => $productoId, 'suc2' => $sucursal_id,
-                    'prod_id3' => $productoId, 'suc3' => $sucursal_id
+                    'prod_id1' => $productoId, 'suc1' => $sucursal_id, 'line1_check' => $linea_id ? 1 : 0, 'line1_id' => $linea_id,
+                    'prod_id2' => $productoId, 'suc2' => $sucursal_id, 'line2_check' => $linea_id ? 1 : 0, 'line2_id' => $linea_id,
+                    'prod_id3' => $productoId, 'suc3' => $sucursal_id, 'line3_check' => $linea_id ? 1 : 0, 'line3_id' => $linea_id
                 ]);
 
                 // Calcular saldos acumulados (necesario si queremos mostrar en DESC pero con balances correctos)
@@ -449,7 +518,7 @@ class AlmacenController extends Controller
             }
         }
 
-        return view('almacen.kardex', compact('movimientos', 'producto', 'user', 'company', 'sucursales', 'sucursal_id', 'fecha_desde', 'fecha_hasta'));
+        return view('almacen.kardex', compact('movimientos', 'producto', 'user', 'company', 'sucursales', 'sucursal_id', 'fecha_desde', 'fecha_hasta', 'linea_id'));
     }
     // --- TRANSFERENCIAS ENTRE SUCURSALES ---
 

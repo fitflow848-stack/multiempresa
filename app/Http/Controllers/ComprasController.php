@@ -83,7 +83,10 @@ class ComprasController extends Controller
             $acciones = '';
             $acciones .= '<a href="' . route('compras.show', $r->id) . '" class="btn btn-sm btn-primary me-1">Ver</a>';
             if (! $r->received_at) {
-                $acciones .= '<a href="' . route('compras.receive', $r->id) . '" class="btn btn-sm btn-warning">Recibir</a>';
+                $acciones .= '<a href="' . route('compras.receive', $r->id) . '" class="btn btn-sm btn-warning me-1">Recibir</a>';
+            }
+            if (Auth::user()->can('compras.eliminar')) {
+                $acciones .= '<button class="btn btn-sm btn-danger btn-delete-compra" data-id="' . $r->id . '" title="Eliminar compra"><i class="bx bxs-trash"></i></button>';
             }
             return [
                 'id' => $r->id,
@@ -451,5 +454,51 @@ class ComprasController extends Controller
 
         session(['compras_receive_index' => $index]);
         return redirect()->route('compras.receive.batch');
+    }
+
+    /**
+     * Delete purchase and revert stock if already received
+     */
+    public function destroy($id)
+    {
+        DB::beginTransaction();
+        try {
+            $compra = Compra::with(['lineas', 'ingresos.detalles'])->where('company_id', Auth::user()->company_id)->findOrFail($id);
+
+            // 1. Si ya fue recibida, revertimos stock
+            if ($compra->recibido) {
+                foreach ($compra->lineas as $line) {
+                    if ($line->product_id) {
+                        $producto = Producto::find($line->product_id);
+                        if ($producto) {
+                            $producto->cantidad = (float)max(0, (float)($producto->cantidad ?? 0) - (float)$line->cantidad);
+                            $producto->save();
+                        }
+                    }
+                }
+
+                // 2. Eliminar registros de AlmacenIngreso vinculados
+                foreach ($compra->ingresos as $ingreso) {
+                    $ingreso->detalles()->delete();
+                    $ingreso->delete();
+                }
+            }
+
+            // 3. Eliminar la compra (líneas se borran por cascada)
+            $compra->delete();
+
+            DB::commit();
+            return response()->json([
+                'success' => true,
+                'message' => 'Compra eliminada y stock revertido correctamente.'
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error eliminando compra: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

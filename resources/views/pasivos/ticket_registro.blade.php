@@ -91,8 +91,11 @@
 
     <div class="divider"></div>
 
-    <div class="total">
-        MONTO TOTAL: S/ {{ number_format($pasivo->monto, 2) }}
+    <div class="total" style="text-align: left; font-size: 11px;">
+        MONTO TOTAL: S/ {{ number_format($pasivo->monto, 2) }}<br>
+        MONTO PAGADO: S/ {{ number_format($pasivo->monto_pagado ?? 0, 2) }}<br>
+        <div class="divider"></div>
+        SALDO PENDIENTE: S/ {{ number_format($pasivo->saldo, 2) }}
     </div>
 
     @if ($pasivo->observaciones)

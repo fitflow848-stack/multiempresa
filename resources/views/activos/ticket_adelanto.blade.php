@@ -90,8 +90,11 @@
 
     <div class="divider"></div>
 
-    <div class="total">
-        MONTO ADELANTADO: S/ {{ number_format($activo->monto, 2) }}
+    <div class="total" style="text-align: left; font-size: 11px;">
+        MONTO ADELANTADO: S/ {{ number_format($activo->monto, 2) }}<br>
+        MONTO SALDADO: S/ {{ $activo->is_settled ? number_format($activo->monto, 2) : '0.00' }}<br>
+        <div class="divider"></div>
+        SALDO : S/ {{ $activo->is_settled ? '0.00' : number_format($activo->monto, 2) }}
     </div>
 
     @if ($activo->observaciones)

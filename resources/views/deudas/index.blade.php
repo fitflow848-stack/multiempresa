@@ -71,16 +71,10 @@
                 <form method="GET" action="{{ route('deudas.index') }}">
                     <div class="row">
                         <div class="col-md-3">
-                            <label>Cliente</label>
-                            <select name="cliente_id" class="form-control">
-                                <option value="">Todos los clientes</option>
-                                @foreach ($clientes as $cliente)
-                                    <option value="{{ $cliente->id }}"
-                                        {{ request('cliente_id') == $cliente->id ? 'selected' : '' }}>
-                                        {{ $cliente->nombre }} - {{ $cliente->numero_documento }}
-                                    </option>
-                                @endforeach
-                            </select>
+                            <label>Buscar Cliente</label>
+                            <input type="text" name="search" class="form-control" 
+                                placeholder="Nombre o Nro. Documento..." 
+                                value="{{ request('search') }}">
                         </div>
                         <div class="col-md-2">
                             <label>Estado</label>

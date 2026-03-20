@@ -95,6 +95,11 @@
                             value="{{ old('pv_docena', $producto['pv_docena'] ?? '') }}">
                     </div>
 
+                    <div class="col-12">
+                        <label class="form-label">Observación</label>
+                        <textarea name="observacion" class="form-control" rows="2" placeholder="Ej: Ajuste por rotura, ingreso inicial, etc.">{{ old('observacion') }}</textarea>
+                    </div>
+
                     <div class="col-12 d-flex gap-2 mt-3">
                         <button type="submit" class="btn btn-primary">Guardar Ajuste</button>
                         <a href="{{ route('almacen.index') }}" class="btn btn-secondary">Cancelar</a>

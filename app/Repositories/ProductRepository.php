@@ -99,8 +99,8 @@ class ProductRepository
         
         return DB::select("SELECT
                     ad.id,
-                    CONCAT('LOTE-', ad.id) as lote,
-                    NULL as fecha_vencimiento,
+                    COALESCE(ad.lote, CONCAT('LOTE-', ad.id)) as lote,
+                    ad.fecha_vencimiento,
                     ad.cantidad,
                     ad.pvp,
                     ad.pvc,
@@ -136,7 +136,7 @@ class ProductRepository
         return DB::select("SELECT
                     ad.id,
                     ad.producto_linea_id,
-                    CONCAT('LOTE-', ad.id) as lote,
+                    COALESCE(ad.lote, CONCAT('LOTE-', ad.id)) as lote,
                     ad.fecha_vencimiento as fecha_vencimiento,
                     ad.cantidad,
                     ad.pvp,

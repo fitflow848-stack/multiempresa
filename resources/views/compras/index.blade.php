@@ -277,6 +277,42 @@
                     table.ajax.reload();
                 });
 
+                // Delegación de eventos para el botón eliminar
+                $(document).on('click', '.btn-delete-compra', function() {
+                    const id = $(this).data('id');
+                    Swal.fire({
+                        title: '¿Eliminar compra?',
+                        text: "Esta acción revertirá el stock si la compra fue recibida y es irreversible.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Sí, eliminar',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            $.ajax({
+                                url: `{{ url('compras') }}/${id}`,
+                                type: 'DELETE',
+                                data: {
+                                    _token: '{{ csrf_token() }}'
+                                },
+                                success: function(response) {
+                                    if (response.success) {
+                                        Swal.fire('¡Eliminado!', response.message, 'success');
+                                        table.ajax.reload();
+                                    } else {
+                                        Swal.fire('Error', response.message, 'error');
+                                    }
+                                },
+                                error: function(xhr) {
+                                    Swal.fire('Error', 'No se pudo completar la operación.', 'error');
+                                }
+                            });
+                        }
+                    });
+                });
+
                 // Función para actualizar estadísticas (simulada)
                 function updateStats() {
                     // En una implementación real, estos valores vendrían del servidor

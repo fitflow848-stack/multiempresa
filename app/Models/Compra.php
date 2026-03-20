@@ -41,6 +41,11 @@ class Compra extends Model
         return $this->belongsTo(User::class, 'id_usuario');
     }
 
+    public function ingresos()
+    {
+        return $this->hasMany(AlmacenIngreso::class, 'compra_id');
+    }
+
     public function almacen()
     {
         return $this->belongsTo(Sucursal::class, 'local_destino');

@@ -18,9 +18,15 @@ class AlmacenIngreso extends Model
         'empresa_id',
         'sucursal_id',
         'user_id',
+        'compra_id',
         'fecha',
         'observacion'
     ];
+
+    public function compra()
+    {
+        return $this->belongsTo(Compra::class, 'compra_id');
+    }
 
     public function detalles()
     {

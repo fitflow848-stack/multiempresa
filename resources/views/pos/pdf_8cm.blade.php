@@ -26,7 +26,7 @@
         }
 
         .uppercase {
-            text-transform: uppercase;
+            /* text-transform: uppercase; */ /* Comentado para ahorrar espacio según pedido del usuario */
         }
 
         /* Encabezado */
@@ -56,7 +56,8 @@
 
         .table-items td {
             vertical-align: top;
-            padding: 2px 0;
+            padding: 2px 2px;
+            font-size: 7.5pt;
         }
 
         .text-right {
@@ -144,21 +145,23 @@
     <table class="table-items">
         <thead>
             <tr class="bold">
-                <td width="8%">CNT</td>
-                <td width="42%">DESCRIPCIÓN</td>
-                <td width="10%" class="text-right">DESC.</td>
-                <td width="18%" class="text-right">P.U.</td>
-                <td width="22%" class="text-right">IMPORTE</td>
+                <td width="10%">Cant</td>
+                <td width="40%">Descripción</td>
+                <td width="15%" class="text-right">Desc.</td>
+                <td width="15%" class="text-right">P.U.</td>
+                <td width="20%" class="text-right">Total</td>
             </tr>
         </thead>
         <tbody>
             @foreach ($servicios as $item)
                 <tr>
-                    <td>{{ number_format($item->cantidad, 0) }}</td>
-                    <td class="uppercase">{{ str_replace('(Marca: ', '/ ', str_replace(')', '', $item->nombre_servicio ?? $item->descripcion)) }}</td>
+                    <td>{{ number_format($item->cantidad, 2) }}</td>
+                    <td style="font-size: 7.5pt; line-height: 1.1;">
+                        {{ $item->nombre_servicio ?? $item->descripcion }}
+                    </td>
                     <td class="text-right">{{ number_format(($item->precio_unitario * $item->cantidad) - $item->importe, 2) }}</td>
                     <td class="text-right">{{ number_format($item->precio_unitario, 2) }}</td>
-                    <td class="text-right">{{ number_format($item->importe, 2) }}</td>
+                    <td class="text-right" style="font-weight: bold;">{{ number_format($item->importe, 2) }}</td>
                 </tr>
             @endforeach
         </tbody>

@@ -24,7 +24,7 @@ class PdfVentaService
         $venta = Venta::with(['deuda', 'user', 'tipoPago', 'sucursal_ref'])->where('id_venta', $id)->first();
         if (!$venta) return null;
 
-        $servicios = VentaDetalle::where('id_venta', $id)->ordenado()->get();
+        $servicios = VentaDetalle::with('almacenIngresoDetalle')->where('id_venta', $id)->ordenado()->get();
 
         // Cliente por defecto (VARIOS) o real
         if ($venta->id_cliente == 999999) {

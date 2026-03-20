@@ -13,13 +13,19 @@
                 <form action="{{ route('almacen.kardex') }}" method="GET" class="mb-4">
                     <div class="row">
                         <div class="col-md-4">
-                            <label for="producto_id" class="form-label">Producto:</label>
+                            <label for="producto_id" class="form-label">Producto / Presentación:</label>
+                            <input type="hidden" name="linea_id" id="linea_id" value="{{ request('linea_id') }}">
                             <select class="form-control select2-producto" name="producto_id" required style="width: 100%;">
                                 @if ($producto)
-                                    <option value="{{ $producto->id }}">{{ $producto->nombre }}
-                                        ({{ $producto->codigo_barras }})</option>
+                                    <option value="{{ $producto->id }}" selected>
+                                        {{ $producto->nombre }} 
+                                        {{ request('linea_nombre') ? '- ' . request('linea_nombre') : '' }}
+                                        ({{ request('linea_codigo') ?? $producto->codigo_barras }})
+                                    </option>
                                 @endif
                             </select>
+                            <input type="hidden" name="linea_nombre" id="linea_nombre" value="{{ request('linea_nombre') }}">
+                            <input type="hidden" name="linea_codigo" id="linea_codigo" value="{{ request('linea_codigo') }}">
                         </div>
                         <div class="col-md-3">
                             <label for="sucursal_id" class="form-label">Sucursal / Local:</label>
@@ -152,15 +158,32 @@
                     processResults: function(data) {
                         return {
                             results: $.map(data, function(item) {
+                                let label = item.nombre;
+                                if(item.presentacion) label += ' - ' + item.presentacion;
+                                if(item.concentracion) label += ' (' + item.concentracion + ')';
+                                label += ' [' + item.cb + ']';
+
                                 return {
-                                    text: item.nombre + (item.cb ? ' (' + item.cb + ')' : ''),
-                                    id: item.id
+                                    text: label,
+                                    id: item.id,
+                                    linea_id: item.linea_id,
+                                    linea_nombre: item.presentacion,
+                                    linea_codigo: item.cb
                                 }
                             })
                         };
                     },
                     cache: true
                 }
+            }).on('select2:select', function (e) {
+                var data = e.params.data;
+                $('#linea_id').val(data.linea_id);
+                $('#linea_nombre').val(data.linea_nombre);
+                $('#linea_codigo').val(data.linea_codigo);
+            }).on('select2:unselect', function (e) {
+                $('#linea_id').val('');
+                $('#linea_nombre').val('');
+                $('#linea_codigo').val('');
             });
         });
     </script>

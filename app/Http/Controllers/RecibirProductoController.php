@@ -106,6 +106,7 @@ class RecibirProductoController extends Controller
                 'empresa_id' => Auth::user()->company_id,
                 'sucursal_id' => $sucursalId,
                 'user_id' => Auth::id(),
+                'compra_id' => $request->compraId,
                 'fecha' => now(),
                 'observacion' => $request->observacion
             ]);

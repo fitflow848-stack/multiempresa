@@ -296,7 +296,7 @@
                            title="${escapeHtml(product.nombre || '')}" readonly>
                 </td>
                 <td>
-                    <input name="cantidad[]" type="number" step="1" min="1" 
+                    <input name="cantidad[]" type="number" step="any" min="0" 
                            class="form-control form-control-sm text-center cantidad-input" value="${cantidad}">
                 </td>
                 <td>
@@ -352,33 +352,7 @@
                 console.log('Producto agregado desde modal con todos los campos:', product);
             }
 
-            // remove
-            $(document).on('click', '.btn-remove-line', function() {
-                $(this).closest('tr').remove();
-
-                // Show no-products message if no products left
-                if ($('#productos-tbody tr:not(#no-products)').length === 0) {
-                    $('#no-products').show();
-                }
-
-                // Call the global function to recalculate totals
-                if (window.calculateTotals) {
-                    window.calculateTotals();
-                }
-
-                // renumber rows
-                $('#productos-tbody tr:not(#no-products)').each(function(i, tr) {
-                    $(tr).find('td:first').html((i + 1) +
-                        '<input type="hidden" name="product_id[]" value="' +
-                        $(tr).find('input[name="product_id[]"]').val() + '">');
-                });
-
-                // Auto-guardar después de eliminar producto
-                if (window.autoSaveCompraData) {
-                    setTimeout(window.autoSaveCompraData, 500);
-                    console.log('Auto-guardado ejecutado después de eliminar producto');
-                }
-            });
+            // Se eliminó el listener de .btn-remove-line para usar el unificado en compras/create.blade.php
 
             // recalc on input changes
             $(document).on('input change', '.cantidad-input, .costo-input, .descuento-input', function() {

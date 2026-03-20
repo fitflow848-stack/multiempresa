@@ -921,7 +921,7 @@
             const pvp = parseFloat(p.pvp || 0).toFixed(2);
             const pvc = parseFloat(p.pvc || 0).toFixed(2);
             const pvd = parseFloat(p.pvpd || 0).toFixed(2);
-            const stock = parseInt(p.cantidad_total || 0);
+            const stock = parseFloat(p.cantidad_total || 0).toFixed(2);
             const marca = p.marca || '-';
             const fVenc = p.fecha_vencimiento ? p.fecha_vencimiento.split(' ')[0].split('-').reverse().join('/') : '-';
 
@@ -2281,8 +2281,7 @@
                 tr.style.borderLeft = '3px solid #ef4444';
             }
 
-            const stockDisplay = p.cantidad_total ?
-                `${parseInt(p.cantidad_total)} NIU${indicadorLotes}${indicadorStockBajo}` : '';
+            const stockDisplay = p.cantidad_total ? `${parseFloat(p.cantidad_total).toFixed(2)} NIU${indicadorLotes}${indicadorStockBajo}` : '';
 
             tr.innerHTML = `
                                                 <td style="position: relative; padding: 6px 8px;">
