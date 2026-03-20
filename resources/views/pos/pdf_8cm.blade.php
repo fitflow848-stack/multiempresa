@@ -129,6 +129,12 @@
             <td class="bold">Método Pago:</td>
             <td class="uppercase">{{ $venta->tipoPago->nombre ?? 'EFECTIVO' }}</td>
         </tr>
+        @if($venta->fecha_vencimiento && $venta->fecha_vencimiento->format('Y-m-d') !== ($venta->fecha_emision ?? $venta->fecha)->format('Y-m-d'))
+        <tr>
+            <td class="bold">Fecha V.:</td>
+            <td>{{ $venta->fecha_vencimiento->format('d/m/Y') }}</td>
+        </tr>
+        @endif
         <tr>
             <td class="bold">Cajero:</td>
             <td>{{ $venta->user->name ?? '-' }}</td>

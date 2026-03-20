@@ -83,8 +83,18 @@ class PosController extends Controller
         }
 
         $isAdmin = $user->isAdmin();
+        $metodos = TipoPago::where('activo', true)->orderBy('orden')->get();
 
-        return view('pos.index', compact('user', 'company', 'sucursales', 'cotizacionData', 'logo', 'isAdmin'));
+        // Obtener documentos autorizados para la empresa y sucursal (Solo Boleta, Factura, Nota Venta, Ticket)
+        $documentos = DB::table('company_documents')
+            ->join('documentos_sunat', 'company_documents.sunat_document_id', '=', 'documentos_sunat.id_tido')
+            ->where('company_documents.company_id', $company->id)
+            ->where('company_documents.branch_id', $user->branch_id)
+            ->whereIn('documentos_sunat.id_tido', [1, 2, 6, 13]) // IDs específicos autorizados
+            ->select('documentos_sunat.id_tido', 'documentos_sunat.nombre', 'company_documents.series', 'company_documents.number')
+            ->get();
+
+        return view('pos.index', compact('user', 'company', 'sucursales', 'cotizacionData', 'logo', 'isAdmin', 'metodos', 'documentos'));
     }
 
     public function buscar(Request $request)
@@ -219,6 +229,7 @@ class PosController extends Controller
                 'observaciones' => $request->observaciones ?? '',
                 'proforma' => $request->proforma ?? 0,
                 'id_coti' => $request->id_coti ?? null,
+                'plazo_dias' => $request->plazo_dias ?? 30,
             ];
             // $request->ticket y $request->cliente se pasan tal cual (el service decodifica si es string)
             $venta = $this->ventaService->crearVentaDesdeTicket($request->ticket, $request->cliente, $meta);

@@ -1,7 +1,12 @@
 <script>
     autoSaveInterval = null;
-    const AUTOSAVE_KEY = 'ventaPersistentePOS';
-    const CLIENTE_KEY = 'clientePersistentePOS';
+    // Uso de var para evitar errores si se incluye el script más de una vez
+    if (typeof AUTOSAVE_KEY === 'undefined') {
+        var AUTOSAVE_KEY = 'ventaPersistentePOS';
+    }
+    if (typeof CLIENTE_KEY === 'undefined') {
+        var CLIENTE_KEY = 'clientePersistentePOS';
+    }
 
     // ========== SISTEMA DE PERSISTENCIA DE VENTAS ==========
 
@@ -124,6 +129,12 @@
     // Función para limpiar venta persistente al completar venta exitosamente
     function limpiarVentaCompletada() {
         try {
+            // Limpiar datos en memoria para evitar que se re-guarden en onbeforeunload
+            if (typeof ticket !== 'undefined') ticket = [];
+            if (typeof clienteActual !== 'undefined') {
+                clienteActual = { id: '', nombre: 'CLIENTE VARIOS', documento: '' };
+            }
+
             // Limpiar venta persistente
             localStorage.removeItem(AUTOSAVE_KEY);
 
@@ -185,9 +196,11 @@
                 try {
                     clienteActual = JSON.parse(clienteGuardado);
 
-                    // Actualizar UI del cliente
-                    document.getElementById('cliente-info-nombre').textContent = clienteActual.nombre;
-                    document.getElementById('cliente-info-documento').textContent = clienteActual.documento || '';
+                    // Actualizar UI del cliente con validación de existencia
+                    const nombreEl = document.getElementById('cliente-info-nombre');
+                    const docEl = document.getElementById('cliente-info-documento');
+                    if (nombreEl) nombreEl.textContent = clienteActual.nombre;
+                    if (docEl) docEl.textContent = clienteActual.documento || '';
 
                     // Limpiar cliente guardado
                     sessionStorage.removeItem('clienteGuardadoPOS');
@@ -228,9 +241,12 @@
                 const cliente = JSON.parse(clienteData);
                 clienteActual = cliente;
 
-                // Actualizar UI del cliente en el footer
-                document.getElementById('footer-cliente').innerText = `${cliente.nombre} - ${cliente.numero_documento || cliente.documento || ''}`;
-
+                // Actualizar UI del cliente en el footer con validación
+                const footerCliente = document.getElementById('footer-cliente');
+                if (footerCliente) {
+                    footerCliente.innerText = `${cliente.nombre} - ${cliente.numero_documento || cliente.documento || ''}`;
+                }
+                
                 // Actualizar también en el área de cliente si existe
                 const clienteNombre = document.getElementById('cliente-info-nombre');
                 const clienteDoc = document.getElementById('cliente-info-documento');
@@ -259,7 +275,10 @@
             if (clienteGuardado) {
                 try {
                     clienteActual = JSON.parse(clienteGuardado);
-                    document.getElementById('footer-cliente').innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento || clienteActual.documento || ''}`;
+                    const fCliente = document.getElementById('footer-cliente');
+                    if (fCliente) {
+                        fCliente.innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento || clienteActual.documento || ''}`;
+                    }
                     sessionStorage.removeItem('clienteGuardadoPOS');
                 } catch (error) {
                     console.error('Error al restaurar cliente guardado:', error);

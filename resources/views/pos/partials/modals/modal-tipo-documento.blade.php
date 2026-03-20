@@ -10,49 +10,40 @@
 
         <!-- Lista de tipos de documento -->
         <div style="padding: 20px;">
-            <div class="tipo-documento-option" onclick="seleccionarTipoDocumento('ticket')"
-                style="display: flex; align-items: center; padding: 12px 15px; margin: 8px 0; background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
-                <div
-                    style="background: #6f42c1; color: white; padding: 8px 12px; border-radius: 4px; margin-right: 12px; font-weight: bold; min-width: 60px; text-align: center;">
-                    📄 [1]</div>
-                <div>
-                    <div style="font-weight: 600; color: #495057;">Ticket</div>
-                    <div style="font-size: 12px; color: #6c757d;">Comprobante interno</div>
+            @foreach($documentos as $idx => $doc)
+                @php
+                    $docName = strtolower($doc->nombre);
+                    $val = 'boleta';
+                    $icon = '🧾';
+                    $color = '#17a2b8';
+                    $desc = 'Comprobante estándar';
+                    
+                    if (str_contains($docName, 'boleta')) { 
+                        $val = 'boleta'; $icon = '🧾'; $color = '#17a2b8'; $desc = 'Para personas naturales';
+                    } elseif (str_contains($docName, 'factura')) { 
+                        $val = 'factura'; $icon = '📊'; $color = '#28a745'; $desc = 'Para empresas con RUC';
+                    } elseif (str_contains($docName, 'nota de venta') || str_contains($docName, 'nota venta')) { 
+                        $val = 'ticket'; $icon = '📝'; $color = '#20c997'; $desc = 'Documento informativo (Nota)';
+                    } elseif (str_contains($docName, 'ticket')) { 
+                        $val = 'ticket'; $icon = '📄'; $color = '#6f42c1'; $desc = 'Comprobante interno';
+                    }
+                @endphp
+                <div class="tipo-documento-option" onclick="seleccionarTipoDocumento('{{ $val }}')"
+                     data-id-tido="{{ $doc->id_tido }}"
+                     style="display: flex; align-items: center; padding: 12px 15px; margin: 8px 0; background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
+                    <div style="background: {{ $color }}; color: white; padding: 8px 12px; border-radius: 4px; margin-right: 12px; font-weight: bold; min-width: 60px; text-align: center;">
+                        {{ $icon }} [{{ $idx + 1 }}]
+                    </div>
+                    <div>
+                        <div style="font-weight: 600; color: #495057;">{{ $doc->nombre }}</div>
+                        <div style="font-size: 12px; color: #6c757d;">{{ $desc }}</div>
+                    </div>
                 </div>
-            </div>
+            @endforeach
 
-            <div class="tipo-documento-option" onclick="seleccionarTipoDocumento('boleta')"
-                style="display: flex; align-items: center; padding: 12px 15px; margin: 8px 0; background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
-                <div
-                    style="background: #17a2b8; color: white; padding: 8px 12px; border-radius: 4px; margin-right: 12px; font-weight: bold; min-width: 60px; text-align: center;">
-                    🧾 [2]</div>
-                <div>
-                    <div style="font-weight: 600; color: #495057;">Boleta</div>
-                    <div style="font-size: 12px; color: #6c757d;">Para personas naturales</div>
-                </div>
-            </div>
-
-            <div class="tipo-documento-option" onclick="seleccionarTipoDocumento('factura')"
-                style="display: flex; align-items: center; padding: 12px 15px; margin: 8px 0; background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
-                <div
-                    style="background: #28a745; color: white; padding: 8px 12px; border-radius: 4px; margin-right: 12px; font-weight: bold; min-width: 60px; text-align: center;">
-                    📊 [3]</div>
-                <div>
-                    <div style="font-weight: 600; color: #495057;">Factura</div>
-                    <div style="font-size: 12px; color: #6c757d;">Para empresas con RUC</div>
-                </div>
-            </div>
-
-            <div class="tipo-documento-option" onclick="seleccionarTipoDocumento('nota-venta')"
-                style="display: flex; align-items: center; padding: 12px 15px; margin: 8px 0; background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
-                <div
-                    style="background: #20c997; color: white; padding: 8px 12px; border-radius: 4px; margin-right: 12px; font-weight: bold; min-width: 60px; text-align: center;">
-                    📝 [4]</div>
-                <div>
-                    <div style="font-weight: 600; color: #495057;">Nota Venta</div>
-                    <div style="font-size: 12px; color: #6c757d;">Documento informativo</div>
-                </div>
-            </div>
+            @if($documentos->isEmpty())
+                <div style="text-align: center; color: #888;">No hay documentos configurados para esta sucursal.</div>
+            @endif
         </div>
 
         <!-- Footer -->
@@ -67,10 +58,11 @@
     document.addEventListener('keydown', function(e) {
         const modal = document.getElementById('modal-tipo-documento');
         if (modal && modal.style.display === 'flex') {
-            if (e.key === '1') seleccionarTipoDocumento('ticket');
-            else if (e.key === '2') seleccionarTipoDocumento('boleta');
-            else if (e.key === '3') seleccionarTipoDocumento('factura');
-            else if (e.key === '4') seleccionarTipoDocumento('nota-venta');
+            const options = Array.from(modal.querySelectorAll('.tipo-documento-option'));
+            const keyNum = parseInt(e.key);
+            if (!isNaN(keyNum) && keyNum > 0 && keyNum <= options.length) {
+                options[keyNum - 1].click();
+            }
         }
     });
 </script>

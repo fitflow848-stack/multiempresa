@@ -36,6 +36,7 @@
                 // LIMPIAR VENTA PERSISTENTE
                 localStorage.removeItem(AUTOSAVE_KEY);
                 sessionStorage.removeItem(AUTOSAVE_KEY);
+                window.pagaConManual = false;
 
                 // Detener auto-guardado
                 if (autoSaveInterval) {
@@ -121,6 +122,7 @@
                 
                 // TAMBIÉN LIMPIAR PERSISTENCIA
                 localStorage.removeItem(AUTOSAVE_KEY);
+                window.pagaConManual = false;
 
                 // Renderizar ticket vacío
                 renderTicket();

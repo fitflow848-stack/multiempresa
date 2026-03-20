@@ -103,7 +103,18 @@
         }
 
         clienteActual = clienteSeleccionado;
-        document.getElementById('footer-cliente').innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento}`;
+        
+        // Helper para actualizar UI de forma segura
+        const updateUI = (id, text) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = text;
+        };
+
+        const displayStr = `${clienteActual.nombre} - ${clienteActual.numero_documento || ''}`;
+        updateUI('footer-cliente', displayStr);
+        updateUI('cliente-info-nombre', clienteActual.nombre);
+        updateUI('cliente-info-documento', clienteActual.numero_documento || '');
+
         mostrarNotificacion(`Cliente seleccionado: ${clienteActual.nombre}`);
         cerrarBuscadorClientes();
 
@@ -121,9 +132,10 @@
         clienteActual = clienteSeleccionado;
 
         // Actualizar UI del cliente en ambos lugares
-        document.getElementById('footer-cliente').innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento}`;
+        const displayStr = `${clienteActual.nombre} - ${clienteActual.numero_documento || ''}`;
+        const footerEl = document.getElementById('footer-cliente');
+        if (footerEl) footerEl.innerText = displayStr;
 
-        // Actualizar también en el área de cliente si existe
         const clienteNombre = document.getElementById('cliente-info-nombre');
         const clienteDoc = document.getElementById('cliente-info-documento');
         if (clienteNombre) clienteNombre.textContent = clienteActual.nombre;
@@ -208,7 +220,12 @@
                     };
 
                     clienteActual = nuevoCliente;
-                    document.getElementById('footer-cliente').innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento}`;
+                    const footerCliente = document.getElementById('footer-cliente');
+                    if (footerCliente) footerCliente.innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento}`;
+                    
+                    const clienteNombre = document.getElementById('cliente-info-nombre');
+                    if (clienteNombre) clienteNombre.textContent = clienteActual.nombre;
+                    
                     mostrarNotificacion(`Cliente creado desde RENIEC: ${clienteActual.nombre}`);
                     cerrarModalClienteDNI();
                     cerrarBuscadorClientes();
@@ -281,7 +298,12 @@
             .then(data => {
                 if (data.success) {
                     clienteActual = data.data;
-                    document.getElementById('footer-cliente').innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento}`;
+                    const footerCliente = document.getElementById('footer-cliente');
+                    if (footerCliente) footerCliente.innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento}`;
+                    
+                    const clienteNombre = document.getElementById('cliente-info-nombre');
+                    if (clienteNombre) clienteNombre.textContent = clienteActual.nombre;
+
                     mostrarNotificacion(`Cliente registrado: ${clienteActual.nombre}`);
                     cerrarModalNuevoCliente();
                     cerrarBuscadorClientes();
@@ -325,12 +347,14 @@
                             email: data.email || ''
                         };
 
-                        // Actualizar UI
-                        document.getElementById('footer-cliente').innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento}`;
+                        // Actualizar UI de forma segura
+                        const footerCliente = document.getElementById('footer-cliente');
+                        if (footerCliente) footerCliente.innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento || ''}`;
+                        
                         const clienteNombre = document.getElementById('cliente-info-nombre');
                         const clienteDoc = document.getElementById('cliente-info-documento');
                         if (clienteNombre) clienteNombre.textContent = clienteActual.nombre;
-                        if (clienteDoc) clienteDoc.textContent = clienteActual.numero_documento;
+                        if (clienteDoc) clienteDoc.textContent = clienteActual.numero_documento || '';
 
                         mostrarNotificacion('✅ Cliente contable configurado');
                         console.log('Cliente contable encontrado:', clienteActual);
@@ -368,7 +392,14 @@
         if (clienteDoc) clienteDoc.textContent = '00000000';
 
         const footerCliente = document.getElementById('footer-cliente');
-        if (footerCliente) footerCliente.innerText = 'CLIENTE CONTABLE - 00000000';
+        if (footerCliente) {
+            footerCliente.innerHTML = `
+                <div class="client-info-container">
+                    <div class="client-info-text" id="cliente-info-nombre">CLIENTE CONTABLE</div>
+                    <div id="cliente-info-documento" class="client-doc-text">00000000</div>
+                </div>
+            `;
+        }
 
         console.log('Cliente contable temporal configurado');
         mostrarNotificacion('⚠️ Cliente contable temporal configurado');

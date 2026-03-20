@@ -161,7 +161,11 @@
                 </tr>
                 <tr>
                     <td style="font-weight:bold;">Cond. de Pago</td>
-                    <td>: {{ $venta->condicion_pago }}</td>
+                    <td>: {{ $venta->condiciones_pago }}</td>
+                    @if($venta->fecha_vencimiento && $venta->fecha_vencimiento->format('Y-m-d') !== $venta->fecha_emision->format('Y-m-d'))
+                        <td style="font-weight:bold;">Fecha Venc.</td>
+                        <td>: {{ $venta->fecha_vencimiento->format('d/m/Y') }}</td>
+                    @endif
                 </tr>
                 <tr>
                     <td style="font-weight:bold;">RUC / DNI</td>

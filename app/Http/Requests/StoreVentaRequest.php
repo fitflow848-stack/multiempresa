@@ -27,6 +27,7 @@ class StoreVentaRequest extends FormRequest
             'numero' => 'required|string',
             'observaciones' => 'nullable|string',
             'proforma' => 'nullable|integer',
+            'plazo_dias' => 'nullable|integer|min:1',
         ];
     }
 }

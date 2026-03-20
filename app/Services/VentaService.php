@@ -95,10 +95,10 @@ class VentaService
                     ->whereNull('fecha_cierre')
                     ->get();
 
-                if ($openCajas->count() === 1) {
-                    $openCaja = $openCajas->latest()->first();
+                if ($openCajas->count() == 1) {
+                    $openCaja = $openCajas->first();
                 } elseif ($openCajas->count() > 1) {
-                    throw new Exception('Tienes múltiples cajas abiertas. Por favor, selecciona una en la barra superior.');
+                    $openCaja = $openCajas->sortByDesc('id')->first();
                 }
             }
 
@@ -166,6 +166,10 @@ class VentaService
                 ->where('nombre', 'like', '%' . $tipoDocumento . '%')
                 ->first();
 
+            if (!$documento) {
+                throw new \Exception("Tipo de documento '{$tipoDocumento}' no reconocido en el sistema.");
+            }
+
             //aumentar en uno numero companies_document
             $companyDocument = CompanyDocument::where('company_id', $company->id)
                 ->where('sunat_document_id', $documento->id_tido)
@@ -182,7 +186,11 @@ class VentaService
             $venta->id_cliente = $clienteData['id'] ?? null;
             $venta->id_tipo_pago = $tipoPagoId;
             $venta->fecha_emision = now();
-            $venta->fecha_vencimiento = now();
+            
+            $plazo_dias = (int) ($meta['plazo_dias'] ?? 0);
+            $venta->fecha_vencimiento = now()->addDays($plazo_dias);
+            $venta->condiciones_pago = $plazo_dias > 0 ? "Crédito {$plazo_dias} días" : "Contado";
+
             $venta->serie = $serie;
             $venta->numero = $siguienteNumero;
             $venta->total = $total;

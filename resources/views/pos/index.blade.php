@@ -1,108 +1,444 @@
 @extends('layout.app')
 
 @section('content')
-@section('title', 'Punto de Venta (POS)')
-<link rel="stylesheet" href="{{ asset('css/pos.css') }}">
 <style>
-    /* Ajustar el alto del POS dinámicamente según el estado del menú principal */
+    /* Nueva Estructura POS - 3 Columnas */
     .pos-container {
         height: calc(100vh - 65px) !important;
-        transition: all 0.3s ease;
         display: flex;
-        flex-direction: column;
-    }
-
-    /* Cuando el menú principal (navbar) está oculto */
-    .nav-is-hidden .pos-container {
-        height: 100vh !important;
-    }
-
-    /* Distribución inteligente del contenido */
-    .main-content-split {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
+        flex-direction: row !important;
+        /* Forzar horizontal */
+        background: #f4f6f9;
         overflow: hidden;
+    }
+
+    /* Columna Izquierda: Buscador y Resultados */
+    .pos-left-sidebar {
+        width: 320px;
+        min-width: 320px;
         background: #f8f9fa;
-        padding: 5px;
-        gap: 5px;
+        border-right: 1px solid #ddd;
+        display: flex;
+        flex-direction: column;
+        padding: 15px;
     }
 
-    /* Ocultar área de resultados si no hay registros */
-    .results-area {
+    .sidebar-header {
+        margin-bottom: 15px;
+    }
+
+    .pos-branch-select {
+        width: 100%;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        margin-bottom: 15px;
         background: white;
-        border-radius: 4px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        display: none !important; /* Por defecto oculto */
-        transition: flex 0.3s ease;
     }
 
-    .results-area.has-results {
-        display: block !important;
-        flex: 0 0 40%;
-        max-height: 50%;
+    .pos-search-container {
+        position: relative;
+        margin-bottom: 15px;
+    }
+
+    .pos-search-input {
+        width: 100%;
+        padding: 12px 15px 12px 40px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        font-size: 14px;
+        background: white;
+    }
+
+    .pos-search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #888;
+        font-size: 18px;
+    }
+
+    .pos-results-scroll {
+        flex: 1;
         overflow-y: auto;
+        padding-right: 5px;
     }
 
-    .ticket-area {
+    /* Cards de Productos */
+    .pos-product-card {
+        background: white;
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 10px;
+        border: 1px solid #eee;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+
+    .pos-product-card:hover {
+        border-color: #696cff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .pos-product-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 8px;
+        line-height: 1.3;
+    }
+
+    .pos-product-prices {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 11px;
+    }
+
+    .price-tag {
+        color: #666;
+    }
+
+    .price-value {
+        font-weight: 700;
+        color: #000;
+    }
+
+    .price-corp {
+        background: #e7f1ff;
+        color: #0d6efd;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-weight: 700;
+    }
+
+    /* Sección Central: Ticket */
+    .pos-center-content {
         flex: 1;
         display: flex;
         flex-direction: column;
         background: white;
-        border-radius: 4px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        min-height: 0;
+        margin: 0;
+        overflow: hidden;
     }
 
-    .ticket-table {
+    .ticket-header-new {
+        padding: 15px 20px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: white;
+    }
+
+    .ticket-header-new h2 {
+        font-size: 16px;
+        font-weight: 800;
+        color: #444;
+        margin: 0;
+    }
+
+    .ticket-buttons {
+        display: flex;
+        gap: 8px;
+    }
+
+    .btn-pos {
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        border: none;
+        cursor: pointer;
+        text-transform: uppercase;
+        transition: all 0.2s;
+    }
+
+    .btn-pos-cancel {
+        background: #fee2e2;
+        color: #ef4444;
+    }
+
+    .btn-pos-save {
+        background: #e0f2fe;
+        color: #0ea5e9;
+    }
+
+    .btn-pos-emit {
+        background: #dcfce7;
+        color: #22c55e;
+    }
+
+    .btn-pos:hover {
+        filter: brightness(0.95);
+    }
+
+    .ticket-table-scroll {
         flex: 1;
         overflow-y: auto;
     }
 
-    /* Animación suave para el cambio */
-    .pos-header,
-    .action-bar {
-        flex-shrink: 0;
+    .table-new {
+        width: 100%;
+        border-collapse: collapse;
     }
 
-    /* Estilos para icono de foto y vista previa */
-    .photo-icon {
+    .table-new th {
+        background: #f8f9fa;
+        padding: 12px 15px;
+        font-size: 11px;
+        color: #888;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .table-new td {
+        padding: 15px;
+        font-size: 13px;
+        border-bottom: 1px solid #f9f9f9;
+        color: #444;
+    }
+
+    .ticket-footer-new {
+        padding: 0;
+        background: #1e293b;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: stretch;
+    }
+
+    .footer-left-totals {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 15px 25px;
+        gap: 5px;
+        border-right: 1px solid #334155;
+    }
+
+    .footer-right-totals {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding: 15px 25px;
+        gap: 30px;
+    }
+
+    .total-item-small {
+        font-size: 11px;
+        color: #94a3b8;
+        display: flex;
+        justify-content: space-between;
+        width: 140px;
+    }
+
+    .total-item-small .val {
+        color: #22c55e;
+        font-weight: 700;
+    }
+
+    .total-display-large {
+        background: #0f172a;
+        padding: 10px 25px;
+        border-radius: 8px;
+        text-align: center;
+        min-width: 180px;
+        border: 1px solid #334155;
+    }
+
+    .total-display-large .label {
+        font-size: 10px;
+        color: #fbbf24;
+        display: block;
+        margin-bottom: 2px;
+    }
+
+    .total-display-large .val {
+        font-size: 24px;
+        font-weight: 900;
+        color: #22c55e;
+        font-family: monospace;
+    }
+
+    /* Columna Derecha: Pago y Documento */
+    .pos-right-sidebar {
+        width: 380px;
+        min-width: 380px;
+        background: #fff;
+        border-left: 1px solid #ddd;
+        display: flex;
+        flex-direction: column;
+        padding: 20px;
+        overflow-y: auto;
+    }
+
+    .section-title {
         font-size: 14px;
-        margin-right: 8px;
-        cursor: pointer;
-        display: inline-block;
-        transition: transform 0.2s;
+        font-weight: 800;
+        color: #0ea5e9;
+        margin-bottom: 15px;
+        text-transform: uppercase;
     }
-    .photo-icon:hover {
-        transform: scale(1.2);
-    }
-    .photo-icon.has-photo { color: #28a745; }
-    .photo-icon.no-photo { color: #dc3545; }
 
+    .payment-tabs {
+        display: flex;
+        background: #f1f5f9;
+        padding: 4px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .payment-tab {
+        flex: 1;
+        padding: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        border: none;
+        background: transparent;
+        color: #64748b;
+        cursor: pointer;
+        border-radius: 6px;
+    }
+
+    .payment-tab.active {
+        background: white;
+        color: #0d6efd;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 11px;
+        font-weight: 700;
+        color: #888;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+    }
+
+    .form-control-new {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 14px;
+        color: #334155;
+    }
+
+    .payment-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+
+    .change-box {
+        background: #f8fafc;
+        padding: 10px;
+        border-radius: 6px;
+        text-align: center;
+        font-weight: 700;
+        color: #ef4444;
+        border: 1px solid #e2e8f0;
+    }
+
+    .client-box {
+        display: flex;
+        align-items: center;
+        background: #f1f5f9;
+        padding: 12px;
+        border-radius: 8px;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .client-box i {
+        font-size: 18px;
+        color: #64748b;
+    }
+
+    .client-box .client-info-container {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.2;
+        overflow: hidden;
+        flex: 1; /* Added flex: 1 to allow it to grow */
+    }
+
+    .client-box .client-info-text {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #334155;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .client-box .client-doc-text {
+        font-size: 0.75rem;
+        color: #64748b;
+    }
+
+    .client-edit-btn {
+        color: #f59e0b;
+        cursor: pointer;
+    }
+
+    .btn-confirm-venta {
+        width: 100%;
+        padding: 15px;
+        background: #6b2e51;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 800;
+        text-transform: uppercase;
+        cursor: pointer;
+        box-shadow: 0 4px 12px rgba(107, 46, 81, 0.2);
+        margin-top: auto;
+    }
+
+    .btn-confirm-venta:hover {
+        filter: brightness(1.1);
+    }
+
+    /* Imagen Previa Tooltip */
     .image-preview-tooltip {
         position: fixed;
-        z-index: 10000;
+        z-index: 5000;
         display: none;
         background: white;
-        border: 2px solid #6b2e51;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-        padding: 5px;
+        border: 1px solid #ddd;
         border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        padding: 5px;
+        max-width: 250px;
         pointer-events: none;
     }
     .image-preview-tooltip img {
-        max-width: 250px;
-        max-height: 250px;
-        display: block;
-        border-radius: 4px;
+        width: 100%;
+        height: auto;
+        border-radius: 5px;
     }
 </style>
 
 <div class="pos-container">
-    <div class="pos-header">
-        <div class="header-left">
-            <img src="{{ $logo }}" alt="Logo" style="height: 30px; margin-right: 15px;">
-            <select name="sucursal" id="sucursal-select" class="header-select" onchange="cambiarSucursal(this.value)">
+    <!-- COLUMNA IZQUIERDA: BUSCADOR -->
+    <aside class="pos-left-sidebar">
+        <div class="sidebar-header">
+            <select name="sucursal" id="sucursal-select" class="pos-branch-select"
+                onchange="cambiarSucursal(this.value)">
                 @foreach ($sucursales as $sucursal)
                     <option value="{{ $sucursal->id }}" {{ session('active_branch_id') == $sucursal->id ? 'selected' : '' }}>
                         {{ $sucursal->nombre }}
@@ -110,171 +446,182 @@
                 @endforeach
             </select>
         </div>
-        <div class="header-right">
-            <div class="nav-item" onclick="mostrarModalAtajos()"><i class="bx bx-keyboard"></i> Atajos</div>
-            <div class="nav-item" onclick="navegarAClientes()"><i class="bx bx-group"></i> Clientes</div>
-            <div class="nav-item"><a href="{{ route('comprobantes.index') }}"><i class="bx bx-book-open"></i>
-                    Comprobantes</a></div>
-            <div class="nav-item"><a href="{{ route('cierre-caja.index') }}"><i class="bx bx-money"></i>
-                    Caja</a></div>
-            <div class="nav-info"><i class="bx bx-user"></i> {{ Auth::user()->name }}</div>
-            <div class="nav-info"><i class="bx bx-store"></i> TPV VD</div>
-        </div>
-    </div>
 
-    <div class="action-bar compact-bar">
-        <!-- Sección Izquierda: Búsqueda -->
-        <div class="bar-left">
-            <div class="families-btn" title="Familias">
-                <span>📦</span>
-            </div>
-
-            <div class="search-group">
-                <input type="text" class="search-input main-search" placeholder="Buscar por Código de Barras..."
-                    autofocus>
-                <input type="text" class="search-input secondary-search"
-                    placeholder="Nombre | Marca | Modelo | Detalle">
-            </div>
-
-            <div class="action-buttons">
-                <button class="icon-btn" title="Listado">📋</button>
-            </div>
+        <div class="pos-search-container">
+            <i class='bx bx-search pos-search-icon'></i>
+            <input type="text" id="main-search-input" class="pos-search-input"
+                placeholder="Buscar por Nombre | Código | Marca" autofocus>
         </div>
 
-        <!-- Sección Derecha: Pago y Opciones -->
-        <div class="bar-right">
-            <div class="payment-group">
-                <label class="payment-radio">
-                    <input type="radio" name="payment" value="contado" checked>
-                    <span>Contado</span>
-                </label>
-                <label class="payment-radio">
-                    <input type="radio" name="payment" value="credito" id="radio-credito">
-                    <span>Crédito</span>
-                </label>
-            </div>
-
-            <div class="option-check">
-                <input type="checkbox" id="proforma-checkbox" name="Proforma">
-                <label for="proforma-checkbox">Proforma</label>
-            </div>
-
-            <div class="currency-display">
-                SOL -
+        <div class="pos-results-scroll" id="product-results-grid">
+            <!-- Resultados dinámicos -->
+            <div style="text-align: center; color: #888; margin-top: 50px;">
+                <i class='bx bx-package' style="font-size: 40px; opacity: 0.3;"></i>
+                <p>Busque un producto para comenzar</p>
             </div>
         </div>
-    </div>
+    </aside>
 
-    <!-- Contenido Principal -->
-    <div class="main-content-split">
-        <!-- Area de Resultados (Izquierda o Arriba según preferencia, aquí lo hacemos flexible) -->
-        <div class="results-area">
-            <div id="productos-listado">
-                <table class="productos-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 35%;">Producto</th>
-                            <th style="width: 15%; text-align: center;">Marca</th>
-                            <th style="width: 15%; text-align: center;">Stock</th>
-                            <th style="width: 15%; text-align: end;">PVP</th>
-                            <th style="width: 20%; text-align: end;">PVC</th>
-                        </tr>
-                    </thead>
-                    <tbody id="productos-tbody">
-                        <!-- Los resultados aparecen aquí -->
-                    </tbody>
-                </table>
+    <!-- SECCIÓN CENTRAL: TICKET -->
+    <main class="pos-center-content">
+        <header class="ticket-header-new">
+            <h2>TICKET ACTUAL ▷</h2>
+            <div class="ticket-buttons">
+                <button class="btn-pos btn-pos-cancel" onclick="cancelarVentaConSweetAlert()">Cancelar</button>
+                <button class="btn-pos btn-pos-save" onclick="guardarTicket()">Guardar</button>
+                <button class="btn-pos btn-pos-emit" onclick="prepararEmision()">Emitir</button>
+            </div>
+        </header>
+
+        <div class="ticket-table-scroll">
+            <table class="table-new">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;">#</th>
+                        <th>PRODUCTO</th>
+                        <th style="width: 80px;">CTD.</th>
+                        <th style="width: 80px;">DCTO.</th>
+                        <th style="width: 100px;">PVU</th>
+                        <th style="width: 100px;">IMPORTE</th>
+                        <th style="width: 50px;">ACC.</th>
+                    </tr>
+                </thead>
+                <tbody id="ticket-tbody">
+                    <!-- Productos agregados -->
+                </tbody>
+            </table>
+        </div>
+
+        <footer class="ticket-footer-new">
+            <div class="footer-left-totals">
+                <div class="total-item-small">
+                    <span>GRAVADA</span>
+                    <span class="val">S/ <span id="footer-gravada">0.00</span></span>
+                </div>
+                <div class="total-item-small">
+                    <span>EXONERADA</span>
+                    <span class="val">S/ <span id="footer-exonerada">0.00</span></span>
+                </div>
+                <div class="total-item-small">
+                    <span>I.G.V. (18%)</span>
+                    <span class="val">S/ <span id="footer-igv">0.00</span></span>
+                </div>
+            </div>
+            <div class="footer-right-totals">
+                <div class="total-item-small" style="font-size: 14px;">
+                    <span style="color: #fbbf24;">DESCUENTO</span>
+                    <span class="val" style="color: #fbbf24;">S/ <span id="footer-dscto">0.00</span></span>
+                </div>
+                <div class="total-display-large">
+                    <span class="label">TOTAL</span>
+                    <span class="val">S/ <span id="footer-total">0.00</span></span>
+                </div>
+            </div>
+        </footer>
+    </main>
+
+    <!-- COLUMNA DERECHA: EMISIÓN -->
+    <aside class="pos-right-sidebar">
+        <div class="section-title">Pago</div>
+
+        <div class="payment-tabs">
+            <button class="payment-tab active" onclick="cambiarTipoPago('contado')">CONTADO</button>
+            <button class="payment-tab" onclick="cambiarTipoPago('credito')">CRÉDITO</button>
+            <button class="payment-tab" onclick="cambiarTipoPago('proforma')">PROFORMA</button>
+            <input type="hidden" id="tipo-pago-hidden" value="contado">
+            <input type="checkbox" id="proforma-checkbox" style="display:none">
+        </div>
+
+        <div class="form-group">
+            <label>Medio de Pago</label>
+            <select id="medio-pago-select" class="form-control-new">
+                @foreach($metodos as $metodo)
+                    <option value="{{ $metodo->id }}">{{ $metodo->nombre }}</option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="form-group" id="plazo-credito-section" style="display:none">
+            <label>Plazo Crédito (Días)</label>
+            <input type="number" id="input-plazo-dias" class="form-control-new" value="30" min="1">
+        </div>
+
+        <div class="payment-grid">
+            <div class="form-group">
+                <label>Paga con (Entrega)</label>
+                <input type="number" id="input-entrega" class="form-control-new" value="0.00"
+                    onkeyup="calcularCambioPOS()" onchange="calcularCambioPOS()">
+            </div>
+            <div class="form-group">
+                <label>Cambio</label>
+                <div class="change-box">S/ <span id="label-cambio">0.00</span></div>
             </div>
         </div>
 
-        <!-- Sección del Ticket (Derecha o Abajo) -->
-        <div class="ticket-area">
-            <div class="ticket-header-compact">
-                <span>TICKET ACTUAL ▷</span>
-                <div class="ticket-header-right">
-                    <button class="btn-compact danger"
-                        onclick="typeof Swal !== 'undefined' ? cancelarVentaConSweetAlert() : cancelarVenta()">Cancelar</button>
-                    <button class="btn-compact primary" onclick="guardarTicket()">Guardar</button>
-                    <button class="btn-compact success" onclick="mostrarSeleccionTipoDocumento()">Emitir</button>
+        <div id="pos-documento-section">
+            <div class="section-title" style="margin-top: 20px;">Documento</div>
 
-                    <div class="ticket-actions-mini-divider"></div>
+            <div class="form-group">
+                <label>Tipo de Documento</label>
+                <select id="tipo-documento-select" class="form-control-new" onchange="cambiarTipoDocumento(this.value)">
+                    <option value="" data-tido="" data-serie="">
+                        Seleccionar...
+                    </option>
+                    @foreach($documentos as $doc)
+                        @php
+                            $docName = strtolower($doc->nombre);
+                            $val = 'boleta';
+                            if (str_contains($docName, 'boleta')) $val = 'boleta';
+                            elseif (str_contains($docName, 'factura')) $val = 'factura';
+                            elseif (str_contains($docName, 'nota de venta') || str_contains($docName, 'nota venta')) $val = 'ticket';
+                            elseif (str_contains($docName, 'ticket')) $val = 'ticket';
+                        @endphp
+                        <option value="{{ $val }}" data-tido="{{ $doc->id_tido }}" data-serie="{{ $doc->series }}">
+                            {{ $doc->nombre }} ({{ $doc->series }})
+                        </option>
+                    @endforeach
+                    @if($documentos->isEmpty())
+                        <option value="boleta" data-serie="B001">Boleta de Venta</option>
+                        <option value="factura" data-serie="F001">Factura</option>
+                        <option value="ticket" data-serie="NV01">Nota de Venta (Ticket)</option>
+                    @endif
+                </select>
+            </div>
 
-                    <div class="ticket-actions-mini">
-                        <button
-                            onclick="typeof Swal !== 'undefined' ? limpiarTicketRapidoConSweetAlert() : limpiarTicketRapido()"
-                            title="Limpiar todo">🗑️</button>
-                        <button onclick="aplicarDescuentoGlobal()" title="Descuento Global">💸</button>
-                    </div>
+            <div class="payment-grid" id="serie-numero-grid" style="display:none">
+                <div class="form-group">
+                    <label>Serie</label>
+                    <input type="text" id="input-serie" class="form-control-new" value="B001" readonly
+                        style="background: #f1f5f9;">
+                </div>
+                <div class="form-group">
+                    <label>Número</label>
+                    <input type="text" id="input-numero" class="form-control-new" value="00000001" readonly
+                        style="background: #f1f5f9;">
                 </div>
             </div>
 
-
-            <!-- Reemplaza el ticket-table por esta tabla, y pon un div para el fondo/marca de agua si lo deseas -->
-            <div class="ticket-table" style="position:relative;">
-                <table class="productos-table" style="width:100%; border-collapse:collapse;">
-                    <thead>
-                        <tr style="background:#f5f5f5;">
-                            <th style="width: 30px;">#</th>
-                            <th>Producto</th>
-                            <th>Vence</th>
-                            <th>Ctd.</th>
-                            <th>Dscto</th>
-                            <th>Impuesto</th>
-                            <th>PVU</th>
-                            <th>Importe</th>
-                            <th style="width: 40px;">Acc.</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ticket-tbody">
-                        <!-- Los productos agregados aparecerán aquí -->
-                    </tbody>
-                </table>
-                {{-- <div
-                        style="position:absolute; left:10%; top:10%; opacity:0.07; font-size:80px; z-index:0; pointer-events:none;">
-                        <img src="tu_logo.png" alt="Marca de agua" style="max-width:40vw;">
-                    </div> --}}
-            </div>
-
-            <!-- Ventas asignadas a la caja abierta -->
-            <div id="caja-ventas-list"
-                style="margin-top:8px; padding:8px; background:#fafafa; border:1px solid #eee; border-radius:6px; min-height:42px;">
-                <div style="color:#666; font-size:12px;">Estado de caja desconocido.</div>
+            <div class="form-group">
+                <label>Observaciones</label>
+                <textarea id="input-observaciones" class="form-control-new" style="height: 60px; resize: none;"
+                    placeholder="Opcional..."></textarea>
             </div>
         </div>
 
-    </div>
-
-    <!-- Footer -->
-    <div class="pos-footer-led">
-        <div class="footer-totals-led">
-            <div>
-                <span class="label">GRAVADA</span> <span class="value">S/ <span id="footer-gravada">0.00</span></span>
-            </div>
-            <div>
-                <span class="label">EXONERADA</span> <span class="value">S/ <span
-                        id="footer-exonerada">0.00</span></span>
-            </div>
-            <div>
-                <span class="label">I.G.V.</span> <span class="value">S/ <span id="footer-igv">0.00</span></span>
+        <div class="form-group">
+            <label>Cliente</label>
+            <div class="client-box" onclick="mostrarBuscadorClientes()" style="cursor: pointer;">
+                <i class='bx bx-user' style="font-size: 1.25rem;"></i>
+                <div class="client-info-container" style="flex: 1;">
+                    <div class="client-info-text" id="cliente-info-nombre">CLIENTE CONTABLE</div>
+                    <div id="cliente-info-documento" class="client-doc-text">00000000</div>
+                </div>
+                <i class='bx bx-pencil client-edit-btn' style="font-size: 1.1rem; opacity: 0.5;"></i>
             </div>
         </div>
 
-        <div class="footer-dsctos">
-            <div>
-                <span class="label">DESCUENTO</span> <span class="value">S/ <span
-                        id="footer-dscto">0.00</span></span>
-            </div>
-            <div id="footer-total-container">
-                <span class="total-label">TOTAL</span>
-                <span class="total-value">S/ <span id="footer-total">0.00</span></span>
-            </div>
-        </div>
-
-        <div class="footer-cliente" onclick="mostrarBuscadorClientes()" style="cursor: pointer;">
-            <i class="bx bx-user-circle fs-3"></i>
-            <span id="footer-cliente">CLIENTE CONTABLE</span>
-        </div>
-    </div>
+        <button class="btn-confirm-venta" onclick="ejecutarConfirmarVenta()">Confirmar Venta</button>
+    </aside>
 
     <!-- Div para previsualización de imagen -->
     <div id="image-preview-tooltip" class="image-preview-tooltip">
@@ -394,29 +741,29 @@
         if (!imgSrc) return;
         const tooltip = document.getElementById('image-preview-tooltip');
         const img = document.getElementById('tooltip-img');
-        
+
         img.src = '/storage/' + imgSrc;
         tooltip.style.display = 'block';
-        
+
         // Posicionar el tooltip cerca del cursor
         const x = event.clientX + 15;
         const y = event.clientY + 15;
-        
+
         // Ajustar si se sale de la pantalla (tooltip tiene max-width 250px)
-        const tooltipWidth = 260; 
+        const tooltipWidth = 260;
         const tooltipHeight = 260;
-        
+
         let finalX = x;
         let finalY = y;
-        
+
         if (x + tooltipWidth > window.innerWidth) {
             finalX = x - tooltipWidth - 30;
         }
-        
+
         if (y + tooltipHeight > window.innerHeight) {
             finalY = y - tooltipHeight - 30;
         }
-        
+
         tooltip.style.left = finalX + 'px';
         tooltip.style.top = finalY + 'px';
     }
@@ -436,13 +783,13 @@
 
 @if (isset($cotizacionData) && $cotizacionData)
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Sobreescribir persistencia si viene de una cotización
             // Limpiamos persistencia anterior para evitar mezclas
             try {
                 localStorage.removeItem('ventaPersistentePOS');
                 sessionStorage.removeItem('ticketGuardadoPOS');
-            } catch (e) {}
+            } catch (e) { }
 
             ticket = [];
             let cotizacionData = @json($cotizacionData);
@@ -504,14 +851,15 @@
 <script>
     const isAdmin = @json($isAdmin ?? false);
     // Verificar si hay lotes seleccionados pendientes de agregar al ticket
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         inicializarSistemaVentaPersistente();
         verificarLotesPendientes();
         verificarClienteSeleccionado();
-        // Consultar estado de caja al iniciar
         if (typeof checkCajaStatus === 'function') {
             checkCajaStatus();
         }
+        
+        cambiarTipoDocumento();
     });
 
     async function checkCajaStatus() {
@@ -540,94 +888,353 @@
         }
     }
 
-    document.querySelectorAll('.search-input')[0].addEventListener('keyup', function() {
+    document.getElementById('main-search-input').addEventListener('keyup', function () {
         let q = this.value;
 
         if (q.length < 2) {
-            document.getElementById('productos-tbody').innerHTML = '';
-            document.querySelector('.results-area').classList.remove('has-results');
+            document.getElementById('product-results-grid').innerHTML = `
+                <div style="text-align: center; color: #888; margin-top: 50px;">
+                    <i class='bx bx-package' style="font-size: 40px; opacity: 0.3;"></i>
+                    <p>Busque un producto para comenzar</p>
+                </div>`;
             return;
         }
 
         fetch(`{{ route('pos.buscar') }}?q=${q}`)
             .then(r => r.json())
-            .then(renderProductos);
+            .then(renderProductosNuevos);
     });
 
-    document.querySelectorAll('.search-input')[1].addEventListener('keyup', function() {
-        let q = this.value;
+    function renderProductosNuevos(productos) {
+        const grid = document.getElementById('product-results-grid');
+        grid.innerHTML = '';
 
-        if (q.length < 2) {
-            document.getElementById('productos-tbody').innerHTML = '';
-            document.querySelector('.results-area').classList.remove('has-results');
+        if (productos.length === 0) {
+            grid.innerHTML = '<div style="text-align: center; padding: 20px; color: #888;">No se encontraron productos</div>';
             return;
         }
 
-        fetch(`{{ route('pos.buscar') }}?q=${q}`)
-            .then(r => r.json())
-            .then(renderProductos);
-    });
+        productos.forEach(p => {
+            const card = document.createElement('div');
+            card.className = 'pos-product-card';
 
-    // Función para navegar a clientes marcando que viene desde POS
-    function navegarAClientes() {
-        // Guardar el ticket actual antes de navegar
-        if (ticket.length > 0) {
-            sessionStorage.setItem('ticketGuardadoPOS', JSON.stringify(ticket));
-            sessionStorage.setItem('clienteGuardadoPOS', JSON.stringify(clienteActual));
-        }
-        sessionStorage.setItem('navegandoDesdePOS', 'true');
-        window.location.href = '{{ route('clientes.index') }}';
+            const pvp = parseFloat(p.pvp || 0).toFixed(2);
+            const pvc = parseFloat(p.pvc || 0).toFixed(2);
+            const pvd = parseFloat(p.pvpd || 0).toFixed(2);
+            const stock = parseInt(p.cantidad_total || 0);
+            const marca = p.marca || '-';
+            const fVenc = p.fecha_vencimiento ? p.fecha_vencimiento.split(' ')[0].split('-').reverse().join('/') : '-';
+
+            card.innerHTML = `
+                <div class="pos-product-title" style="font-size: 13px; line-height: 1.2; margin-bottom: 3px;">${p.nombre}</div>
+                <div style="font-size: 10px; color: #666; margin-bottom: 4px; display: flex; justify-content: space-between; gap: 4px;">
+                    <span class="text-truncate" style="max-width: 80px;">M: <strong>${marca}</strong></span>
+                    <span>Stk: <strong style="color: ${stock <= 5 ? '#ef4444' : '#22c55e'}">${stock}</strong></span>
+                    <span>V: <strong>${fVenc}</strong></span>
+                </div>
+                <div class="pos-product-prices" style="border-top: 1px dashed #eee; padding-top: 3px; font-size: 11px;">
+                    <div class="d-flex justify-content-between align-items-center" style="gap: 5px; flex-wrap: wrap;">
+                        <span>Púb: <strong class="text-dark">S/ ${pvp}</strong></span>
+                        <span>Corp: <strong class="text-primary">S/ ${pvc}</strong></span>
+                        <span>Doc: <strong class="text-info">S/ ${pvd}</strong></span>
+                    </div>
+                </div>
+            `;
+
+            // Un solo clic: No hace nada (actualiza el producto actual para el menú)
+            card.onclick = (e) => {
+                currentProduct = p;
+                // No abrir modal ni redirigir
+            };
+
+            // Doble clic: Pasar directo al ticket
+            card.ondblclick = (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                currentProduct = p;
+                
+                // Cerrar cualquier modal abierto por si acaso
+                cerrarModalCantidad();
+                
+                const prodAdd = {
+                    producto_id: p.producto_id,
+                    id: p.id,
+                    nombre: p.nombre,
+                    marca: p.marca || '',
+                    precio: parseFloat(p.pvp || 0),
+                    cantidad: 1,
+                    descuento: 0,
+                    importe: parseFloat(p.pvp || 0),
+                    cantidad_disponible: parseFloat(p.cantidad_total || 0),
+                    tipo_impuesto: p.tipo_impuesto,
+                    imagen_principal: p.imagen_principal || '',
+                    almacen_detalle_id: p.id // Usar el ID de lote directo del resultado
+                };
+                agregarProductoAlTicket(prodAdd);
+                if (typeof mostrarNotificacion === 'function') {
+                    mostrarNotificacion(`✅ ${p.nombre} agregado`);
+                }
+            };
+
+            // Anticlic (Click derecho): Abrir menú de opciones
+            card.oncontextmenu = (event) => {
+                event.preventDefault();
+                currentProduct = p;
+                mostrarMenuLotes(event, p);
+            };
+
+            grid.appendChild(card);
+        });
     }
 
-    // Función para mostrar la modal de selección de tipo de documento
-    async function mostrarSeleccionTipoDocumento() {
+    function cambiarTipoPago(tipo) {
+        document.querySelectorAll('.payment-tab').forEach(btn => {
+            btn.classList.remove('active');
+            let text = btn.innerText.toLowerCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Quitar acentos
+            if (text === tipo) {
+                btn.classList.add('active');
+            }
+        });
 
-        if (ticket.length === 0) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Ticket Vacio',
-                text: 'No hay productos en el ticket para emitir'
-            });
+        document.getElementById('tipo-pago-hidden').value = tipo;
+
+        // Si es crédito o proforma, el entrega suele ser 0
+        if (tipo === 'credito' || tipo === 'proforma') {
+            const amountInput = document.getElementById('input-entrega');
+            if (amountInput) {
+                amountInput.value = (0).toFixed(2);
+                window.pagaConManual = true; // Evitar que el auto-sync lo vuelva a subir
+            }
+        }
+
+        // Manejar checkbox de proforma y visibilidad de sección documento
+        const proformaCheck = document.getElementById('proforma-checkbox');
+        const documentoSection = document.getElementById('pos-documento-section');
+        const plazoSection = document.getElementById('plazo-credito-section');
+        
+        if (tipo === 'proforma') {
+            if (proformaCheck) proformaCheck.checked = true;
+            if (documentoSection) documentoSection.style.display = 'none';
+        } else {
+            if (proformaCheck) proformaCheck.checked = false;
+            if (documentoSection) documentoSection.style.display = 'block';
+        }
+
+        if (tipo === 'credito') {
+            if (plazoSection) plazoSection.style.display = 'block';
+        } else {
+            if (plazoSection) plazoSection.style.display = 'none';
+        }
+
+        // Si es contado, volver a habilitar el sincronismo automático del total
+        if (tipo === 'contado') {
+            window.pagaConManual = false;
+            // No necesitamos llamar a actualizarFooter manualmente porque renderTicket se llama a menudo
+            // Pero para respuesta inmediata, podemos forzar el sincronismo aquí
+            const totalVal = ticket.reduce((sum, item) => sum + (item.importe || 0), 0);
+            const amountInput = document.getElementById('input-entrega');
+            if (amountInput) {
+                amountInput.value = totalVal.toFixed(2);
+            }
+        }
+
+        calcularCambioPOS();
+    }
+
+    function calcularCambioPOS() {
+        const total = ticket.reduce((sum, item) => sum + (item.importe || 0), 0);
+        const amountPaid = parseFloat(document.getElementById('input-entrega').value) || 0;
+        const change = Math.max(0, amountPaid - total);
+
+        const changeEl = document.getElementById('label-cambio');
+        if (changeEl) {
+            changeEl.innerText = change.toFixed(2);
+        }
+    }
+
+    async function cambiarTipoDocumento() {
+        const tipoSelect = document.getElementById('tipo-documento-select');
+        if (!tipoSelect) return;
+        
+        const tipo = tipoSelect.value;
+        const selectedOption = tipoSelect.options[tipoSelect.selectedIndex];
+        const serieFromData = selectedOption ? selectedOption.getAttribute('data-serie') : '';
+        
+        const grid = document.getElementById('serie-numero-grid');
+        if (tipo) {
+            if (grid) grid.style.display = 'grid';
+        } else {
+            if (grid) grid.style.display = 'none';
             return;
         }
 
-        // Verificar que la caja esté abierta
+        const tipoMap = { 'boleta': 'boleta', 'factura': 'factura', 'ticket': 'nota_entrega' };
+        const tipoBackend = tipoMap[tipo] || 'boleta';
+        const serieDefecto = { 'boleta': 'B001', 'factura': 'F001', 'ticket': 'NV01' };
+        const finalSerie = serieFromData || serieDefecto[tipo] || 'B001';
+
         try {
-            const res = await fetch('{{ route('cierre-caja.caja.open') }}');
-            if (!res.ok) throw new Error('Error de red');
+            const res = await fetch('{{ route('pos.obtener-siguiente-numero') }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                body: JSON.stringify({ serie: finalSerie, tipo_documento: tipoBackend })
+            });
             const data = await res.json();
-            if (!data.open) {
+            document.getElementById('input-serie').value = data.serie || finalSerie;
+            document.getElementById('input-numero').value = data.numero;
+        } catch (e) { console.error(e); }
+    }
+
+    async function ejecutarConfirmarVenta() {
+        if (ticket.length === 0) {
+            Swal.fire('Atención', 'El ticket está vacío', 'warning');
+            return;
+        }
+
+        // VALIDACIÓN: Caja abierta
+        try {
+            const rcVal = await fetch('{{ route('cierre-caja.caja.open') }}');
+            const dcVal = await rcVal.json();
+            if (!dcVal.open) {
+                Swal.fire('Caja Cerrada', 'Abra caja antes de vender', 'error');
+                return;
+            }
+        } catch (eC) { console.error(eC); }
+
+        const tipoPagoString = document.getElementById('tipo-pago-hidden').value;
+
+        // VALIDACIÓN: Documento seleccionado (Solo si NO es proforma)
+        const tipoDoc = document.getElementById('tipo-documento-select').value;
+        if (tipoPagoString !== 'proforma') {
+            if (!tipoDoc || tipoDoc === "" || tipoDoc === "S") {
                 Swal.fire({
-                    icon: 'error',
-                    title: 'Caja Cerrada',
-                    text: 'No hay una caja abierta. Abra una caja antes de emitir ventas.'
+                    icon: 'warning',
+                    title: 'Tipo de Documento Requerido',
+                    text: 'Por favor, seleccione un tipo de documento antes de confirmar la venta.'
                 });
                 return;
             }
-        } catch (err) {
-            console.error('No se pudo verificar caja abierta:', err);
+        }
+
+        const total = ticket.reduce((sum, item) => sum + (item.importe || 0), 0);
+        const amountPaid = parseFloat(document.getElementById('input-entrega').value) || 0;
+        const change = Math.max(0, amountPaid - total);
+        const tipoPagoId = document.getElementById('medio-pago-select').value;
+        const serie = document.getElementById('input-serie').value;
+        const numero = document.getElementById('input-numero').value;
+        const observaciones = document.getElementById('input-observaciones').value;
+
+        const tipoDocBackend = tipoDoc === 'factura' ? 'factura' : (tipoDoc === 'boleta' ? 'boleta' : 'ticket');
+
+        if (tipoDoc === 'factura') {
+            const doc = clienteActual?.numero_documento || clienteActual?.documento || '';
+            if (doc.length !== 11) {
+                Swal.fire('Atención', 'Para Factura se requiere RUC de 11 dígitos', 'warning');
+                return;
+            }
+        }
+
+        Swal.fire({ title: 'Procesando Venta...', didOpen: () => Swal.showLoading() });
+
+        const datos = {
+            ticket: JSON.stringify(ticket),
+            cliente: JSON.stringify(clienteActual),
+            tipo_documento: tipoDocBackend,
+            tipo_pago_id: tipoPagoId,
+            metodo_pago: tipoPagoString,
+            total: total.toFixed(2),
+            entrega: amountPaid.toFixed(2),
+            cambio: change.toFixed(2),
+            serie: serie,
+            numero: numero,
+            observaciones: observaciones,
+            proforma: tipoPagoString === 'proforma' ? 1 : 0,
+            plazo_dias: tipoPagoString === 'credito' ? (document.getElementById('input-plazo-dias').value || 30) : 0,
+            _token: '{{ csrf_token() }}'
+        };
+
+        try {
+            const isProforma = tipoPagoString === 'proforma';
+            const saveUrl = isProforma ? '{{ route("cotizaciones.save-cotizacion") }}' : '{{ route("pos.save-venta") }}';
+
+            // Guardar marca de proforma global para manejo de impresión
+            window.currentIsProforma = isProforma;
+
+            const res = await fetch(saveUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(datos)
+            });
+            const data = await res.json();
+            if (data.success) {
+                const vid = data.data.venta_id;
+                // Sincronizar con variables globales para compatibilidad con otros scripts
+                window.currentVentaId = vid;
+                window.currentVentaData = data.data;
+
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Venta Realizada!',
+                    text: 'Se ha guardado la venta correctamente.',
+                    showConfirmButton: true,
+                    confirmButtonText: '<i class="bx bx-printer"></i> Imprimir Comprobante',
+                    allowOutsideClick: false
+                }).then(() => {
+                    if (typeof abrirModalFormatosVenta === 'function') {
+                        abrirModalFormatosVenta(vid, data.data.total);
+                    } else {
+                        limpiarVentaCompletada();
+                        window.location.reload();
+                    }
+                });
+            } else {
+                Swal.fire('Error', data.message, 'error');
+            }
+        } catch (e) {
+            Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+        }
+    }
+
+    async function mostrarSeleccionTipoDocumento() {
+        if (ticket.length === 0) {
+            Swal.fire('Atención', 'El ticket está vacío', 'warning');
+            return;
+        }
+        try {
+            const res = await fetch('{{ route('cierre-caja.caja.open') }}');
+            const data = await res.json();
+            if (!data.open) {
+                Swal.fire('Caja Cerrada', 'Abra caja antes de vender', 'error');
+                return;
+            }
+        } catch (err) { }
+        const inputPago = document.getElementById('input-entrega');
+        if (inputPago) { inputPago.focus(); inputPago.select(); }
+    }
+
+    function prepararEmision() {
+        if (ticket.length === 0) {
             Swal.fire({
-                icon: 'error',
-                title: 'Error de Red',
-                text: 'No se pudo verificar el estado de la caja. Intente nuevamente.'
+                icon: 'warning',
+                title: 'Ticket Vacío',
+                text: 'Agregue productos al ticket antes de emitir.'
             });
             return;
         }
 
-        // Si es "Cliente Contable", crear cliente contable automáticamente
-        if (!clienteActual || !clienteActual.id || ['CLIENTE CONTABLE', 'CLIENTE CONTADO', 'VARIOS'].includes(
-                clienteActual.nombre.toUpperCase().trim())) {
-            crearClienteContable();
+        // Enfocar el input de pago en el sidebar derecho
+        const amountPaidInput = document.getElementById('input-entrega');
+        if (amountPaidInput) {
+            amountPaidInput.focus();
+            amountPaidInput.select();
         }
 
-        // Si el checkbox de proforma está marcado, mostrar modal de formatos
-        if (document.getElementById('proforma-checkbox') && document.getElementById('proforma-checkbox').checked) {
-            const modalF = new bootstrap.Modal(document.getElementById('modalFormatosProforma'));
-            modalF.show();
-            return;
-        }
-
-        document.getElementById('modal-tipo-documento').style.display = 'flex';
+        // Mostrar notificación de ayuda
+        mostrarNotificacion('✅ Ticket listo para emitir. Verifique el pago y documento.');
     }
 
     // Función para cerrar la modal de tipo de documento
@@ -640,20 +1247,20 @@
     // Función para seleccionar el tipo de documento y proceder a emitir
     async function seleccionarTipoDocumento(tipo) {
         if (isProcessingEmission) return;
-        
+
         cerrarModalTipoDocumento();
-        
+
         // Deshabilitar botones de tipo documento para evitar doble clic
         const buttons = document.querySelectorAll('.tipo-doc-btn');
         buttons.forEach(btn => btn.disabled = true);
-        
+
         await emitirVentaConTipo(tipo);
     }
 
     // Función para emitir venta con el tipo de documento seleccionado
     async function emitirVentaConTipo(tipoDocumento) {
         if (isProcessingEmission) return;
-        
+
         // Doble validación antes de proceder
         if (ticket.length === 0) {
             Swal.fire({
@@ -728,11 +1335,11 @@
 
         // Limpiar persistencia ANTES de enviar para evitar que se restaure en otros lugares/tiempos
         const ticketCopia = [...ticket];
-        const clienteCopia = {...clienteActual};
-        
+        const clienteCopia = { ...clienteActual };
+
         // Limpiar todo antes de salir para evitar "ghost products" por restauración de localStorage
         limpiarVentaCompletada();
-        
+
         // Preparar datos para enviar
         const datosVenta = {
             ticket: JSON.stringify(ticketCopia),
@@ -1233,6 +1840,12 @@
     // Función para limpiar venta persistente al completar venta exitosamente
     function limpiarVentaCompletada() {
         try {
+            // Limpiar datos en memoria para evitar que se re-guarden en onbeforeunload
+            if (typeof ticket !== 'undefined') ticket = [];
+            if (typeof clienteActual !== 'undefined') {
+                clienteActual = { id: '', nombre: 'CLIENTE VARIOS', documento: '' };
+            }
+
             // Limpiar venta persistente
             localStorage.removeItem(AUTOSAVE_KEY);
 
@@ -1384,7 +1997,7 @@
             const clienteNombre = document.getElementById('cliente-info-nombre');
             const clienteDoc = document.getElementById('cliente-info-documento');
             if (clienteNombre) clienteNombre.textContent = 'CLIENTE CONTABLE';
-            if (clienteDoc) clienteDoc.textContent = '';
+            if (clienteDoc) clienteDoc.textContent = '00000000';
 
             // Limpiar búsqueda de productos
             const searchInput = document.querySelector('input[placeholder="Buscar productos..."]');
@@ -1456,8 +2069,8 @@
         }
 
         if (confirm(
-                '¿Está seguro que desea limpiar el ticket? Solo se eliminarán los productos, el cliente seleccionado se mantendrá.'
-            )) {
+            '¿Está seguro que desea limpiar el ticket? Solo se eliminarán los productos, el cliente seleccionado se mantendrá.'
+        )) {
             // Solo limpiar ticket, mantener cliente
             ticket = [];
 
@@ -1549,7 +2162,7 @@
     }
 
     // Cerrar menú al hacer clic fuera
-    document.addEventListener('click', function(event) {
+    document.addEventListener('click', function (event) {
         const contextMenu = document.getElementById('context-menu');
         if (contextMenu.style.display === 'block' && !contextMenu.contains(event.target)) {
             cerrarContextMenu();
@@ -1557,7 +2170,7 @@
     });
 
     // Cerrar menú con tecla ESC
-    document.addEventListener('keydown', function(event) {
+    document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
             cerrarContextMenu();
         }
@@ -1720,7 +2333,7 @@
             if (cantidadFinal <= existente.cantidad_disponible) {
                 existente.cantidad = cantidadFinal;
 
-                // Recalcular importe considerando descuento previo si existe
+                // Recalcular importe considerando descuento previo si existe (REVERTIDO A TOTAL)
                 const subtotalSinDescuento = existente.cantidad * existente.precio;
                 if (existente.descuentoFijo > 0) {
                     existente.importe = subtotalSinDescuento - existente.descuentoFijo;
@@ -1772,23 +2385,6 @@
         ticket.forEach((p, idx) => {
             total += p.importe;
 
-            // Formatear información de lote y vencimiento
-            // Mostrar el nombre tal cual (como en la foto 1). Ocultamos la etiqueta de lote
-            // en la vista para que el nombre quede igual, pero la dejamos en el title (hover).
-            let infoLote = '';
-            let titleLote = '';
-            if (p.es_lote_especifico && p.lote) {
-                infoLote = '';
-                titleLote = ` (Lt: ${p.lote})`;
-            }
-
-            let fechaVencimiento = '---';
-            if (p.fecha_vencimiento) {
-                fechaVencimiento = p.fecha_vencimiento;
-            } else if (p.es_lote_especifico) {
-                fechaVencimiento = 'S/F';
-            }
-
             // Color de fondo diferente para lotes específicos y precio corporativo
             let bgColor;
             if (p.es_precio_corporativo) {
@@ -1803,50 +2399,59 @@
             let borderStyle = (idx === window.selectedIndex) ?
                 'border: 2px solid #6b2e51; box-shadow: inset 0 0 8px rgba(107, 46, 81, 0.2);' : '';
 
-            tbody.innerHTML += `
-                                    <tr style="background:${bgColor}; ${borderStyle} cursor: pointer;" onclick="editarLinea(${idx})" oncontextmenu='mostrarMenuTicket(event, ${JSON.stringify(p)})'>
-                                        <td>${idx + 1}</td>
-                                        <td title="${p.nombre}${titleLote}">
-                                            <div style="display: flex; align-items: flex-start; gap: 4px;">
-                                                <span class="photo-icon ${p.imagen_principal ? 'has-photo' : 'no-photo'}" 
-                                                      onmouseover="showImagePreview(event, '${p.imagen_principal || ''}')" 
-                                                      onmouseout="hideImagePreview()">
-                                                    <i class="bx bx-image"></i>
-                                                </span>
-                                                <div style="flex: 1;">
-                                                    <div style="font-weight: 600;">${p.nombre.length > 100 ? p.nombre.substring(0, 25) + '...' : p.nombre}</div>
-                                                    <div style="font-size: 10px; color: #666;">Marca: ${p.marca || '-'}</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>${fechaVencimiento}</td>
-                                        <td>
-                                            <input type="number" value="${p.cantidad}" min="1" max="${p.cantidad_disponible}" 
-                                                   style="width: 50px; border: none; background: transparent; text-align: center;"
-                                                   onchange="actualizarCantidad(${idx}, this.value)"
-                                                   onclick="event.stopPropagation()">
-                                            NIU
-                                        </td>
-                                        <td>
-                                            <input type="text" value="S/ ${((p.precio * p.cantidad) - p.importe).toFixed(2)}" 
-                                                   style="width: 80px; border: none; background: transparent; text-align: center; color: #d63384; font-size: 11px;"
-                                                   onchange="actualizarDescuento(${idx}, this.value)"
-                                                   onclick="event.stopPropagation()"
-                                                   placeholder="0% o S/0"
-                                                   title="Ingrese porcentaje (ej: 12%) o monto fijo (ej: S/12)">
-                                        </td>
-                                        <td>${p.tipo_impuesto === 'exonerado' ? '0.00' : (p.importe - (p.importe / 1.18)).toFixed(3)}</td>
-                                        <td>${p.precio.toFixed(2)}</td>
-                                        <td>${p.importe.toFixed(2)}</td>
-                                        <td style="text-align: center;">
-                                            <button onclick="event.stopPropagation(); eliminarLinea(${idx})" 
-                                                    style="background: none; border: none; color: #dc3545; cursor: pointer; padding: 2px 5px;"
-                                                    title="Eliminar este producto">
-                                                <i class="bx bx-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                `;
+            const tr = document.createElement('tr');
+            tr.style.background = bgColor;
+            if (borderStyle) tr.style.cssText += borderStyle;
+            tr.style.cursor = 'pointer';
+            
+            // Eventos
+            tr.onclick = () => editarLinea(idx);
+            tr.oncontextmenu = (e) => {
+                e.preventDefault();
+                mostrarMenuTicket(e, p);
+            };
+
+            const nombreStr = p.nombre || 'S/N';
+            const nombreDisplay = nombreStr.length > 50 ? nombreStr.substring(0, 47) + '...' : nombreStr;
+            const loteInfo = p.lote ? ` <small class="text-muted" style="color:#888;">(Lt: ${p.lote})</small>` : '';
+
+            tr.innerHTML = `
+                <td>${idx + 1}</td>
+                <td title="${nombreStr}${p.lote ? ' - Lote: ' + p.lote : ''}">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="photo-icon ${p.imagen_principal ? 'has-photo' : 'no-photo'}" 
+                              onmouseover="showImagePreview(event, '${p.imagen_principal || ''}')" 
+                              onmouseout="hideImagePreview()">
+                            <i class="bx bx-image"></i>
+                        </span>
+                        <div>
+                            <div style="font-weight: 600;">${nombreDisplay}${loteInfo}</div>
+                            <div style="font-size: 10px; color: #888;">MARCA: ${p.marca || '-'}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <input type="number" value="${p.cantidad}" min="0.001" step="any" 
+                           style="width: 60px; border: 1px solid #ddd; border-radius: 4px; text-align: center; padding: 2px;"
+                           onchange="actualizarCantidad(${idx}, this.value)"
+                           onclick="event.stopPropagation()">
+                </td>
+                <td>
+                    <input type="text" value="${((parseFloat(p.cantidad || 0) * parseFloat(p.precio || 0)) - parseFloat(p.importe || 0)).toFixed(2)}" 
+                           style="width: 70px; border: 1px solid #ddd; border-radius: 4px; text-align: center; padding: 2px; color: #d63384; font-weight: 600;"
+                           onchange="actualizarDescuento(${idx}, this.value)"
+                           onclick="event.stopPropagation()">
+                </td>
+                <td style="font-weight: 600;">S/ ${parseFloat(p.precio || 0).toFixed(2)}</td>
+                <td style="font-weight: 800; color: #22c55e;">S/ ${parseFloat(p.importe || 0).toFixed(2)}</td>
+                <td style="text-align: center;">
+                    <button onclick="event.stopPropagation(); eliminarLinea(${idx})" 
+                            style="background: #fee2e2; border: none; color: #ef4444; border-radius: 4px; cursor: pointer; padding: 5px 8px;">
+                        <i class="bx bx-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
         });
 
         actualizarFooter(total);
@@ -1856,7 +2461,7 @@
             clearTimeout(window.renderTicketSaveTimeout);
             window.renderTicketSaveTimeout = setTimeout(() => {
                 guardarVentaPersistente();
-            }, 1000); // Esperar 1 segundo después del último cambio
+            }, 1000); 
         }
     }
 
@@ -1915,7 +2520,7 @@
         }
 
         producto.cantidad = cantidad;
-        // Recalcular importe considerando descuento (porcentual o fijo)
+        // Recalcular importe considerando descuento (REVERTIDO A TOTAL)
         const subtotalSinDescuento = producto.cantidad * producto.precio;
         if (producto.descuentoFijo > 0) {
             producto.importe = subtotalSinDescuento - producto.descuentoFijo;
@@ -1945,7 +2550,7 @@
     }
 
     // Lógica de Atajos de Teclado
-    document.addEventListener('keydown', function(e) {
+    document.addEventListener('keydown', function (e) {
         // No interferir si el usuario está en un input (excepto para F1 que es foco)
         const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
 
@@ -2057,12 +2662,28 @@
         let montoDescuento = 0;
         let textoDescuento = '';
 
-        if (valor.includes('S/') || valor.includes('s/')) {
-            // Descuento fijo en soles
+        // Si contiene %, se trata como porcentaje. De lo contrario, se trata como MONTO (Soles).
+        if (valor.includes('%')) {
+            // Descuento porcentual
+            const porcentaje = parseFloat(valor.replace('%', ''));
+
+            if (!isAdmin && (isNaN(porcentaje) || porcentaje < 0 || porcentaje > 100)) {
+                alert('El descuento debe estar entre 0% y 100%');
+                renderTicket();
+                return;
+            }
+
+            montoDescuento = subtotalSinDescuento * porcentaje / 100;
+            producto.descuento = porcentaje;
+            producto.descuentoFijo = 0;
+            producto.descuentoTexto = `${porcentaje}%`;
+            textoDescuento = `Descuento del ${porcentaje}%`;
+        } else {
+            // Descuento fijo en soles (por defecto si no hay %)
             const montoFijo = parseFloat(valor.replace(/[S\/s\/\s]/g, ''));
 
             if (isNaN(montoFijo) || montoFijo < 0) {
-                alert('Ingrese un monto válido (ej: S/12)');
+                alert('Ingrese un monto válido (ej: 12.50)');
                 renderTicket();
                 return;
             }
@@ -2078,22 +2699,6 @@
             producto.descuentoFijo = montoFijo;
             producto.descuentoTexto = `S/${montoFijo.toFixed(2)}`;
             textoDescuento = `Descuento fijo de S/ ${montoFijo.toFixed(2)}`;
-
-        } else {
-            // Descuento porcentual
-            const porcentaje = parseFloat(valor.replace('%', ''));
-
-            if (!isAdmin && (isNaN(porcentaje) || porcentaje < 0 || porcentaje > 100)) {
-                alert('El descuento debe estar entre 0% y 100%');
-                renderTicket();
-                return;
-            }
-
-            montoDescuento = subtotalSinDescuento * porcentaje / 100;
-            producto.descuento = porcentaje;
-            producto.descuentoFijo = 0;
-            producto.descuentoTexto = `${porcentaje}%`;
-            textoDescuento = `Descuento del ${porcentaje}%`;
         }
 
         // Aplicar descuento
@@ -2231,12 +2836,42 @@
         let cantListado = ticket.length;
 
         // Helper seguro para no fallar si el elemento no existe aún
-        function setEl(id, value) {
+        function setEl(id, value, prefix = '') {
             const el = document.getElementById(id);
-            if (el) el.innerText = value;
+            if (el) el.innerText = prefix + value;
         }
 
-        // Actualizar UI de forma segura
+        // Actualizar UI del footer central
+        setEl('pos-footer-gravada', gravada.toFixed(2), 'S/ ');
+        setEl('pos-footer-igv', igv.toFixed(2), 'S/ ');
+        setEl('pos-footer-exonerada', exonerada.toFixed(2), 'S/ ');
+        setEl('pos-footer-discount', totalDescuentos.toFixed(2), 'S/ ');
+        setEl('pos-footer-total', total.toFixed(2), 'S/ ');
+
+        // Actualizar UI del resumen derecho
+        setEl('pos-summary-total', total.toFixed(2), 'S/ ');
+
+        // Actualizar inputs de pago si no han sido editados manualmente
+        const amountPaidInput = document.getElementById('input-entrega');
+        if (amountPaidInput) {
+            // Attach event listener once to track manual edits
+            if (!amountPaidInput.dataset.listenerAttached) {
+                amountPaidInput.addEventListener('input', () => {
+                    window.pagaConManual = true;
+                });
+                amountPaidInput.dataset.listenerAttached = 'true';
+            }
+
+            if (!window.pagaConManual) {
+                amountPaidInput.value = total.toFixed(2);
+            }
+            // Always call calcularCambioPOS to update change, regardless of manual edit
+            if (typeof calcularCambioPOS === 'function') {
+                calcularCambioPOS();
+            }
+        }
+
+        // Compatibilidad con IDs antiguos por si acaso
         setEl('footer-gravada', gravada.toFixed(2));
         setEl('footer-igv', igv.toFixed(2));
         setEl('footer-icbper', icbper.toFixed(2));
@@ -2245,15 +2880,24 @@
         setEl('footer-productos-listados', cantListado);
         setEl('footer-exonerada', exonerada.toFixed(2));
     }
+
+
 </script>
 @include('pos.partials.modals.context-menu-ticket')
 @include('pos.partials.modals.modal-formatos-proforma')
+@include('pos.partials.modals.modal-formatos-venta')
+@include('pos.partials.modals.modal-buscar-clientes')
+@include('pos.partials.modals.modal-nuevo-cliente')
+@include('pos.partials.modals.modal-tipo-documento')
 @include('pos.partials.js.finalizar-venta')
 @include('pos.partials.js.sucursal-toggle')
+@include('pos.partials.js.cantidad-venta')
+@include('pos.partials.js.cliente-venta')
+@include('pos.partials.js.persistencia-venta')
 
 @if (session('error'))
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             Swal.fire({
                 icon: 'error',
                 title: 'Error',
@@ -2265,7 +2909,7 @@
 
 @if (session('success'))
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             Swal.fire({
                 icon: 'success',
                 title: 'Éxito',

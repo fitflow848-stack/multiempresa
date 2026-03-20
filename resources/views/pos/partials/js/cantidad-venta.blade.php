@@ -1,5 +1,7 @@
 <script>
-    let isEditMode = false;
+    if (typeof isEditMode === 'undefined') {
+        var isEditMode = false;
+    }
 
     // Abre un modal para conocer cantidad y precio antes de agregar al ticket
     function abrirModalCantidad(editMode = false) {
@@ -193,12 +195,15 @@
             producto_id: currentProduct.producto_id,
             producto_linea_id: currentProduct.product_linea_id || currentProduct.producto_linea_id || null,
             nombre: currentProduct.nombre || currentProduct.descripcion || '',
+            marca: currentProduct.marca || '',
+            imagen_principal: currentProduct.imagen_principal || '',
             cantidad: cantidad,
             cantidad_disponible: currentProduct.cantidad_total || currentProduct.cantidad_disponible || 0,
             precio: precio,
             importe: parseFloat((cantidad * precio).toFixed(2)),
             pvp: currentProduct.pvp || precio,
             pvc: currentProduct.pvc || precio,
+            tipo_impuesto: currentProduct.tipo_impuesto || 'gravado',
             descuento: currentProduct.descuento || 0,
             descuentoFijo: currentProduct.descuentoFijo || 0,
             descuentoTexto: currentProduct.descuentoTexto || '0%',

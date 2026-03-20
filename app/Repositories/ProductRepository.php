@@ -62,6 +62,7 @@ class ProductRepository
                 COUNT(ad.id) AS total_lotes,
                 MAX(ad.fecha_vencimiento) as fecha_vencimiento,
                 MAX(ad.stock_min) AS stock_min,
+                MAX(ad.lote) AS lote,
                 CASE 
                     WHEN SUM(ad.cantidad) <= MAX(COALESCE(ad.stock_min, 0)) AND MAX(COALESCE(ad.stock_min, 0)) > 0 
                     THEN 1 
