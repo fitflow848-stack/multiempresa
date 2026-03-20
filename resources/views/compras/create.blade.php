@@ -839,48 +839,45 @@
                     const isFromSession = @json(session('restore_compra_data'));
                     const isFromURL = urlParams.get('restore_compra_data') === 'true';
 
-                    console.log('Verificando datos temporales al cargar:', {
-                        tempData: !!tempData,
-                        isFromSession: isFromSession,
-                        isFromURL: isFromURL
-                    });
+                    const newProductId = @json(session('new_product_id')) || urlParams.get('new_product_id');
 
-                    if (tempData) {
-                        if (isFromSession || isFromURL) {
-                            // Restauración automática (viene de productos)
-                            setTimeout(function() {
-                                if (restoreCompraData()) {
-                                    // Si hay un nuevo producto creado, agregarlo automáticamente
-                                    const newProductId = @json(session('new_product_id')) || urlParams.get(
-                                        'new_product_id');
-                                    if (newProductId) {
-                                        fetchAndAddNewProduct(parseInt(newProductId));
-                                    }
+                    if (isFromSession || isFromURL) {
+                        // Restauración automática si venimos de flujo de creación de producto
+                        setTimeout(function() {
+                            // 1. Intentar restaurar datos previos del borrador
+                            let restored = false;
+                            if (tempData) {
+                                restored = restoreCompraData();
+                            }
 
-                                    // Limpiar parámetros URL si existen
-                                    if (isFromURL) {
-                                        const cleanUrl = window.location.origin + window.location
-                                            .pathname;
-                                        window.history.replaceState({}, document.title, cleanUrl);
-                                    }
+                            // 2. Si hay un nuevo producto, agregarlo
+                            if (newProductId) {
+                                fetchAndAddNewProduct(parseInt(newProductId));
+                            }
 
-                                    Swal.fire({
-                                        icon: 'success',
-                                        title: 'Datos restaurados',
-                                        text: 'Se han restaurado los datos de la compra anterior',
-                                        timer: 2000,
-                                        showConfirmButton: false
-                                    });
-                                }
-                            }, 500);
-                        } else {
-                            // Navegación normal - restaurar silenciosamente
-                            setTimeout(function() {
-                                if (restoreCompraData()) {
-                                    console.log('Datos restaurados silenciosamente');
-                                }
-                            }, 300);
-                        }
+                            // 3. Limpiar parámetros URL si existen
+                            if (isFromURL) {
+                                const cleanUrl = window.location.origin + window.location.pathname;
+                                window.history.replaceState({}, document.title, cleanUrl);
+                            }
+
+                            // 4. Feedback al usuario
+                            if (restored || newProductId) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Datos actualizados',
+                                    text: newProductId ? 'Se ha agregado el nuevo producto a la compra' : 'Se han restaurado los datos de la compra anterior',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                });
+                            }
+                        }, 500);
+                    } else if (tempData) {
+                        // Navegación normal - restaurar borrador silenciosamente si existe
+                        setTimeout(function() {
+                            restoreCompraData();
+                            console.log('Borrador restaurado silenciosamente');
+                        }, 300);
                     }
 
                     // Configurar auto-guardado después de la restauración

@@ -340,19 +340,22 @@ class ProductoController extends Controller
                 }
             }
 
-            Log::info('ProductoController store - No return_to_compras session found, redirecting to compras.index');
+            // Fallback: tratar como si regresara a compras si no se especificó otra cosa
+            $redirectUrl = route('compras.create') . '?restore_compra_data=true&new_product_id=' . $producto->id;
 
             if (request()->ajax()) {
                 // Para peticiones AJAX normales
                 return response()->json([
                     'success' => true,
                     'message' => 'Producto creado correctamente.',
-                    'redirect' => route('compras.index')
+                    'redirect' => $redirectUrl
                 ]);
             }
 
-            return redirect()->route('compras.index')
-                ->with('success', 'Producto creado correctamente.');
+            return redirect($redirectUrl)
+                ->with('success', 'Producto creado correctamente y listo para compra.')
+                ->with('new_product_id', $producto->id)
+                ->with('restore_compra_data', true);
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error('Error creando producto: ' . $e->getMessage(), ['exception' => $e]);

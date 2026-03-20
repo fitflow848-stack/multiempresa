@@ -163,34 +163,6 @@
             
             @php
                 $linesJson = '[]';
-                if(isset($productoClon)){
-                    $lines = $productoClon->lineas->map(function($ln){
-                        return [
-                            'cb' => $ln->cb,
-                            'codigo_ref' => $ln->codigo_ref,
-                            'presentacion' => $ln->presentacion,
-                            'concentracion' => $ln->concentracion,
-                            'cantidad' => $ln->cantidad,
-                            'precio_compra' => $ln->precio_compra,
-                            'pvp' => $ln->pvp,
-                            'pvp_dto' => $ln->pvp_dto,
-                            'peso' => $ln->peso,
-                            'pa1' => $ln->pa1,
-                            'pa2' => $ln->pa2,
-                            'lote' => $ln->lote,
-                            'fecha_venc' => $ln->fecha_venc ? \Carbon\Carbon::parse($ln->fecha_venc)->format('Y-m-d') : null,
-                            'registro' => $ln->registro,
-                            'costo_operativo' => $ln->costo_operativo,
-                            'pv_docena' => $ln->pv_docena,
-                            'pvc' => $ln->pvc,
-                            'pvc_dto' => $ln->pvc_dto,
-                            'pvp2' => $ln->pvp2,
-                            'stock_maximo' => $ln->stock_maximo,
-                            'stock_minimo' => $ln->stock_minimo,
-                        ];
-                    });
-                    $linesJson = json_encode($lines);
-                }
             @endphp
             <input type="hidden" name="product_lines_json" value="{{ $linesJson }}">
 
@@ -225,8 +197,9 @@
                                                             </option>
                                                             @foreach ($laboratorios ?? [] as $laboratorio)
                                                                 <option value="{{ $laboratorio->id }}" 
-                                                                    {{ (isset($productoClon) && (is_object($productoClon->laboratorio) ? $productoClon->laboratorio->id : $productoClon->laboratorio) == $laboratorio->id) ? 'selected' : '' }}>
+                                                                    {{ (isset($productoClon) && (($productoClon->laboratorio->id ?? $productoClon->laboratorio) == $laboratorio->id)) ? 'selected' : '' }}>
                                                                     {{ $laboratorio->nombre }}</option>
+
                                                             @endforeach
                                                         </select>
                                                         <button type="button" class="btn btn-success" id="np-lab-add"
@@ -244,7 +217,7 @@
                                                         <select name="familia_id" id="np-familia" class="form-select" readonly
                                                             style="pointer-events: none;">
                                                             @if(isset($productoClon))
-                                                                <option value="{{ $productoClon->familia_id }}" selected>{{ $productoClon->familia ? $productoClon->familia->nombre : $productoClon->familia_id }}</option>
+                                                                <option value="{{ $productoClon->familia_id }}" selected>{{ $productoClon->familia->nombre ?? $productoClon->familia_id }}</option>
                                                             @else
                                                                 <option value="">-- Seleccionar --</option>
                                                                 <option value="nutrientes">NUTRIENTES</option>
