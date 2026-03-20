@@ -147,6 +147,7 @@
                                 <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">PVP DTO</th>
                                 <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">PVC</th>
                                 <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">PVC DTO</th>
+                                <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">PV DOCENA</th>
                                 <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">STOCK ACTUAL</th>
                                 <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">CÓDIGO</th>
                                 <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">OPERACIONES
@@ -189,6 +190,9 @@
                                     </td>
                                     <td class="text-center text-muted">
                                         {{ isset($p->pvcd) ? 'S/. ' . number_format($p->pvcd, 2) : '-' }}
+                                    </td>
+                                    <td class="text-center text-info">
+                                        {{ isset($p->pv_docena) ? 'S/. ' . number_format($p->pv_docena, 2) : '-' }}
                                     </td>
                                     <td class="text-center">
                                         <span

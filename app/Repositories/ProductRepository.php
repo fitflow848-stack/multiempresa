@@ -59,6 +59,7 @@ class ProductRepository
                 MAX(ad.pvpd) AS pvpd,
                 MAX(ad.pvc) AS pvc,
                 MAX(ad.pvcd) AS pvcd,
+                MAX(p.pv_docena) AS pv_docena,
                 COUNT(ad.id) AS total_lotes,
                 MAX(ad.fecha_vencimiento) as fecha_vencimiento,
                 MAX(ad.stock_min) AS stock_min,

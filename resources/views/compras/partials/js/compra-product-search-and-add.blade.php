@@ -177,6 +177,14 @@
                 $('#detail-descuento').val(0.00);
                 $('#detail-stock-min').val(product.stock_min || 0);
                 $('#detail-stock-max').val(product.stock_max || 0);
+                
+                // Precios sugeridos (viniendo de la línea)
+                const pl = product.precio_linea || {};
+                $('#detail-pvp').val(Number(product.pvp || pl.pvp || 0).toFixed(2));
+                $('#detail-pvc').val(Number(product.pvc || pl.pvc || 0).toFixed(2));
+                $('#detail-pvp-dto').val(Number(product.pvp_dto || pl.pvp_dto || 0).toFixed(2));
+                $('#detail-pv-docena').val(Number(product.pv_docena || pl.pv_docena || 0).toFixed(2));
+
                 $('#detail-lote').val(product.lote || '');
                 $('#detail-fecha-vencimiento').val(product.fecha_vencimiento || '');
 
@@ -219,6 +227,10 @@
                         descuento: Number($('#detail-descuento').val()) || 0,
                         stock_min: Number($('#detail-stock-min').val()) || 0,
                         stock_max: Number($('#detail-stock-max').val()) || 0,
+                        pvp: Number($('#detail-pvp').val()) || 0,
+                        pvc: Number($('#detail-pvc').val()) || 0,
+                        pvp_dto: Number($('#detail-pvp-dto').val()) || 0,
+                        pv_docena: Number($('#detail-pv-docena').val()) || 0,
                         lote: $('#detail-lote').val() || '',
                         fecha_vencimiento: $('#detail-fecha-vencimiento').val() || ''
                     };
@@ -285,6 +297,10 @@
                     <td class="text-center">${idx}
                         <input type="hidden" name="product_id[]" value="${escapeHtml(product.id)}">
                         <input type="hidden" name="linea_id[]" value="${escapeHtml(lineaId)}">
+                        <input type="hidden" name="pvp[]" value="${product.pvp || 0}">
+                        <input type="hidden" name="pvc[]" value="${product.pvc || 0}">
+                        <input type="hidden" name="pvp_dto[]" value="${product.pvp_dto || 0}">
+                        <input type="hidden" name="pv_docena[]" value="${product.pv_docena || 0}">
                     </td>
                 <td>
                     <input name="codigo[]" type="text" class="form-control form-control-sm" 

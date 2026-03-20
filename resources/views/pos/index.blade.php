@@ -742,8 +742,9 @@
             card.className = 'pos-product-card';
 
             const pvp = parseFloat(p.pvp || 0).toFixed(2);
-            const pvc = parseFloat(p.pvc || 0).toFixed(2);
             const pvd = parseFloat(p.pvpd || 0).toFixed(2);
+            const pvc = parseFloat(p.pvc || 0).toFixed(2);
+            const pdoc = parseFloat(p.pv_docena || 0).toFixed(2);
             const stock = parseFloat(p.cantidad_total || 0).toFixed(2);
             const marca = p.marca || '-';
             const fVenc = p.fecha_vencimiento ? p.fecha_vencimiento.split(' ')[0].split('-').reverse().join('/') : '-';
@@ -758,8 +759,9 @@
                 <div class="pos-product-prices" style="border-top: 1px dashed #eee; padding-top: 3px; font-size: 11px;">
                     <div class="d-flex justify-content-between align-items-center" style="gap: 5px; flex-wrap: wrap;">
                         <span>Púb: <strong class="text-dark">S/ ${pvp}</strong></span>
+                        <span>Dct: <strong class="text-warning">S/ ${pvd}</strong></span>
                         <span>Corp: <strong class="text-primary">S/ ${pvc}</strong></span>
-                        <span>Doc: <strong class="text-info">S/ ${pvd}</strong></span>
+                        <span>Doc: <strong class="text-info">S/ ${pdoc}</strong></span>
                     </div>
                 </div>
             `;

@@ -150,6 +150,10 @@ class ComprasController extends Controller
             'costo' => ['nullable', 'array'],
             'descuento' => ['nullable', 'array'],
             'vcpc' => ['nullable', 'array'],
+            'pvp' => ['nullable', 'array'],
+            'pvc' => ['nullable', 'array'],
+            'pvp_dto' => ['nullable', 'array'],
+            'pv_docena' => ['nullable', 'array'],
         ]);
 
         // Guardar en transacción
@@ -191,6 +195,10 @@ class ComprasController extends Controller
             $vencimientos = $request->input('fecha_vencimiento', []);
             $stockMins = $request->input('stock_min', []);
             $stockMaxs = $request->input('stock_max', []);
+            $pvps = $request->input('pvp', []);
+            $pvcs = $request->input('pvc', []);
+            $pvpDtos = $request->input('pvp_dto', []);
+            $pvDocenas = $request->input('pv_docena', []);
 
             $n = max(
                 count($productIds),
@@ -205,29 +213,69 @@ class ComprasController extends Controller
             );
 
             for ($i = 0; $i < $n; $i++) {
-                // skip empty rows (cantidad zero and empty description)
                 $cantidad = isset($cants[$i]) ? (float)$cants[$i] : 0;
                 $descripcion = $descrs[$i] ?? null;
+                $productId = $productIds[$i] ?? null;
+
                 if ($cantidad <= 0 && !$descripcion) continue;
-                $productLines = ProductoLinea::where('id', $productLinesIds[$i] ?? 0)->first();
+
+                $productLineId = $productLinesIds[$i] ?? 0;
+                $productLine = ProductoLinea::find($productLineId);
+
+                // Nuevos precios desde el request
+                $newPvp = isset($pvps[$i]) ? (float)$pvps[$i] : ($productLine->pvp ?? 0);
+                $newPvc = isset($pvcs[$i]) ? (float)$pvcs[$i] : ($productLine->pvc ?? 0);
+                $newPvpDto = isset($pvpDtos[$i]) ? (float)$pvpDtos[$i] : ($productLine->pvp_dto ?? 0);
+                $newPvDocena = isset($pvDocenas[$i]) ? (float)$pvDocenas[$i] : ($productLine->pv_docena ?? 0);
+
+                // SI el precio es nuevo (o simplemente lo enviamos), afecta a TODO el producto
+                // Usuario: "si el precio es nuevo debería afectar a todos los lotes de ese producto"
+                if ($productId) {
+                    // 1. Actualizar Producto (Padre)
+                    DB::table('productos')->where('id', $productId)->update([
+                        'pvp' => $newPvp,
+                        'pvc' => $newPvc,
+                        'pvp_dto' => $newPvpDto,
+                        'pv_docena' => $newPvDocena,
+                    ]);
+
+                    // 2. Actualizar todas las Líneas/Variantes del producto
+                    ProductoLinea::where('producto_id', $productId)->update([
+                        'pvp' => $newPvp,
+                        'pvc' => $newPvc,
+                        'pvp_dto' => $newPvpDto,
+                        'pv_docena' => $newPvDocena,
+                    ]);
+
+                    // 3. Actualizar todos los lotes activos en el almacén (para POS y vista Almacén)
+                    DB::table('almacen_ingreso_detalle')
+                        ->where('producto_id', $productId)
+                        ->update([
+                            'pvp' => $newPvp,
+                            'pvc' => $newPvc,
+                            'pvpd' => $newPvpDto, // Pvpd = PvP con Descuento (usado en Almacén y POS)
+                            // Nota: Si pv_docena no existe en esta tabla, se consume del producto en otros puntos
+                        ]);
+                }
+
                 CompraLinea::create([
                     'compra_id' => $compra->id,
-                    'product_id' => $productIds[$i] ?? null,
-                    'product_linea_id' => $productLinesIds[$i] ?? null,
+                    'product_id' => $productId,
+                    'product_linea_id' => $productLineId,
                     'cb' => $cbs[$i] ?? null,
                     'descripcion' => $descripcion,
                     'cantidad' => (int)$cantidad,
                     'costo' => isset($costos[$i]) && $costos[$i] !== '' ? $costos[$i] : null,
                     'descuento' => isset($descs[$i]) && $descs[$i] !== '' ? $descs[$i] : 0,
                     'vcpc' => $vcpcs[$i] ?? null,
-                    'pvp' => $productLines->pvp ?? 0,
-                    'pvp_dto' => $productLines->pvp_dto ?? 0,
-                    'pvc' => $productLines->pvc ?? 0,
-                    'pvc_dto' => $productLines->pvc_dto ?? 0,
-                    'stock_min' => $stockMins[$i] ?? ($productLines->stock_minimo ?? 0),
-                    'stock_max' => $stockMaxs[$i] ?? ($productLines->stock_maximo ?? 0),
-                    'lote' => $lotes[$i] ?? ($productLines->lote ?? null),
-                    'fecha_vencimiento' => $vencimientos[$i] ?? ($productLines->fecha_venc ?? null),
+                    'pvp' => $newPvp,
+                    'pvp_dto' => $newPvpDto,
+                    'pvc' => $newPvc,
+                    'pvc_dto' => $request->input('pvc_dto')[$i] ?? ($productLine->pvc_dto ?? 0), // preservamos si existe en request
+                    'stock_min' => $stockMins[$i] ?? ($productLine->stock_minimo ?? 0),
+                    'stock_max' => $stockMaxs[$i] ?? ($productLine->stock_maximo ?? 0),
+                    'lote' => $lotes[$i] ?? ($productLine->lote ?? null),
+                    'fecha_vencimiento' => $vencimientos[$i] ?? ($productLine->fecha_venc ?? null),
                 ]);
             }
 
