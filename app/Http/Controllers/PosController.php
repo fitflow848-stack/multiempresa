@@ -461,8 +461,20 @@ class PosController extends Controller
             $allowedFields = ['costo', 'pvp', 'pvpd', 'pvc', 'pvcd'];
 
             if (in_array($field, $allowedFields)) {
-                $detalle->$field = $request->value;
-                $detalle->save();
+                // Actualizar todos los lotes del mismo producto/linea en la misma sucursal
+                $ingreso = $detalle->ingreso;
+                if ($ingreso) {
+                    \App\Models\AlmacenIngresoDetalle::join('almacen_ingresos', 'almacen_ingresos.id', '=', 'almacen_ingreso_detalle.ingreso_id')
+                        ->where('almacen_ingreso_detalle.producto_id', $detalle->producto_id)
+                        ->where('almacen_ingreso_detalle.producto_linea_id', $detalle->producto_linea_id)
+                        ->where('almacen_ingresos.sucursal_id', $ingreso->sucursal_id)
+                        ->update(["almacen_ingreso_detalle.{$field}" => $request->value]);
+                } else {
+                    // Fallback to single row update if no ingreso linked
+                    $detalle->$field = $request->value;
+                    $detalle->save();
+                }
+                
                 return response()->json(['success' => true]);
             }
 

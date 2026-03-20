@@ -46,10 +46,11 @@ class AlmacenController extends Controller
                 'pl.concentracion',
                 's.nombre as almacen_nombre',
                 DB::raw('SUM(d.cantidad) as existencias'),
-                DB::raw('AVG(d.costo) as costo'),
-                DB::raw('AVG(d.pvp) as pvp'),
-                DB::raw('AVG(d.pvpd) as pvpd'),
-                DB::raw('AVG(d.pvc) as pvc')
+                DB::raw('MAX(d.costo) as costo'),
+                DB::raw('MAX(d.pvp) as pvp'),
+                DB::raw('MAX(d.pvpd) as pvpd'),
+                DB::raw('MAX(d.pvc) as pvc'),
+                DB::raw('MAX(d.pvcd) as pvcd')
             );
 
         // Seguridad: Filtro por Empresa
@@ -137,12 +138,12 @@ class AlmacenController extends Controller
             'existencias_fisico' => $totalExistencias,
             'precio_compra' => $detalles->costo,
             'costo_operativo' => $detalles->costo,
-            'peso' => $detalles->peso,
+            'peso' => $productoModel->peso,
             'pvp' => $detalles->pvp,
             'pvp_dcto' => $detalles->pvpd,
             'pvc' => $detalles->pvc,
-            'pvc_dcto' => $detalles->pvp_dto ?? 0,
-            'pv_docena' => $detalles->pv_docena ?? 0,
+            'pvc_dcto' => $detalles->pvcd,
+            'pv_docena' => $productoModel->pv_docena ?? 0,
         ];
 
         return view('almacen.ajustar-existencias', compact('user', 'company', 'producto'));
@@ -173,10 +174,11 @@ class AlmacenController extends Controller
                 'pl.cb as codigo',
                 's.nombre as almacen_nombre',
                 DB::raw('SUM(d.cantidad) as existencias'),
-                DB::raw('AVG(d.costo) as costo'),
-                DB::raw('AVG(d.pvp) as pvp'),
-                DB::raw('AVG(d.pvpd) as pvpd'),
-                DB::raw('AVG(d.pvc) as pvc')
+                DB::raw('MAX(d.costo) as costo'),
+                DB::raw('MAX(d.pvp) as pvp'),
+                DB::raw('MAX(d.pvpd) as pvpd'),
+                DB::raw('MAX(d.pvc) as pvc'),
+                DB::raw('MAX(d.pvcd) as pvcd')
             );
 
         // Filtro por Empresa y Sucursal
@@ -246,28 +248,42 @@ class AlmacenController extends Controller
                     'producto_linea_id' => $detalleOriginal->producto_linea_id,
                     'cantidad' => $diferencia,
                     'costo' => $request->precio_compra,
-                    'peso' => $request->peso,
                     'pvp' => $request->pvp,
                     'pvpd' => $request->pvp_dcto,
                     'pvc' => $request->pvc,
-                    'pvc_dto' => $request->pvc_dcto,
-                    'pv_docena' => $request->pv_docena,
+                    'pvcd' => $request->pvc_dcto,
                     'lote' => $detalleOriginal->lote,
                     'fecha_vencimiento' => $detalleOriginal->fecha_vencimiento,
                     'stock_min' => $detalleOriginal->stock_min,
                     'stock_max' => $detalleOriginal->stock_max,
                 ]);
+
+                // Actualizar peso y pv_docena en el producto
+                $productoUpdate = Producto::find($detalleOriginal->producto_id);
+                if ($productoUpdate) {
+                    $productoUpdate->update([
+                        'peso' => $request->peso,
+                        'pv_docena' => $request->pv_docena,
+                    ]);
+                }
             } else {
                 // Si la cantidad es la misma, solo actualizamos los datos del registro existente
                 $detalleOriginal->update([
                     'costo' => $request->precio_compra,
-                    'peso' => $request->peso,
                     'pvp' => $request->pvp,
                     'pvpd' => $request->pvp_dcto,
                     'pvc' => $request->pvc,
-                    'pvc_dto' => $request->pvc_dcto,
-                    'pv_docena' => $request->pv_docena,
+                    'pvcd' => $request->pvc_dcto,
                 ]);
+
+                // Actualizar peso y pv_docena en el producto
+                $productoUpdate = Producto::find($detalleOriginal->producto_id);
+                if ($productoUpdate) {
+                    $productoUpdate->update([
+                        'peso' => $request->peso,
+                        'pv_docena' => $request->pv_docena,
+                    ]);
+                }
             }
 
             DB::commit();
@@ -816,6 +832,7 @@ class AlmacenController extends Controller
             'stock_min' => 'nullable|numeric',
             'stock_max' => 'nullable|numeric',
             'peso' => 'nullable|numeric',
+            'pv_docena' => 'nullable|numeric',
         ]);
 
         DB::beginTransaction();
@@ -888,6 +905,9 @@ class AlmacenController extends Controller
                 'attr_fecha_vencimiento' => $request->boolean('attr_fecha_vencimiento'),
                 'attr_lote_produccion' => $request->boolean('attr_lote_produccion'),
                 'attr_venta_menudeo' => $request->boolean('attr_venta_menudeo'),
+                // Weight and dozen price
+                'peso' => $request->peso,
+                'pv_docena' => $request->pv_docena,
             ]);
 
             // 5. Actualizar Detalle de Almacén
@@ -902,7 +922,6 @@ class AlmacenController extends Controller
                 'fecha_vencimiento' => $request->fecha_vencimiento,
                 'stock_min' => $request->stock_min,
                 'stock_max' => $request->stock_max,
-                'peso' => $request->peso,
             ]);
 
             DB::commit();

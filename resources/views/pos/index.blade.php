@@ -12,7 +12,15 @@
         overflow: hidden;
     }
 
-    /* Columna Izquierda: Buscador y Resultados */
+    /* Estructura Base POS - 3 Columnas Desktop */
+    .pos-container {
+        height: calc(100vh - 65px) !important;
+        display: flex;
+        flex-direction: row !important;
+        background: #f4f6f9;
+        overflow: hidden;
+    }
+
     .pos-left-sidebar {
         width: 320px;
         min-width: 320px;
@@ -23,419 +31,180 @@
         padding: 15px;
     }
 
-    .sidebar-header {
-        margin-bottom: 15px;
+    .sidebar-header { margin-bottom: 15px; }
+    .pos-branch-select { 
+        width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; 
+        margin-bottom: 15px; background: white; 
     }
-
-    .pos-branch-select {
-        width: 100%;
-        padding: 10px;
-        border-radius: 8px;
-        border: 1px solid #ddd;
-        margin-bottom: 15px;
-        background: white;
+    .pos-search-container { position: relative; margin-bottom: 15px; }
+    .pos-search-input { 
+        width: 100%; padding: 12px 15px 12px 40px; border-radius: 8px; 
+        border: 1px solid #ddd; font-size: 14px; background: white; 
     }
-
-    .pos-search-container {
-        position: relative;
-        margin-bottom: 15px;
+    .pos-search-icon { 
+        position: absolute; left: 12px; top: 50%; transform: translateY(-50%); 
+        color: #888; font-size: 18px; 
     }
+    .pos-results-scroll { flex: 1; overflow-y: auto; padding-right: 5px; }
 
-    .pos-search-input {
-        width: 100%;
-        padding: 12px 15px 12px 40px;
-        border-radius: 8px;
-        border: 1px solid #ddd;
-        font-size: 14px;
-        background: white;
-    }
-
-    .pos-search-icon {
-        position: absolute;
-        left: 12px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #888;
-        font-size: 18px;
-    }
-
-    .pos-results-scroll {
-        flex: 1;
-        overflow-y: auto;
-        padding-right: 5px;
-    }
-
-    /* Cards de Productos */
     .pos-product-card {
-        background: white;
-        border-radius: 10px;
-        padding: 12px;
-        margin-bottom: 10px;
-        border: 1px solid #eee;
-        cursor: pointer;
-        transition: all 0.2s;
+        background: white; border-radius: 10px; padding: 12px; margin-bottom: 10px;
+        border: 1px solid #eee; cursor: pointer; transition: all 0.2s;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
     }
+    .pos-product-card:hover { border-color: #696cff; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); }
+    .pos-product-title { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 8px; line-height: 1.3; }
+    .pos-product-prices { display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
+    .price-value { font-weight: 700; color: #000; }
+    .price-corp { background: #e7f1ff; color: #0d6efd; padding: 2px 6px; border-radius: 4px; font-weight: 700; }
 
-    .pos-product-card:hover {
-        border-color: #696cff;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+    .pos-center-content { flex: 1; display: flex; flex-direction: column; background: white; margin: 0; overflow: hidden; }
+    .ticket-header-new { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: white; }
+    .ticket-header-new h2 { font-size: 16px; font-weight: 800; color: #444; margin: 0; }
+    .ticket-buttons { display: flex; gap: 8px; }
+    .btn-pos { padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; text-transform: uppercase; transition: all 0.2s; }
+    .btn-pos-cancel { background: #fee2e2; color: #ef4444; }
+    .btn-pos-save { background: #e0f2fe; color: #0ea5e9; }
+    .btn-pos-emit { background: #dcfce7; color: #22c55e; }
+    .ticket-table-scroll { flex: 1; overflow-y: auto; }
+    .table-new { width: 100%; border-collapse: collapse; }
+    .table-new th { background: #f8f9fa; padding: 12px 15px; font-size: 11px; color: #888; text-align: left; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 10; }
+    .table-new td { padding: 15px; font-size: 13px; border-bottom: 1px solid #f9f9f9; color: #444; }
+
+    .ticket-footer-new { padding: 0; background: #1e293b; color: white; display: flex; justify-content: space-between; align-items: stretch; }
+    .footer-left-totals { display: flex; flex-direction: column; justify-content: center; padding: 15px 25px; gap: 5px; border-right: 1px solid #334155; }
+    .footer-right-totals { flex: 1; display: flex; align-items: center; justify-content: flex-end; padding: 15px 25px; gap: 30px; }
+    .total-item-small { font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; width: 140px; }
+    .total-item-small .val { color: #22c55e; font-weight: 700; }
+    .total-display-large { background: #0f172a; padding: 10px 25px; border-radius: 8px; text-align: center; min-width: 180px; border: 1px solid #334155; }
+    .total-display-large .label { font-size: 10px; color: #fbbf24; display: block; margin-bottom: 2px; }
+    .total-display-large .val { font-size: 24px; font-weight: 900; color: #22c55e; font-family: monospace; }
+
+    .pos-right-sidebar { width: 380px; min-width: 380px; background: #fff; border-left: 1px solid #ddd; display: flex; flex-direction: column; padding: 20px; overflow-y: auto; }
+    .section-title { font-size: 14px; font-weight: 800; color: #0ea5e9; margin-bottom: 15px; text-transform: uppercase; }
+    .payment-tabs { display: flex; background: #f1f5f9; padding: 4px; border-radius: 8px; margin-bottom: 20px; }
+    .payment-tab { flex: 1; padding: 8px; font-size: 12px; font-weight: 700; border: none; background: transparent; color: #64748b; cursor: pointer; border-radius: 6px; }
+    .payment-tab.active { background: white; color: #0d6efd; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; font-size: 11px; font-weight: 700; color: #888; margin-bottom: 6px; text-transform: uppercase; }
+    .form-control-new { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; color: #334155; }
+    .payment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .change-box { background: #f8fafc; padding: 10px; border-radius: 6px; text-align: center; font-weight: 700; color: #ef4444; border: 1px solid #e2e8f0; }
+    .client-box { display: flex; align-items: center; background: #f1f5f9; padding: 12px; border-radius: 8px; gap: 10px; margin-bottom: 20px; }
+    .client-box .client-info-container { display: flex; flex-direction: column; line-height: 1.2; overflow: hidden; flex: 1; }
+    .client-box .client-info-text { font-weight: 600; font-size: 0.9rem; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .client-box .client-doc-text { font-size: 0.75rem; color: #64748b; }
+    .btn-confirm-venta { width: 100%; padding: 15px; background: #6b2e51; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 800; text-transform: uppercase; cursor: pointer; box-shadow: 0 4px 12px rgba(107, 46, 81, 0.2); margin-top: auto; }
+
+    .image-preview-tooltip { position: fixed; z-index: 5000; display: none; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); padding: 5px; max-width: 250px; pointer-events: none; }
+    .image-preview-tooltip img { width: 100%; height: auto; border-radius: 5px; }
+
+    /* Responsive para Móvil y Tablet */
+    @media (max-width: 1024px) {
+        .pos-container {
+            flex-direction: column !important;
+            height: calc(100vh - 65px) !important;
+            overflow: hidden !important;
+            position: relative;
+        }
+
+        .pos-left-sidebar, .pos-center-content, .pos-right-sidebar {
+            width: 100% !important;
+            min-width: 100% !important;
+            height: calc(100% - 60px) !important;
+            display: none !important;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+            border: none !important;
+        }
+
+        .pos-left-sidebar.active, .pos-center-content.active, .pos-right-sidebar.active {
+            display: flex !important;
+        }
+
+        .pos-mobile-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: #fff;
+            display: flex !important;
+            border-top: 1px solid #e2e8f0;
+            z-index: 1000;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
+        }
+
+        .mobile-nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: none;
+            color: #94a3b8;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 8px 0;
+        }
+
+        .mobile-nav-item i { font-size: 22px; margin-bottom: 2px; }
+        .mobile-nav-item.active { color: #6b2e51; background: #fff5f8; }
+
+        .mobile-nav-item .badge-count {
+            position: absolute;
+            top: 8px;
+            margin-left: 15px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 9px;
+            min-width: 16px;
+        }
+
+        .ticket-footer-new {
+            flex-direction: column-reverse !important;
+            height: auto !important;
+            gap: 10px;
+            padding: 10px !important;
+        }
+
+        .footer-left-totals { border: none !important; padding: 0 !important; flex-direction: row !important; flex-wrap: wrap !important; justify-content: space-around !important; }
+        .footer-right-totals { padding: 0 !important; justify-content: space-between !important; gap: 10px !important; }
+        .total-display-large { min-width: 140px !important; padding: 5px 15px !important; }
+        .pos-right-sidebar { padding: 15px !important; }
+        .btn-confirm-venta { margin-bottom: 10px; }
     }
 
-    .pos-product-title {
-        font-size: 13px;
-        font-weight: 700;
-        color: #333;
-        margin-bottom: 8px;
-        line-height: 1.3;
-    }
-
-    .pos-product-prices {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 11px;
-    }
-
-    .price-tag {
-        color: #666;
-    }
-
-    .price-value {
-        font-weight: 700;
-        color: #000;
-    }
-
-    .price-corp {
-        background: #e7f1ff;
-        color: #0d6efd;
-        padding: 2px 6px;
-        border-radius: 4px;
-        font-weight: 700;
-    }
-
-    /* Sección Central: Ticket */
-    .pos-center-content {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        background: white;
-        margin: 0;
-        overflow: hidden;
-    }
-
-    .ticket-header-new {
-        padding: 15px 20px;
-        border-bottom: 1px solid #eee;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: white;
-    }
-
-    .ticket-header-new h2 {
-        font-size: 16px;
-        font-weight: 800;
-        color: #444;
-        margin: 0;
-    }
-
-    .ticket-buttons {
-        display: flex;
-        gap: 8px;
-    }
-
-    .btn-pos {
-        padding: 8px 16px;
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 700;
-        border: none;
-        cursor: pointer;
-        text-transform: uppercase;
-        transition: all 0.2s;
-    }
-
-    .btn-pos-cancel {
-        background: #fee2e2;
-        color: #ef4444;
-    }
-
-    .btn-pos-save {
-        background: #e0f2fe;
-        color: #0ea5e9;
-    }
-
-    .btn-pos-emit {
-        background: #dcfce7;
-        color: #22c55e;
-    }
-
-    .btn-pos:hover {
-        filter: brightness(0.95);
-    }
-
-    .ticket-table-scroll {
-        flex: 1;
-        overflow-y: auto;
-    }
-
-    .table-new {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-    .table-new th {
-        background: #f8f9fa;
-        padding: 12px 15px;
-        font-size: 11px;
-        color: #888;
-        text-align: left;
-        border-bottom: 1px solid #eee;
-        position: sticky;
-        top: 0;
-        z-index: 10;
-    }
-
-    .table-new td {
-        padding: 15px;
-        font-size: 13px;
-        border-bottom: 1px solid #f9f9f9;
-        color: #444;
-    }
-
-    .ticket-footer-new {
-        padding: 0;
-        background: #1e293b;
-        color: white;
-        display: flex;
-        justify-content: space-between;
-        align-items: stretch;
-    }
-
-    .footer-left-totals {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        padding: 15px 25px;
-        gap: 5px;
-        border-right: 1px solid #334155;
-    }
-
-    .footer-right-totals {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        padding: 15px 25px;
-        gap: 30px;
-    }
-
-    .total-item-small {
-        font-size: 11px;
-        color: #94a3b8;
-        display: flex;
-        justify-content: space-between;
-        width: 140px;
-    }
-
-    .total-item-small .val {
-        color: #22c55e;
-        font-weight: 700;
-    }
-
-    .total-display-large {
-        background: #0f172a;
-        padding: 10px 25px;
-        border-radius: 8px;
-        text-align: center;
-        min-width: 180px;
-        border: 1px solid #334155;
-    }
-
-    .total-display-large .label {
-        font-size: 10px;
-        color: #fbbf24;
-        display: block;
-        margin-bottom: 2px;
-    }
-
-    .total-display-large .val {
-        font-size: 24px;
-        font-weight: 900;
-        color: #22c55e;
-        font-family: monospace;
-    }
-
-    /* Columna Derecha: Pago y Documento */
-    .pos-right-sidebar {
-        width: 380px;
-        min-width: 380px;
-        background: #fff;
-        border-left: 1px solid #ddd;
-        display: flex;
-        flex-direction: column;
-        padding: 20px;
-        overflow-y: auto;
-    }
-
-    .section-title {
-        font-size: 14px;
-        font-weight: 800;
-        color: #0ea5e9;
-        margin-bottom: 15px;
-        text-transform: uppercase;
-    }
-
-    .payment-tabs {
-        display: flex;
-        background: #f1f5f9;
-        padding: 4px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-    }
-
-    .payment-tab {
-        flex: 1;
-        padding: 8px;
-        font-size: 12px;
-        font-weight: 700;
-        border: none;
-        background: transparent;
-        color: #64748b;
-        cursor: pointer;
-        border-radius: 6px;
-    }
-
-    .payment-tab.active {
-        background: white;
-        color: #0d6efd;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-
-    .form-group {
-        margin-bottom: 15px;
-    }
-
-    .form-group label {
-        display: block;
-        font-size: 11px;
-        font-weight: 700;
-        color: #888;
-        margin-bottom: 6px;
-        text-transform: uppercase;
-    }
-
-    .form-control-new {
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #e2e8f0;
-        border-radius: 6px;
-        font-size: 14px;
-        color: #334155;
-    }
-
-    .payment-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-    }
-
-    .change-box {
-        background: #f8fafc;
-        padding: 10px;
-        border-radius: 6px;
-        text-align: center;
-        font-weight: 700;
-        color: #ef4444;
-        border: 1px solid #e2e8f0;
-    }
-
-    .client-box {
-        display: flex;
-        align-items: center;
-        background: #f1f5f9;
-        padding: 12px;
-        border-radius: 8px;
-        gap: 10px;
-        margin-bottom: 20px;
-    }
-
-    .client-box i {
-        font-size: 18px;
-        color: #64748b;
-    }
-
-    .client-box .client-info-container {
-        display: flex;
-        flex-direction: column;
-        line-height: 1.2;
-        overflow: hidden;
-        flex: 1; /* Added flex: 1 to allow it to grow */
-    }
-
-    .client-box .client-info-text {
-        font-weight: 600;
-        font-size: 0.9rem;
-        color: #334155;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .client-box .client-doc-text {
-        font-size: 0.75rem;
-        color: #64748b;
-    }
-
-    .client-edit-btn {
-        color: #f59e0b;
-        cursor: pointer;
-    }
-
-    .btn-confirm-venta {
-        width: 100%;
-        padding: 15px;
-        background: #6b2e51;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 800;
-        text-transform: uppercase;
-        cursor: pointer;
-        box-shadow: 0 4px 12px rgba(107, 46, 81, 0.2);
-        margin-top: auto;
-    }
-
-    .btn-confirm-venta:hover {
-        filter: brightness(1.1);
-    }
-
-    /* Imagen Previa Tooltip */
-    .image-preview-tooltip {
-        position: fixed;
-        z-index: 5000;
-        display: none;
-        background: white;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        padding: 5px;
-        max-width: 250px;
-        pointer-events: none;
-    }
-    .image-preview-tooltip img {
-        width: 100%;
-        height: auto;
-        border-radius: 5px;
+    @media (min-width: 1025px) {
+        .pos-mobile-nav { display: none !important; }
     }
 </style>
 
+<!-- NAV INFERIOR PARA MÓVIL -->
+<div class="pos-mobile-nav">
+    <button class="mobile-nav-item active" onclick="switchPosTab('search')">
+        <i class='bx bx-search'></i>
+        <span>BUSCAR</span>
+    </button>
+    <button class="mobile-nav-item" onclick="switchPosTab('ticket')">
+        <i class='bx bx-cart'></i>
+        <span class="badge-count" id="mobile-ticket-count" style="display:none">0</span>
+        <span>TICKET</span>
+    </button>
+    <button class="mobile-nav-item" onclick="switchPosTab('payment')">
+        <i class='bx bx-credit-card-front'></i>
+        <span>PAGO</span>
+    </button>
+</div>
+
 <div class="pos-container">
     <!-- COLUMNA IZQUIERDA: BUSCADOR -->
-    <aside class="pos-left-sidebar">
+    <aside class="pos-left-sidebar active">
         <div class="sidebar-header">
             <select name="sucursal" id="sucursal-select" class="pos-branch-select"
                 onchange="cambiarSucursal(this.value)">
@@ -776,6 +545,49 @@
             if (img) img.src = '';
         }
     }
+
+    // Lógica de cambio de pestañas en móvil
+    function switchPosTab(tab) {
+        // Remover clases activas de la nav
+        document.querySelectorAll('.mobile-nav-item').forEach(el => el.classList.remove('active'));
+        // Agregar a la clicada
+        const targetNav = event.currentTarget || document.querySelector(`.mobile-nav-item[onclick*="${tab}"]`);
+        if (targetNav) targetNav.classList.add('active');
+
+        // Remover activas de las secciones
+        const left = document.querySelector('.pos-left-sidebar');
+        const center = document.querySelector('.pos-center-content');
+        const right = document.querySelector('.pos-right-sidebar');
+
+        left.classList.remove('active');
+        center.classList.remove('active');
+        right.classList.remove('active');
+
+        if (tab === 'search') left.classList.add('active');
+        if (tab === 'ticket') center.classList.add('active');
+        if (tab === 'payment') right.classList.add('active');
+    }
+
+    // Actualizar contador de items en el badge de móvil
+    function actualizarCountMobile() {
+        const badge = document.getElementById('mobile-ticket-count');
+        if (badge) {
+            const count = (window.ticket || []).length;
+            if (count > 0) {
+                badge.innerText = count;
+                badge.style.display = 'block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+    }
+    
+    // Inyectar en actualizarFooter
+    const oldUpdateCount = window.actualizarFooter;
+    window.actualizarFooter = function() {
+        if (typeof oldUpdateCount === 'function') oldUpdateCount();
+        actualizarCountMobile();
+    };
 </script>
 
 <script src="{{ asset('assets/js/helpers.js') }}"></script>
@@ -1224,6 +1036,11 @@
                 text: 'Agregue productos al ticket antes de emitir.'
             });
             return;
+        }
+
+        // En móvil, cambiar automáticamente a la pestaña de pago
+        if (typeof switchPosTab === 'function') {
+            switchPosTab('payment');
         }
 
         // Enfocar el input de pago en el sidebar derecho
@@ -2441,7 +2258,14 @@
                            onchange="actualizarDescuento(${idx}, this.value)"
                            onclick="event.stopPropagation()">
                 </td>
-                <td style="font-weight: 600;">S/ ${parseFloat(p.precio || 0).toFixed(2)}</td>
+                <td>
+                    <div class="input-group input-group-sm" onclick="event.stopPropagation()">
+                        <span class="input-group-text" style="padding: 2px 4px; font-size: 10px;">S/</span>
+                        <input type="number" value="${parseFloat(p.precio || 0).toFixed(2)}" step="0.01" 
+                               style="width: 70px; border: 1px solid #ddd; border-radius: 4px; text-align: center; padding: 2px; font-weight: 600;"
+                               onchange="actualizarPrecio(${idx}, this.value)">
+                    </div>
+                </td>
                 <td style="font-weight: 800; color: #22c55e;">S/ ${parseFloat(p.importe || 0).toFixed(2)}</td>
                 <td style="text-align: center;">
                     <button onclick="event.stopPropagation(); eliminarLinea(${idx})" 
@@ -2640,6 +2464,35 @@
                 text: 'No se encontró el ID de la última venta en esta sesión corporativa.'
             });
         }
+    }
+
+    // Función para actualizar precio unitario directamente
+    function actualizarPrecio(index, nuevoPrecio) {
+        const producto = ticket[index];
+        const precio = parseFloat(nuevoPrecio);
+        
+        if (isNaN(precio) || precio < 0) {
+            alert('Ingrese un precio válido');
+            renderTicket();
+            return;
+        }
+
+        producto.precio = precio;
+        
+        // Recalcular importe respetando el descuento (si existe)
+        const subtotalSinDescuento = producto.cantidad * producto.precio;
+        let montoDescuento = 0;
+
+        if (producto.descuento && producto.descuento > 0) {
+            montoDescuento = subtotalSinDescuento * producto.descuento / 100;
+        } else if (producto.descuentoFijo && producto.descuentoFijo > 0) {
+            montoDescuento = producto.descuentoFijo;
+        }
+
+        producto.importe = Math.max(0, subtotalSinDescuento - montoDescuento);
+        
+        renderTicket();
+        mostrarNotificacion(`Se actualizó el precio de ${producto.nombre} a S/ ${precio.toFixed(2)}`);
     }
 
     // Función para actualizar descuento (porcentaje o monto fijo)
@@ -2875,9 +2728,12 @@
         setEl('footer-igv', igv.toFixed(2));
         setEl('footer-icbper', icbper.toFixed(2));
         setEl('footer-dscto', totalDescuentos.toFixed(2));
-        setEl('footer-total', total.toFixed(2));
-        setEl('footer-productos-listados', cantListado);
         setEl('footer-exonerada', exonerada.toFixed(2));
+
+        // Actualizar badge móvil
+        if (typeof actualizarCountMobile === 'function') {
+            actualizarCountMobile();
+        }
     }
 
 

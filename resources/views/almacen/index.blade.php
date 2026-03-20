@@ -143,9 +143,11 @@
                                 <th class="border-0 text-muted py-3" style="font-size: 0.8rem;">PRODUCTO / INFO</th>
                                 <th class="border-0 text-muted py-3" style="font-size: 0.8rem;">LOCAL</th>
                                 <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">COSTO</th>
-                                <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">VENTA (PVP)</th>
-                                <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">STOCK ACTUAL
-                                </th>
+                                <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">PVP</th>
+                                <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">PVP DTO</th>
+                                <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">PVC</th>
+                                <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">PVC DTO</th>
+                                <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">STOCK ACTUAL</th>
                                 <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">CÓDIGO</th>
                                 <th class="border-0 text-muted py-3 text-center" style="font-size: 0.8rem;">OPERACIONES
                                 </th>
@@ -178,6 +180,15 @@
                                     </td>
                                     <td class="text-center fw-bold text-success">
                                         {{ isset($p->pvp) ? 'S/. ' . number_format($p->pvp, 2) : '-' }}
+                                    </td>
+                                    <td class="text-center text-muted">
+                                        {{ isset($p->pvpd) ? 'S/. ' . number_format($p->pvpd, 2) : '-' }}
+                                    </td>
+                                    <td class="text-center text-primary">
+                                        {{ isset($p->pvc) ? 'S/. ' . number_format($p->pvc, 2) : '-' }}
+                                    </td>
+                                    <td class="text-center text-muted">
+                                        {{ isset($p->pvcd) ? 'S/. ' . number_format($p->pvcd, 2) : '-' }}
                                     </td>
                                     <td class="text-center">
                                         <span
