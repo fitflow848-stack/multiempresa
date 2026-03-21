@@ -50,7 +50,7 @@
     <div class="context-menu-item" onclick="abrirModalRomperDocena()"
         style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; background: #fff5f5;">
         <span style="color: #d63384;">⚒️</span>
-        <span style="font-weight: 700; color: #d63384;">Romper Docena/Saco</span>
+        <span style="font-weight: 700; color: #d63384;">Conversión Docena/Saco</span>
     </div>
     <div class="context-menu-item" onclick="limpiarLista()"
         style="padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px;">
