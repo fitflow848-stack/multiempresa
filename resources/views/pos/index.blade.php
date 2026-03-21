@@ -33,16 +33,7 @@
 <div class="pos-container">
     <!-- COLUMNA IZQUIERDA: BUSCADOR -->
     <aside class="pos-left-sidebar active">
-        <div class="sidebar-header">
-            <select name="sucursal" id="sucursal-select" class="pos-branch-select"
-                onchange="cambiarSucursal(this.value)">
-                @foreach ($sucursales as $sucursal)
-                    <option value="{{ $sucursal->id }}" {{ session('active_branch_id') == $sucursal->id ? 'selected' : '' }}>
-                        {{ $sucursal->nombre }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
+        {{-- Sidebar header con sucursal eliminado a pedido del usuario --}}
 
         <div class="pos-search-container">
             <i class='bx bx-search pos-search-icon'></i>
@@ -505,10 +496,40 @@
         }
     }
 
-    document.getElementById('main-search-input').addEventListener('keyup', function () {
-        let q = this.value;
+    // Función Debounce para evitar múltiples peticiones seguidas
+    function debounce(func, timeout = 300) {
+        let timer;
+        return (...args) => {
+            clearTimeout(timer);
+            timer = setTimeout(() => { func.apply(this, args); }, timeout);
+        };
+    }
 
+    const buscarProductosDebounced = debounce(function (q) {
+        // El clearing ahora se hace fuera del debounce para que sea instantáneo
+        
+        // Mostrar indicador de carga
+        const grid = document.getElementById('product-results-grid');
+        grid.innerHTML = `
+            <div style="text-align: center; margin-top: 50px;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+                <p class="mt-2 text-muted">Buscando...</p>
+            </div>`;
+
+        fetch(`{{ route('pos.buscar') }}?q=${q}`)
+            .then(r => r.json())
+            .then(renderProductosNuevos)
+            .catch(err => {
+                grid.innerHTML = '<div style="text-align: center; padding: 20px; color: #d9534f;">Error en la búsqueda</div>';
+            });
+    }, 350);
+
+    document.getElementById('main-search-input').addEventListener('input', function () {
+        let q = this.value;
         if (q.length < 2) {
+            // Borrar instantáneamente si la búsqueda es corta o está vacía
             document.getElementById('product-results-grid').innerHTML = `
                 <div style="text-align: center; color: #888; margin-top: 50px;">
                     <i class='bx bx-package' style="font-size: 40px; opacity: 0.3;"></i>
@@ -516,10 +537,7 @@
                 </div>`;
             return;
         }
-
-        fetch(`{{ route('pos.buscar') }}?q=${q}`)
-            .then(r => r.json())
-            .then(renderProductosNuevos);
+        buscarProductosDebounced(q);
     });
 
     function renderProductosNuevos(productos) {
@@ -543,12 +561,28 @@
             const marca = p.marca || '-';
             const fVenc = p.fecha_vencimiento ? p.fecha_vencimiento.split(' ')[0].split('-').reverse().join('/') : '-';
 
+            const imgPathRaw = p.imagen_principal || null;
+
             card.innerHTML = `
-                <div class="pos-product-title" style="font-size: 13px; line-height: 1.2; margin-bottom: 3px;">${p.nombre}</div>
-                <div style="font-size: 10px; color: #666; margin-bottom: 4px; display: flex; justify-content: space-between; gap: 4px;">
-                    <span class="text-truncate" style="max-width: 80px;">M: <strong>${marca}</strong></span>
-                    <span>Stk: <strong style="color: ${stock <= 5 ? '#ef4444' : '#22c55e'}">${stock}</strong></span>
-                    <span>V: <strong>${fVenc}</strong></span>
+                <div class="pos-product-main" style="margin-bottom: 5px;">
+                    <div class="d-flex align-items-center justify-content-between gap-2">
+                        <div class="pos-product-title text-truncate" style="font-size: 13px; line-height: 1.2; font-weight: 600;" title="${p.nombre}">
+                            ${p.nombre}
+                        </div>
+                        ${imgPathRaw ? `
+                            <div class="image-preview-wrapper" 
+                                onmouseover="showImagePreview(event, '${imgPathRaw}')" 
+                                onmouseout="hideImagePreview()"
+                                style="cursor: help;">
+                                <i class='bx bx-image text-primary' style="font-size: 20px;"></i>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div style="font-size: 10px; color: #666; display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px;">
+                        <span class="text-truncate" style="max-width: 150px;">M: <strong>${marca}</strong></span>
+                        <span>Stk: <strong style="color: ${stock <= 5 ? '#ef4444' : '#22c55e'}">${stock}</strong></span>
+                        <span>V: <strong>${fVenc}</strong></span>
+                    </div>
                 </div>
                 <div class="pos-product-prices" style="border-top: 1px dashed #eee; padding-top: 3px; font-size: 11px;">
                     <div class="d-flex justify-content-between align-items-center" style="gap: 5px; flex-wrap: wrap;">
@@ -559,6 +593,8 @@
                     </div>
                 </div>
             `;
+
+            // No es necesario realizar acciones aquí ya que usamos onmouseover/onmouseout arriba
 
             // Un solo clic: No hace nada (actualiza el producto actual para el menú)
             card.onclick = (e) => {
