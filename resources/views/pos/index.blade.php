@@ -283,6 +283,10 @@
 <!-- Modal de Selección de Tipo de Documento -->
 @include('pos.partials.modals.modal-tipo-documento')
 
+<!-- Modal Romper Docena / Saco -->
+@include('pos.partials.modals.modal-romper-docena')
+@include('pos.partials.js.romper-docena')
+
 <script>
     // ESTADO GLOBAL DEL POS - Declarado una sola vez al inicio
     window.ticket = [];

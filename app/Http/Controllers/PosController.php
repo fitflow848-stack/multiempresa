@@ -605,4 +605,102 @@ class PosController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Procesa la rotura de un saco/docena (bulk) a unidades (suelto)
+     */
+    public function procesarRoturaStock(Request $request)
+    {
+        $request->validate([
+            'origen_producto_id' => 'required',
+            'origen_lote_id' => 'required',
+            'cantidad_origen' => 'required|numeric|min:0.001',
+            'destino_producto_id' => 'required',
+            'factor' => 'required|numeric|min:0.001'
+        ]);
+
+        try {
+            DB::beginTransaction();
+            $user = Auth::user();
+
+            // 1. Obtener Lote Origen y Bloquear
+            $loteOrigen = AlmacenIngresoDetalle::lockForUpdate()->find($request->origen_lote_id);
+            if (!$loteOrigen || $loteOrigen->cantidad < $request->cantidad_origen) {
+                throw new \Exception('Stock insuficiente en el producto origen o lote no encontrado.');
+            }
+
+            // 2. Obtener Lote Destino (el más reciente en la misma sucursal para este producto)
+            // IMPORTANTE: Buscamos en almacen_ingreso_detalle un registro que pertenezca a un ingreso de esta sucursal
+            $loteDestino = DB::table('almacen_ingreso_detalle as d')
+                ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
+                ->where('d.producto_id', $request->destino_producto_id)
+                ->where('i.sucursal_id', $user->branch_id)
+                ->select('d.*')
+                ->orderBy('d.created_at', 'desc')
+                ->first();
+
+            // Si no hay lote destino, crear uno basado en el origen pero para el producto destino
+            if (!$loteDestino) {
+                // Generar un nuevo ingreso de ajuste para inicializar el stock del subproducto
+                $ingresoAjuste = DB::table('almacen_ingresos')->insertGetId([
+                    'company_id' => $user->company_id,
+                    'empresa_id' => $user->company_id,
+                    'sucursal_id' => $user->branch_id,
+                    'user_id' => $user->id,
+                    'fecha' => now(),
+                    'observacion' => '[ROTURA] Inicialización de stock desde rotura de ' . $loteOrigen->producto_id,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+
+                $loteDestinoId = DB::table('almacen_ingreso_detalle')->insertGetId([
+                    'ingreso_id' => $ingresoAjuste,
+                    'producto_id' => $request->destino_producto_id,
+                    'producto_linea_id' => null, 
+                    'cantidad' => 0,
+                    'costo' => $loteOrigen->costo / $request->factor,
+                    'pvp' => $loteOrigen->pvp / $request->factor,
+                    'lote' => $loteOrigen->lote,
+                    'fecha_vencimiento' => $loteOrigen->fecha_vencimiento,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+                
+                $loteDestino = DB::table('almacen_ingreso_detalle')->where('id', $loteDestinoId)->first();
+            }
+
+            // 3. Realizar el ajuste
+            $cantidadAumentar = $request->cantidad_origen * $request->factor;
+
+            // Restar Origen
+            DB::table('almacen_ingreso_detalle')
+                ->where('id', $loteOrigen->id)
+                ->update([
+                    'cantidad' => $loteOrigen->cantidad - $request->cantidad_origen,
+                    'updated_at' => now()
+                ]);
+
+            // Aumentar Destino
+            DB::table('almacen_ingreso_detalle')
+                ->where('id', $loteDestino->id)
+                ->update([
+                    'cantidad' => $loteDestino->cantidad + $cantidadAumentar,
+                    'updated_at' => now()
+                ]);
+
+            DB::commit();
+            return response()->json([
+                'success' => true,
+                'message' => 'Stock ajustado con éxito'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Error en procesarRoturaStock: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 422);
+        }
+    }
 }

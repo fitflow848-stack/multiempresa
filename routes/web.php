@@ -97,6 +97,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
     Route::get('/pos/listar-ventas-guardadas', [PosController::class, 'listarVentasGuardadas'])->name('pos.listar-ventas-guardadas');
     Route::get('/pos/cargar-venta-guardada/{id}', [PosController::class, 'cargarVentaGuardada'])->name('pos.cargar-venta-guardada');
     Route::delete('/pos/eliminar-venta-guardada/{id}', [PosController::class, 'eliminarVentaGuardada'])->name('pos.eliminar-venta-guardada');
+    Route::post('/pos/procesar-rotura-stock', [PosController::class, 'procesarRoturaStock'])->name('pos.procesar-rotura-stock');
 
     // Rutas del módulo de deudas
     Route::prefix('deudas')->name('deudas.')->middleware('can:deudas.ver')->group(function () {
