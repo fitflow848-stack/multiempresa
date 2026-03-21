@@ -1976,18 +1976,13 @@
             tr.innerHTML = `
                 <td>${idx + 1}</td>
                 <td title="${nombreStr}${p.lote ? ' - Lote: ' + p.lote : ''}">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span class="photo-icon ${p.imagen_principal ? 'has-photo' : 'no-photo'}" 
-                              onmouseover="showImagePreview(event, '${p.imagen_principal || ''}')" 
-                              onmouseout="hideImagePreview()">
-                            <i class="bx bx-image"></i>
-                        </span>
-                        <div>
-                            <div style="font-weight: 600;">
-                                ${nombreDisplay}${loteInfo}
-                                ${p.es_precio_docena ? '<span style="background: #2196f3; color: white; padding: 1px 4px; border-radius: 4px; font-size: 9px; margin-left: 5px;">DOCENA</span>' : ''}
-                            </div>
-                            <div style="font-size: 10px; color: #888;">MARCA: ${p.marca || '-'}</div>
+                    <div style="display: flex; flex-direction: column; gap: 0;">
+                        <div style="font-weight: 700; font-size: 13px; color: #333; line-height: 1.2; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 320px;">
+                            ${nombreDisplay}${loteInfo}
+                            ${p.es_precio_docena ? '<span style="background: #2196f3; color: white; padding: 1px 4px; border-radius: 4px; font-size: 9px; margin-left: 5px; vertical-align: middle;">DOCENA</span>' : ''}
+                        </div>
+                        <div style="font-size: 10px; color: #64748b; font-weight: 500; margin-top: 2px;">
+                            MARCA: ${p.marca || '-'}
                         </div>
                     </div>
                 </td>
