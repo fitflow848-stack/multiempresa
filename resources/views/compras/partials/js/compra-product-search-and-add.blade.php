@@ -183,6 +183,7 @@
                 $('#detail-pvp').val(Number(product.pvp || pl.pvp || 0).toFixed(2));
                 $('#detail-pvc').val(Number(product.pvc || pl.pvc || 0).toFixed(2));
                 $('#detail-pvp-dto').val(Number(product.pvp_dto || pl.pvp_dto || 0).toFixed(2));
+                $('#detail-pvc-dto').val(Number(product.pvc_dto || pl.pvc_dto || 0).toFixed(2));
                 $('#detail-pv-docena').val(Number(product.pv_docena || pl.pv_docena || 0).toFixed(2));
 
                 $('#detail-lote').val(product.lote || '');
@@ -230,6 +231,7 @@
                         pvp: Number($('#detail-pvp').val()) || 0,
                         pvc: Number($('#detail-pvc').val()) || 0,
                         pvp_dto: Number($('#detail-pvp-dto').val()) || 0,
+                        pvc_dto: Number($('#detail-pvc-dto').val()) || 0,
                         pv_docena: Number($('#detail-pv-docena').val()) || 0,
                         lote: $('#detail-lote').val() || '',
                         fecha_vencimiento: $('#detail-fecha-vencimiento').val() || ''
@@ -300,6 +302,7 @@
                         <input type="hidden" name="pvp[]" value="${product.pvp || 0}">
                         <input type="hidden" name="pvc[]" value="${product.pvc || 0}">
                         <input type="hidden" name="pvp_dto[]" value="${product.pvp_dto || 0}">
+                        <input type="hidden" name="pvc_dto[]" value="${product.pvc_dto || 0}">
                         <input type="hidden" name="pv_docena[]" value="${product.pv_docena || 0}">
                     </td>
                 <td>

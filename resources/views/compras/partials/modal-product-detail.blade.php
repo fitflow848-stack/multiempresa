@@ -56,6 +56,11 @@
                     </div>
 
                     <div class="col-md-3">
+                        <label class="form-label text-primary fw-bold">PVC Dcto.</label>
+                        <input id="detail-pvc-dto" type="number" min="0" step="0.01" class="form-control form-control-sm text-end" value="0.00">
+                    </div>
+
+                    <div class="col-md-3">
                         <label class="form-label text-success fw-bold">PV Docena</label>
                         <input id="detail-pv-docena" type="number" min="0" step="0.01" class="form-control form-control-sm text-end" value="0.00">
                     </div>

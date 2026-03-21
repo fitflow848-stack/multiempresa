@@ -151,8 +151,7 @@ class ComprasController extends Controller
             'descuento' => ['nullable', 'array'],
             'vcpc' => ['nullable', 'array'],
             'pvp' => ['nullable', 'array'],
-            'pvc' => ['nullable', 'array'],
-            'pvp_dto' => ['nullable', 'array'],
+            'pvc_dto' => ['nullable', 'array'],
             'pv_docena' => ['nullable', 'array'],
         ]);
 
@@ -198,6 +197,7 @@ class ComprasController extends Controller
             $pvps = $request->input('pvp', []);
             $pvcs = $request->input('pvc', []);
             $pvpDtos = $request->input('pvp_dto', []);
+            $pvcDtos = $request->input('pvc_dto', []);
             $pvDocenas = $request->input('pv_docena', []);
 
             $n = max(
@@ -226,6 +226,7 @@ class ComprasController extends Controller
                 $newPvp = isset($pvps[$i]) ? (float)$pvps[$i] : ($productLine->pvp ?? 0);
                 $newPvc = isset($pvcs[$i]) ? (float)$pvcs[$i] : ($productLine->pvc ?? 0);
                 $newPvpDto = isset($pvpDtos[$i]) ? (float)$pvpDtos[$i] : ($productLine->pvp_dto ?? 0);
+                $newPvcDto = isset($pvcDtos[$i]) ? (float)$pvcDtos[$i] : ($productLine->pvc_dto ?? 0);
                 $newPvDocena = isset($pvDocenas[$i]) ? (float)$pvDocenas[$i] : ($productLine->pv_docena ?? 0);
 
                 // SI el precio es nuevo (o simplemente lo enviamos), afecta a TODO el producto
@@ -236,6 +237,7 @@ class ComprasController extends Controller
                         'pvp' => $newPvp,
                         'pvc' => $newPvc,
                         'pvp_dto' => $newPvpDto,
+                        'pvc_dto' => $newPvcDto,
                         'pv_docena' => $newPvDocena,
                     ]);
 
@@ -244,6 +246,7 @@ class ComprasController extends Controller
                         'pvp' => $newPvp,
                         'pvc' => $newPvc,
                         'pvp_dto' => $newPvpDto,
+                        'pvc_dto' => $newPvcDto,
                         'pv_docena' => $newPvDocena,
                     ]);
 
@@ -254,6 +257,7 @@ class ComprasController extends Controller
                             'pvp' => $newPvp,
                             'pvc' => $newPvc,
                             'pvpd' => $newPvpDto, // Pvpd = PvP con Descuento (usado en Almacén y POS)
+                            'pvcd' => $newPvcDto, // Pvcd = PVC con Descuento
                             // Nota: Si pv_docena no existe en esta tabla, se consume del producto en otros puntos
                         ]);
                 }
@@ -271,7 +275,7 @@ class ComprasController extends Controller
                     'pvp' => $newPvp,
                     'pvp_dto' => $newPvpDto,
                     'pvc' => $newPvc,
-                    'pvc_dto' => $request->input('pvc_dto')[$i] ?? ($productLine->pvc_dto ?? 0), // preservamos si existe en request
+                    'pvc_dto' => $newPvcDto,
                     'stock_min' => $stockMins[$i] ?? ($productLine->stock_minimo ?? 0),
                     'stock_max' => $stockMaxs[$i] ?? ($productLine->stock_maximo ?? 0),
                     'lote' => $lotes[$i] ?? ($productLine->lote ?? null),
