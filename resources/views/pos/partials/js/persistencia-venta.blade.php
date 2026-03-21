@@ -127,12 +127,12 @@
     // ========== FIN SISTEMA DE PERSISTENCIA ==========
 
     // Función para limpiar venta persistente al completar venta exitosamente
-    function limpiarVentaCompletada() {
+    async function limpiarVentaCompletada() {
         try {
             // Limpiar datos en memoria para evitar que se re-guarden en onbeforeunload
             if (typeof ticket !== 'undefined') ticket = [];
             if (typeof clienteActual !== 'undefined') {
-                clienteActual = { id: '', nombre: 'CLIENTE VARIOS', documento: '' };
+                await crearClienteContable();
             }
 
             // Limpiar venta persistente

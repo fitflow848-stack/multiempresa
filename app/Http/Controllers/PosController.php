@@ -229,7 +229,7 @@ class PosController extends Controller
                 'observaciones' => $request->observaciones ?? '',
                 'proforma' => $request->proforma ?? 0,
                 'id_coti' => $request->id_coti ?? null,
-                'plazo_dias' => $request->plazo_dias ?? 30,
+                'plazo_dias' => $request->plazo_dias ?? 0,
             ];
             // $request->ticket y $request->cliente se pasan tal cual (el service decodifica si es string)
             $venta = $this->ventaService->crearVentaDesdeTicket($request->ticket, $request->cliente, $meta);

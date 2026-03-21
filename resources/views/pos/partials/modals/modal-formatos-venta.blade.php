@@ -1,5 +1,6 @@
 <!-- Modal para seleccionar formato de impresión de Venta -->
-<div class="modal fade" id="modalFormatosVenta" tabindex="-1" aria-hidden="true" style="z-index: 2500;">
+<div class="modal fade" id="modalFormatosVenta" aria-hidden="true" style="z-index: 2500;"
+    data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header border-bottom bg-light">
@@ -85,10 +86,10 @@
             if (ultimaVentaId) {
                 const isProforma = window.currentIsProforma || false;
                 // Si es proforma, usar ruta de cotizaciones, de lo contrario pos/v
-                const rawUrl = isProforma 
+                const rawUrl = isProforma
                     ? `{{ url("cotizaciones/pdf") }}/${ultimaVentaId}?format=${format}`
                     : `{{ url("pos/v") }}/${ultimaVentaId}/pdf/${format}`;
-                
+
                 const url = `${rawUrl}${rawUrl.includes('?') ? '&' : '?'}print=1`;
                 imprimirPDFv2(url);
             }
@@ -109,12 +110,13 @@
                 phone = clientObj ? (clientObj.telefono || clientObj.celular || '') : '';
             } catch (e) { }
 
-            window.imprimiendoRedirigiendo = true;
-
             const modalEl = document.getElementById('modalFormatosVenta');
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            if (modal) modal.hide();
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
 
+            // 1. Ocultar el modal de formatos temporalmente
+            if (modalInstance) modalInstance.hide();
+
+            // 2. Esperar a que se oculte el modal de bootstrap y luego llamar a SweetAlert
             setTimeout(() => {
                 Swal.fire({
                     title: 'Enviar por WhatsApp',
@@ -143,32 +145,26 @@
                     if (result.isConfirmed) {
                         const targetPhone = result.value.replace(/\D/g, '');
                         const isProforma = window.currentIsProforma || false;
-                        const pdfUrl = isProforma 
-                            ? `{{ url("cotizaciones/pdf") }}/${ventaId}?format=default` 
+                        const pdfUrl = isProforma
+                            ? `{{ url("cotizaciones/pdf") }}/${ventaId}?format=default`
                             : `{{ url("pos/v") }}/${ventaId}/pdf/default`;
-                            
+
                         const message = `Hola ${clientName}, le adjunto su comprobante ${ventaData.numero_completo} por un total de S/ ${ventaData.total}. Puede verlo/descargarlo aquí: ${pdfUrl}`;
                         const waUrl = `https://wa.me/${targetPhone.startsWith('51') ? targetPhone : '51' + targetPhone}?text=${encodeURIComponent(message)}`;
 
                         window.open(waUrl, '_blank');
-
-                        // Redirigir al POS después de enviar
-                        setTimeout(() => {
-                            recargarPaginaVenta();
-                        }, 1000);
-
-                    } else {
-                        // Limpiar aunque cancele si la venta ya se guardó
-                        recargarPaginaVenta();
                     }
+                    
+                    // 3. Restaurar el modal de formatos de venta (sea que envíen o cancelen)
+                    setTimeout(() => {
+                        if (modalInstance) modalInstance.show();
+                    }, 300);
                 });
             }, 300);
         }
     });
 
     function imprimirPDFv2(url) {
-        window.imprimiendoRedirigiendo = true;
-        // Print.js es más robusto para abrir el diálogo de impresión directamente
         if (typeof printJS !== 'undefined') {
             printJS({
                 printable: url,
@@ -176,29 +172,17 @@
                 showModal: true,
                 modalMessage: 'Preparando documento...',
                 onPrintDialogClose: () => {
-                    setTimeout(recargarPaginaVenta, 1000);
+                    console.log('Dialogo de impresión cerrado');
                 },
                 onError: (error) => {
                     console.error('Error con Print.js:', error);
                     window.open(url, '_blank');
-                    setTimeout(recargarPaginaVenta, 500);
                 }
             });
         } else {
             window.open(url, '_blank');
-            setTimeout(recargarPaginaVenta, 1000);
         }
     }
 
-    // Detectar cierre del modal por cualquier vía
-    document.addEventListener('DOMContentLoaded', () => {
-        const modalEl = document.getElementById('modalFormatosVenta');
-        if (modalEl) {
-            modalEl.addEventListener('hidden.bs.modal', function () {
-                if (!window.imprimiendoRedirigiendo) {
-                    recargarPaginaVenta();
-                }
-            });
-        }
-    });
+    // No necesitamos el listener de hidden.bs.modal si el modal es estático y controlamos los botones
 </script>
