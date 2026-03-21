@@ -57,6 +57,10 @@
             <div class="ticket-buttons">
                 <button class="btn-pos btn-pos-cancel" onclick="cancelarVentaConSweetAlert()">Cancelar</button>
                 <button class="btn-pos btn-pos-save" onclick="guardarTicket()">Guardar</button>
+                <button type="button" class="btn-pos-history ms-1" onclick="abrirModalVentasGuardadas()" title="Ver Ventas en Espera" 
+                        style="height: 38px; width: 42px; border: 1px solid #e2e8f0; border-radius: 8px; background: white; color: #64748b; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;">
+                    <i class='bx bx-history fs-4'></i>
+                </button>
             </div>
         </header>
 
@@ -1586,42 +1590,7 @@
         if (typeof cerrarContextMenu === 'function') cerrarContextMenu();
     }
 
-    function guardarTicket() {
-        if (ticket.length === 0) {
-            mostrarNotificacion('No hay productos en el ticket para guardar');
-            return;
-        }
-
-        try {
-            // Guardar en sistema persistente
-            guardarVentaPersistente();
-
-            // También en sessionStorage para compatibilidad
-            sessionStorage.setItem('ticketGuardadoPOS', JSON.stringify(ticket));
-
-            // Guardar información del cliente actual también
-            if (clienteActual && clienteActual.nombre !== 'CLIENTE CONTABLE' && clienteActual.nombre !==
-                'Cliente Contado') {
-                sessionStorage.setItem('clienteGuardadoPOS', JSON.stringify(clienteActual));
-            }
-
-            // Notificación de éxito
-            const total = ticket.reduce((sum, item) => sum + (item.importe || 0), 0);
-            const fechaGuardado = new Date().toLocaleString('es-PE');
-            mostrarNotificacion(
-                `💾 Venta guardada permanentemente: ${ticket.length} productos - Total: S/ ${total.toFixed(2)} (${fechaGuardado})`
-            );
-
-            console.log('Ticket guardado manualmente:', {
-                ticket,
-                cliente: clienteActual,
-                fecha: fechaGuardado
-            });
-        } catch (error) {
-            console.error('Error al guardar ticket:', error);
-            mostrarNotificacion('❌ Error al guardar el ticket. Intente nuevamente.');
-        }
-    }
+    // Se eliminó la función guardarTicket de aquí para usar la centralizada en ventas-guardadas.blade.php
 
     function limpiarTicketRapido() {
         if (ticket.length === 0) {
@@ -2496,6 +2465,9 @@
 @include('pos.partials.js.cantidad-venta')
 @include('pos.partials.js.cliente-venta')
 @include('pos.partials.js.persistencia-venta')
+
+@include('pos.partials.modals.modal-ventas-guardadas')
+@include('pos.partials.js.ventas-guardadas')
 
 @if (session('error'))
     <script>

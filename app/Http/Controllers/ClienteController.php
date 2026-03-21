@@ -517,4 +517,58 @@ class ClienteController extends Controller
             ], 500);
         }
     }
+
+    public function consultarDocumento(Request $request)
+    {
+        $documento = $request->get('documento') ?? $request->get('dni');
+        
+        if (!$documento) {
+            return response()->json(['error' => 'No se proporcionó un documento'], 400);
+        }
+
+        $length = strlen($documento);
+        if ($length !== 8 && $length !== 11) {
+            return response()->json(['error' => 'El documento debe tener 8 (DNI) u 11 (RUC) dígitos'], 400);
+        }
+
+        try {
+            if ($length === 8) {
+                $data = $this->peruConsultas->consultarDni($documento);
+                $isRuc = false;
+            } else {
+                $data = $this->peruConsultas->consultarRuc($documento);
+                $isRuc = true;
+            }
+
+            if (isset($data['error'])) {
+                return response()->json(['error' => "Documento no encontrado o error en el servicio: " . $data['error']], 404);
+            }
+
+            // Normalización según el servicio PeruConsultasService
+            if ($isRuc) {
+                $nombre = $data['razonSocial'] ?? '';
+            } else {
+                $nombre = trim(
+                    ($data['apellidoPaterno'] ?? '') . ' ' .
+                    ($data['apellidoMaterno'] ?? '') . ' ' .
+                    ($data['nombres'] ?? '')
+                );
+            }
+
+            return response()->json([
+                'success' => true,
+                'is_ruc' => $isRuc,
+                'data' => [
+                    'numero_documento' => $documento,
+                    'nombre' => strtoupper($nombre),
+                    'direccion' => $data['direccion'] ?? '',
+                    'departamento' => $data['departamento'] ?? '',
+                    'provincia' => $data['provincia'] ?? '',
+                    'distrito' => $data['distrito'] ?? '',
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error técnico al consultar: ' . $e->getMessage()], 500);
+        }
+    }
 }

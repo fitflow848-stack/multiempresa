@@ -7,10 +7,19 @@
             </div>
             
             <!-- Botones de acción -->
-            <div style="padding: 15px 20px; border-bottom: 1px solid #dee2e6; display: flex; gap: 10px;">
-                <button onclick="mostrarFormularioNuevoCliente()" style="padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">✚ Nuevo cliente</button>
-                <button onclick="usarClienteContado()" style="padding: 8px 15px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;" title="Usar cliente contable para ventas rápidas">💳 Cliente Contable</button>
-                <button onclick="seleccionarClienteSeleccionado()" style="padding: 8px 15px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600;">👤 Usar seleccionado</button>
+            <div style="padding: 15px 20px; border-bottom: 1px solid #dee2e6; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                <button onclick="mostrarFormularioNuevoCliente()" style="padding: 10px 18px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 4px rgba(40,167,69,0.2);">
+                    <i class='bx bx-plus-circle'></i> Nuevo cliente
+                </button>
+                <button onclick="usarClienteContado()" style="padding: 10px 18px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 4px rgba(40,167,69,0.2);" title="Usar cliente contable para ventas rápidas">
+                    <i class='bx bx-purchase-tag'></i> Cliente Contable
+                </button>
+                <button onclick="seleccionarClienteSeleccionado()" style="padding: 10px 18px; background: #17a2b8; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 5px; box-shadow: 0 2px 4px rgba(23,162,184,0.2);">
+                    <i class='bx bx-user-check'></i> Usar seleccionado
+                </button>
+                <button onclick="mostrarFormularioDNI()" style="padding: 10px 18px; background: #ffffff; color: #dc3545; border: 1.5px solid #dc3545; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 5px; transition: all 0.2s;" onmouseover="this.style.background='#dc3545'; this.style.color='white'" onmouseout="this.style.background='white'; this.style.color='#dc3545'">
+                    <i class='bx bx-globe'></i> reniec/sunat
+                </button>
             </div>
             
             <!-- Campo de búsqueda -->

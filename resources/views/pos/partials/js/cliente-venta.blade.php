@@ -170,7 +170,11 @@
     function mostrarFormularioDNI() {
         document.getElementById('modal-cliente-dni').style.display = 'flex';
         setTimeout(() => {
-            document.getElementById('dni-input').focus();
+            const input = document.getElementById('dni-input');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
         }, 100);
     }
 
@@ -179,68 +183,78 @@
         document.getElementById('dni-input').value = '';
     }
 
-    function buscarPorDNI() {
-        const dni = document.getElementById('dni-input').value.trim();
+    /**
+     * Versión simplificada para creación directa desde modal pequeño
+     */
+    function buscarPorDNIrapido() {
+        const documento = document.getElementById('dni-input').value.trim();
 
-        if (dni.length !== 8) {
-            alert('El DNI debe tener 8 dígitos');
+        if (documento.length !== 8 && documento.length !== 11) {
+            Swal.fire('Atención', 'El documento debe tener 8 dígitos (DNI) o 11 (RUC)', 'warning');
             return;
         }
 
-        if (!/^\d{8}$/.test(dni)) {
-            alert('El DNI debe contener solo números');
-            return;
-        }
+        const btn = document.getElementById('btn-crear-reniec-directo');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Creando...';
+        btn.disabled = true;
 
-        // Consultar RENIEC
-        mostrarNotificacion('Consultando RENIEC...');
-
-        fetch(`{{ route('pos.consultar-reniec') }}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({
-                dni: dni
+        // Usamos el endpoint que automatiza la creación completa
+        fetch(`{{ route('clientes.crear-desde-reniec') }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    documento: documento
+                })
             })
-        })
             .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const nuevoCliente = {
-                        id: Date.now(),
-                        tipo_documento: 'DNI',
-                        numero_documento: dni,
-                        nombre: data.data.nombre_completo,
-                        direccion: '',
-                        email: '',
-                        telefono: '',
-                        debe: 0
-                    };
+            .then(res => {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
 
-                    clienteActual = nuevoCliente;
+                if (res.success) {
+                    clienteActual = res.data;
+                    
+                    // Actualizar UI
                     const footerCliente = document.getElementById('footer-cliente');
                     if (footerCliente) footerCliente.innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento}`;
-                    
+
                     const clienteNombre = document.getElementById('cliente-info-nombre');
+                    const clienteDoc = document.getElementById('cliente-info-documento');
                     if (clienteNombre) clienteNombre.textContent = clienteActual.nombre;
+                    if (clienteDoc) clienteDoc.textContent = clienteActual.numero_documento;
+
+                    mostrarNotificacion(`✅ Cliente ${res.message === 'El cliente ya existe en el sistema' ? 'encontrado' : 'registrado'}: ${clienteActual.nombre}`);
                     
-                    mostrarNotificacion(`Cliente creado desde RENIEC: ${clienteActual.nombre}`);
                     cerrarModalClienteDNI();
                     cerrarBuscadorClientes();
+                    
+                    // Auto-guardar
+                    guardarVentaPersistente();
                 } else {
-                    alert('Error al consultar RENIEC: ' + (data.error || 'Error desconocido'));
+                    Swal.fire('Error', res.error || 'No se pudo crear el cliente', 'error');
                 }
             })
             .catch(error => {
-                alert('Error de conexión al consultar RENIEC');
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
                 console.error('Error:', error);
+                Swal.fire('Error', 'Problema al conectar con el servicio', 'error');
             });
     }
 
     function mostrarFormularioNuevoCliente() {
         document.getElementById('modal-nuevo-cliente').style.display = 'flex';
+        setTimeout(() => {
+            const input = document.getElementById('nro-documento');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+        }, 100);
     }
 
     function cerrarModalNuevoCliente() {
@@ -248,9 +262,98 @@
         limpiarFormularioCliente();
     }
 
+    function setTipoCliente(tipo) {
+        document.getElementById('tipo-cliente').value = tipo;
+        const btnPersona = document.getElementById('btn-tipo-persona');
+        const btnEmpresa = document.getElementById('btn-tipo-empresa');
+        const selectDoc = document.getElementById('tipo-documento');
+
+        if (tipo === 'Particular') {
+            btnPersona.style.background = '#eafaf1';
+            btnPersona.style.borderColor = '#28a745';
+            btnPersona.style.color = '#1e7e34';
+            btnEmpresa.style.background = 'white';
+            btnEmpresa.style.borderColor = '#dee2e6';
+            btnEmpresa.style.color = '#6c757d';
+            selectDoc.value = 'DNI';
+        } else {
+            btnEmpresa.style.background = '#eafaf1';
+            btnEmpresa.style.borderColor = '#28a745';
+            btnEmpresa.style.color = '#1e7e34';
+            btnPersona.style.background = 'white';
+            btnPersona.style.borderColor = '#dee2e6';
+            btnPersona.style.color = '#6c757d';
+            selectDoc.value = 'RUC';
+        }
+        ajustarPlaceholderDoc();
+    }
+
+    function ajustarPlaceholderDoc() {
+        const type = document.getElementById('tipo-documento').value;
+        const input = document.getElementById('nro-documento');
+        if (type === 'DNI') {
+            input.placeholder = 'Ingrese 8 dígitos';
+            input.maxLength = 8;
+        } else if (type === 'RUC') {
+            input.placeholder = 'Ingrese 11 dígitos';
+            input.maxLength = 11;
+        } else {
+            input.placeholder = 'Nro documento';
+            input.maxLength = 15;
+        }
+    }
+
+    function consultarServicioIdentidad() {
+        const doc = document.getElementById('nro-documento').value.trim();
+        if (doc.length !== 8 && doc.length !== 11) {
+            Swal.fire('Atención', 'El número de documento debe tener 8 (DNI) u 11 (RUC) dígitos.', 'warning');
+            return;
+        }
+
+        const btn = document.getElementById('btn-search-reniec');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        btn.disabled = true;
+
+        fetch(`{{ route('pos.consultar-reniec') }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    documento: doc
+                })
+            })
+            .then(response => response.json())
+            .then(res => {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+
+                if (res.success) {
+                    const data = res.data;
+                    document.getElementById('nombre-cliente').value = data.nombre || '';
+                    document.getElementById('direccion-cliente').value = data.direccion || '';
+                    if (res.is_ruc) {
+                        setTipoCliente('Empresa');
+                    } else {
+                        setTipoCliente('Particular');
+                    }
+                    mostrarNotificacion('✅ Datos recuperados correctamente');
+                } else {
+                    Swal.fire('No encontrado', res.error || 'No se hallaron datos para este documento', 'info');
+                }
+            })
+            .catch(error => {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                console.error('Error:', error);
+                Swal.fire('Error', 'Problema al conectar con el servicio de identidad', 'error');
+            });
+    }
+
     function limpiarFormularioCliente() {
-        document.getElementById('tipo-cliente').value = 'Particular';
-        document.getElementById('tipo-documento').value = 'DNI';
+        setTipoCliente('Particular');
         document.getElementById('nro-documento').value = '';
         document.getElementById('nombre-cliente').value = '';
         document.getElementById('direccion-cliente').value = '';
@@ -263,13 +366,14 @@
         const nroDocumento = document.getElementById('nro-documento').value.trim();
         const nombre = document.getElementById('nombre-cliente').value.trim();
 
-        if (!nroDocumento) {
-            alert('El número de documento es requerido');
+        if (!nroDocumento || (tipoDocumento === 'DNI' && nroDocumento.length !== 8) || (tipoDocumento === 'RUC' &&
+                nroDocumento.length !== 11)) {
+            Swal.fire('Error', 'Número de documento inválido', 'error');
             return;
         }
 
         if (!nombre) {
-            alert('El nombre es requerido');
+            Swal.fire('Error', 'El nombre o razón social es requerido', 'error');
             return;
         }
 
@@ -284,35 +388,50 @@
             pos: true,
         };
 
-        mostrarNotificacion('Registrando cliente...');
+        // Mostrar loading
+        Swal.fire({
+            title: 'Registrando cliente...',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
 
         fetch(`{{ route('clientes.store') }}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify(datosCliente)
-        })
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(datosCliente)
+            })
             .then(response => response.json())
             .then(data => {
+                Swal.close();
                 if (data.success) {
                     clienteActual = data.data;
                     const footerCliente = document.getElementById('footer-cliente');
-                    if (footerCliente) footerCliente.innerText = `${clienteActual.nombre} - ${clienteActual.numero_documento}`;
-                    
-                    const clienteNombre = document.getElementById('cliente-info-nombre');
-                    if (clienteNombre) clienteNombre.textContent = clienteActual.nombre;
+                    if (footerCliente) footerCliente.innerText =
+                        `${clienteActual.nombre} - ${clienteActual.numero_documento}`;
 
-                    mostrarNotificacion(`Cliente registrado: ${clienteActual.nombre}`);
+                    const clienteNombre = document.getElementById('cliente-info-nombre');
+                    const clienteDoc = document.getElementById('cliente-info-documento');
+                    if (clienteNombre) clienteNombre.textContent = clienteActual.nombre;
+                    if (clienteDoc) clienteDoc.textContent = clienteActual.numero_documento;
+
+                    mostrarNotificacion(`✅ Cliente registrado: ${clienteActual.nombre}`);
                     cerrarModalNuevoCliente();
                     cerrarBuscadorClientes();
+
+                    // Auto-guardar después de registrar cliente
+                    guardarVentaPersistente();
                 } else {
-                    alert('Error al registrar cliente');
+                    Swal.fire('Error', data.message || 'Error al registrar cliente', 'error');
                 }
             })
             .catch(error => {
-                alert('Error de conexión al registrar cliente');
+                Swal.close();
+                Swal.fire('Error', 'Error de conexión al registrar cliente', 'error');
                 console.error('Error:', error);
             });
     }

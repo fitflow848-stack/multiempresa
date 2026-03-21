@@ -107,6 +107,61 @@ class PosController extends Controller
         return response()->json($productos);
     }
 
+    public function guardarVenta(Request $request)
+    {
+        $user = Auth::user();
+        $data = $request->input('data');
+        $total = $request->input('total', 0);
+        $clienteNombre = $request->input('cliente_nombre', 'Cliente General');
+
+        $guardada = \App\Models\PosVentaGuardada::create([
+            'user_id' => $user->id,
+            'company_id' => $user->company_id,
+            'branch_id' => $user->branch_id,
+            'cliente_nombre' => $clienteNombre,
+            'total' => $total,
+            'data' => $data,
+        ]);
+
+        return response()->json(['success' => true, 'id' => $guardada->id]);
+    }
+
+    public function listarVentasGuardadas()
+    {
+        $user = Auth::user();
+        $ventas = \App\Models\PosVentaGuardada::where('company_id', $user->company_id)
+            ->where('branch_id', $user->branch_id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($ventas);
+    }
+
+    public function cargarVentaGuardada($id)
+    {
+        $user = Auth::user();
+        $guardada = \App\Models\PosVentaGuardada::where('id', $id)
+            ->where('company_id', $user->company_id)
+            ->firstOrFail();
+
+        $data = $guardada->data;
+        $guardada->delete();
+
+        return response()->json(['success' => true, 'data' => $data]);
+    }
+
+    public function eliminarVentaGuardada($id)
+    {
+        $user = Auth::user();
+        $guardada = \App\Models\PosVentaGuardada::where('id', $id)
+            ->where('company_id', $user->company_id)
+            ->firstOrFail();
+
+        $guardada->delete();
+
+        return response()->json(['success' => true]);
+    }
+
     public function obtenerLotes(Request $request)
     {
         $productoId = $request->get('producto_id');

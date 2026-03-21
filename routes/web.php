@@ -91,8 +91,12 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
     Route::get('/pos/obtener-lotes', [PosController::class, 'obtenerLotes'])->name('pos.lotes');
     Route::get('/pos/elegir-stock', [PosController::class, 'elegirStock'])->name('pos.elegir-stock');
     Route::get('/pos/buscar-clientes', [PosController::class, 'buscarClientes'])->name('pos.buscar-clientes');
-    Route::post('/pos/consultar-reniec', [PosController::class, 'consultarReniec'])->name('pos.consultar-reniec');
+    Route::post('/pos/consultar-reniec', [ClienteController::class, 'consultarDocumento'])->name('pos.consultar-reniec');
     Route::post('/pos/crear-cliente', [PosController::class, 'crearCliente'])->name('pos.crear-cliente');
+    Route::post('/pos/guardar-venta', [PosController::class, 'guardarVenta'])->name('pos.guardar-venta');
+    Route::get('/pos/listar-ventas-guardadas', [PosController::class, 'listarVentasGuardadas'])->name('pos.listar-ventas-guardadas');
+    Route::get('/pos/cargar-venta-guardada/{id}', [PosController::class, 'cargarVentaGuardada'])->name('pos.cargar-venta-guardada');
+    Route::delete('/pos/eliminar-venta-guardada/{id}', [PosController::class, 'eliminarVentaGuardada'])->name('pos.eliminar-venta-guardada');
 
     // Rutas del módulo de deudas
     Route::prefix('deudas')->name('deudas.')->middleware('can:deudas.ver')->group(function () {
