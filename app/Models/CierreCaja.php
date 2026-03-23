@@ -93,6 +93,7 @@ class CierreCaja extends Model
                     LEFT JOIN deudas d ON d.venta_id = v.id_venta
                 WHERE
                     v.cierre_caja_id = :cierre_id AND v.id_tido != 5
+                    AND (v.estado != 0 OR (:is_closed = 1 AND v.updated_at > :fecha_cierre))
                 ) UNION
                 (
                 SELECT
@@ -111,7 +112,12 @@ class CierreCaja extends Model
                     operaciones_caja o
                 INNER JOIN users u ON u.id = o.user_id 
                 where o.cierre_caja_id = :cierre_id_2
-                ) ORDER BY fecha_emision DESC", ['cierre_id' => $this->id, 'cierre_id_2' => $this->id]);
+                ) ORDER BY fecha_emision DESC", [
+                    'cierre_id' => $this->id, 
+                    'cierre_id_2' => $this->id,
+                    'is_closed' => $this->fecha_cierre ? 1 : 0,
+                    'fecha_cierre' => $this->fecha_cierre ? $this->fecha_cierre : '2099-01-01'
+                ]);
 
         $ingresosTotal = 0;
         $egresosTotal = 0;

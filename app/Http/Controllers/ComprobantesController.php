@@ -224,11 +224,15 @@ class ComprobantesController extends Controller
                             ->first();
                     }
 
-                    if (!$cajaActual) {
-                        throw new \Exception("La venta {$venta->serie}-{$venta->numero} requiere una devolución de dinero (S/ {$montoADescontar}), pero no tienes una caja abierta. Por favor, abre la caja antes de realizar la anulación.");
-                    }
+                    $isSameBox = $cajaActual && $cajaActual->id == $venta->cierre_caja_id;
 
-                    if ($cajaActual) {
+                    // NOTA: Si es la misma caja, simplemente desaparece la venta en el query dinámico y no restamos
+                    if (!$isSameBox) {
+                        if (!$cajaActual) {
+                            throw new \Exception("La venta {$venta->serie}-{$venta->numero} requiere una devolución de dinero, pero no tienes una caja abierta. Y la caja original ya está cerrada.");
+                        }
+
+                        if ($cajaActual) {
                         // Registrar como operación de caja para que sea visible
                         \App\Models\OperacionCaja::create([
                             'company_id' => $user->company_id,
@@ -248,8 +252,10 @@ class ComprobantesController extends Controller
                         $cajaActual->save();
                     }
                 }
+                }
 
                 // 2.2 Anular Deuda asociada si existe (después de usar sus datos para caja)
+
                 $deudaAsociada = \App\Models\Deuda::where('venta_id', $venta->id_venta)->first();
                 if ($deudaAsociada) {
                     \App\Models\DeudaPago::where('deuda_id', $deudaAsociada->id)->delete();
