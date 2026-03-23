@@ -20,7 +20,14 @@
 
         .almacen-container {
             padding: 1.5rem;
-            padding-bottom: 100px;
+            padding-bottom: 120px;
+        }
+
+        @media (max-width: 768px) {
+            .almacen-container {
+                padding: 0.8rem;
+                padding-bottom: 220px;
+            }
         }
 
         /* Cabecera y Breadcrumb */
@@ -161,7 +168,8 @@
             position: fixed;
             bottom: 20px;
             left: 50%;
-            width: 50%;
+            width: 80%;
+            max-width: 900px;
             transform: translateX(-50%);
             background: #fff;
             padding: 15px 30px;
@@ -169,9 +177,42 @@
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             display: flex;
             align-items: center;
-            gap: 25px;
+            justify-content: space-between;
+            gap: 15px;
             z-index: 1050;
             border: 1px solid #e2e8f0;
+        }
+
+        @media (max-width: 768px) {
+            .summary-footer {
+                width: 95%;
+                padding: 10px 15px;
+                gap: 10px;
+                border-radius: 15px;
+                flex-wrap: wrap;
+                justify-content: center;
+                bottom: 10px;
+            }
+            .stat-group {
+                flex: 1 1 30%;
+                min-width: 80px;
+                text-align: center;
+            }
+            .stat-group.border-start {
+                border-start: none !important;
+                border-left: 1px solid #edf2f7 !important;
+            }
+            .stat-val {
+                font-size: 0.9rem;
+            }
+            #btn-recibir {
+                width: 100%;
+                order: 4;
+                margin-top: 5px;
+            }
+            .summary-footer .btn-light {
+                display: none; /* Ocultar cancelar en footer móvil para ahorrar espacio */
+            }
         }
 
         .stat-group {
