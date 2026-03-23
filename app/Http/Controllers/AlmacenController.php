@@ -413,7 +413,7 @@ class AlmacenController extends Controller
         $fecha_desde = $request->get('fecha_desde', Carbon::now()->format('Y-m-d'));
         $fecha_hasta = $request->get('fecha_hasta', Carbon::now()->format('Y-m-d'));
 
-        if ($request->has('producto_id')) {
+        if ($request->has('producto_id') && $request->get('producto_id')) {
             $productoId = $request->get('producto_id');
             $producto = Producto::find($productoId);
 
@@ -538,9 +538,11 @@ class AlmacenController extends Controller
                                 ELSE 0 
                             END as salida,
                             COALESCE(aid.costo, 0) as precio_unitario,
-                            u.name as usuario
+                            u.name as usuario,
+                            p.nombre as producto_nombre
                         FROM almacen_ingreso_detalle aid
                         JOIN almacen_ingresos ai ON ai.id = aid.ingreso_id
+                        JOIN productos p ON p.id = aid.producto_id
                         LEFT JOIN producto_lineas pl ON pl.id = aid.producto_linea_id
                         LEFT JOIN sucursales s ON s.id = ai.sucursal_id
                         LEFT JOIN users u ON u.id = ai.user_id
@@ -560,9 +562,11 @@ class AlmacenController extends Controller
                             CAST(0 AS DECIMAL(10,2)) as entrada,
                             CAST(vd.cantidad AS DECIMAL(10,2)) as salida,
                             vd.precio_unitario,
-                            u.name as usuario
+                            u.name as usuario,
+                            p.nombre as producto_nombre
                         FROM venta_detalles vd
                         JOIN ventas v ON v.id_venta = vd.id_venta
+                        JOIN productos p ON p.id = vd.servicio_id
                         LEFT JOIN almacen_ingreso_detalle aid_lote_v ON aid_lote_v.id = vd.almacen_ingreso_detalle_id
                         LEFT JOIN producto_lineas pl ON pl.id = aid_lote_v.producto_linea_id
                         LEFT JOIN sucursales s ON s.id = v.sucursal
@@ -585,8 +589,10 @@ class AlmacenController extends Controller
                             CAST(0 AS DECIMAL(10,2)) as entrada,
                             t.cantidad as salida,
                             CAST(0 AS DECIMAL(10,2)) as precio_unitario,
-                            u.name as usuario
+                            u.name as usuario,
+                            p.nombre as producto_nombre
                         FROM almacen_transferencias t
+                        JOIN productos p ON p.id = t.producto_id
                         LEFT JOIN sucursales s_dest ON s_dest.id = t.sucursal_destino_id
                         LEFT JOIN users u ON u.id = t.user_id
                         LEFT JOIN almacen_ingreso_detalle aid_lote_t ON aid_lote_t.id = t.origen_lote_id
@@ -644,9 +650,70 @@ class AlmacenController extends Controller
                     $virtualSaldo->precio_unitario = 0;
                     $virtualSaldo->usuario = '-';
                     $virtualSaldo->saldo_linea = $saldoInicial;
+                    $virtualSaldo->producto_nombre = $producto->nombre;
                     $movimientos[] = $virtualSaldo;
                 }
             }
+        } else {
+            // MODO GENERAL: Si no hay producto_id, mostramos todos los movimientos del día
+            $dateFilter = " AND ai.created_at >= '{$fecha_desde} 00:00:00' AND ai.created_at <= '{$fecha_hasta} 23:59:59'";
+            $dateFilterV = " AND v.created_at >= '{$fecha_desde} 00:00:00' AND v.created_at <= '{$fecha_hasta} 23:59:59'";
+
+            $movimientos = DB::select("
+                SELECT * FROM (
+                    -- INGRESOS (Ajustes de hoy)
+                    SELECT 
+                        ai.created_at as fecha,
+                        CASE 
+                            WHEN ai.observacion LIKE '[AJUSTE]%' THEN 
+                                (CASE WHEN (aid.cantidad) < 0 THEN 'SALIDA (AJUSTE)' ELSE 'ENTRADA (AJUSTE)' END)
+                            ELSE 'ENTRADA' 
+                        END as tipo,
+                        s.nombre as sucursal,
+                        CONCAT(p.nombre, ' / ', COALESCE(pl.presentacion, ''), ' / L: ', COALESCE(aid.lote, '-'), ' / ', COALESCE(ai.observacion, '')) as detalle,
+                        CASE WHEN aid.cantidad >= 0 THEN aid.cantidad ELSE 0 END as entrada,
+                        CASE WHEN aid.cantidad < 0 THEN ABS(aid.cantidad) ELSE 0 END as salida,
+                        COALESCE(aid.costo, 0) as precio_unitario,
+                        u.name as usuario,
+                        p.nombre as producto_nombre,
+                        CAST(0 AS DECIMAL(10,2)) as saldo_linea
+                    FROM almacen_ingreso_detalle aid
+                    JOIN almacen_ingresos ai ON ai.id = aid.ingreso_id
+                    JOIN productos p ON p.id = aid.producto_id
+                    LEFT JOIN producto_lineas pl ON pl.id = aid.producto_linea_id
+                    LEFT JOIN sucursales s ON s.id = ai.sucursal_id
+                    LEFT JOIN users u ON u.id = ai.user_id
+                    WHERE ai.sucursal_id = :suc1
+                    {$dateFilter}
+
+                    UNION ALL
+
+                    -- VENTAS de hoy
+                    SELECT
+                        v.created_at as fecha,
+                        'SALIDA (VENTA)' as tipo,
+                        COALESCE(s.nombre, 'N/A') as sucursal,
+                        CONCAT(p.nombre, ' / ', COALESCE(v.serie, ''), '-', LPAD(COALESCE(v.numero, 0), 8, '0')) as detalle,
+                        CAST(0 AS DECIMAL(10,2)) as entrada,
+                        CAST(vd.cantidad AS DECIMAL(10,2)) as salida,
+                        vd.precio_unitario,
+                        u.name as usuario,
+                        p.nombre as producto_nombre,
+                        CAST(0 AS DECIMAL(10,2)) as saldo_linea
+                    FROM venta_detalles vd
+                    JOIN ventas v ON v.id_venta = vd.id_venta
+                    JOIN productos p ON p.id = vd.servicio_id
+                    LEFT JOIN sucursales s ON s.id = v.sucursal
+                    LEFT JOIN users u ON u.id = v.id_usuario
+                    WHERE v.sucursal = :suc2 AND v.estado != 0
+                    {$dateFilterV}
+                ) as historial
+                ORDER BY fecha DESC
+                LIMIT 100
+            ", [
+                'suc1' => $sucursal_id,
+                'suc2' => $sucursal_id
+            ]);
         }
 
         return view('almacen.kardex', compact('movimientos', 'producto', 'user', 'company', 'sucursales', 'sucursal_id', 'fecha_desde', 'fecha_hasta', 'linea_id'));

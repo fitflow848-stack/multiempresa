@@ -53,14 +53,19 @@
                     </div>
                 </form>
 
-                @if ($producto)
-                    <div class="alert alert-info d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong>Producto:</strong> {{ $producto->nombre }} <br>
-                            <strong>Código:</strong> {{ $producto->codigo_barras }}
+                @if ($producto || count($movimientos) > 0)
+                    @if ($producto)
+                        <div class="alert alert-info d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>Producto:</strong> {{ $producto->nombre }} <br>
+                                <strong>Código:</strong> {{ $producto->codigo_barras }}
+                            </div>
                         </div>
-                        <!-- El stock actual podría venir de la suma del kardex o de la tabla productos -->
-                    </div>
+                    @else
+                        <div class="alert alert-warning">
+                            <i class="bx bx-info-circle"></i> Mostrando movimientos generales de la sucursal (sin balance acumulado).
+                        </div>
+                    @endif
 
                     <div class="table-responsive">
                         <table class="table table-bordered table-striped table-hover" id="dataTableKardex" width="100%"
@@ -68,6 +73,9 @@
                             <thead class="text-center bg-light">
                                 <tr>
                                     <th rowspan="2" class="align-middle">Fecha / Hora</th>
+                                    @if (!$producto)
+                                        <th rowspan="2" class="align-middle">Producto</th>
+                                    @endif
                                     <th rowspan="2" class="align-middle">Tipo</th>
                                     <th rowspan="2" class="align-middle">Sucursal</th>
                                     <th rowspan="2" class="align-middle">Detalle / Documento</th>
@@ -84,9 +92,12 @@
                                 @forelse($movimientos as $mov)
                                     <tr>
                                         <td>{{ \Carbon\Carbon::parse($mov->fecha)->format('d/m/Y H:i') }}</td>
+                                        @if (!$producto)
+                                            <td><small>{{ $mov->producto_nombre ?? 'N/A' }}</small></td>
+                                        @endif
                                         <td class="text-center">
-                                            @if ($mov->tipo == 'ENTRADA')
-                                                <span class="badge bg-success">ENTRADA</span>
+                                            @if ($mov->tipo == 'ENTRADA' || str_contains($mov->tipo, 'ENTRADA'))
+                                                <span class="badge bg-success">{{ $mov->tipo }}</span>
                                             @else
                                                 <span class="badge bg-danger">{{ $mov->tipo }}</span>
                                             @endif
@@ -101,28 +112,29 @@
                                             {{ floatval($mov->salida) > 0 ? number_format($mov->salida, 2) : '-' }}
                                         </td>
                                         <td class="text-right font-weight-bold bg-light">
-                                            {{ number_format($mov->saldo_linea, 2) }}
+                                            {{ $producto ? number_format($mov->saldo_linea, 2) : '-' }}
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="text-center text-muted">No se encontraron movimientos para
-                                            este producto.</td>
+                                        <td colspan="{{ $producto ? 7 : 8 }}" class="text-center text-muted">No se encontraron movimientos.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
+                            @if ($producto)
                             <tfoot class="bg-light font-weight-bold">
                                 <tr>
                                     <td colspan="7" class="text-right">SALDO FINAL:</td>
                                     <td class="text-right">{{ number_format(count($movimientos) > 0 ? $movimientos[0]->saldo_linea : 0, 2) }}</td>
                                 </tr>
                             </tfoot>
+                            @endif
                         </table>
                     </div>
                 @else
                     <div class="text-center py-5 text-muted">
                         <i class="fas fa-boxes fa-3x mb-3"></i>
-                        <p>Seleccione un producto para ver su historial completo de movimientos.</p>
+                        <p>Seleccione un producto para ver su historial completo, o use los filtros de fecha para ver movimientos generales.</p>
                     </div>
                 @endif
             </div>
