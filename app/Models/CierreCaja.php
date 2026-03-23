@@ -72,7 +72,7 @@ class CierreCaja extends Model
     {
         $movimientos = DB::select("( SELECT
                 v.created_at AS fecha_emision,
-                'Ingreso - Venta' AS operacion,
+                CASE WHEN v.estado = 0 THEN 'Ingreso - Venta (Anulada)' WHEN v.estado = 3 THEN 'Ingreso - Venta (Devuelta)' ELSE 'Ingreso - Venta' END AS operacion,
                 'ingreso' AS tipo_movimiento,
                 COALESCE(c.nombre, 'Cliente Contable') AS cliente_nombre,
                 CONCAT( v.serie, ' ', v.numero ) AS concepto,
@@ -92,7 +92,7 @@ class CierreCaja extends Model
                     LEFT JOIN tipos_pagos tp ON tp.id = v.id_tipo_pago
                     LEFT JOIN deudas d ON d.venta_id = v.id_venta
                 WHERE
-                    v.cierre_caja_id = :cierre_id AND v.estado != 0 AND v.id_tido != 5
+                    v.cierre_caja_id = :cierre_id AND v.id_tido != 5
                 ) UNION
                 (
                 SELECT
