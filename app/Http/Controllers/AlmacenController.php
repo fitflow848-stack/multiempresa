@@ -409,8 +409,8 @@ class AlmacenController extends Controller
         $producto = null;
         $linea_id = $request->get('linea_id');
         
-        // Por defecto mostramos movimientos de los últimos 30 días si no se especifica
-        $fecha_desde = $request->get('fecha_desde', Carbon::now()->subDays(30)->format('Y-m-d'));
+        // Por defecto mostramos movimientos de hoy si no se especifica
+        $fecha_desde = $request->get('fecha_desde', Carbon::now()->format('Y-m-d'));
         $fecha_hasta = $request->get('fecha_hasta', Carbon::now()->format('Y-m-d'));
 
         if ($request->has('producto_id')) {
