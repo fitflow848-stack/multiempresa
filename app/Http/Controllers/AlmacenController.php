@@ -204,20 +204,29 @@ class AlmacenController extends Controller
 
     public function guardarAjuste(Request $request, $id)
     {
-        // 1. Validar los datos
-        $request->validate([
-            'existencias_fisico' => 'required|numeric',
-            'precio_compra' => 'required|numeric|min:0',
-            'pvp' => 'required|numeric|min:0',
-            'observacion' => 'nullable|string|max:1000',
-        ]);
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
 
+        // 1. Validar los datos
         try {
+            Log::info("Iniciando ajuste para lote ID $id", $request->all());
+            
+            $request->validate([
+                'existencias_fisico' => 'required|numeric',
+                'precio_compra' => 'required|numeric|min:0',
+                'pvp' => 'required|numeric|min:0',
+                'observacion' => 'nullable|string|max:1000',
+            ]);
+
             DB::beginTransaction();
 
             // 2. Localizar el registro original de ingreso
             $detalleOriginal = AlmacenIngresoDetalle::findOrFail($id);
             $ingresoOriginal = $detalleOriginal->ingreso;
+
+            if (!$ingresoOriginal) {
+                throw new \Exception("El lote no tiene un registro de ingreso asociado.");
+            }
 
             // Calculamos el TOTAL actual para este producto/línea en esta sucursal (antes del ajuste)
             $oldTotal = DB::table('almacen_ingreso_detalle as d')
@@ -227,15 +236,25 @@ class AlmacenController extends Controller
                 ->where('i.sucursal_id', $ingresoOriginal->sucursal_id)
                 ->sum('d.cantidad') ?? 0;
 
-            $newTotal = (float)$request->existencias_fisico;
-            $diferencia = $newTotal - (float)$oldTotal;
+            $newTotal = floatval($request->existencias_fisico);
+            $diferencia = $newTotal - floatval($oldTotal);
 
-            // SOLO si hay una diferencia en cantidad, creamos un registro de ajuste para el Kardex
-            if (abs($diferencia) > 0.001) {
-                // Generamos un nuevo ingreso tipo 'Ajuste'
+            // Siempre actualizamos los datos del producto base si vienen en el request
+            $productoUpdate = Producto::find($detalleOriginal->producto_id);
+            if ($productoUpdate) {
+                $productoUpdate->update([
+                    'peso' => $request->filled('peso') ? $request->peso : $productoUpdate->peso,
+                    'pv_docena' => $request->filled('pv_docena') ? $request->pv_docena : $productoUpdate->pv_docena,
+                    'precio_compra' => $request->precio_compra,
+                    'pvp' => $request->pvp
+                ]);
+            }
+
+            // Si hay una diferencia en cantidad, creamos un registro de ajuste para el Kardex
+            if (abs($diferencia) > 0.0001) {
                 $ingresoAjuste = AlmacenIngreso::create([
-                    'company_id' => $ingresoOriginal->company_id,
-                    'empresa_id' => $ingresoOriginal->empresa_id,
+                    'company_id' => $user->company_id ?? $ingresoOriginal->company_id,
+                    'empresa_id' => $user->company_id ?? $ingresoOriginal->empresa_id,
                     'sucursal_id' => $ingresoOriginal->sucursal_id,
                     'user_id' => Auth::id(),
                     'fecha' => now(),
@@ -252,22 +271,13 @@ class AlmacenController extends Controller
                     'pvpd' => $request->pvp_dcto,
                     'pvc' => $request->pvc,
                     'pvcd' => $request->pvc_dcto,
-                    'lote' => $detalleOriginal->lote,
+                    'lote' => $detalleOriginal->lote ?? 'AJUSTE',
                     'fecha_vencimiento' => $detalleOriginal->fecha_vencimiento,
                     'stock_min' => $detalleOriginal->stock_min,
                     'stock_max' => $detalleOriginal->stock_max,
                 ]);
-
-                // Actualizar peso y pv_docena en el producto
-                $productoUpdate = Producto::find($detalleOriginal->producto_id);
-                if ($productoUpdate) {
-                    $productoUpdate->update([
-                        'peso' => $request->peso,
-                        'pv_docena' => $request->pv_docena,
-                    ]);
-                }
             } else {
-                // Si la cantidad es la misma, solo actualizamos los datos del registro existente
+                // Si la cantidad es la misma, actualizamos los datos del registro de lote específico
                 $detalleOriginal->update([
                     'costo' => $request->precio_compra,
                     'pvp' => $request->pvp,
@@ -275,24 +285,20 @@ class AlmacenController extends Controller
                     'pvc' => $request->pvc,
                     'pvcd' => $request->pvc_dcto,
                 ]);
-
-                // Actualizar peso y pv_docena en el producto
-                $productoUpdate = Producto::find($detalleOriginal->producto_id);
-                if ($productoUpdate) {
-                    $productoUpdate->update([
-                        'peso' => $request->peso,
-                        'pv_docena' => $request->pv_docena,
-                    ]);
-                }
             }
 
             DB::commit();
 
-            return redirect()->route('almacen.index')
-                ->with('success', 'El ajuste de existencias se registró correctamente.');
+            return redirect()->route('almacen.index', ['sucursal' => $ingresoOriginal->sucursal_id])
+                ->with('success', "Ajuste procesado. Stock actual: $newTotal " . ($productoUpdate->unidadMedida->nombre ?? 'unid.'));
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning("Fallo de validación en ajuste: ", $e->errors());
+            throw $e;
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->withErrors('Error al procesar el ajuste: ' . $e->getMessage());
+            Log::error("Error en ajuste para lote ID $id: " . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return back()->withInput()->withErrors('Error al procesar el ajuste: ' . $e->getMessage());
         }
     }
 

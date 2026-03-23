@@ -14,6 +14,16 @@
             </div>
         </div>
 
+        @if ($errors->any())
+            <div class="alert alert-danger shadow-sm border-0" style="border-radius: 1rem;">
+                <ul class="mb-0">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <div class="card">
             <div class="card-body">
                 <div class="row mb-3">
