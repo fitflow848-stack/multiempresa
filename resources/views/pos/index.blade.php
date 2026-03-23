@@ -280,6 +280,10 @@
 <!-- Modal de Nuevo Cliente Manual -->
 @include('pos.partials.modals.modal-nuevo-cliente')
 
+<!-- Modales de Acciones de Cliente (Global) -->
+@include('pos.partials.modals.modal-editar-cliente-pos')
+@include('pos.partials.modals.modal-cobrar-deuda-pos')
+
 <!-- Modal de Selección de Tipo de Documento -->
 @include('pos.partials.modals.modal-tipo-documento')
 
@@ -732,7 +736,7 @@
             return;
         }
 
-        const tipoMap = { 'boleta': 'boleta', 'factura': 'factura', 'ticket': 'nota_entrega' };
+        const tipoMap = { 'boleta': 'boleta', 'factura': 'factura', 'ticket': 'ticket' };
         const tipoBackend = tipoMap[tipo] || 'boleta';
         const serieDefecto = { 'boleta': 'B001', 'factura': 'F001', 'ticket': 'NV01' };
         const finalSerie = serieFromData || serieDefecto[tipo] || 'B001';

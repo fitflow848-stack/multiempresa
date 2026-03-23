@@ -54,10 +54,15 @@
         clientes.forEach((cliente, index) => {
             const tr = document.createElement('tr');
             tr.style.cursor = 'pointer';
-            tr.onclick = () => seleccionarCliente(cliente);
+            tr.onclick = (e) => {
+                // Si el click es en los botones de acción, no seleccionar el cliente para venta
+                if (e.target.closest('.btn-cliente-action')) return;
+                seleccionarCliente(cliente);
+            };
 
             // Agregar funcionalidad de doble click para confirmar selección
-            tr.ondblclick = () => {
+            tr.ondblclick = (e) => {
+                if (e.target.closest('.btn-cliente-action')) return;
                 seleccionarCliente(cliente);
                 confirmarSeleccionCliente(); // Confirmar automáticamente
             };
@@ -76,12 +81,27 @@
 
             // Convertir debe a número para evitar errores
             const debeNumero = parseFloat(cliente.debe) || 0;
+            const esContable = cliente.id === 999999 || (cliente.nombre && cliente.nombre.includes('CONTABLE'));
 
             tr.innerHTML = `
                     <td style="padding: 8px; border-bottom: 1px solid #eee;">${icono}</td>
                     <td style="padding: 8px; border-bottom: 1px solid #eee; font-family: monospace;">${cliente.numero_documento}</td>
                     <td style="padding: 8px; border-bottom: 1px solid #eee;">${cliente.nombre}</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; color: ${debeNumero > 0 ? '#dc3545' : '#28a745'};">S/ ${debeNumero.toFixed(2)}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; color: ${debeNumero > 0 ? '#dc3545' : '#28a745'}; font-weight: bold;">S/ ${debeNumero.toFixed(2)}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">
+                        <div style="display: flex; gap: 5px; justify-content: center;">
+                            ${debeNumero > 0 ? `
+                                <button onclick="abrirModalCobrarDeuda(${cliente.id}, '${cliente.nombre.replace(/'/g, "\\'")}', ${debeNumero})" class="btn-cliente-action" title="Cobrar Deuda" style="padding: 5px 8px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                                    <i class='bx bx-money'></i> Cobrar
+                                </button>
+                            ` : ''}
+                            ${!esContable ? `
+                                <button onclick="abrirModalEditarCliente(${cliente.id})" class="btn-cliente-action" title="Editar Cliente" style="padding: 5px 8px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px;">
+                                    <i class='bx bx-edit'></i> Editar
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
                 `;
 
             // Agregar tooltip para indicar la funcionalidad
@@ -90,6 +110,162 @@
             tbody.appendChild(tr);
         });
     }
+
+    // --- FUNCIONES DE ACCIONES DE CLIENTE ---
+
+    function abrirModalEditarCliente(clienteId) {
+        const cliente = clientesDisponibles.find(c => c.id === clienteId);
+        if (!cliente) return;
+
+        document.getElementById('edit-cliente-id').value = cliente.id;
+        document.getElementById('edit-cliente-nombre').value = cliente.nombre;
+        document.getElementById('edit-cliente-telefono').value = cliente.telefono || '';
+        document.getElementById('edit-cliente-direccion').value = cliente.direccion || '';
+        document.getElementById('edit-cliente-email').value = cliente.email || '';
+
+        document.getElementById('modal-editar-cliente-pos').style.display = 'flex';
+    }
+
+    function cerrarModalEditarCliente() {
+        document.getElementById('modal-editar-cliente-pos').style.display = 'none';
+        document.getElementById('form-editar-cliente-pos').reset();
+    }
+
+    function guardarEdicionCliente(event) {
+        event.preventDefault();
+
+        const id = document.getElementById('edit-cliente-id').value;
+        const datos = {
+            telefono: document.getElementById('edit-cliente-telefono').value,
+            direccion: document.getElementById('edit-cliente-direccion').value,
+            email: document.getElementById('edit-cliente-email').value,
+            _token: '{{ csrf_token() }}',
+            _method: 'PUT'
+        };
+
+        const btn = document.getElementById('btn-guardar-edit-cliente');
+        const originalText = btn.innerText;
+        btn.innerText = 'Guardando...';
+        btn.disabled = true;
+
+        fetch(`{{ url('clientes') }}/${id}/pos-update`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify(datos)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                mostrarNotificacion('✅ Cliente actualizado correctamente');
+                cerrarModalEditarCliente();
+                cargarListaClientes(); // Recargar lista para ver cambios
+            } else {
+                Swal.fire('Error', data.message || 'No se pudo actualizar el cliente', 'error');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            Swal.fire('Error', 'Problema al conectar con el servidor', 'error');
+        })
+        .finally(() => {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        });
+    }
+
+    function abrirModalCobrarDeuda(clienteId, nombre, deuda) {
+        document.getElementById('cobrar-cliente-id').value = clienteId;
+        document.getElementById('cobrar-cliente-nombre').innerText = nombre;
+        document.getElementById('cobrar-monto-total').innerText = 'S/ ' + parseFloat(deuda).toFixed(2);
+        document.getElementById('cobrar-monto-pago').value = parseFloat(deuda).toFixed(2);
+        document.getElementById('cobrar-monto-pago').max = parseFloat(deuda).toFixed(2);
+        
+        document.getElementById('modal-cobrar-deuda-pos').style.display = 'flex';
+        
+        setTimeout(() => {
+            document.getElementById('cobrar-monto-pago').focus();
+            document.getElementById('cobrar-monto-pago').select();
+        }, 100);
+    }
+
+    function cerrarModalCobrarDeuda() {
+        document.getElementById('modal-cobrar-deuda-pos').style.display = 'none';
+        document.getElementById('form-cobrar-deuda-pos').reset();
+    }
+
+    function procesarCobroDeuda(event) {
+        event.preventDefault();
+
+        const clienteId = document.getElementById('cobrar-cliente-id').value;
+        const monto = parseFloat(document.getElementById('cobrar-monto-pago').value);
+        const metodo = document.getElementById('cobrar-metodo-pago').value;
+        const observaciones = document.getElementById('cobrar-observaciones').value;
+
+        if (!monto || monto <= 0) {
+            Swal.fire('Atención', 'Ingrese un monto válido para el pago', 'warning');
+            return;
+        }
+
+        const btn = document.getElementById('btn-confirmar-cobro');
+        const originalText = btn.innerText;
+        btn.innerText = 'Procesando...';
+        btn.disabled = true;
+
+        fetch(`{{ route('deudas.pagar-acumulado') }}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                cliente_id: clienteId,
+                monto_pago: monto,
+                metodo_pago: metodo,
+                observaciones: observaciones
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                cerrarModalCobrarDeuda();
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Cobro realizado!',
+                    text: data.message,
+                    showCancelButton: true,
+                    confirmButtonText: 'Imprimir Recibo',
+                    cancelButtonText: 'Cerrar',
+                    confirmButtonColor: '#28a745'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        if (data.batch_id) {
+                            window.open(`{{ url('deudas/pago') }}/${data.pago_ids[0]}/comprobante`, '_blank');
+                        }
+                    }
+                    cargarListaClientes();
+                    
+                    // Si el usuario tiene abierta la caja en otra pestaña o algo, esto refresca el estado en el POS
+                    if (typeof checkCajaStatus === 'function') checkCajaStatus();
+                });
+            } else {
+                Swal.fire('Error', data.message || 'No se pudo procesar el cobro', 'error');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            Swal.fire('Error', 'Problema al conectar con el servidor', 'error');
+        })
+        .finally(() => {
+            btn.innerText = originalText;
+            btn.disabled = false;
+        });
+    }
+
+    // --- FIN FUNCIONES DE ACCIONES ---
 
     function seleccionarCliente(cliente) {
         clienteSeleccionado = cliente;

@@ -3,13 +3,12 @@
 namespace App\Models;
 
 use App\Traits\BelongsToCompany;
-use App\Traits\BelongsToSucursal;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Cliente extends Model
 {
-    use HasFactory, BelongsToCompany, BelongsToSucursal;
+    use HasFactory, BelongsToCompany;
 
     protected $fillable = [
         'company_id',

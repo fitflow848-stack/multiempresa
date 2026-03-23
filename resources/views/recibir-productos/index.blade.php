@@ -97,7 +97,7 @@
             right: 0;
             width: 50%;
             background: #fff;
-            border-top: 1px solid #e2e8f0;
+            border-top: 2px solid #4361ee;
             padding: 15px 40px;
             display: flex;
             justify-content: space-between;
@@ -127,6 +127,38 @@
             font-size: 1.3rem;
             font-weight: 800;
             color: #1a202c;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .almacen-container {
+                padding: 10px;
+                padding-bottom: 250px; /* More space for stacked footer */
+            }
+            .summary-footer {
+                flex-direction: column;
+                width: 100% !important;
+                left: 0 !important;
+                padding: 15px;
+                gap: 15px;
+            }
+            .stat-group {
+                flex-direction: column;
+                gap: 10px;
+                width: 100%;
+                text-align: center;
+            }
+            .stat-value {
+                font-size: 1.1rem;
+            }
+            #btn-recibir {
+                width: 100%;
+            }
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
         }
     </style>
 

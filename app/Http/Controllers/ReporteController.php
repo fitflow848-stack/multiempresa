@@ -1364,5 +1364,177 @@ class ReporteController extends Controller
             'data' => compact('ventasTotal', 'ventasCantidad', 'egresos', 'ingresosExtra', 'comprasTotal', 'comprasCantidad', 'desde', 'hasta')
         ];
     }
+
+    private function reportePagosMetodo(Request $request)
+    {
+        $desde = $request->input('desde');
+        $hasta = $request->input('hasta');
+        $vendedor_id = $request->input('vendedor_id');
+        $local_id = $request->input('local_id');
+
+        // 1. Pagos directos en ventas
+        $queryVentas = Venta::with(['cliente', 'user', 'tipoPago'])
+            ->where('estado', '!=', '0')
+            ->whereHas('tipoPago', function ($q) {
+                $q->where('nombre', 'like', '%YAPE%')
+                    ->orWhere('nombre', 'like', '%TRANSFERENCIA%')
+                    ->orWhere('nombre', 'like', '%PLIN%')
+                    ->orWhere('nombre', 'like', '%BCP%')
+                    ->orWhere('nombre', 'like', '%BBVA%')
+                    ->orWhere('nombre', 'like', '%SCOTIABANK%')
+                    ->orWhere('nombre', 'like', '%INTERBANK%');
+            });
+
+        if ($desde) $queryVentas->whereDate('fecha_emision', '>=', $desde);
+        if ($hasta) $queryVentas->whereDate('fecha_emision', '<=', $hasta);
+        if ($vendedor_id) $queryVentas->where('id_usuario', $vendedor_id);
+        if ($local_id) $queryVentas->where('sucursal', $local_id);
+
+        $ventas = $queryVentas->get()->map(function ($v) {
+            return (object) [
+                'fecha' => $v->fecha_emision,
+                'cliente' => $v->cliente->nombre ?? 'Varios',
+                'documento' => $v->serie . '-' . str_pad($v->numero, 8, '0', STR_PAD_LEFT),
+                'metodo' => $v->tipoPago->nombre ?? 'S/N',
+                'monto' => $v->total,
+                'vendedor' => $v->user->name ?? '-',
+                'tipo' => 'Venta Directa'
+            ];
+        });
+
+        // 2. Pagos de deudas acumuladas
+        $queryPagos = DeudaPago::with(['deuda.cliente', 'user'])
+            ->where(function ($q) {
+                $q->where('metodo_pago', 'like', '%YAPE%')
+                    ->orWhere('metodo_pago', 'like', '%TRANSFERENCIA%')
+                    ->orWhere('metodo_pago', 'like', '%PLIN%')
+                    ->orWhere('metodo_pago', 'like', '%BCP%')
+                    ->orWhere('metodo_pago', 'like', '%BBVA%')
+                    ->orWhere('metodo_pago', 'like', '%SCOTIABANK%')
+                    ->orWhere('metodo_pago', 'like', '%INTERBANK%');
+            });
+
+        if ($desde) $queryPagos->whereDate('fecha_pago', '>=', $desde);
+        if ($hasta) $queryPagos->whereDate('fecha_pago', '<=', $hasta);
+        if ($vendedor_id) $queryPagos->where('user_id', $vendedor_id);
+        
+        if ($local_id) {
+            $queryPagos->whereHas('deuda', function($q) use ($local_id) {
+                $q->where('sucursal_id', $local_id);
+            });
+        }
+
+        $pagos = $queryPagos->get()->map(function ($p) {
+            return (object) [
+                'fecha' => $p->fecha_pago,
+                'cliente' => $p->deuda->cliente->nombre ?? '-',
+                'documento' => 'Cobr. ' . $p->deuda->numero_comprobante,
+                'metodo' => $p->metodo_pago,
+                'monto' => $p->monto,
+                'vendedor' => $p->user->name ?? '-',
+                'tipo' => 'Cobranza Deuda'
+            ];
+        });
+
+        $resultados = $ventas->concat($pagos)->sortByDesc('fecha');
+        
+        $totales = (object) [
+            'monto' => $resultados->sum('monto')
+        ];
+
+        return [
+            'view' => 'reportes.partials.pagos_metodo',
+            'data' => compact('resultados', 'totales')
+        ];
+    }
+
+    private function reporteStockCritico(Request $request)
+    {
+        $local_id = $request->input('local_id') ?: Auth::user()->branch_id;
+        $familia_id = $request->input('familia_id');
+
+        $query = Producto::with(['familia', 'marca']);
+        
+        if ($familia_id) {
+            $query->where('familia_id', $familia_id);
+        }
+
+        $resultados = $query->get()->map(function($p) use ($local_id) {
+            $stock = DB::table('almacen_ingreso_detalle as ad')
+                ->join('almacen_ingresos as ai', 'ai.id', '=', 'ad.ingreso_id')
+                ->where('ad.producto_id', $p->id)
+                ->where('ai.sucursal_id', $local_id)
+                ->sum('ad.cantidad');
+            
+            $p->stock_actual = (float) $stock;
+            return $p;
+        })->filter(function($p) {
+            return $p->stock_actual <= ($p->stock_minimo ?? 0);
+        })->sortBy('stock_actual')->values();
+
+        return [
+            'view' => 'reportes.partials.stock_critico',
+            'data' => compact('resultados')
+        ];
+    }
+
+    private function reporteHistorialIngresos(Request $request)
+    {
+        $desde = $request->input('desde');
+        $hasta = $request->input('hasta');
+        $local_id = $request->input('local_id');
+        $vendedor_id = $request->input('vendedor_id');
+
+        // 1. Ingresos por Ventas Directas
+        $ventasQuery = Venta::with(['cliente', 'user', 'tipoPago'])
+            ->where('estado', '!=', '0');
+        if ($desde) $ventasQuery->whereDate('fecha_emision', '>=', $desde);
+        if ($hasta) $ventasQuery->whereDate('fecha_emision', '<=', $hasta);
+        if ($local_id) $ventasQuery->where('sucursal', $local_id);
+        if ($vendedor_id) $ventasQuery->where('id_usuario', $vendedor_id);
+
+        $ventas = $ventasQuery->get()->map(function ($v) {
+            return (object) [
+                'fecha' => $v->fecha_emision,
+                'cliente' => $v->cliente->nombre ?? 'Varios',
+                'concepto' => 'Venta: ' . $v->serie . '-' . str_pad($v->numero, 8, '0', STR_PAD_LEFT),
+                'metodo' => $v->tipoPago->nombre ?? '-',
+                'monto' => $v->total,
+                'usuario' => $v->user->name ?? '-',
+                'tipo' => 'VENTA'
+            ];
+        });
+
+        // 2. Ingresos por Cobranza de Deudas
+        $cobrosQuery = DeudaPago::with(['deuda.cliente', 'user']);
+        if ($desde) $cobrosQuery->whereDate('fecha_pago', '>=', $desde);
+        if ($hasta) $cobrosQuery->whereDate('fecha_pago', '<=', $hasta);
+        if ($vendedor_id) $cobrosQuery->where('user_id', $vendedor_id);
+        if ($local_id) {
+            $cobrosQuery->whereHas('deuda', function ($q) use ($local_id) {
+                $q->where('sucursal_id', $local_id);
+            });
+        }
+
+        $cobros = $cobrosQuery->get()->map(function ($p) {
+            return (object) [
+                'fecha' => $p->fecha_pago,
+                'cliente' => $p->deuda->cliente->nombre ?? '-',
+                'concepto' => 'Cobro Deuda: ' . $p->deuda->numero_comprobante,
+                'metodo' => $p->metodo_pago,
+                'monto' => $p->monto,
+                'usuario' => $p->user->name ?? '-',
+                'tipo' => 'COBRANZA'
+            ];
+        });
+
+        $resultados = $ventas->concat($cobros)->sortByDesc('fecha');
+        $total = $resultados->sum('monto');
+
+        return [
+            'view' => 'reportes.partials.historial_ingresos',
+            'data' => compact('resultados', 'total')
+        ];
+    }
 }
 

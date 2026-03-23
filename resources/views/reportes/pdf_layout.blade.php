@@ -115,8 +115,8 @@
     @include($view)
 
     <div class="footer">
-        Página
-        <script type="text/php">echo $PAGE_NUM . " de " . $PAGE_COUNT;</script> - Wolvix Report System
+        Página <script type="text/php">echo $PAGE_NUM . " de " . $PAGE_COUNT;</script> - Wolvix Report System
+        | Fecha de Impresión: {{ date('d/m/Y H:i:s') }}
     </div>
 </body>
 

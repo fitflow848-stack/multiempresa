@@ -32,7 +32,6 @@ class ClienteController extends Controller
     {
         $user = Auth::user();
         $query = Cliente::where('company_id', $user->company_id)
-            ->where('sucursal_id', $user->branch_id)
             ->activos();
 
         // Filtro de búsqueda
@@ -115,7 +114,6 @@ class ClienteController extends Controller
         // 2. Verificar existencia (Evitar back() en AJAX)
         $existeCliente = Cliente::withoutGlobalScopes()
             ->where('company_id', $user->company_id)
-            ->where('sucursal_id', $user->branch_id)
             ->where('numero_documento', $request->numero_documento)
             ->first();
 
@@ -209,7 +207,6 @@ class ClienteController extends Controller
         // Verificar si ya existe otro cliente con ese documento
         $existeCliente = Cliente::withoutGlobalScopes()
             ->where('company_id', Auth::user()->company_id)
-            ->where('sucursal_id', Auth::user()->branch_id)
             ->where('numero_documento', $request->numero_documento)
             ->where('id', '!=', $cliente->id)
             ->first();
@@ -269,7 +266,6 @@ class ClienteController extends Controller
         // Verificar si ya existe el cliente (Bypass global scopes to prevent duplicates across context)
         $existeCliente = Cliente::withoutGlobalScopes()
             ->where('company_id', $user->company_id)
-            ->where('sucursal_id', $user->branch_id)
             ->where('numero_documento', $documento)
             ->first();
 
@@ -356,7 +352,6 @@ class ClienteController extends Controller
         $termino = $request->get('q', '');
 
         $clientes = Cliente::where('company_id', $user->company_id)
-            ->where('sucursal_id', $user->branch_id)
             ->activos()
             ->when($termino, function ($query, $termino) {
                 $query->buscar($termino);
@@ -452,8 +447,7 @@ class ClienteController extends Controller
         $query = $request->get('q', '');
 
         $clientes = Cliente::where('company_id', $user->company_id)
-            ->where('sucursal_id', $user->branch_id)
-            ->where('activo', 1)
+            ->where('estado', 1)
             ->where(function ($q) use ($query) {
                 $q->where('nombre', 'like', "%{$query}%")
                     ->orWhere('numero_documento', 'like', "%{$query}%")
@@ -569,6 +563,33 @@ class ClienteController extends Controller
             ]);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Error técnico al consultar: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function posUpdate(Request $request, Cliente $cliente)
+    {
+        $request->validate([
+            'telefono' => 'nullable|string|max:20',
+            'direccion' => 'nullable|string',
+            'email' => 'nullable|email'
+        ]);
+
+        try {
+            $cliente->update([
+                'telefono' => $request->telefono,
+                'direccion' => $request->direccion,
+                'email' => $request->email
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cliente actualizado correctamente'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar cliente: ' . $e->getMessage()
+            ], 500);
         }
     }
 }

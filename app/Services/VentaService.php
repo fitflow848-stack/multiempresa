@@ -161,7 +161,7 @@ class VentaService
             $subtotal_gravado = round($total - $igv, 2); // Base total (gravada + exonerada + inafecta)
 
             // Obtener siguiente número
-            $siguienteNumero = $this->obtenerSiguienteNumeroSerie('', $tipoDocumento, true);
+            $siguienteNumero = $this->obtenerSiguienteNumeroSerie($serie, $tipoDocumento, true);
             $documento = DB::table('documentos_sunat')
                 ->where('nombre', 'like', '%' . $tipoDocumento . '%')
                 ->first();
@@ -368,18 +368,22 @@ class VentaService
         return $ultimaVenta ? (intval($ultimaVenta->numero) + 1) : 1;
     }
 
-    /**
-     * Obtener el siguiente número de serie para mostrar en el formulario
-     */
     public function obtenerSiguienteNumeroSerie($serie, $tipoDocumento, $es_venta = false)
     {
         $user = Auth::user();
         $documento = DB::table('documentos_sunat')
             ->where('nombre', 'like', '%' . $tipoDocumento . '%')
             ->first();
+
+        if (!$documento) {
+            return $es_venta ? 1 : response()->json(['numero' => '00000001', 'error' => 'Documento no configurado']);
+        }
+
         $companyDoc = CompanyDocument::where('company_id', $user->company_id)
+            ->where('branch_id', $user->branch_id)
             ->where('sunat_document_id', $documento->id_tido)
             ->first();
+
         if ($companyDoc) {
             $siguienteNumero = $companyDoc->number + 1;
         } else {
@@ -389,7 +393,8 @@ class VentaService
             return $siguienteNumero;
         }
         return response()->json([
-            'numero' => str_pad($siguienteNumero, 8, '0', STR_PAD_LEFT)
+            'numero' => str_pad($siguienteNumero, 8, '0', STR_PAD_LEFT),
+            'serie' => $companyDoc ? $companyDoc->series : $serie
         ]);
     }
 }

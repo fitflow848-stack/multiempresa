@@ -490,11 +490,11 @@
                     @endif
 
                     @if ($selectedCajaBadge)
-                        <li class="nav-item me-2 d-none d-lg-block">
+                        <li class="nav-item me-2">
                             <a href="{{ route('cierre-caja.index') }}"
                                 class="btn btn-primary btn-xs px-2 shadow-sm py-1 d-flex align-items-center"
                                 style="font-size: 0.75rem;">
-                                <i class="bx bx-box me-1"></i> CAJA (F2)
+                                <i class="bx bx-box me-1"></i> CAJA
                             </a>
                         </li>
                     @endif

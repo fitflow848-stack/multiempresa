@@ -53,10 +53,34 @@
         .form-control-sm {
             font-size: 0.85rem;
         }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .arqueo-modal-content {
+                width: 95% !important;
+                max-height: 90vh;
+                overflow-y: auto;
+            }
+            .arqueo-flex {
+                flex-direction: column !important;
+            }
+            .arqueo-column {
+                width: 100% !important;
+                margin-bottom: 15px;
+            }
+            .display-value {
+                font-size: 1rem;
+            }
+            .header-info-mobile {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 10px;
+            }
+        }
     </style>
 
     <div id="cierre-container" class="container-fluid py-3">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-3 header-info-mobile">
             <div>
                 <h1 class="h4 mb-0 text-dark">{{ isset($isTesoreria) && $isTesoreria ? 'Arqueo de Tesorería' : 'Cierre de Caja' }} #{{ $cierre->id }}</h1>
                 <p class="text-muted small mb-0">Usuario: {{ auth()->user()->name ?? 'Administrador' }}</p>
@@ -470,10 +494,10 @@
     <!-- Modal Arqueo: conteo de monedas y billetes -->
     <div id="modal-arqueo"
         style="display:none; position: fixed; inset:0; background: rgba(0,0,0,0.5); z-index:3000; align-items:center; justify-content:center;">
-        <div style="background:#fff; padding:18px; width:760px; border-radius:6px;">
-            <h5 class="mb-3">Registrar Arqueo de Caja</h5>
-            <div style="display:flex; gap:20px;">
-                <div style="flex:1;">
+        <div class="arqueo-modal-content" style="background:#fff; padding:18px; width:760px; border-radius:6px; max-width: 95%;">
+            <h5 class="mb-3 text-center">Registrar Arqueo de Caja</h5>
+            <div class="arqueo-flex" style="display:flex; gap:20px;">
+                <div class="arqueo-column" style="flex:1;">
                     <h6>Monedas</h6>
                     <div>
                         <label> S/5.00: <input type="number" class="m-count form-control form-control-sm" data-value="5"
@@ -490,7 +514,7 @@
                                 data-value="0.1" value="0" min="0"></label>
                     </div>
                 </div>
-                <div style="flex:1;">
+                <div class="arqueo-column" style="flex:1;">
                     <h6>Billetes</h6>
                     <div>
                         <label> S/200: <input type="number" class="b-count form-control form-control-sm"
@@ -506,7 +530,7 @@
 
                     </div>
                 </div>
-                <div style="width:220px;">
+                <div class="arqueo-column" style="width:220px;">
                     <h6>Totales</h6>
                     <div>Monedas: S/ <span id="total-monedas">0.00</span></div>
                     <div>Billetes: S/ <span id="total-billetes">0.00</span></div>

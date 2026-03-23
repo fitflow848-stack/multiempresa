@@ -4,11 +4,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use App\Traits\BelongsToCompany;
-use App\Traits\BelongsToSucursal;
 
 class Deuda extends Model
 {
-    use HasFactory, BelongsToCompany, BelongsToSucursal;
+    use HasFactory, BelongsToCompany;
     
     
     protected $table = 'deudas';
