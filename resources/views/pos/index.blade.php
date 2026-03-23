@@ -872,15 +872,25 @@
                     text: 'Se ha guardado la venta correctamente.',
                     showConfirmButton: true,
                     confirmButtonText: '<i class="bx bx-printer"></i> Imprimir Comprobante',
+                    showCancelButton: true,
+                    cancelButtonText: 'Cerrar Ventana',
+                    confirmButtonColor: '#4361ee',
+                    cancelButtonColor: '#6c757d',
                     allowOutsideClick: false
-                }).then(() => {
-                    if (typeof abrirModalFormatosVenta === 'function') {
-                        abrirModalFormatosVenta(vid, data.data.total);
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        if (typeof abrirModalFormatosVenta === 'function') {
+                            abrirModalFormatosVenta(vid, data.data.total);
+                        } else {
+                            limpiarVentaCompletada();
+                            window.location.reload();
+                        }
                     } else {
+                        // Si le da a Cerrar, simplemente limpiar y recargar (o lo que corresponda)
                         limpiarVentaCompletada();
                         window.location.reload();
                     }
-                    isProcessingEmission = false; // Solo después de cerrar el Alert o entrar al siguiente modal
+                    isProcessingEmission = false;
                 });
             } else {
                 Swal.fire('Error', data.message, 'error');
@@ -925,6 +935,19 @@
     // Función para cerrar la modal de tipo de documento
     function cerrarModalTipoDocumento() {
         document.getElementById('modal-tipo-documento').style.display = 'none';
+        
+        // Resetear selección en el modal
+        if (typeof documentSelectedVal !== 'undefined') {
+            documentSelectedVal = null;
+            documentSelectedName = '';
+            document.querySelectorAll('.tipo-documento-option').forEach(opt => {
+                opt.classList.remove('active');
+                opt.style.borderColor = '#e5e7eb';
+                opt.style.background = '#ffffff';
+                const check = opt.querySelector('.check-icon');
+                if(check) check.style.display = 'none';
+            });
+        }
     }
 
     let isProcessingEmission = false;

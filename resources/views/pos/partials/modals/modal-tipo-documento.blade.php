@@ -11,7 +11,7 @@
         <!-- Lista de tipos de documento -->
         <div style="padding: 20px;">
             <p style="text-align: center; color: #4b5563; font-size: 14px; margin-bottom: 15px; font-weight: 500;">
-                Haga clic o use los números del teclado [1, 2, 3...]
+                Seleccione un documento y pulse Aceptar [o use los números 1, 2, 3...]
             </p>
             @foreach($documentos as $idx => $doc)
                 @php
@@ -31,11 +31,13 @@
                         $val = 'ticket'; $icon = '📄'; $color = '#593196'; $desc = 'Comprobante de consumo';
                     }
                 @endphp
-                <div class="tipo-documento-option" onclick="seleccionarTipoDocumento('{{ $val }}')"
+                <div class="tipo-documento-option" onclick="marcarTipoDocumento(this, '{{ $val }}')"
+                     data-val="{{ $val }}"
                      data-id-tido="{{ $doc->id_tido }}"
+                     data-nombre="{{ $doc->nombre }}"
                      style="display: flex; align-items: center; padding: 15px; margin: 10px 0; background: #ffffff; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"
-                     onmouseover="this.style.borderColor='#007bff'; this.style.background='#f0f7ff';"
-                     onmouseout="this.style.borderColor='#e5e7eb'; this.style.background='#ffffff';">
+                     onmouseover="if(!this.classList.contains('active')) { this.style.borderColor='#007bff'; this.style.background='#f0f7ff'; }"
+                     onmouseout="if(!this.classList.contains('active')) { this.style.borderColor='#e5e7eb'; this.style.background='#ffffff'; }">
                     
                     <div style="background: {{ $color }}; color: white; padding: 10px; border-radius: 8px; margin-right: 15px; font-weight: 800; min-width: 70px; text-align: center; font-size: 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.15);">
                         {{ $icon }} [{{ $idx + 1 }}]
@@ -44,7 +46,9 @@
                         <div style="font-weight: 700; color: #111827; font-size: 16px; text-transform: uppercase;">{{ $doc->nombre }}</div>
                         <div style="font-size: 13px; color: #4b5563; margin-top: 2px; font-weight: 500;">{{ $desc }}</div>
                     </div>
-                    <i class='bx bx-chevron-right' style="font-size: 24px; color: #d1d5db;"></i>
+                    <div class="check-icon" style="display: none;">
+                        <i class='bx bx-check-circle' style="font-size: 28px; color: #007bff;"></i>
+                    </div>
                 </div>
             @endforeach
 
@@ -54,7 +58,13 @@
         </div>
 
         <!-- Footer -->
-        <div style="background: #f9fafb; padding: 15px 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+        <div style="background: #f9fafb; padding: 15px 20px; text-align: center; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; justify-content: center;">
+            <button id="btn-aceptar-tipo-doc" onclick="confirmarSeleccionTipoDocumento()"
+                style="padding: 10px 40px; background: #22c55e; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 15px; transition: all 0.2s;"
+                onmouseover="this.style.background='#16a34a'"
+                onmouseout="this.style.background='#22c55e'">
+                Aceptar
+            </button>
             <button onclick="cerrarModalTipoDocumento()"
                 style="padding: 10px 30px; background: #4b5563; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 15px; transition: background 0.2s;"
                 onmouseover="this.style.background='#374151'"
@@ -66,13 +76,86 @@
 </div>
 
 <script>
+    let documentSelectedVal = null;
+    let documentSelectedName = '';
+
+    function marcarTipoDocumento(el, val) {
+        // Desmarcar todos
+        const options = document.querySelectorAll('.tipo-documento-option');
+        options.forEach(opt => {
+            opt.classList.remove('active');
+            opt.style.borderColor = '#e5e7eb';
+            opt.style.background = '#ffffff';
+            opt.querySelector('.check-icon').style.display = 'none';
+        });
+
+        // Marcar el actual
+        el.classList.add('active');
+        el.style.borderColor = '#007bff';
+        el.style.background = '#f0f7ff';
+        el.querySelector('.check-icon').style.display = 'block';
+
+        documentSelectedVal = val;
+        documentSelectedName = el.getAttribute('data-nombre');
+        
+        // Efecto visual en el botón
+        const btn = document.getElementById('btn-aceptar-tipo-doc');
+        if(btn) {
+            btn.style.background = '#22c55e';
+            btn.classList.add('animate__animated', 'animate__pulse');
+            setTimeout(() => btn.classList.remove('animate__animated', 'animate__pulse'), 500);
+        }
+    }
+
+    async function confirmarSeleccionTipoDocumento() {
+        if (!documentSelectedVal) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Atención',
+                text: 'Por favor, seleccione un tipo de documento.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            return;
+        }
+
+        const { isConfirmed } = await Swal.fire({
+            title: '¿Confirmar Emisión?',
+            text: `¿Estás seguro que desea emitir una ${documentSelectedName.toUpperCase()}?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#22c55e',
+            cancelButtonColor: '#4b5563',
+            confirmButtonText: 'Sí, emitir',
+            cancelButtonText: 'Cancelar'
+        });
+
+        if (isConfirmed) {
+            if (typeof seleccionarTipoDocumento === 'function') {
+                seleccionarTipoDocumento(documentSelectedVal);
+            }
+        }
+    }
+
     document.addEventListener('keydown', function(e) {
         const modal = document.getElementById('modal-tipo-documento');
         if (modal && modal.style.display === 'flex') {
             const options = Array.from(modal.querySelectorAll('.tipo-documento-option'));
             const keyNum = parseInt(e.key);
+            
+            // Números para seleccionar
             if (!isNaN(keyNum) && keyNum > 0 && keyNum <= options.length) {
                 options[keyNum - 1].click();
+            }
+
+            // Enter para confirmar
+            if (e.key === 'Enter' && documentSelectedVal) {
+                confirmarSeleccionTipoDocumento();
+            }
+
+            // Escape para cerrar
+            if (e.key === 'Escape') {
+                cerrarModalTipoDocumento();
             }
         }
     });
