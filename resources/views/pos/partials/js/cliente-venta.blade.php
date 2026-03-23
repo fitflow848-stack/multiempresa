@@ -1,6 +1,7 @@
 <script>
     // Variables globales para clientes
     clientesDisponibles = [];
+    currentFilteredList = []; // New variable to track current results
     clienteSeleccionado = null;
 
     // Funciones para manejo de clientes
@@ -14,12 +15,15 @@
         const modal = document.getElementById('modal-buscar-clientes');
         modal.style.display = 'none';
         clienteSeleccionado = null;
+        // Limpiar búsqueda al cerrar
+        const input = document.getElementById('buscar-cliente-input');
+        if (input) input.value = '';
     }
 
     function cargarListaClientes() {
         const tbody = document.getElementById('lista-clientes-tbody');
         tbody.innerHTML =
-            '<tr><td colspan="4" style="padding: 20px; text-align: center; color: #6c757d;">Cargando clientes...</td></tr>';
+            '<tr><td colspan="5" style="padding: 20px; text-align: center; color: #6c757d;">Cargando clientes...</td></tr>';
 
         fetch(`{{ route('clientes.buscar-pos') }}`, {
             method: 'POST',
@@ -32,13 +36,39 @@
             .then(response => response.json())
             .then(data => {
                 clientesDisponibles = data;
-                renderizarListaClientes(clientesDisponibles);
+                currentFilteredList = data; // Set initial filtered list
+                renderizarListaClientes(currentFilteredList);
             })
             .catch(error => {
                 tbody.innerHTML =
-                    '<tr><td colspan="4" style="padding: 20px; text-align: center; color: #dc3545;">Error al cargar clientes</td></tr>';
+                    '<tr><td colspan="5" style="padding: 20px; text-align: center; color: #dc3545;">Error al cargar clientes</td></tr>';
                 console.error('Error:', error);
             });
+    }
+
+    // ... (renderizarListaClientes stays similar but I'll update it later if needed)
+    
+    function seleccionarCliente(cliente) {
+        clienteSeleccionado = cliente;
+        // Re-render only the current filtered state to maintain context
+        renderizarListaClientes(currentFilteredList);
+    }
+    
+    function buscarClientes() {
+        const termino = document.getElementById('buscar-cliente-input').value.toLowerCase();
+
+        if (termino.length === 0) {
+            currentFilteredList = clientesDisponibles;
+            renderizarListaClientes(currentFilteredList);
+            return;
+        }
+
+        currentFilteredList = clientesDisponibles.filter(cliente =>
+            (cliente.nombre && cliente.nombre.toLowerCase().includes(termino)) ||
+            (cliente.numero_documento && cliente.numero_documento.includes(termino))
+        );
+
+        renderizarListaClientes(currentFilteredList);
     }
 
     function renderizarListaClientes(clientes) {
@@ -269,7 +299,8 @@
 
     function seleccionarCliente(cliente) {
         clienteSeleccionado = cliente;
-        renderizarListaClientes(clientesDisponibles);
+        // Re-render only the current filtered state to maintain context
+        renderizarListaClientes(currentFilteredList);
     }
 
     function seleccionarClienteSeleccionado() {
@@ -331,16 +362,17 @@
         const termino = document.getElementById('buscar-cliente-input').value.toLowerCase();
 
         if (termino.length === 0) {
-            renderizarListaClientes(clientesDisponibles);
+            currentFilteredList = clientesDisponibles;
+            renderizarListaClientes(currentFilteredList);
             return;
         }
 
-        const clientesFiltrados = clientesDisponibles.filter(cliente =>
-            cliente.nombre.toLowerCase().includes(termino) ||
-            cliente.numero_documento.includes(termino)
+        currentFilteredList = clientesDisponibles.filter(cliente =>
+            (cliente.nombre && cliente.nombre.toLowerCase().includes(termino)) ||
+            (cliente.numero_documento && cliente.numero_documento.includes(termino))
         );
 
-        renderizarListaClientes(clientesFiltrados);
+        renderizarListaClientes(currentFilteredList);
     }
 
     function mostrarFormularioDNI() {
