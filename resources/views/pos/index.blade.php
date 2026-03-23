@@ -629,6 +629,9 @@
                     nombre: p.nombre,
                     marca: p.marca || '',
                     precio: parseFloat(p.pvp || 0),
+                    pvp: parseFloat(p.pvp || 0),
+                    pvc: parseFloat(p.pvc || 0),
+                    pv_docena: parseFloat(p.pv_docena || 0),
                     cantidad: 1,
                     descuento: 0,
                     importe: parseFloat(p.pvp || 0),
@@ -1066,6 +1069,7 @@
             importe: cantidad * parseFloat(currentProduct.pvc),
             pvp: currentProduct.pvp,
             pvc: currentProduct.pvc,
+            pv_docena: currentProduct.pv_docena || 0,
             es_precio_corporativo: true,
             descuento: 0, // Inicializar descuento porcentual
             descuentoFijo: 0, // Inicializar descuento fijo
@@ -1186,6 +1190,7 @@
             importe: cantidad * parseFloat(currentProduct.pvp),
             pvp: currentProduct.pvp,
             pvc: currentProduct.pvc,
+            pv_docena: currentProduct.pv_docena || 0,
             es_precio_publico: true,
             descuento: 0, // Inicializar descuento porcentual
             descuentoFijo: 0, // Inicializar descuento fijo
@@ -1870,6 +1875,16 @@
             if (cantidadFinal <= existente.cantidad_disponible) {
                 existente.cantidad = cantidadFinal;
 
+                // Aplicar lógica de Precio por Docena (>= 12 unidades)
+                if (existente.cantidad >= 12 && (existente.pv_docena || producto.pv_docena) > 0) {
+                    existente.precio = existente.pv_docena || producto.pv_docena;
+                    existente.es_precio_docena = true;
+                } else if (existente.es_precio_docena) {
+                    // Si ya tenía precio docena pero bajó de 12, restaurar pvp
+                    existente.precio = existente.pvp || producto.pvp || existente.precio;
+                    existente.es_precio_docena = false;
+                }
+
                 // Recalcular importe considerando descuento previo si existe (REVERTIDO A TOTAL)
                 const subtotalSinDescuento = existente.cantidad * existente.precio;
                 if (existente.descuentoFijo > 0) {
@@ -1888,13 +1903,20 @@
             const nuevoProducto = {
                 ...producto,
                 cantidad: qtyToAdd,
-                importe: producto.importe || (qtyToAdd * (producto.precio || parseFloat(producto.pvp || 0))),
                 descuento: producto.descuento || 0,
                 descuentoFijo: producto.descuentoFijo || 0,
                 descuentoTexto: producto.descuentoTexto || '0%',
                 es_precio_corporativo: producto.es_precio_corporativo || false,
                 es_precio_publico: producto.es_precio_publico || false
             };
+
+            // Aplicar lógica de Precio por Docena al agregar nuevo
+            if (nuevoProducto.cantidad >= 12 && nuevoProducto.pv_docena > 0) {
+                nuevoProducto.precio = nuevoProducto.pv_docena;
+                nuevoProducto.es_precio_docena = true;
+            }
+
+            nuevoProducto.importe = nuevoProducto.importe || (qtyToAdd * (nuevoProducto.precio || parseFloat(nuevoProducto.pvp || 0)));
 
             ticket.push(nuevoProducto);
         }
@@ -1925,7 +1947,9 @@
 
             // Color de fondo diferente para lotes específicos y precio corporativo
             let bgColor;
-            if (p.es_precio_corporativo) {
+            if (p.es_precio_docena) {
+                bgColor = idx % 2 === 0 ? '#e3f2fd' : '#bbdefb'; // Azul suave para precio docena
+            } else if (p.es_precio_corporativo) {
                 bgColor = idx % 2 === 0 ? '#e8f5e8' : '#d4edda'; // Verde claro para precio corporativo
             } else if (p.es_lote_especifico) {
                 bgColor = idx % 2 === 0 ? '#fff3e0' : '#ffe0b2'; // Naranja para lotes específicos
@@ -1956,15 +1980,13 @@
             tr.innerHTML = `
                 <td>${idx + 1}</td>
                 <td title="${nombreStr}${p.lote ? ' - Lote: ' + p.lote : ''}">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span class="photo-icon ${p.imagen_principal ? 'has-photo' : 'no-photo'}" 
-                              onmouseover="showImagePreview(event, '${p.imagen_principal || ''}')" 
-                              onmouseout="hideImagePreview()">
-                            <i class="bx bx-image"></i>
-                        </span>
-                        <div>
-                            <div style="font-weight: 600;">${nombreDisplay}${loteInfo}</div>
-                            <div style="font-size: 10px; color: #888;">MARCA: ${p.marca || '-'}</div>
+                    <div style="display: flex; flex-direction: column; gap: 0;">
+                        <div style="font-weight: 700; font-size: 13px; color: #333; line-height: 1.2; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 320px;">
+                            ${nombreDisplay}${loteInfo}
+                            ${p.es_precio_docena ? '<span style="background: #2196f3; color: white; padding: 1px 4px; border-radius: 4px; font-size: 9px; margin-left: 5px; vertical-align: middle;">DOCENA</span>' : ''}
+                        </div>
+                        <div style="font-size: 10px; color: #64748b; font-weight: 500; margin-top: 2px;">
+                            MARCA: ${p.marca || '-'}
                         </div>
                     </div>
                 </td>
@@ -2066,6 +2088,17 @@
         }
 
         producto.cantidad = cantidad;
+
+        // Aplicar lógica de Precio por Docena (>= 12 unidades)
+        if (producto.cantidad >= 12 && producto.pv_docena > 0) {
+            producto.precio = producto.pv_docena;
+            producto.es_precio_docena = true;
+        } else if (producto.es_precio_docena) {
+            // Si ya tenía precio docena pero bajó de 12, restaurar pvp
+            producto.precio = producto.pvp || producto.precio;
+            producto.es_precio_docena = false;
+        }
+
         // Recalcular importe considerando descuento (REVERTIDO A TOTAL)
         const subtotalSinDescuento = producto.cantidad * producto.precio;
         if (producto.descuentoFijo > 0) {

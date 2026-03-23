@@ -401,15 +401,25 @@
                             <i class="bx bx-grid-alt"></i> Gestión
                         </a>
                         <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="gestionDropdown">
-                            @can('guias_remision.ver')
+                            @canany(['guias_remision.ver', 'comprobantes.ver'])
                                 <li class="dropdown-header text-uppercase small fw-bold">Documentación</li>
-                                <li>
-                                    <a class="dropdown-item {{ request()->is('guia*') ? 'active' : '' }}"
-                                        href="{{ route('guia.index') }}">
-                                        <i class="bx bx-file me-2"></i> Guías de Remisión
-                                    </a>
-                                </li>
-                            @endcan
+                                @can('comprobantes.ver')
+                                    <li>
+                                        <a class="dropdown-item {{ request()->is('comprobantes*') ? 'active' : '' }}"
+                                            href="{{ route('comprobantes.index') }}">
+                                            <i class="bx bx-receipt me-2"></i> Comprobantes
+                                        </a>
+                                    </li>
+                                @endcan
+                                @can('guias_remision.ver')
+                                    <li>
+                                        <a class="dropdown-item {{ request()->is('guia*') ? 'active' : '' }}"
+                                            href="{{ route('guia.index') }}">
+                                            <i class="bx bx-file me-2"></i> Guías de Remisión
+                                        </a>
+                                    </li>
+                                @endcan
+                            @endcanany
 
                             @can('contabilidad.ver')
                                 <li>

@@ -61,7 +61,7 @@
     .ticket-table-scroll { flex: 1; overflow-y: auto; }
     .table-new { width: 100%; border-collapse: collapse; }
     .table-new th { background: #f8f9fa; padding: 12px 15px; font-size: 11px; color: #888; text-align: left; border-bottom: 1px solid #eee; position: sticky; top: 0; z-index: 10; }
-    .table-new td { padding: 15px; font-size: 13px; border-bottom: 1px solid #f9f9f9; color: #444; }
+    .table-new td { padding: 8px 15px; font-size: 13px; border-bottom: 1px solid #f9f9f9; color: #444; }
 
     .ticket-footer-new { padding: 0; background: #1e293b; color: white; display: flex; justify-content: space-between; align-items: stretch; }
     .footer-left-totals { display: flex; flex-direction: column; justify-content: center; padding: 15px 25px; gap: 5px; border-right: 1px solid #334155; }

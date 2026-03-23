@@ -203,6 +203,7 @@
             importe: parseFloat((cantidad * precio).toFixed(2)),
             pvp: currentProduct.pvp || precio,
             pvc: currentProduct.pvc || precio,
+            pv_docena: currentProduct.pv_docena || 0,
             tipo_impuesto: currentProduct.tipo_impuesto || 'gravado',
             descuento: currentProduct.descuento || 0,
             descuentoFijo: currentProduct.descuentoFijo || 0,

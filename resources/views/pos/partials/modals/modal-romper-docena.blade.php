@@ -4,14 +4,14 @@
         <!-- Header -->
         <div style="background: #d63384; color: white; padding: 20px; display: flex; align-items: center; gap: 12px;">
             <i class='bx bx-git-branch' style="font-size: 1.8rem;"></i>
-            <h3 style="margin: 0; font-size: 1.3rem; font-weight: 700;">Romper Docena / Saco / Granel</h3>
+            <h3 style="margin: 0; font-size: 1.3rem; font-weight: 700;">conversión Docena / Saco / Granel</h3>
             <button onclick="cerrarModalRomperDocena()" style="margin-left: auto; background: none; border: none; color: white; cursor: pointer; font-size: 1.5rem;">&times;</button>
         </div>
 
         <div style="padding: 25px;">
             <!-- Producto Origen (Saco) -->
             <div style="background: #fff0f6; border: 1.5px solid #d63384; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                <div style="font-size: 0.85rem; color: #d63384; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">📍 Producto a romper (Bulk)</div>
+                <div style="font-size: 0.85rem; color: #d63384; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">📍 Producto a convertir (Bulk)</div>
                 <div id="romper-nombre-origen" style="font-weight: 700; font-size: 1.1rem; color: #333;">Fosfato di Amonico / SACO 50 KG</div>
                 <div style="display: flex; gap: 15px; margin-top: 8px; font-size: 0.95rem;">
                     <span>Stock actual: <strong id="romper-stock-origen">0.00</strong></span>
@@ -20,7 +20,7 @@
 
             <!-- Cantidad a Romper -->
             <div style="margin-bottom: 20px;">
-                <label style="display: block; font-weight: 700; margin-bottom: 8px; color: #495057;">¿Cuántos sacos/unidades vas a romper?</label>
+                <label style="display: block; font-weight: 700; margin-bottom: 8px; color: #495057;">¿Cuántos sacos/unidades vas a convertir?</label>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <input type="number" id="romper-cantidad-bulk" value="1" min="1" step="any"
                         style="width: 120px; padding: 12px; border: 2px solid #ced4da; border-radius: 8px; font-size: 1.1rem; text-align: center; font-weight: 700;">
