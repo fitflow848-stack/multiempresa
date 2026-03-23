@@ -970,14 +970,15 @@ class ReporteController extends Controller
             )->first()->total_capital ?? 0;
 
         $detalles = $baseQuery
-            ->with(['producto.marca', 'producto.familia', 'producto.laboratorio'])
+            ->with(['producto.marca', 'producto.familia', 'producto.laboratorio', 'productoLinea'])
             ->select(
                 'almacen_ingreso_detalle.producto_id',
+                'almacen_ingreso_detalle.producto_linea_id',
                 DB::raw('SUM(almacen_ingreso_detalle.cantidad) as stock'),
                 DB::raw('SUM(almacen_ingreso_detalle.cantidad * almacen_ingreso_detalle.costo) as valor'),
                 DB::raw('AVG(almacen_ingreso_detalle.costo) as costo_unitario_promedio')
             )
-            ->groupBy('almacen_ingreso_detalle.producto_id')
+            ->groupBy('almacen_ingreso_detalle.producto_id', 'almacen_ingreso_detalle.producto_linea_id')
             ->having('stock', '>', 0)
             ->orderByDesc('valor')
             ->limit(200)
@@ -1015,9 +1016,14 @@ class ReporteController extends Controller
             )->first()->total_capital ?? 0;
 
         $detalles = $baseQuery
-            ->with('producto')
-            ->select('almacen_ingreso_detalle.producto_id', DB::raw('SUM(almacen_ingreso_detalle.cantidad) as stock'), DB::raw('SUM(almacen_ingreso_detalle.cantidad * almacen_ingreso_detalle.costo) as valor'))
-            ->groupBy('almacen_ingreso_detalle.producto_id')
+            ->with(['producto', 'productoLinea'])
+            ->select(
+                'almacen_ingreso_detalle.producto_id', 
+                'almacen_ingreso_detalle.producto_linea_id',
+                DB::raw('SUM(almacen_ingreso_detalle.cantidad) as stock'), 
+                DB::raw('SUM(almacen_ingreso_detalle.cantidad * almacen_ingreso_detalle.costo) as valor')
+            )
+            ->groupBy('almacen_ingreso_detalle.producto_id', 'almacen_ingreso_detalle.producto_linea_id')
             ->having('stock', '>', 0)
             ->orderByDesc('valor')
             ->limit(100)
@@ -1068,11 +1074,15 @@ class ReporteController extends Controller
                     $q->where('sucursal_id', $sucursalId);
                 }
             })
-            ->select('almacen_ingreso_detalle.producto_id', DB::raw('SUM(almacen_ingreso_detalle.cantidad) as stock_total'))
-            ->groupBy('almacen_ingreso_detalle.producto_id')
+            ->select(
+                'almacen_ingreso_detalle.producto_id', 
+                'almacen_ingreso_detalle.producto_linea_id',
+                DB::raw('SUM(almacen_ingreso_detalle.cantidad) as stock_total')
+            )
+            ->groupBy('almacen_ingreso_detalle.producto_id', 'almacen_ingreso_detalle.producto_linea_id')
             ->having('stock_total', '>', 0)
             ->orderByDesc('stock_total')
-            ->with('producto');
+            ->with(['producto', 'productoLinea']);
 
         if ($request->input('familia_id')) {
             $query->whereHas('producto', function ($q) use ($request) {

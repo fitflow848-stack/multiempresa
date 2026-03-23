@@ -21,6 +21,9 @@
                 <tr class="table-danger">
                     <td class="text-start">
                         <strong>{{ $item->nombre }}</strong>
+                        @if ($item->presentacion_modelo || $item->concentracion_detalle)
+                            <br><small class="text-muted">{{ $item->presentacion_modelo }} {{ $item->concentracion_detalle }}</small>
+                        @endif
                     </td>
                     <td>{{ $item->marca->nombre ?? '-' }}</td>
                     <td>{{ $item->familia->nombre ?? '-' }}</td>

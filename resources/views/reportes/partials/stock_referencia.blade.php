@@ -17,7 +17,14 @@
         <tbody>
             @forelse($resultados as $row)
                 <tr>
-                    <td>{{ $row->producto->nombre ?? 'N/A' }}</td>
+                    <td>
+                        <strong>{{ $row->producto->nombre ?? 'N/A' }}</strong>
+                        @if ($row->productoLinea)
+                            <br><small class="text-primary">{{ $row->productoLinea->presentacion }} {{ $row->productoLinea->concentracion }}</small>
+                        @elseif ($row->producto->presentacion_modelo || $row->producto->concentracion_detalle)
+                            <br><small class="text-muted">{{ $row->producto->presentacion_modelo }} {{ $row->producto->concentracion_detalle }}</small>
+                        @endif
+                    </td>
                     <td class="fw-bold">{{ $row->lote }}</td>
                     <td>{{ $row->fecha_vencimiento }}</td>
                     <td class="text-center">{{ (float) $row->cantidad }}</td>
