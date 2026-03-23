@@ -137,8 +137,10 @@ class RoleAndPermissionSeeder extends Seeder
         $adminEmpresaRole = Role::firstOrCreate(['name' => 'admin_empresa']);
 
         // Roles operativos (ya existentes)
+        $administradorRole = Role::firstOrCreate(['name' => 'administrador']);
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
         $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
+        $jefeAlmacenRole = Role::firstOrCreate(['name' => 'jefe_almacen']);
         $vendedorRole = Role::firstOrCreate(['name' => 'vendedor']);
         $cajeroRole = Role::firstOrCreate(['name' => 'cajero']);
 
@@ -157,15 +159,36 @@ class RoleAndPermissionSeeder extends Seeder
                 'sucursales.crear',
                 'sucursales.editar',
                 'sucursales.eliminar',
-                'cajas.crear',
-                'cajas.editar',
-                'cajas.eliminar',
+                // 'cajas.crear', // Admin empresa SÍ debe poder crear cajas y series
+                // 'cajas.editar', 
+                // 'cajas.eliminar',
             ];
             return !in_array($p->name, $restricted);
         }));
 
+        // El rol ADMINISTRADOR tiene las mismas funciones que ADMIN EMPRESA según el requerimiento
+        $administradorRole->syncPermissions($adminEmpresaRole->permissions);
+
         // Admin ( legacy )
         $adminRole->syncPermissions($allPermissions);
+
+        // Jefe de Almacén: gestión total de productos e inventario
+        $jefeAlmacenRole->syncPermissions([
+            'productos.ver',
+            'productos.crear',
+            'productos.editar',
+            'productos.eliminar',
+            'inventario.ver',
+            'inventario.ajustar',
+            'inventario.transferir',
+            'inventario.kardex',
+            'compras.ver',
+            'compras.crear',
+            'compras.recibir',
+            'catalogos.ver',
+            'catalogos.gestionar',
+            'sucursales.ver',
+        ]);
 
         // Supervisor: supervisa operaciones en su sucursal
         $supervisorRole->syncPermissions([

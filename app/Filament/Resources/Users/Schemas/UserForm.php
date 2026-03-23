@@ -124,7 +124,8 @@ class UserForm
                         )
                         ->multiple()
                         ->preload()
-                        ->native(false),
+                        ->native(false)
+                        ->default(fn () => \Spatie\Permission\Models\Role::where('name', 'admin_empresa')->pluck('id')->toArray()),
 
                     Toggle::make('is_active')
                         ->label('Usuario Activo')

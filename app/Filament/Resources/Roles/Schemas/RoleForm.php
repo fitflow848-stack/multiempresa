@@ -35,12 +35,21 @@ class RoleForm
                 ->schema([
                     CheckboxList::make('permissions')
                         ->label('Accesos Disponibles')
-                        ->relationship('permissions', 'name')
+                        ->relationship(
+                            'permissions', 
+                            'name',
+                            fn($query) => auth()->user()->isSuperAdmin() 
+                                ? $query 
+                                : $query->whereNotIn('name', [
+                                    'empresas.crear', 'empresas.editar', 'empresas.eliminar',
+                                    'sucursales.crear', 'sucursales.editar', 'sucursales.eliminar'
+                                ])
+                        )
                         ->searchable()
                         ->bulkToggleable()
                         ->columns(3)
                         ->gridDirection('vertical')
-                        ->helperText('Seleccione los permisos que tendrá este rol')
+                        ->helperText('Seleccione los permisos que tendrá este rol'),
                 ]),
         ];
     }
