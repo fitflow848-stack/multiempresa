@@ -229,7 +229,6 @@ class BalanceController extends Controller
 
         // INVENTARIO: Valorizado al costo promedio o costo de entrada (Sistema)
         $inventario = AlmacenIngresoDetalle::withoutGlobalScopes()
-            ->where('cantidad', '>', 0)
             ->whereHas('ingreso', function ($q) use ($user, $sucursalId) {
                 $q->withoutGlobalScopes()->where('empresa_id', $user->company_id);
                 if ($sucursalId) {
