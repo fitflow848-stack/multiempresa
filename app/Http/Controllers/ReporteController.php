@@ -942,7 +942,7 @@ class ReporteController extends Controller
         
         // Base query with scoping
         $baseQuery = AlmacenIngresoDetalle::withoutGlobalScopes()
-            ->where('almacen_ingreso_detalle.cantidad', '>', 0)
+            // ->where('almacen_ingreso_detalle.cantidad', '>', 0) // Removido para incluir ajustes negativos
             ->whereHas('ingreso', function ($q) use ($user, $request) {
                 $q->withoutGlobalScopes()
                   ->where('empresa_id', $user->company_id);
@@ -978,6 +978,7 @@ class ReporteController extends Controller
                 DB::raw('AVG(almacen_ingreso_detalle.costo) as costo_unitario_promedio')
             )
             ->groupBy('almacen_ingreso_detalle.producto_id')
+            ->having('stock', '>', 0)
             ->orderByDesc('valor')
             ->limit(200)
             ->get();
@@ -993,7 +994,7 @@ class ReporteController extends Controller
         $user = Auth::user();
         
         $baseQuery = AlmacenIngresoDetalle::withoutGlobalScopes()
-            ->where('almacen_ingreso_detalle.cantidad', '>', 0)
+            // ->where('almacen_ingreso_detalle.cantidad', '>', 0)
             ->whereHas('ingreso', function ($q) use ($user, $request) {
                 $q->withoutGlobalScopes()
                   ->where('empresa_id', $user->company_id);
@@ -1017,6 +1018,7 @@ class ReporteController extends Controller
             ->with('producto')
             ->select('almacen_ingreso_detalle.producto_id', DB::raw('SUM(almacen_ingreso_detalle.cantidad) as stock'), DB::raw('SUM(almacen_ingreso_detalle.cantidad * almacen_ingreso_detalle.costo) as valor'))
             ->groupBy('almacen_ingreso_detalle.producto_id')
+            ->having('stock', '>', 0)
             ->orderByDesc('valor')
             ->limit(100)
             ->get();
@@ -1058,7 +1060,7 @@ class ReporteController extends Controller
         $sucursalId = $request->input('local_id') ?: null;
 
         $query = AlmacenIngresoDetalle::withoutGlobalScopes()
-            ->where('almacen_ingreso_detalle.cantidad', '>', 0)
+            // ->where('almacen_ingreso_detalle.cantidad', '>', 0)
             ->whereHas('ingreso', function ($q) use ($user, $sucursalId) {
                 $q->withoutGlobalScopes()
                   ->where('empresa_id', $user->company_id);
@@ -1068,6 +1070,7 @@ class ReporteController extends Controller
             })
             ->select('almacen_ingreso_detalle.producto_id', DB::raw('SUM(almacen_ingreso_detalle.cantidad) as stock_total'))
             ->groupBy('almacen_ingreso_detalle.producto_id')
+            ->having('stock_total', '>', 0)
             ->orderByDesc('stock_total')
             ->with('producto');
 
@@ -1089,7 +1092,7 @@ class ReporteController extends Controller
         $user = Auth::user();
         $sucursalId = $request->input('local_id') ?: null;
 
-        $query = AlmacenIngresoDetalle::withoutGlobalScopes()->where('almacen_ingreso_detalle.cantidad', '>', 0)
+        $query = AlmacenIngresoDetalle::withoutGlobalScopes() // ->where('almacen_ingreso_detalle.cantidad', '>', 0)
             ->whereHas('ingreso', function ($q) use ($user, $sucursalId) {
                 $q->withoutGlobalScopes()->where('empresa_id', $user->company_id);
                 if ($sucursalId) {
@@ -1099,6 +1102,7 @@ class ReporteController extends Controller
             ->select('almacen_ingreso_detalle.producto_id', 'almacen_ingresos.sucursal_id', DB::raw('SUM(almacen_ingreso_detalle.cantidad) as stock_total'))
             ->join('almacen_ingresos', 'almacen_ingreso_detalle.ingreso_id', '=', 'almacen_ingresos.id')
             ->groupBy('almacen_ingreso_detalle.producto_id', 'almacen_ingresos.sucursal_id')
+            ->having('stock_total', '>', 0)
             ->with('producto');
 
         if ($request->input('familia_id')) {
@@ -1119,7 +1123,7 @@ class ReporteController extends Controller
         $user = Auth::user();
         $sucursalId = $request->input('local_id') ?: null;
 
-        $query = AlmacenIngresoDetalle::withoutGlobalScopes()->where('almacen_ingreso_detalle.cantidad', '>', 0)
+        $query = AlmacenIngresoDetalle::withoutGlobalScopes() // ->where('almacen_ingreso_detalle.cantidad', '>', 0)
             ->whereHas('ingreso', function ($q) use ($user, $sucursalId) {
                 $q->withoutGlobalScopes()->where('empresa_id', $user->company_id);
                 if ($sucursalId) {
@@ -1176,7 +1180,7 @@ class ReporteController extends Controller
                     $q->where('sucursal_id', $sucursalId);
                 }
             })
-            ->where('almacen_ingreso_detalle.cantidad', '>', 0)
+            // ->where('almacen_ingreso_detalle.cantidad', '>', 0)
             ->whereNotNull('almacen_ingreso_detalle.fecha_vencimiento')
             ->whereDate('almacen_ingreso_detalle.fecha_vencimiento', '<=', $fechaLimite)
             ->select('almacen_ingreso_detalle.*')
@@ -1474,6 +1478,36 @@ class ReporteController extends Controller
 
         return [
             'view' => 'reportes.partials.stock_critico',
+            'data' => compact('resultados')
+        ];
+    }
+
+    private function reporteSinStock(Request $request)
+    {
+        $local_id = $request->input('local_id') ?: Auth::user()->branch_id;
+        $familia_id = $request->input('familia_id');
+
+        $query = Producto::with(['familia', 'marca']);
+        
+        if ($familia_id) {
+            $query->where('familia_id', $familia_id);
+        }
+
+        $resultados = $query->get()->map(function($p) use ($local_id) {
+            $stock = DB::table('almacen_ingreso_detalle as ad')
+                ->join('almacen_ingresos as ai', 'ai.id', '=', 'ad.ingreso_id')
+                ->where('ad.producto_id', $p->id)
+                ->where('ai.sucursal_id', $local_id)
+                ->sum('ad.cantidad');
+            
+            $p->stock_actual = (float) $stock;
+            return $p;
+        })->filter(function($p) {
+            return $p->stock_actual <= 0;
+        })->values();
+
+        return [
+            'view' => 'reportes.partials.sin_stock',
             'data' => compact('resultados')
         ];
     }
