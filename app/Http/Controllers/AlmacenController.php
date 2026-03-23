@@ -413,6 +413,77 @@ class AlmacenController extends Controller
                 $dateFilterV = " AND v.created_at >= '{$fecha_desde} 00:00:00' AND v.created_at <= '{$fecha_hasta} 23:59:59'";
                 $dateFilterT = " AND t.created_at >= '{$fecha_desde} 00:00:00' AND t.created_at <= '{$fecha_hasta} 23:59:59'";
 
+                // 1. Calcular Saldo Inicial (Movimientos antes de fecha_desde)
+                $dateFilterPrev = " AND ai.created_at < '{$fecha_desde} 00:00:00'";
+                $dateFilterVPrev = " AND v.created_at < '{$fecha_desde} 00:00:00'";
+                $dateFilterTPrev = " AND t.created_at < '{$fecha_desde} 00:00:00'";
+
+                $prevResult = DB::selectOne("
+                    SELECT SUM(entrada) - SUM(salida) as balance FROM (
+                        SELECT 
+                            CASE 
+                                WHEN (aid.cantidad + 
+                                    COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
+                                    COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
+                                ) >= 0 THEN 
+                                    (aid.cantidad + 
+                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
+                                        COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
+                                    ) 
+                                ELSE 0 
+                            END as entrada,
+                            CASE 
+                                WHEN (aid.cantidad + 
+                                    COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
+                                    COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
+                                ) < 0 THEN 
+                                    ABS(aid.cantidad + 
+                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
+                                        COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
+                                    )
+                                ELSE 0 
+                            END as salida
+                        FROM almacen_ingreso_detalle aid
+                        JOIN almacen_ingresos ai ON ai.id = aid.ingreso_id
+                        WHERE aid.producto_id = :prod_id1
+                        AND ai.sucursal_id = :suc1
+                        AND (:line1_check = 0 OR aid.producto_linea_id = :line1_id)
+                        {$dateFilterPrev}
+
+                        UNION ALL
+
+                        SELECT
+                            0 as entrada,
+                            vd.cantidad as salida
+                        FROM venta_detalles vd
+                        JOIN ventas v ON v.id_venta = vd.id_venta
+                        LEFT JOIN almacen_ingreso_detalle aid_lote_v ON aid_lote_v.id = vd.almacen_ingreso_detalle_id
+                        WHERE vd.servicio_id = :prod_id2 
+                        AND v.sucursal = :suc2
+                        AND v.estado != 0
+                        AND (:line2_check = 0 OR aid_lote_v.producto_linea_id = :line2_id)
+                        {$dateFilterVPrev}
+
+                        UNION ALL
+
+                        SELECT
+                            0 as entrada,
+                            t.cantidad as salida
+                        FROM almacen_transferencias t
+                        LEFT JOIN almacen_ingreso_detalle aid_lote_t ON aid_lote_t.id = t.origen_lote_id
+                        WHERE t.producto_id = :prod_id3
+                        AND t.sucursal_origen_id = :suc3
+                        AND (:line3_check = 0 OR aid_lote_t.producto_linea_id = :line3_id)
+                        {$dateFilterTPrev}
+                    ) as historial_prev
+                ", [
+                    'prod_id1' => $productoId, 'suc1' => $sucursal_id, 'line1_check' => $linea_id ? 1 : 0, 'line1_id' => $linea_id,
+                    'prod_id2' => $productoId, 'suc2' => $sucursal_id, 'line2_check' => $linea_id ? 1 : 0, 'line2_id' => $linea_id,
+                    'prod_id3' => $productoId, 'suc3' => $sucursal_id, 'line3_check' => $linea_id ? 1 : 0, 'line3_id' => $linea_id
+                ]);
+
+                $saldoInicial = floatval($prevResult->balance ?? 0);
+
                 // Consulta UNION para Entradas, Salidas (Ventas) y Transferencias
                 $movimientos = DB::select("
                     SELECT * FROM (
@@ -523,7 +594,26 @@ class AlmacenController extends Controller
                 ]);
 
                 // Calcular saldos acumulados (necesario si queremos mostrar en DESC pero con balances correctos)
-                $saldoAcumulado = 0;
+                $saldoAcumulado = $saldoInicial;
+                
+                // Si el saldo inicial es distinto de cero o no hay movimientos en el rango, 
+                // podemos añadir una fila virtual de "Saldo Anterior" para claridad
+                if ($saldoInicial != 0) {
+                    $virtualSaldo = new \stdClass();
+                    $virtualSaldo->fecha = Carbon::parse($fecha_desde)->startOfDay();
+                    $virtualSaldo->tipo = 'SALDO ANTERIOR';
+                    $virtualSaldo->sucursal = '-';
+                    $virtualSaldo->detalle = 'Saldo acumulado antes del ' . Carbon::parse($fecha_desde)->format('d/m/Y');
+                    $virtualSaldo->entrada = $saldoInicial > 0 ? $saldoInicial : 0;
+                    $virtualSaldo->salida = $saldoInicial < 0 ? abs($saldoInicial) : 0;
+                    $virtualSaldo->precio_unitario = 0;
+                    $virtualSaldo->usuario = '-';
+                    $virtualSaldo->saldo_linea = $saldoInicial;
+                    
+                    // No lo añadimos al array todavía para que el loop de abajo funcione correctamente
+                    // Pero guardamos la referencia si queremos mostrarlo al final/inicio
+                }
+
                 foreach ($movimientos as $mov) {
                     $saldoAcumulado += (floatval($mov->entrada) - floatval($mov->salida));
                     $mov->saldo_linea = $saldoAcumulado;
@@ -531,6 +621,21 @@ class AlmacenController extends Controller
 
                 // Invertir para mostrar el más reciente arriba (fecha antigua abajo)
                 $movimientos = array_reverse($movimientos);
+                
+                // Añadir el saldo anterior al final (que será el inicio tras el reverse)
+                if ($saldoInicial != 0) {
+                    $virtualSaldo = new \stdClass();
+                    $virtualSaldo->fecha = Carbon::parse($fecha_desde)->startOfDay();
+                    $virtualSaldo->tipo = 'SALDO ANTERIOR';
+                    $virtualSaldo->sucursal = '-';
+                    $virtualSaldo->detalle = 'Saldo acumulado antes del ' . Carbon::parse($fecha_desde)->format('d/m/Y');
+                    $virtualSaldo->entrada = 0;
+                    $virtualSaldo->salida = 0;
+                    $virtualSaldo->precio_unitario = 0;
+                    $virtualSaldo->usuario = '-';
+                    $virtualSaldo->saldo_linea = $saldoInicial;
+                    $movimientos[] = $virtualSaldo;
+                }
             }
         }
 

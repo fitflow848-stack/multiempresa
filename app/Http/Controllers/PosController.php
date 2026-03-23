@@ -623,75 +623,82 @@ class PosController extends Controller
             DB::beginTransaction();
             $user = Auth::user();
 
-            // 1. Obtener Lote Origen y Bloquear
-            $loteOrigen = AlmacenIngresoDetalle::lockForUpdate()->find($request->origen_lote_id);
-            if (!$loteOrigen || $loteOrigen->cantidad < $request->cantidad_origen) {
+            // 1. Obtener Lote Origen
+            $loteOrigen = AlmacenIngresoDetalle::find($request->origen_lote_id);
+            if (!$loteOrigen || DB::table('almacen_ingreso_detalle')->where('producto_id', $loteOrigen->producto_id)->where('lote', $loteOrigen->lote)->sum('cantidad') < $request->cantidad_origen) {
                 throw new \Exception('Stock insuficiente en el producto origen o lote no encontrado.');
             }
 
-            // 2. Obtener Lote Destino (el más reciente en la misma sucursal para este producto)
-            // IMPORTANTE: Buscamos en almacen_ingreso_detalle un registro que pertenezca a un ingreso de esta sucursal
-            $loteDestino = DB::table('almacen_ingreso_detalle as d')
+            $cantidadAumentar = $request->cantidad_origen * $request->factor;
+
+            // 2. Crear Ajuste de SALIDA para el Origen (Kardex)
+            $ingresoSalidaId = DB::table('almacen_ingresos')->insertGetId([
+                'company_id' => $user->company_id,
+                'empresa_id' => $user->company_id,
+                'sucursal_id' => $user->branch_id,
+                'user_id' => $user->id,
+                'fecha' => now(),
+                'observacion' => "[AJUSTE] Conversión/Rotura (Salida): {$request->cantidad_origen} unidades de " . ($loteOrigen->producto->nombre ?? 'producto'),
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            DB::table('almacen_ingreso_detalle')->insert([
+                'ingreso_id' => $ingresoSalidaId,
+                'producto_id' => $loteOrigen->producto_id,
+                'producto_linea_id' => $loteOrigen->producto_linea_id,
+                'cantidad' => -1 * $request->cantidad_origen,
+                'costo' => $loteOrigen->costo,
+                'pvp' => $loteOrigen->pvp,
+                'pvpd' => $loteOrigen->pvpd,
+                'pvc' => $loteOrigen->pvc,
+                'pvcd' => $loteOrigen->pvcd,
+                'lote' => $loteOrigen->lote,
+                'fecha_vencimiento' => $loteOrigen->fecha_vencimiento,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            // 3. Crear Ajuste de ENTRADA para el Destino (Kardex)
+            $ingresoEntradaId = DB::table('almacen_ingresos')->insertGetId([
+                'company_id' => $user->company_id,
+                'empresa_id' => $user->company_id,
+                'sucursal_id' => $user->branch_id,
+                'user_id' => $user->id,
+                'fecha' => now(),
+                'observacion' => "[AJUSTE] Conversión/Rotura (Entrada): {$cantidadAumentar} unidades desde " . ($loteOrigen->producto->nombre ?? 'producto'),
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            // Buscamos si el destino ya tiene una línea de producto definida o si podemos rescatar valores
+            $loteDestinoPrevio = DB::table('almacen_ingreso_detalle as d')
                 ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
                 ->where('d.producto_id', $request->destino_producto_id)
                 ->where('i.sucursal_id', $user->branch_id)
-                ->select('d.*')
                 ->orderBy('d.created_at', 'desc')
                 ->first();
 
-            // Si no hay lote destino, crear uno basado en el origen pero para el producto destino
-            if (!$loteDestino) {
-                // Generar un nuevo ingreso de ajuste para inicializar el stock del subproducto
-                $ingresoAjuste = DB::table('almacen_ingresos')->insertGetId([
-                    'company_id' => $user->company_id,
-                    'empresa_id' => $user->company_id,
-                    'sucursal_id' => $user->branch_id,
-                    'user_id' => $user->id,
-                    'fecha' => now(),
-                    'observacion' => '[ROTURA] Inicialización de stock desde rotura de ' . $loteOrigen->producto_id,
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ]);
-
-                $loteDestinoId = DB::table('almacen_ingreso_detalle')->insertGetId([
-                    'ingreso_id' => $ingresoAjuste,
-                    'producto_id' => $request->destino_producto_id,
-                    'producto_linea_id' => null, 
-                    'cantidad' => 0,
-                    'costo' => $loteOrigen->costo / $request->factor,
-                    'pvp' => $loteOrigen->pvp / $request->factor,
-                    'lote' => $loteOrigen->lote,
-                    'fecha_vencimiento' => $loteOrigen->fecha_vencimiento,
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ]);
-                
-                $loteDestino = DB::table('almacen_ingreso_detalle')->where('id', $loteDestinoId)->first();
-            }
-
-            // 3. Realizar el ajuste
-            $cantidadAumentar = $request->cantidad_origen * $request->factor;
-
-            // Restar Origen
-            DB::table('almacen_ingreso_detalle')
-                ->where('id', $loteOrigen->id)
-                ->update([
-                    'cantidad' => $loteOrigen->cantidad - $request->cantidad_origen,
-                    'updated_at' => now()
-                ]);
-
-            // Aumentar Destino
-            DB::table('almacen_ingreso_detalle')
-                ->where('id', $loteDestino->id)
-                ->update([
-                    'cantidad' => $loteDestino->cantidad + $cantidadAumentar,
-                    'updated_at' => now()
-                ]);
+            DB::table('almacen_ingreso_detalle')->insert([
+                'ingreso_id' => $ingresoEntradaId,
+                'producto_id' => $request->destino_producto_id,
+                'producto_linea_id' => $loteDestinoPrevio->producto_linea_id ?? null,
+                'cantidad' => $cantidadAumentar,
+                'costo' => $loteOrigen->costo / $request->factor,
+                'pvp' => $loteOrigen->pvp / $request->factor,
+                'pvpd' => ($loteOrigen->pvpd ?? 0) / $request->factor,
+                'pvc' => ($loteOrigen->pvc ?? 0) / $request->factor,
+                'pvcd' => ($loteOrigen->pvcd ?? 0) / $request->factor,
+                'lote' => $loteOrigen->lote, // Mantener el mismo lote para trazabilidad
+                'fecha_vencimiento' => $loteOrigen->fecha_vencimiento,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
 
             DB::commit();
             return response()->json([
                 'success' => true,
-                'message' => 'Stock ajustado con éxito'
+                'message' => 'Conversión procesada y reportada al kardex correctamente'
             ]);
 
         } catch (\Exception $e) {

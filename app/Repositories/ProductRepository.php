@@ -76,8 +76,9 @@ class ProductRepository
             LEFT JOIN marcas m ON m.id = p.marca_id
             LEFT JOIN familias f ON f.id = p.familia_id
             LEFT JOIN unidades_medida um ON um.id = p.unidad_medida_id
-            WHERE (p.nombre LIKE ? OR p.codigo_barras LIKE ?) AND ad.cantidad > 0
+            WHERE (p.nombre LIKE ? OR p.codigo_barras LIKE ?)
             GROUP BY p.id, ad.producto_linea_id
+            HAVING SUM(ad.cantidad) > 0
             ORDER BY MAX(p.nombre) ASC
         ", $params);
     }
@@ -99,17 +100,19 @@ class ProductRepository
         $params[] = $productoId;
         
         return DB::select("SELECT
-                    ad.id,
-                    COALESCE(ad.lote, CONCAT('LOTE-', ad.id)) as lote,
+                    MAX(ad.id) as id,
+                    COALESCE(ad.lote, CONCAT('LOTE-', MAX(ad.id))) as lote,
                     ad.fecha_vencimiento,
-                    ad.cantidad,
                     ad.pvp,
                     ad.pvc,
-                    CONCAT('Stock: ', ad.cantidad) as descripcion_lote
+                    SUM(ad.cantidad) as cantidad,
+                    CONCAT('Stock: ', SUM(ad.cantidad)) as descripcion_lote
                 FROM almacen_ingreso_detalle ad
                 $joinIngresos
-                WHERE ad.producto_id = ? AND ad.cantidad > 0
-                ORDER BY ad.id ASC", $params);
+                WHERE ad.producto_id = ?
+                GROUP BY ad.lote, ad.fecha_vencimiento, ad.pvp, ad.pvc
+                HAVING SUM(ad.cantidad) > 0
+                ORDER BY MAX(ad.id) ASC", $params);
     }
 
     public function obtenerProductoConLotes(int $productoId)
@@ -135,20 +138,20 @@ class ProductRepository
         $params[] = $productoId;
 
         return DB::select("SELECT
-                    ad.id,
+                    MAX(ad.id) as id,
                     ad.producto_linea_id,
-                    COALESCE(ad.lote, CONCAT('LOTE-', ad.id)) as lote,
+                    COALESCE(ad.lote, CONCAT('LOTE-', MAX(ad.id))) as lote,
                     ad.fecha_vencimiento as fecha_vencimiento,
-                    ad.cantidad,
-                    ad.pvp,
-                    ad.pvc,
-                    ad.fecha_vencimiento as fecha_formato,
                     'ONIU' as empaque,
-                    ad.cantidad as unidades
+                    SUM(ad.cantidad) as unidades,
+                    ad.pvp,
+                    ad.pvc
                 FROM
                     almacen_ingreso_detalle ad
                 $joinIngresos
-                WHERE ad.producto_id = ? AND ad.cantidad > 0
-                ORDER BY ad.id ASC", $params);
+                WHERE ad.producto_id = ?
+                GROUP BY ad.producto_linea_id, ad.lote, ad.fecha_vencimiento, ad.pvp, ad.pvc
+                HAVING SUM(ad.cantidad) > 0
+                ORDER BY MAX(ad.id) ASC", $params);
     }
 }
