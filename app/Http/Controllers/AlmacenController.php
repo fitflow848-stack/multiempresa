@@ -280,6 +280,11 @@ class AlmacenController extends Controller
                     'stock_min' => $detalleOriginal->stock_min,
                     'stock_max' => $detalleOriginal->stock_max,
                 ]);
+
+                // 2.3 Sincronizar stock total en la tabla de productos
+                if ($productoUpdate) {
+                    $productoUpdate->increment('cantidad', $diferencia);
+                }
             } else {
                 // Si la cantidad es la misma, actualizamos los datos del registro de lote específico
                 $detalleOriginal->update([

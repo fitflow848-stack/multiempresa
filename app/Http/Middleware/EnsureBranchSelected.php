@@ -18,8 +18,21 @@ class EnsureBranchSelected
         $user = auth()->user();
 
         if ($user && !$user->isSuperAdmin()) {
+            // Verificar que la sucursal en sesión sea válida para este usuario/empresa
+            $currentActiveBranchId = session('active_branch_id');
+            if ($currentActiveBranchId) {
+                $isSameCompany = \App\Models\Sucursal::where('id', $currentActiveBranchId)
+                    ->where('company_id', $user->company_id)
+                    ->exists();
+                
+                if (!$isSameCompany) {
+                    // Si no es de la misma empresa, limpiamos para obligar re-selección
+                    session()->forget(['active_branch_id', 'branch_selected']);
+                }
+            }
+
             // No aplicar a rutas de seleccion o logout
-            if ($request->routeIs('branch.select') || $request->routeIs('branch.select.post') || $request->routeIs('logout')) {
+            if ($request->routeIs('branch.select') || $request->routeIs('branch.select.post') || $request->routeIs('logout') || $request->routeIs('logout.get')) {
                 return $next($request);
             }
 

@@ -275,9 +275,14 @@ class VentaService
                 // Resolver el lote para descontar stock
                 $almacenDetalleId = $item['almacen_detalle_id'] ?? null;
 
-                // Si no viene el lote, buscamos el más antiguo con stock (FIFO)
+                // Si no viene el lote, buscamos el más antiguo con stock (FIFO) de la sucursal actual
                 if (empty($almacenDetalleId)) {
                     $lote = AlmacenIngresoDetalle::where('producto_id', $item['producto_id'])
+                        ->whereHas('ingreso', function($q) use ($user) {
+                            if ($user->branch_id) {
+                                $q->where('sucursal_id', $user->branch_id);
+                            }
+                        })
                         ->where('cantidad', '>', 0)
                         ->orderBy('id', 'asc')
                         ->first();

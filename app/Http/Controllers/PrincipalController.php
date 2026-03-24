@@ -12,6 +12,7 @@ use App\Models\Cotizacion;
 use App\Models\Deuda;
 use App\Models\AlmacenIngresoDetalle;
 use App\Models\Company;
+use App\Models\CierreCaja;
 use Carbon\Carbon;
 
 class PrincipalController extends Controller
@@ -69,19 +70,30 @@ class PrincipalController extends Controller
         // If the user wants branch-specific stock counts, we'd need to join.
 
         // Productos en stock mínimo (cantidad <= stock_min)
-        $productos_stock_minimo_cnt = AlmacenIngresoDetalle::whereHas('ingreso', function($q) {
-                // BelongsToSucursal on AlmacenIngreso will handle this
+        $branchId = $user->branch_id;
+
+        // --- CONTEO DE PRODUCTOS (BRANCH SCOPED) ---
+        // Obtenemos los IDs de productos que tienen stock positivo en la sucursal actual
+        $inStockProductIdsQuery = AlmacenIngresoDetalle::whereHas('ingreso', function($q) use ($branchId) {
+                if ($branchId) {
+                    $q->where('sucursal_id', $branchId);
+                }
             })
             ->where('cantidad', '>', 0)
-            ->whereColumn('cantidad', '<=', 'stock_min')
-            ->where('stock_min', '>', 0)
+            ->distinct()
+            ->select('producto_id');
+
+        $productos_stock_cnt = $inStockProductIdsQuery->get()->count();
+        
+        // Conteo de productos sin stock (productos de la empresa que no están en el query anterior)
+        $productos_sin_stock_cnt = Producto::whereNotIn('id', $inStockProductIdsQuery)->count();
+
+        $cajas_abiertas_cnt = CierreCaja::where('id_empresa', $user->company_id)
+            ->whereNull('fecha_cierre')
             ->count();
 
         // --- CAPITAL ACTUAL ---
-        $branchId = $user->branch_id;
-        $stock_valuations = AlmacenIngresoDetalle::whereHas('ingreso', function($q) use ($user, $branchId) {
-                // Si es super_admin, tratamos de filtrar por la sucursal seleccionada en la sesión
-                // Para otros roles, el trait BelongsToSucursal ya debería encargarse, but we ensure it here.
+        $stock_valuations = AlmacenIngresoDetalle::whereHas('ingreso', function($q) use ($branchId) {
                 if ($branchId) {
                     $q->where('sucursal_id', $branchId);
                 }
@@ -95,6 +107,21 @@ class PrincipalController extends Controller
 
         $capital_costo = $stock_valuations->total_costo ?? 0;
         $capital_venta = $stock_valuations->total_venta ?? 0;
+
+        // --- ALERTAS DE STOCK ---
+        // Productos donde la SUMA de existencias en el lote es <= stock_min
+        $stock_alerts = AlmacenIngresoDetalle::whereHas('ingreso', function($q) use ($branchId) {
+                if ($branchId) {
+                    $q->where('sucursal_id', $branchId);
+                }
+            })
+            ->select('producto_id', DB::raw('SUM(cantidad) as total_existencias'), DB::raw('MAX(stock_min) as min_stock'))
+            ->groupBy('producto_id')
+            ->havingRaw('SUM(cantidad) <= MAX(stock_min)')
+            ->where('cantidad', '>', 0) // Que al menos algo haya (o no)
+            ->get();
+
+        $productos_alerta_cnt = $stock_alerts->count();
 
         $capital_venta_neto = $capital_venta / 1.18;
         $capital_impuesto = $capital_venta - $capital_venta_neto;
