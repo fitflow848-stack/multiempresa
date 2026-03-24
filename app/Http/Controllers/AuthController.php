@@ -53,49 +53,6 @@ class AuthController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        if ($user) {
-            // Liberar cajas abiertas (Cierre automático por logout)
-            $openCajas = \App\Models\CierreCaja::where('user_id', $user->id)
-                ->whereNull('fecha_cierre')
-                ->get();
-
-            foreach ($openCajas as $cierre) {
-                // Calcular totales de movimientos para un cierre coherente
-                $movimientos = \Illuminate\Support\Facades\DB::select("
-                    (SELECT 'ingreso' as tipo, 
-                        CASE 
-                            WHEN d.id IS NULL THEN v.total
-                            ELSE (v.total - (d.monto_deuda + COALESCE((SELECT SUM(monto) FROM deuda_pagos WHERE deuda_id = d.id), 0)))
-                        END as importe, 
-                        tp.es_efectivo 
-                     FROM ventas v 
-                     LEFT JOIN tipos_pagos tp ON tp.id = v.id_tipo_pago
-                     LEFT JOIN deudas d ON d.venta_id = v.id_venta
-                     WHERE v.cierre_caja_id = :c1 AND v.estado != 0)
-                    UNION ALL
-                    (SELECT tipo, importe, es_efectivo FROM operaciones_caja WHERE cierre_caja_id = :c2)
-                ", ['c1' => $cierre->id, 'c2' => $cierre->id]);
-
-                $teoricoEfectivo = (float) $cierre->monto_apertura;
-                foreach ($movimientos as $mov) {
-                    if ($mov->es_efectivo) {
-                        $tipo = strtolower($mov->tipo);
-                        if ($tipo === 'ingreso' || $tipo === 'aportacion' || $tipo === 'aporte') {
-                            $teoricoEfectivo += (float) $mov->importe;
-                        } elseif ($tipo === 'gasto' || $tipo === 'sustraccion' || $tipo === 'retiro') {
-                            $teoricoEfectivo -= (float) $mov->importe;
-                        }
-                    }
-                }
-
-                $cierre->update([
-                    'fecha_cierre' => now(),
-                    'monto_cierre' => $teoricoEfectivo, // Se cierra con el saldo teórico
-                    'observaciones' => ($cierre->observaciones ? $cierre->observaciones . ' | ' : '') . 'Cierre automático por cierre de sesión.'
-                ]);
-            }
-        }
-
         Auth::logout();
 
         $request->session()->invalidate();
