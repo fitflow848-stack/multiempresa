@@ -113,20 +113,28 @@ class AlmacenController extends Controller
         $company = $user->company ?? null;
 
         // Registro específico (lote) que estamos editando
-        $detalles = AlmacenIngresoDetalle::where('id', $id)->with('ingreso')->first();
+        $detalles = AlmacenIngresoDetalle::where('id', $id)->first();
         if (!$detalles) {
             abort(404);
+        }
+
+        // Cargamos el ingreso ignorando scopes para evitar que el filtro de sucursal del trait lo oculte
+        // si el usuario está en una sucursal distinta pero tiene permisos (ej: Admin de Empresa)
+        $ingreso = AlmacenIngreso::withoutGlobalScopes()->find($detalles->ingreso_id);
+
+        if (!$ingreso) {
+            return back()->withErrors('El registro de ingreso asociado a este lote no existe o no tiene permisos para verlo.');
         }
 
         $productoModel = Producto::find($detalles->producto_id);
         $producto_lineas = ProductoLinea::where('id', $detalles->producto_linea_id)->first();
 
-        // Calculamos el TOTAL de existencias para este producto/línea en esta sucursal
+        // Calculamos el TOTAL de existencias para este producto/línea en esta sucursal específica
         $totalExistencias = DB::table('almacen_ingreso_detalle as d')
             ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
             ->where('d.producto_id', $detalles->producto_id)
             ->where('d.producto_linea_id', $detalles->producto_linea_id)
-            ->where('i.sucursal_id', $detalles->ingreso->sucursal_id)
+            ->where('i.sucursal_id', $ingreso->sucursal_id)
             ->sum('d.cantidad') ?? 0;
 
         $producto = [
@@ -222,10 +230,11 @@ class AlmacenController extends Controller
 
             // 2. Localizar el registro original de ingreso
             $detalleOriginal = AlmacenIngresoDetalle::findOrFail($id);
-            $ingresoOriginal = $detalleOriginal->ingreso;
+            // Evitar que el trait BelongsToSucursal oculte el ingreso si el usuario cambió de sucursal pero aún puede editar
+            $ingresoOriginal = AlmacenIngreso::withoutGlobalScopes()->find($detalleOriginal->ingreso_id);
 
             if (!$ingresoOriginal) {
-                throw new \Exception("El lote no tiene un registro de ingreso asociado.");
+                throw new \Exception("El lote no tiene un registro de ingreso asociado o no tiene permisos.");
             }
 
             // Calculamos el TOTAL actual para este producto/línea en esta sucursal (antes del ajuste)
