@@ -121,7 +121,7 @@ class PrincipalController extends Controller
             ->where('cantidad', '>', 0) // Que al menos algo haya (o no)
             ->get();
 
-        $productos_alerta_cnt = $stock_alerts->count();
+        $productos_stock_minimo_cnt = $stock_alerts->count();
 
         $capital_venta_neto = $capital_venta / 1.18;
         $capital_impuesto = $capital_venta - $capital_venta_neto;
