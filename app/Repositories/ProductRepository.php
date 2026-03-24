@@ -12,7 +12,7 @@ class ProductRepository
     /**
      * Buscar productos (reemplaza el DB::select del controller).
      */
-    public function buscar(string $q, ?int $sucursalId = null): array
+    public function buscar(string $q, ?int $sucursalId = null, bool $includeEmpty = false): array
     {
         $sucursalId = $sucursalId ?? session('active_branch_id');
         $companyId = session('active_company_id') ?? (auth()->check() ? auth()->user()->company_id : null);
@@ -28,6 +28,8 @@ class ProductRepository
         }
         $params[] = "%{$q}%";
         $params[] = "%{$q}%";
+
+        $having = $includeEmpty ? "" : "HAVING SUM(ad.cantidad) > 0";
 
         return DB::select("
             SELECT
@@ -78,7 +80,7 @@ class ProductRepository
             LEFT JOIN unidades_medida um ON um.id = p.unidad_medida_id
             WHERE (p.nombre LIKE ? OR p.codigo_barras LIKE ?)
             GROUP BY p.id, ad.producto_linea_id
-            HAVING SUM(ad.cantidad) > 0
+            $having
             ORDER BY MAX(p.nombre) ASC
         ", $params);
     }

@@ -52,7 +52,7 @@
         container.style.display = 'block';
 
         try {
-            const resp = await fetch(`/pos/buscar-productos?q=${encodeURIComponent(query)}`);
+            const resp = await fetch(`/pos/buscar-productos?q=${encodeURIComponent(query)}&include_empty=1`);
             const productos = await resp.json();
 
             container.innerHTML = '';
@@ -171,6 +171,7 @@
                     origen_lote_id: productToBreak.id, // ID del detalle de almacén
                     cantidad_origen: qtyBulk,
                     destino_producto_id: targetBreakProduct.producto_id,
+                    destino_producto_linea_id: targetBreakProduct.product_linea_id,
                     destino_lote_id: targetBreakProduct.id,
                     factor: factor
                 })

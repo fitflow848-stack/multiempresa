@@ -100,9 +100,10 @@ class PosController extends Controller
     public function buscar(Request $request)
     {
         $q = $request->get('q', '');
+        $includeEmpty = $request->boolean('include_empty', false);
 
         // El repositorio ya toma el active_branch_id de la sesión por defecto
-        $productos = $this->productRepo->buscar($q);
+        $productos = $this->productRepo->buscar($q, null, $includeEmpty);
 
         return response()->json($productos);
     }
@@ -676,9 +677,15 @@ class PosController extends Controller
             ]);
 
             // Buscamos si el destino ya tiene una línea de producto definida o si podemos rescatar valores
+            // Priorizamos el producto_linea_id enviado desde el front si existe
+            $destinoLineaId = $request->get('destino_producto_linea_id', $request->get('destino_lote_id') ? DB::table('almacen_ingreso_detalle')->where('id', $request->destino_lote_id)->value('producto_linea_id') : null);
+
             $loteDestinoPrevio = DB::table('almacen_ingreso_detalle as d')
                 ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
                 ->where('d.producto_id', $request->destino_producto_id)
+                ->when($destinoLineaId, function($q) use ($destinoLineaId) {
+                    return $q->where('d.producto_linea_id', $destinoLineaId);
+                })
                 ->where('i.sucursal_id', $user->branch_id)
                 ->orderBy('d.created_at', 'desc')
                 ->first();
@@ -686,17 +693,17 @@ class PosController extends Controller
             DB::table('almacen_ingreso_detalle')->insert([
                 'ingreso_id' => $ingresoEntradaId,
                 'producto_id' => $request->destino_producto_id,
-                'producto_linea_id' => $loteDestinoPrevio->producto_linea_id ?? null,
+                'producto_linea_id' => $destinoLineaId ?? ($loteDestinoPrevio->producto_linea_id ?? null),
                 'cantidad' => $cantidadAumentar,
                 'costo' => $loteOrigen->costo / $request->factor,
                 'cop' => ($loteDestinoPrevio->cop ?? $loteOrigen->cop) / $request->factor,
                 'mu' => $loteDestinoPrevio->mu ?? $loteOrigen->mu,
                 'mud' => $loteDestinoPrevio->mud ?? $loteOrigen->mud,
                 'mup' => $loteDestinoPrevio->mup ?? $loteOrigen->mup,
-                'pvp' => $loteOrigen->pvp / $request->factor,
-                'pvpd' => ($loteOrigen->pvpd ?? 0) / $request->factor,
-                'pvc' => ($loteOrigen->pvc ?? 0) / $request->factor,
-                'pvcd' => ($loteOrigen->pvcd ?? 0) / $request->factor,
+                'pvp' => ($loteDestinoPrevio->pvp ?? ($loteOrigen->pvp / $request->factor)),
+                'pvpd' => ($loteDestinoPrevio->pvpd ?? (($loteOrigen->pvpd ?? 0) / $request->factor)),
+                'pvc' => ($loteDestinoPrevio->pvc ?? (($loteOrigen->pvc ?? 0) / $request->factor)),
+                'pvcd' => ($loteDestinoPrevio->pvcd ?? (($loteOrigen->pvcd ?? 0) / $request->factor)),
                 'lote' => $loteOrigen->lote, // Mantener el mismo lote para trazabilidad
                 'fecha_vencimiento' => $loteOrigen->fecha_vencimiento,
                 'created_at' => now(),
