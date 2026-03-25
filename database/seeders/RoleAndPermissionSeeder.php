@@ -124,127 +124,74 @@ class RoleAndPermissionSeeder extends Seeder
             'configuracion.editar',
         ];
 
+        $guards = ['web', 'admin'];
+
         foreach ($permissions as $permission) {
-            Permission::firstOrCreate(['name' => $permission]);
+            foreach ($guards as $guard) {
+                Permission::firstOrCreate(['name' => $permission, 'guard_name' => $guard]);
+            }
         }
 
         // ─── Crear roles ────────────────────────────────────────
 
-        // Super Admin: SOLO infraestructura del sistema (crear empresas y sucursales).
-        // No opera dentro de una empresa, delega la gestión al admin_empresa.
-        $superAdminRole = Role::firstOrCreate(['name' => 'super_admin']);
+        foreach ($guards as $guard) {
+            // Super Admin
+            $superAdminRole = Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => $guard]);
+            $allPermissions = Permission::where('guard_name', $guard)->get();
+            $superAdminRole->syncPermissions($allPermissions);
 
-        // Admin Empresa (Dueño de Negocio): administra TODO dentro de su empresa.
-        // Crea usuarios, roles, cajas, configura series, etc.
-        // NO puede crear/editar/eliminar empresas ni sucursales (eso es territorio del super_admin).
-        $adminEmpresaRole = Role::firstOrCreate(['name' => 'admin_empresa']);
+            // Admin Empresa
+            $adminEmpresaRole = Role::firstOrCreate(['name' => 'admin_empresa', 'guard_name' => $guard]);
+            $adminEmpresaRole->syncPermissions($allPermissions->filter(function ($p) {
+                $soloSuperAdmin = [
+                    'empresas.crear',
+                    'empresas.eliminar',
+                    'sucursales.crear',
+                    'sucursales.editar',
+                    'sucursales.eliminar',
+                ];
+                return !in_array($p->name, $soloSuperAdmin);
+            }));
 
-        // Roles operativos
-        $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
-        $jefeAlmacenRole = Role::firstOrCreate(['name' => 'jefe_almacen']);
-        $vendedorRole = Role::firstOrCreate(['name' => 'vendedor']);
-        $cajeroRole = Role::firstOrCreate(['name' => 'cajero']);
+            // Supervisor
+            $supervisorRole = Role::firstOrCreate(['name' => 'supervisor', 'guard_name' => $guard]);
+            $supervisorRole->syncPermissions([
+                'usuarios.ver', 'usuarios.crear', 'usuarios.editar', 'sucursales.ver',
+                'ventas.ver', 'ventas.crear', 'ventas.editar', 'ventas.anular',
+                'pos.ver', 'comprobantes.ver', 'comprobantes.imprimir',
+                'inventario.ver', 'productos.ver', 'clientes.ver', 'clientes.crear',
+                'caja.ver', 'caja.abrir_cerrar', 'caja.arquear', 'operaciones_caja.ver', 'reportes.ver'
+            ]);
 
-        // Rol legacy — mantener para compatibilidad pero sin permisos peligrosos
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $administradorRole = Role::firstOrCreate(['name' => 'administrador']);
+            // Jefe de Almacén
+            $jefeAlmacenRole = Role::firstOrCreate(['name' => 'jefe_almacen', 'guard_name' => $guard]);
+            $jefeAlmacenRole->syncPermissions([
+                'productos.ver', 'productos.crear', 'productos.editar', 'productos.eliminar',
+                'inventario.ver', 'inventario.ajustar', 'inventario.transferir', 'inventario.kardex',
+                'compras.ver', 'compras.crear', 'compras.recibir', 'catalogos.ver', 'catalogos.gestionar', 'sucursales.ver',
+            ]);
 
-        // ─── Asignar permisos a roles ───────────────────────────
+            // Vendedor
+            $vendedorRole = Role::firstOrCreate(['name' => 'vendedor', 'guard_name' => $guard]);
+            $vendedorRole->syncPermissions([
+                'ventas.ver', 'ventas.crear', 'ventas.editar', 'pos.ver',
+                'comprobantes.ver', 'comprobantes.imprimir', 'productos.ver', 'clientes.ver', 'clientes.crear', 'caja.ver'
+            ]);
 
-        // Super Admin: TODO el sistema
-        $allPermissions = Permission::all();
-        $superAdminRole->syncPermissions($allPermissions);
+            // Cajero
+            $cajeroRole = Role::firstOrCreate(['name' => 'cajero', 'guard_name' => $guard]);
+            $cajeroRole->syncPermissions([
+                'ventas.ver', 'ventas.crear', 'pos.ver', 'comprobantes.ver', 'comprobantes.imprimir',
+                'productos.ver', 'caja.ver', 'caja.abrir_cerrar', 'caja.arquear', 'operaciones_caja.ver', 'operaciones_caja.crear'
+            ]);
 
-        // Admin Empresa: TODOS los permisos EXCEPTO crear/eliminar empresas y sucursales.
-        // SÍ puede: editar su empresa, ver sucursales, gestionar usuarios/roles/cajas, ventas, etc.
-        // NO puede: crear empresas nuevas, eliminar empresas, crear/editar/eliminar sucursales.
-        $adminEmpresaRole->syncPermissions($allPermissions->filter(function ($p) {
-            // Infraestructura exclusiva del super_admin
-            $soloSuperAdmin = [
-                'empresas.crear',
-                'empresas.eliminar',    // Editar su empresa SÍ puede (CompanyPolicy lo valida)
-                'sucursales.crear',     // La estructura de sucursales la define el super_admin
-                'sucursales.editar',
-                'sucursales.eliminar',
-            ];
-            return !in_array($p->name, $soloSuperAdmin);
-        }));
+            // Roles legacy
+            $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => $guard]);
+            $adminRole->syncPermissions($adminEmpresaRole->permissions);
 
-        // Los roles legacy (admin, administrador) heredan permisos del admin_empresa
-        // para evitar que sigan siendo equivalentes al super_admin, lo cual era una brecha.
-        $administradorRole->syncPermissions($adminEmpresaRole->permissions);
-        $adminRole->syncPermissions($adminEmpresaRole->permissions);
-
-        // Jefe de Almacén: gestión total de productos e inventario
-        $jefeAlmacenRole->syncPermissions([
-            'productos.ver',
-            'productos.crear',
-            'productos.editar',
-            'productos.eliminar',
-            'inventario.ver',
-            'inventario.ajustar',
-            'inventario.transferir',
-            'inventario.kardex',
-            'compras.ver',
-            'compras.crear',
-            'compras.recibir',
-            'catalogos.ver',
-            'catalogos.gestionar',
-            'sucursales.ver',
-        ]);
-
-        // Supervisor: supervisa operaciones en su sucursal
-        $supervisorRole->syncPermissions([
-            'usuarios.ver',
-            'usuarios.crear',
-            'usuarios.editar',
-            'sucursales.ver',
-            'ventas.ver',
-            'ventas.crear',
-            'ventas.editar',
-            'ventas.anular',
-            'pos.ver',
-            'comprobantes.ver',
-            'comprobantes.imprimir',
-            'inventario.ver',
-            'productos.ver',
-            'clientes.ver',
-            'clientes.crear',
-            'caja.ver',
-            'caja.abrir_cerrar',
-            'caja.arquear',
-            'operaciones_caja.ver',
-            'reportes.ver',
-        ]);
-
-        // Vendedor: puede ver y crear ventas
-        $vendedorRole->syncPermissions([
-            'ventas.ver',
-            'ventas.crear',
-            'ventas.editar',
-            'pos.ver',
-            'comprobantes.ver',
-            'comprobantes.imprimir',
-            'productos.ver',
-            'clientes.ver',
-            'clientes.crear',
-            'caja.ver',
-        ]);
-
-        // Cajero: solo puede procesar ventas y manejar caja
-        $cajeroRole->syncPermissions([
-            'ventas.ver',
-            'ventas.crear',
-            'pos.ver',
-            'comprobantes.ver',
-            'comprobantes.imprimir',
-            'productos.ver',
-            'caja.ver',
-            'caja.abrir_cerrar',
-            'caja.arquear',
-            'operaciones_caja.ver',
-            'operaciones_caja.crear',
-        ]);
+            $administradorRole = Role::firstOrCreate(['name' => 'administrador', 'guard_name' => $guard]);
+            $administradorRole->syncPermissions($adminEmpresaRole->permissions);
+        }
 
         // ─── Asignar rol al primer usuario ──────────────────────
 
