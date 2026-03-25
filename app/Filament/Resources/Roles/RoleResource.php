@@ -49,4 +49,23 @@ class RoleResource extends Resource
     {
         return (string) static::getModel()::count();
     }
+
+    /**
+     * El admin_empresa no puede ver ni tocar los roles de infraestructura del sistema.
+     * El super_admin ve todos los roles.
+     */
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = \App\Helpers\AuthHelper::resolveAuthenticatedUser();
+
+        if ($user && !$user->isSuperAdmin()) {
+            // Los roles de sistema no deben ser editables por el dueño del negocio
+            $systemRoles = ['super_admin', 'admin_empresa'];
+            $query->whereNotIn('name', $systemRoles);
+        }
+
+        return $query;
+    }
+
 }

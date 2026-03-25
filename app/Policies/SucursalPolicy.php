@@ -4,13 +4,15 @@ namespace App\Policies;
 
 use App\Models\Sucursal;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class SucursalPolicy
 {
+    /**
+     * Super admin tiene acceso total sin restricciones.
+     */
     public function before(User $user, string $ability): ?bool
     {
-        if ($user->hasRole('super_admin')) {
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
@@ -18,42 +20,45 @@ class SucursalPolicy
     }
 
     /**
-     * Determine whether the user can view any models.
+     * Puede ver la lista de sucursales de su empresa.
+     * El admin_empresa necesita verlas para asignar usuarios y cajas.
      */
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin();
+        return $user->hasPermissionTo('sucursales.ver');
     }
 
     /**
-     * Determine whether the user can view the model.
+     * Puede ver el detalle de una sucursal de su empresa.
      */
     public function view(User $user, Sucursal $sucursal): bool
     {
-        return $user->isAdmin() && $user->company_id === $sucursal->company_id;
+        return $user->hasPermissionTo('sucursales.ver')
+            && $user->company_id === $sucursal->company_id;
     }
 
     /**
-     * Determine whether the user can create models.
+     * Solo el super_admin puede crear sucursales (gestionadas por before()).
+     * El admin_empresa NO puede: la estructura de sucursales la define el super_admin.
      */
     public function create(User $user): bool
     {
-        return $user->isAdmin();
+        return false; // Solo super_admin via before()
     }
 
     /**
-     * Determine whether the user can update the model.
+     * Solo el super_admin puede editar sucursales (gestionadas por before()).
      */
     public function update(User $user, Sucursal $sucursal): bool
     {
-        return $user->isAdmin() && $user->company_id === $sucursal->company_id;
+        return false; // Solo super_admin via before()
     }
 
     /**
-     * Determine whether the user can delete the model.
+     * Solo el super_admin puede eliminar sucursales (gestionadas by before()).
      */
     public function delete(User $user, Sucursal $sucursal): bool
     {
-        return $user->isAdmin() && $user->company_id === $sucursal->company_id;
+        return false; // Solo super_admin via before()
     }
 }

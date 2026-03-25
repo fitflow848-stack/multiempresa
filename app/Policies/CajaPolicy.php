@@ -4,13 +4,15 @@ namespace App\Policies;
 
 use App\Models\Caja;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class CajaPolicy
 {
+    /**
+     * Super admin tiene acceso total sin restricciones.
+     */
     public function before(User $user, string $ability): ?bool
     {
-        if ($user->hasRole('super_admin')) {
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
@@ -18,42 +20,46 @@ class CajaPolicy
     }
 
     /**
-     * Determine whether the user can view any models.
+     * Puede ver cajas de su empresa.
      */
     public function viewAny(User $user): bool
     {
-        return $user->isAdmin();
+        return $user->hasPermissionTo('cajas.ver');
     }
 
     /**
-     * Determine whether the user can view the model.
+     * Puede ver una caja específica de su empresa.
      */
     public function view(User $user, Caja $caja): bool
     {
-        return $user->isAdmin() && $user->company_id === $caja->company_id;
+        return $user->hasPermissionTo('cajas.ver')
+            && $user->company_id === $caja->company_id;
     }
 
     /**
-     * Determine whether the user can create models.
+     * El dueño del negocio (admin_empresa) puede crear cajas en su empresa.
+     * Es una función de administración del negocio, no de infraestructura.
      */
     public function create(User $user): bool
     {
-        return $user->isAdmin();
+        return $user->hasPermissionTo('cajas.crear');
     }
 
     /**
-     * Determine whether the user can update the model.
+     * Puede editar cajas de su empresa.
      */
     public function update(User $user, Caja $caja): bool
     {
-        return $user->isAdmin() && $user->company_id === $caja->company_id;
+        return $user->hasPermissionTo('cajas.editar')
+            && $user->company_id === $caja->company_id;
     }
 
     /**
-     * Determine whether the user can delete the model.
+     * Puede eliminar cajas de su empresa.
      */
     public function delete(User $user, Caja $caja): bool
     {
-        return $user->isAdmin() && $user->company_id === $caja->company_id;
+        return $user->hasPermissionTo('cajas.eliminar')
+            && $user->company_id === $caja->company_id;
     }
 }

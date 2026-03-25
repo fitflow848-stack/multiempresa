@@ -130,47 +130,50 @@ class RoleAndPermissionSeeder extends Seeder
 
         // ─── Crear roles ────────────────────────────────────────
 
-        // Super Admin: administrador general del sistema (crea empresas, ve todo)
+        // Super Admin: SOLO infraestructura del sistema (crear empresas y sucursales).
+        // No opera dentro de una empresa, delega la gestión al admin_empresa.
         $superAdminRole = Role::firstOrCreate(['name' => 'super_admin']);
 
-        // Admin Empresa: administrador de una empresa específica
+        // Admin Empresa (Dueño de Negocio): administra TODO dentro de su empresa.
+        // Crea usuarios, roles, cajas, configura series, etc.
+        // NO puede crear/editar/eliminar empresas ni sucursales (eso es territorio del super_admin).
         $adminEmpresaRole = Role::firstOrCreate(['name' => 'admin_empresa']);
 
-        // Roles operativos (ya existentes)
-        $administradorRole = Role::firstOrCreate(['name' => 'administrador']);
-        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        // Roles operativos
         $supervisorRole = Role::firstOrCreate(['name' => 'supervisor']);
         $jefeAlmacenRole = Role::firstOrCreate(['name' => 'jefe_almacen']);
         $vendedorRole = Role::firstOrCreate(['name' => 'vendedor']);
         $cajeroRole = Role::firstOrCreate(['name' => 'cajero']);
 
+        // Rol legacy — mantener para compatibilidad pero sin permisos peligrosos
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        $administradorRole = Role::firstOrCreate(['name' => 'administrador']);
+
         // ─── Asignar permisos a roles ───────────────────────────
 
-        // Super Admin: TODOS los permisos
+        // Super Admin: TODO el sistema
         $allPermissions = Permission::all();
         $superAdminRole->syncPermissions($allPermissions);
 
-        // Admin Empresa: gestiona su empresa completa PERO con restricciones de infraestructura (solo ver sucursales/cajas)
+        // Admin Empresa: TODOS los permisos EXCEPTO crear/eliminar empresas y sucursales.
+        // SÍ puede: editar su empresa, ver sucursales, gestionar usuarios/roles/cajas, ventas, etc.
+        // NO puede: crear empresas nuevas, eliminar empresas, crear/editar/eliminar sucursales.
         $adminEmpresaRole->syncPermissions($allPermissions->filter(function ($p) {
-            $restricted = [
+            // Infraestructura exclusiva del super_admin
+            $soloSuperAdmin = [
                 'empresas.crear',
-                'empresas.editar',
-                'empresas.eliminar',
-                'sucursales.crear',
+                'empresas.eliminar',    // Editar su empresa SÍ puede (CompanyPolicy lo valida)
+                'sucursales.crear',     // La estructura de sucursales la define el super_admin
                 'sucursales.editar',
                 'sucursales.eliminar',
-                // 'cajas.crear', // Admin empresa SÍ debe poder crear cajas y series
-                // 'cajas.editar', 
-                // 'cajas.eliminar',
             ];
-            return !in_array($p->name, $restricted);
+            return !in_array($p->name, $soloSuperAdmin);
         }));
 
-        // El rol ADMINISTRADOR tiene las mismas funciones que ADMIN EMPRESA según el requerimiento
+        // Los roles legacy (admin, administrador) heredan permisos del admin_empresa
+        // para evitar que sigan siendo equivalentes al super_admin, lo cual era una brecha.
         $administradorRole->syncPermissions($adminEmpresaRole->permissions);
-
-        // Admin ( legacy )
-        $adminRole->syncPermissions($allPermissions);
+        $adminRole->syncPermissions($adminEmpresaRole->permissions);
 
         // Jefe de Almacén: gestión total de productos e inventario
         $jefeAlmacenRole->syncPermissions([

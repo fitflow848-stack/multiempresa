@@ -4,13 +4,16 @@ namespace App\Policies;
 
 use App\Models\Company;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class CompanyPolicy
 {
+    /**
+     * Super admin tiene acceso total: crea empresas, las edita, las elimina.
+     * Esta es su función exclusiva en el sistema.
+     */
     public function before(User $user, string $ability): ?bool
     {
-        if ($user->hasRole('super_admin')) {
+        if ($user->isSuperAdmin()) {
             return true;
         }
 
@@ -18,23 +21,26 @@ class CompanyPolicy
     }
 
     /**
-     * Determine whether the user can view any models.
+     * El admin_empresa puede ver su propia empresa en el panel para conocer los datos.
+     * El super_admin ve todas las empresas (gestionado por before()).
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasRole('admin_empresa');
+        return $user->hasPermissionTo('empresas.ver');
     }
 
     /**
-     * Determine whether the user can view the model.
+     * Puede ver el detalle de su propia empresa.
      */
     public function view(User $user, Company $company): bool
     {
-        return $user->hasRole('admin_empresa') && $user->company_id === $company->id;
+        return $user->hasPermissionTo('empresas.ver')
+            && $user->company_id === $company->id;
     }
 
     /**
-     * Determine whether the user can create models.
+     * SOLO el super_admin puede crear empresas nuevas.
+     * El admin_empresa no tiene esta función.
      */
     public function create(User $user): bool
     {
@@ -42,15 +48,18 @@ class CompanyPolicy
     }
 
     /**
-     * Determine whether the user can update the model.
+     * El admin_empresa puede actualizar los datos de su propia empresa
+     * (razón social, dirección, logo, configuración fiscal, etc.).
+     * No puede modificar empresas ajenas.
      */
     public function update(User $user, Company $company): bool
     {
-        return $user->hasRole('admin_empresa') && $user->company_id === $company->id;
+        return $user->hasPermissionTo('empresas.editar')
+            && $user->company_id === $company->id;
     }
 
     /**
-     * Determine whether the user can delete the model.
+     * SOLO el super_admin puede eliminar empresas.
      */
     public function delete(User $user, Company $company): bool
     {

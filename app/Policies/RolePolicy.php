@@ -38,7 +38,8 @@ class RolePolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        // El dueño del negocio puede crear roles personalizados para su empresa
+        return $user->hasPermissionTo('roles.crear');
     }
 
     /**
@@ -46,7 +47,12 @@ class RolePolicy
      */
     public function update(User $user, Role $role): bool
     {
-        return false;
+        // No puede editar roles de sistema (super_admin, admin_empresa)
+        $systemRoles = ['super_admin', 'admin_empresa'];
+        if (in_array($role->name, $systemRoles)) {
+            return false;
+        }
+        return $user->hasPermissionTo('roles.editar');
     }
 
     /**
@@ -54,6 +60,11 @@ class RolePolicy
      */
     public function delete(User $user, Role $role): bool
     {
-        return false;
+        // No puede eliminar roles críticos del sistema
+        $systemRoles = ['super_admin', 'admin_empresa', 'admin', 'administrador'];
+        if (in_array($role->name, $systemRoles)) {
+            return false;
+        }
+        return $user->hasPermissionTo('roles.eliminar');
     }
 }

@@ -136,18 +136,20 @@ class User extends Authenticatable implements FilamentUser
 
     /**
      * ¿Es administrador (empresa o general)?
+     * Incluye super_admin y admin_empresa pero NO el rol legacy 'admin'.
      */
     public function isAdmin(): bool
     {
-        return $this->roles()->whereIn('name', ['admin', 'admin_empresa', 'super_admin'])->exists();
+        return $this->roles()->whereIn('name', ['super_admin', 'admin_empresa'])->exists();
     }
 
     /**
-     * ¿Es administrador de una empresa?
+     * ¿Es administrador de una empresa (dueño del negocio)?
+     * Este rol gestiona usuarios, roles, cajas y configuración de su empresa.
      */
     public function isAdminEmpresa(): bool
     {
-        return $this->hasRole('admin_empresa');
+        return $this->hasAnyRole(['admin_empresa', 'admin', 'administrador']);
     }
 
     /**
