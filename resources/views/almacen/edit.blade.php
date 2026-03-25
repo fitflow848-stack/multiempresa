@@ -118,6 +118,26 @@
                                                 </select>
                                             </div>
                                         </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Presentación</label>
+                                                <select name="presentacion" class="form-select">
+                                                    <option value="">-- Seleccionar --</option>
+                                                    @foreach($presentaciones as $p)
+                                                        <option value="{{ $p->nombre }}" {{ old('presentacion', $detalle->productoLinea->presentacion ?? '') == $p->nombre ? 'selected' : '' }}>{{ $p->nombre }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Concentración</label>
+                                                <select name="concentracion" class="form-select">
+                                                    <option value="">-- Seleccionar --</option>
+                                                    @foreach($concentraciones as $c)
+                                                        <option value="{{ $c->nombre }}" {{ old('concentracion', $detalle->productoLinea->concentracion ?? '') == $c->nombre ? 'selected' : '' }}>{{ $c->nombre }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

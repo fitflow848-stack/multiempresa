@@ -28,12 +28,14 @@
         
         <!-- Campos ocultos del Paso 1 (Producto) -->
         @foreach($producto_data as $key => $value)
-            @if(is_array($value))
-                @foreach($value as $subKey => $subValue)
-                    <input type="hidden" name="{{ $key }}[{{ $subKey }}]" value="{{ $subValue }}">
-                @endforeach
-            @else
-                <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+            @if(!in_array($key, ['presentacion', 'concentracion']))
+                @if(is_array($value))
+                    @foreach($value as $subKey => $subValue)
+                        <input type="hidden" name="{{ $key }}[{{ $subKey }}]" value="{{ $subValue }}">
+                    @endforeach
+                @else
+                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                @endif
             @endif
         @endforeach
 
@@ -59,6 +61,32 @@
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-end-0"><i class="fas fa-calendar-alt"></i></span>
                                     <input type="date" name="fecha_vencimiento" class="form-control border-start-0" value="{{ old('fecha_vencimiento', $detalle->fecha_vencimiento ? $detalle->fecha_vencimiento->format('Y-m-d') : '') }}">
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-muted">Presentación</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-prescription-bottle"></i></span>
+                                    <select name="presentacion" class="form-select border-start-0">
+                                        <option value="">-- Seleccionar --</option>
+                                        @foreach($presentaciones as $p)
+                                            <option value="{{ $p->nombre }}" {{ old('presentacion', $producto_data['presentacion'] ?? ($detalle->productoLinea->presentacion ?? '')) == $p->nombre ? 'selected' : '' }}>{{ $p->nombre }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-muted">Concentración</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fas fa-flask"></i></span>
+                                    <select name="concentracion" class="form-select border-start-0">
+                                        <option value="">-- Seleccionar --</option>
+                                        @foreach($concentraciones as $c)
+                                            <option value="{{ $c->nombre }}" {{ old('concentracion', $producto_data['concentracion'] ?? ($detalle->productoLinea->concentracion ?? '')) == $c->nombre ? 'selected' : '' }}>{{ $c->nombre }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
                             </div>
 

@@ -934,8 +934,8 @@ class AlmacenController extends Controller
         $laboratorios = DB::table('laboratorios')->get();
         $marcas = DB::table('marcas')->get();
         $unidades = DB::table('unidades_medida')->get();
-        $presentaciones = DB::table('presentaciones')->get();
-        $concentraciones = DB::table('concentraciones')->get();
+        $presentaciones = DB::table('presentaciones')->where('company_id', $user->company_id)->where('activo', 1)->get();
+        $concentraciones = DB::table('concentraciones')->where('company_id', $user->company_id)->where('activo', 1)->get();
 
         return view('almacen.edit', compact('detalle', 'producto', 'user', 'laboratorios', 'marcas', 'unidades', 'presentaciones', 'concentraciones'));
     }
@@ -964,6 +964,8 @@ class AlmacenController extends Controller
             'imagen_alt' => ['nullable', 'string'],
             'imagen_titulo' => ['nullable', 'string'],
             'imagen_fuente' => ['nullable', 'string'],
+            'presentacion' => ['nullable', 'string'],
+            'concentracion' => ['nullable', 'string'],
             // Las imágenes se manejan si se suben nuevas
         ]);
 
@@ -990,8 +992,9 @@ class AlmacenController extends Controller
             $data['imagenes_adicionales_temp'] = $imagenesAdicionales;
         }
 
-        $presentaciones = DB::table('presentaciones')->get();
-        $concentraciones = DB::table('concentraciones')->get();
+        $user = Auth::user();
+        $presentaciones = DB::table('presentaciones')->where('company_id', $user->company_id)->where('activo', 1)->get();
+        $concentraciones = DB::table('concentraciones')->where('company_id', $user->company_id)->where('activo', 1)->get();
 
         return view('almacen.edit-detailed', [
             'producto_data' => $data,
@@ -1029,6 +1032,8 @@ class AlmacenController extends Controller
             'stock_max' => 'nullable|numeric',
             'peso' => 'nullable|numeric',
             'pv_docena' => 'nullable|numeric',
+            'presentacion' => 'nullable|string',
+            'concentracion' => 'nullable|string',
         ]);
 
         DB::beginTransaction();
@@ -1095,6 +1100,8 @@ class AlmacenController extends Controller
                 'imagen_alt' => $request->input('imagen_alt'),
                 'imagen_titulo' => $request->input('imagen_titulo'),
                 'imagen_fuente' => $request->input('imagen_fuente'),
+                'presentacion_modelo' => $request->presentacion,
+                'concentracion_detalle' => $request->concentracion,
                 // Booleans
                 'opciones_avanzadas' => $request->boolean('opciones_avanzadas'),
                 'attr_numero_serie' => $request->boolean('attr_numero_serie'),
@@ -1119,6 +1126,15 @@ class AlmacenController extends Controller
                 'stock_min' => $request->stock_min,
                 'stock_max' => $request->stock_max,
             ]);
+
+            // 6. Actualizar ProductoLinea
+            $linea = \App\Models\ProductoLinea::find($detalle->producto_linea_id);
+            if ($linea) {
+                $linea->update([
+                    'presentacion' => $request->presentacion,
+                    'concentracion' => $request->concentracion,
+                ]);
+            }
 
             DB::commit();
             return redirect()->route('almacen.index')->with('success', 'Registro de almacén y datos del producto actualizados correctamente.');
