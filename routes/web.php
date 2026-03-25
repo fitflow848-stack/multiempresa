@@ -296,7 +296,6 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::get('/api/lotes', [AlmacenController::class, 'getLotesAvailable'])->name('api.lotes');
         Route::get('/edit/{id}', [AlmacenController::class, 'edit'])->name('edit')->middleware('can:inventario.ajustar');
         Route::post('/edit-detailed/{id}', [AlmacenController::class, 'editDetailed'])->name('edit-detailed')->middleware('can:inventario.ajustar');
-        Route::get('/update/{id}', [AlmacenController::class, 'update'])->name('update')->middleware('can:inventario.ajustar');
         Route::post('/update/{id}', [AlmacenController::class, 'update'])->name('update')->middleware('can:inventario.ajustar');
         Route::delete('/destroy/{id}', [AlmacenController::class, 'destroy'])->name('destroy')->middleware('can:inventario.ajustar');
         
