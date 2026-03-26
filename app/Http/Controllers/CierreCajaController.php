@@ -307,11 +307,14 @@ class CierreCajaController extends Controller
         $movimientos = $totalesDin['movimientos'];
         $ingresosPorMetodo = $totalesDin['ingresos_por_metodo'];
 
+        // Calculamos los componentes del ingreso (Total, Efectivo, Digital) para la vista
+        $cierre->ingresos_total = $totalesDin['ingresos_total'];
+        $cierre->ingresos_efectivo = $totalesDin['ingresos_efectivo'];
+        $cierre->ingresos_digital = $totalesDin['ingresos_total'] - $totalesDin['ingresos_efectivo'];
+
         // Si el cierre está abierto, usamos los totales dinámicos (calculados al vuelo)
         if (!$cierre->fecha_cierre) {
-            $cierre->ingresos = $totalesDin['ingresos_total']; // Cambiado a total
-            $cierre->ingresos_efectivo = $totalesDin['ingresos_efectivo']; // Nuevo para JS
-            $cierre->ingresos_digital = $totalesDin['ingresos_total'] - $totalesDin['ingresos_efectivo']; // Nuevo para JS
+            $cierre->ingresos = $cierre->ingresos_total; 
             $cierre->egresos = $totalesDin['egresos_efectivo'];
             $cierre->aportaciones = $totalesDin['aportaciones_efectivo'];
             $cierre->sustracciones = $totalesDin['sustracciones_efectivo'];

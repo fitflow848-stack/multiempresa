@@ -1007,15 +1007,16 @@
                     const diffContainer = document.getElementById('modal-arqueo-diff-container');
 
                     diffEl.innerText = Math.abs(diff).toFixed(2);
+                    
                     if (Math.abs(diff) <= 0.01) {
                         diffContainer.style.color = 'green';
-                        diffContainer.innerHTML = 'Caja Cuadrada <i class="fas fa-check-circle"></i>';
+                        diffContainer.innerHTML = 'Caja Cuadrada <i class="fas fa-check-circle"></i> <span id="modal-arqueo-diferencia" style="display:none">0.00</span>';
                     } else if (diff < 0) {
                         diffContainer.style.color = 'red';
-                        diffContainer.innerHTML = 'Faltante: S/ <span>' + Math.abs(diff).toFixed(2) + '</span>';
+                        diffContainer.innerHTML = 'Faltante: S/ <span id="modal-arqueo-diferencia">' + Math.abs(diff).toFixed(2) + '</span>';
                     } else {
                         diffContainer.style.color = 'blue';
-                        diffContainer.innerHTML = 'Sobrante: S/ <span>' + diff.toFixed(2) + '</span>';
+                        diffContainer.innerHTML = 'Sobrante: S/ <span id="modal-arqueo-diferencia">' + diff.toFixed(2) + '</span>';
                     }
                 }
 
