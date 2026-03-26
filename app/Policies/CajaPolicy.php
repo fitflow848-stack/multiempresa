@@ -24,7 +24,8 @@ class CajaPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasPermissionTo('cajas.ver');
+        // Usar check alternativo para evitar excepciones si el permiso no existe en el guard actual
+        return $user->hasAnyPermission(['cajas.ver']); 
     }
 
     /**
@@ -32,7 +33,7 @@ class CajaPolicy
      */
     public function view(User $user, Caja $caja): bool
     {
-        return $user->hasPermissionTo('cajas.ver')
+        return $user->hasAnyPermission(['cajas.ver'])
             && $user->company_id === $caja->company_id;
     }
 
@@ -42,7 +43,7 @@ class CajaPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo('cajas.crear');
+        return $user->hasAnyPermission(['cajas.crear']);
     }
 
     /**
@@ -50,7 +51,7 @@ class CajaPolicy
      */
     public function update(User $user, Caja $caja): bool
     {
-        return $user->hasPermissionTo('cajas.editar')
+        return $user->hasAnyPermission(['cajas.editar'])
             && $user->company_id === $caja->company_id;
     }
 
@@ -59,7 +60,7 @@ class CajaPolicy
      */
     public function delete(User $user, Caja $caja): bool
     {
-        return $user->hasPermissionTo('cajas.eliminar')
+        return $user->hasAnyPermission(['cajas.eliminar'])
             && $user->company_id === $caja->company_id;
     }
 }

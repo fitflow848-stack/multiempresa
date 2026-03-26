@@ -7,6 +7,7 @@ use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Models\User;
+use App\Models\Company;
 
 class RoleAndPermissionSeeder extends Seeder
 {
@@ -199,16 +200,16 @@ class RoleAndPermissionSeeder extends Seeder
         }
 
         // ─── Asignar rol al primer usuario ──────────────────────
-
         $adminUser = User::first();
         if ($adminUser) {
-            if (!$adminUser->hasAnyRole(['super_admin', 'admin', 'admin_empresa'])) {
-                $adminUser->assignRole('super_admin'); // Le damos super_admin por ser el primero
+            foreach ($guards as $guard) {
+                // Le damos super_admin en todos los guards para evitar problemas de acceso en diferentes paneles
+                $adminUser->assignRole(Role::where('name', 'super_admin')->where('guard_name', $guard)->first());
             }
 
             // Si no tiene company_id, asignar la primera empresa
             if (!$adminUser->company_id) {
-                $company = \App\Models\Company::first();
+                $company = Company::first();
                 if ($company) {
                     $adminUser->update(['company_id' => $company->id]);
                 }
