@@ -1,5 +1,5 @@
 <div id="modal-romper-docena" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2005; display: none; justify-content: center; align-items: center; backdrop-filter: blur(3px);">
-    <div style="background: white; padding: 0; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.4); width: 100%; max-width: 550px; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; overflow: hidden;">
+    <div style="background: white; padding: 0; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.4); width: 100%; max-width: 550px; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; overflow-y: auto; max-height: 90vh; margin: 20px;">
         
         <!-- Header -->
         <div style="background: #d63384; color: white; padding: 20px; display: flex; align-items: center; gap: 12px;">
