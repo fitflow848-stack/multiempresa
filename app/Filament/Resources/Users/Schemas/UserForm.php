@@ -72,6 +72,7 @@ class UserForm
                         ->nullable()
                         ->hidden(fn () => !auth()->user()->isSuperAdmin())
                         ->default(fn () => auth()->user()->company_id)
+                        ->dehydrated(true)
                         ->afterStateUpdated(function (callable $set) {
                             $set('branches', []);
                             $set('cajas', []);
