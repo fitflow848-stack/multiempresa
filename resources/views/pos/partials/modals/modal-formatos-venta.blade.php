@@ -92,6 +92,11 @@
 
                 const url = `${rawUrl}${rawUrl.includes('?') ? '&' : '?'}print=1`;
                 imprimirPDFv2(url);
+                
+                // Cerrar modal y limpiar automáticamente después de enviar a impresión
+                setTimeout(() => {
+                    recargarPaginaVenta();
+                }, 1000); 
             }
         }
 
@@ -153,12 +158,17 @@
                         const waUrl = `https://wa.me/${targetPhone.startsWith('51') ? targetPhone : '51' + targetPhone}?text=${encodeURIComponent(message)}`;
 
                         window.open(waUrl, '_blank');
+                        
+                        // Una vez enviado por whatsapp, limpiar venta y cerrar modal
+                        setTimeout(() => {
+                            recargarPaginaVenta();
+                        }, 1000);
+                    } else {
+                        // Si canceló el envío de WhatsApp, re-mostramos el modal de formatos
+                        setTimeout(() => {
+                            if (modalInstance) modalInstance.show();
+                        }, 300);
                     }
-                    
-                    // 3. Restaurar el modal de formatos de venta (sea que envíen o cancelen)
-                    setTimeout(() => {
-                        if (modalInstance) modalInstance.show();
-                    }, 300);
                 });
             }, 300);
         }

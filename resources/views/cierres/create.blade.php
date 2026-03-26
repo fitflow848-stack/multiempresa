@@ -47,8 +47,9 @@
 					<div class="input-group input-group-lg">
 						<span class="input-group-text bg-primary text-white border-primary">S/</span>
 						<input type="number" step="0.01" name="monto_apertura" id="saldo_inicial" 
-							class="form-control border-primary fw-bold" 
-							value="{{ $saldoInicial ?? '0.00' }}" autofocus>
+							class="form-control border-primary fw-bold bg-light" 
+							value="{{ $saldoInicial ?? '0.00' }}" 
+							{{ isset($ultimoCierre) ? 'readonly' : '' }} autofocus>
 					</div>
 					<small class="text-muted mt-1 d-block">Indica cuánto dinero físico hay en la caja en este momento.</small>
 				</div>

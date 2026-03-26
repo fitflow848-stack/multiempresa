@@ -177,7 +177,17 @@ class CierreCajaController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->first();
 
-            $saldoInicial = $ultimoCierre ? $ultimoCierre->monto_cierre : 0.00;
+            // Calulo de saldo inicial teórico para la bóveda
+            if ($ultimoCierre) {
+                $totales = $ultimoCierre->calcularTotalesDinamicos();
+                $saldoInicial = floatval($ultimoCierre->monto_apertura) 
+                    + floatval($totales['ingresos_efectivo'])
+                    + floatval($ultimoCierre->aportaciones) 
+                    - floatval($ultimoCierre->egresos) 
+                    - floatval($ultimoCierre->sustracciones);
+            } else {
+                $saldoInicial = 0.00;
+            }
 
             return view('cierres.create', compact('saldoInicial', 'ultimoCierre', 'isTesoreria'));
         }
@@ -210,8 +220,18 @@ class CierreCajaController extends Controller
             ->orderBy('created_at', 'desc')
             ->first();
 
-        // El saldo inicial será el monto de cierre del último arqueo, o 0 si no hay cierres previos
-        $saldoInicial = $ultimoCierre ? $ultimoCierre->monto_cierre : 0.00;
+        // El saldo inicial será el monto TEÓRICO de cierre del último arqueo, o 0 si no hay cierres previos
+        // Esto previene que si cerraron con 0 por error, la caja se abra en cero.
+        if ($ultimoCierre) {
+            $totales = $ultimoCierre->calcularTotalesDinamicos();
+            $saldoInicial = floatval($ultimoCierre->monto_apertura) 
+                + floatval($totales['ingresos_efectivo'])
+                + floatval($ultimoCierre->aportaciones) 
+                - floatval($ultimoCierre->egresos) 
+                - floatval($ultimoCierre->sustracciones);
+        } else {
+            $saldoInicial = 0.00;
+        }
 
         return view('cierres.create', compact('saldoInicial', 'ultimoCierre', 'isTesoreria'));
     }
