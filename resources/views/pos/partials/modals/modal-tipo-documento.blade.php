@@ -138,6 +138,11 @@
     }
 
     document.addEventListener('keydown', function(e) {
+        // No interferir si hay una alerta de SweetAlert activa
+        if (typeof Swal !== 'undefined' && Swal.isVisible()) {
+            return;
+        }
+
         const modal = document.getElementById('modal-tipo-documento');
         if (modal && modal.style.display === 'flex') {
             const options = Array.from(modal.querySelectorAll('.tipo-documento-option'));
