@@ -126,9 +126,14 @@ class RoleAndPermissionSeeder extends Seeder
 
         $guards = ['web', 'admin'];
 
-        foreach ($permissions as $permission) {
+        // Recopilar todos los nombres de permisos únicos (predefinidos + existentes)
+        $allUniqueNames = collect($permissions)
+            ->merge(Permission::pluck('name'))
+            ->unique();
+
+        foreach ($allUniqueNames as $permissionName) {
             foreach ($guards as $guard) {
-                Permission::firstOrCreate(['name' => $permission, 'guard_name' => $guard]);
+                Permission::firstOrCreate(['name' => $permissionName, 'guard_name' => $guard]);
             }
         }
 

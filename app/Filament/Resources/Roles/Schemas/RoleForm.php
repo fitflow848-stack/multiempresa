@@ -24,10 +24,10 @@ class RoleForm
 
                     TextInput::make('guard_name')
                         ->label('Guard')
-                        ->default('web')
+                        ->default('admin')
                         ->disabled()
                         ->dehydrated()
-                        ->helperText('Guard por defecto para autenticación web'),
+                        ->helperText('Guard por defecto para autenticación en el panel administrativo'),
                 ])
                 ->columns(2),
 
@@ -38,12 +38,13 @@ class RoleForm
                         ->relationship(
                             'permissions', 
                             'name',
-                            fn($query) => auth()->user()->isSuperAdmin() 
-                                ? $query 
-                                : $query->whereNotIn('name', [
-                                    'empresas.crear', 'empresas.editar', 'empresas.eliminar',
-                                    'sucursales.crear', 'sucursales.editar', 'sucursales.eliminar'
-                                ])
+                            fn($query) => $query->where('guard_name', 'admin') // Filtrar siempre por guard admin para evitar duplicados
+                                ->when(!auth()->user()->isSuperAdmin(), fn($q) => 
+                                    $q->whereNotIn('name', [
+                                        'empresas.crear', 'empresas.eliminar',
+                                        'sucursales.crear', 'sucursales.eliminar'
+                                    ])
+                                )
                         )
                         ->searchable()
                         ->bulkToggleable()

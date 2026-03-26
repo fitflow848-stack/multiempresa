@@ -21,7 +21,12 @@ class CompanyForm
 {
     public static function schema(): array
     {
-        $isNotSuperAdmin = fn () => ! (\App\Helpers\AuthHelper::resolveAuthenticatedUser())?->hasRole('super_admin');
+        $user = \App\Helpers\AuthHelper::resolveAuthenticatedUser();
+        // El administrador de la empresa debe poder editar sus propios datos, 
+        // pero solo el super_admin puede crear empresas o deshabilitarlas completamente (is_active).
+        // Sin embargo, para la mayoría de los campos descriptivos permitiremos la edición.
+        $isNotAdmin = fn () => !($user?->isAdmin() || $user?->isAdminEmpresa() || $user?->isSuperAdmin());
+        $isNotSuperAdmin = fn () => !($user?->isSuperAdmin());
 
         return [
             Wizard::make([
@@ -33,7 +38,7 @@ class CompanyForm
                                     ->label('RUC')
                                     ->required()
                                     ->length(11)
-                                    ->disabled($isNotSuperAdmin)
+                                    ->disabled($isNotSuperAdmin) 
                                     ->suffixAction(
                                         Action::make('searchRuc')
                                             ->icon('heroicon-m-magnifying-glass')
@@ -69,13 +74,13 @@ class CompanyForm
                                                         if (!empty($resultado['departamento']) && !empty($resultado['provincia'])) {
                                                             $dep = \App\Models\Departamento::where('dep_nombre', $resultado['departamento'])->first();
                                                             if ($dep) {
-                                                                $prov = \App\Models\Provincia::where('dep_codigo', $dep->dep_cod)->where('pro_nombre', $resultado['provincia'])->first();
-                                                                if ($prov) {
-                                                                    $dist = \App\Models\Distrito::where('dep_codigo', $dep->dep_cod)->where('pro_codigo', $prov->pro_cod)->where('dis_nombre', $resultado['distrito'])->first();
-                                                                    if ($dist) {
-                                                                        $set('ubigeo', $dep->dep_cod . $prov->pro_cod . $dist->dis_codigo);
-                                                                    }
-                                                                }
+                                                                 $prov = \App\Models\Provincia::where('dep_codigo', $dep->dep_cod)->where('pro_nombre', $resultado['provincia'])->first();
+                                                                 if ($prov) {
+                                                                     $dist = \App\Models\Distrito::where('dep_codigo', $dep->dep_cod)->where('pro_codigo', $prov->pro_cod)->where('dis_nombre', $resultado['distrito'])->first();
+                                                                     if ($dist) {
+                                                                         $set('ubigeo', $dep->dep_cod . $prov->pro_cod . $dist->dis_codigo);
+                                                                     }
+                                                                 }
                                                             }
                                                         }
                                                     }
@@ -136,7 +141,7 @@ class CompanyForm
                 Step::make('Configuración')
                     ->schema([
                         Section::make('Ubicación Fiscal')
-                            ->disabled($isNotSuperAdmin)
+                            ->disabled($isNotAdmin)
                             ->schema([
                                 Select::make('department')
                                     ->label('Departamento')
@@ -385,7 +390,7 @@ class CompanyForm
                     ]),
             ])
                 ->columnSpanFull()
-                ->skippable() // Permitir saltar pasos si es necesario (o quitar si se quiere estricto)
+                ->skippable() 
         ];
     }
 }

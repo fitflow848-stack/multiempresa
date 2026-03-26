@@ -120,12 +120,13 @@ class UserForm
                         ->relationship(
                             'roles',
                             'name',
-                            fn($query) => auth()->user()->isSuperAdmin() ? $query : $query->where('name', '!=', 'super_admin')
+                            fn($query) => $query->where('guard_name', 'admin') // Filtrar por guard admin para evitar duplicados
+                                ->when(!auth()->user()->isSuperAdmin(), fn($q) => $q->where('name', '!=', 'super_admin'))
                         )
                         ->multiple()
                         ->preload()
                         ->native(false)
-                        ->default(fn () => \Spatie\Permission\Models\Role::where('name', 'admin_empresa')->pluck('id')->toArray()),
+                        ->default(fn () => \Spatie\Permission\Models\Role::where('name', 'admin_empresa')->where('guard_name', 'admin')->pluck('id')->toArray()),
 
                     Toggle::make('is_active')
                         ->label('Usuario Activo')

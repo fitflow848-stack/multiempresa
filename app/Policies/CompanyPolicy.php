@@ -26,7 +26,7 @@ class CompanyPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasPermissionTo('empresas.ver');
+        return $user->isSuperAdmin() || $user->isAdminEmpresa() || $user->hasPermissionTo('empresas.ver');
     }
 
     /**
@@ -34,7 +34,9 @@ class CompanyPolicy
      */
     public function view(User $user, Company $company): bool
     {
-        return $user->hasPermissionTo('empresas.ver')
+        if ($user->isSuperAdmin()) return true;
+
+        return ($user->isAdminEmpresa() || $user->hasPermissionTo('empresas.ver'))
             && $user->company_id === $company->id;
     }
 
@@ -54,7 +56,9 @@ class CompanyPolicy
      */
     public function update(User $user, Company $company): bool
     {
-        return $user->hasPermissionTo('empresas.editar')
+        if ($user->isSuperAdmin()) return true;
+
+        return ($user->isAdminEmpresa() || $user->hasPermissionTo('empresas.editar'))
             && $user->company_id === $company->id;
     }
 

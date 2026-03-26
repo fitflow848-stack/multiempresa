@@ -47,7 +47,7 @@ class RoleResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return (string) static::getModel()::count();
+        return (string) static::getEloquentQuery()->count();
     }
 
     /**
@@ -58,6 +58,9 @@ class RoleResource extends Resource
     {
         $query = parent::getEloquentQuery();
         $user = \App\Helpers\AuthHelper::resolveAuthenticatedUser();
+
+        // Siempre filtramos por el guard actual del panel para evitar duplicados visuales
+        $query->where('guard_name', 'admin');
 
         if ($user && !$user->isSuperAdmin()) {
             // Los roles de sistema no deben ser editables por el dueño del negocio
