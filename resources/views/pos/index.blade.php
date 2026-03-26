@@ -921,9 +921,9 @@
                 // Mostrar modal
                 document.getElementById('modal-tipo-documento').style.display = 'flex';
                 
-                // Opcional: enfocar el input de entrega para que el usuario pueda escribir rápido el monto si no lo hizo
-                const inputPago = document.getElementById('input-entrega');
-                if (inputPago) { inputPago.focus(); inputPago.select(); }
+                // No enfocar el input de entrega automáticamente para evitar conflictos con los atajos numéricos [1, 2, 3...]
+                // const inputPago = document.getElementById('input-entrega');
+                // if (inputPago) { inputPago.focus(); inputPago.select(); }
             })
             .catch(e => {
                 console.error(e);

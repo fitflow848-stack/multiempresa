@@ -143,20 +143,28 @@
             const options = Array.from(modal.querySelectorAll('.tipo-documento-option'));
             const keyNum = parseInt(e.key);
             
-            // Números para seleccionar
+            // Números para seleccionar (1-9)
             if (!isNaN(keyNum) && keyNum > 0 && keyNum <= options.length) {
+                e.preventDefault();
+                e.stopPropagation();
                 options[keyNum - 1].click();
             }
 
             // Enter para confirmar
-            if (e.key === 'Enter' && documentSelectedVal) {
-                confirmarSeleccionTipoDocumento();
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                if (documentSelectedVal) {
+                    confirmarSeleccionTipoDocumento();
+                }
             }
 
             // Escape para cerrar
             if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
                 cerrarModalTipoDocumento();
             }
         }
-    });
+    }, true); // Use capture phase to intercept before other listeners
 </script>
