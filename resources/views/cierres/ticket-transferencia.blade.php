@@ -6,90 +6,87 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 12px;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
             background: #fff;
             color: #000;
         }
         .ticket {
             width: 80mm;
             margin: 0 auto;
-            padding: 10px 8px;
-            border: 1px dashed #aaa;
+            padding: 5px;
         }
         .header {
             text-align: center;
-            border-bottom: 2px dashed #000;
+            border-bottom: 2.5px solid #000;
             padding-bottom: 8px;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
         .header h2 {
-            font-size: 14px;
-            font-weight: bold;
+            font-size: 16px;
+            font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 1px;
         }
         .header .tipo-badge {
             background: #000;
             color: #fff;
-            padding: 2px 10px;
-            border-radius: 3px;
+            padding: 3px 12px;
             font-size: 11px;
+            font-weight: 900;
             display: inline-block;
-            margin-top: 4px;
+            margin-top: 5px;
         }
         .row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 4px;
-            line-height: 1.4;
+            margin-bottom: 5px;
+            line-height: 1.2;
         }
-        .label { color: #555; font-size: 10px; text-transform: uppercase; }
-        .value { font-weight: bold; text-align: right; max-width: 55%; word-break: break-word; }
+        .label { color: #000; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+        .value { font-weight: 900; text-align: right; max-width: 60%; font-size: 13px; }
         .divider {
-            border-top: 1px dashed #000;
-            margin: 6px 0;
+            border-top: 2px dashed #000;
+            margin: 8px 0;
         }
         .importe-box {
-            background: #f0f0f0;
             border: 2px solid #000;
             text-align: center;
-            padding: 8px;
-            margin: 8px 0;
-            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
         }
-        .importe-box .importe-label { font-size: 10px; color: #555; text-transform: uppercase; }
-        .importe-box .importe-valor { font-size: 22px; font-weight: 900; letter-spacing: 1px; }
+        .importe-box .importe-label { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #000; }
+        .importe-box .importe-valor { font-size: 24px; font-weight: 900; }
         .firma-section {
-            margin-top: 12px;
-            border-top: 1px dashed #000;
-            padding-top: 8px;
+            margin-top: 15px;
+            border-top: 2px solid #000;
+            padding-top: 10px;
         }
         .firma-line {
             display: flex;
             justify-content: space-between;
-            gap: 12px;
-            margin-top: 16px;
+            gap: 15px;
+            margin-top: 20px;
         }
         .firma-box {
             flex: 1;
             text-align: center;
         }
         .firma-box .linea {
-            border-top: 1px solid #000;
-            margin-top: 30px;
-            padding-top: 3px;
-            font-size: 9px;
+            border-top: 1.5px solid #000;
+            margin-top: 25px;
+            padding-top: 5px;
+            font-size: 10px;
+            font-weight: 900;
             text-transform: uppercase;
-            color: #555;
         }
         .footer {
             text-align: center;
-            margin-top: 10px;
-            font-size: 9px;
-            color: #888;
-            border-top: 1px dashed #aaa;
-            padding-top: 6px;
+            margin-top: 15px;
+            font-size: 10px;
+            font-weight: 700;
+            border-top: 1.5px dashed #000;
+            padding-top: 8px;
+            color: #000;
         }
         @media print {
             body { background: #fff; }

@@ -9,12 +9,13 @@
         }
 
         body {
-            font-family: "Lucida Console", Monaco, monospace;
-            /* Fuente tipo ticketera */
-            font-size: 8pt;
+            font-family: Arial, Helvetica, sans-serif;
+            /* Fuentes sans-serif imprimen más claro en térmicas */
+            font-size: 9pt;
+            color: #000;
             margin: 0;
-            padding: 4px; /* Reducido de 8px para mejor aprovechamiento */
-            line-height: 1.2;
+            padding: 2px;
+            line-height: 1.1;
         }
 
         .center {
@@ -22,42 +23,41 @@
         }
 
         .bold {
-            font-weight: bold;
-        }
-
-        .uppercase {
-            /* text-transform: uppercase; */ /* Comentado para ahorrar espacio según pedido del usuario */
+            font-weight: 800; /* Extra bold para térmicas */
         }
 
         /* Encabezado */
         .empresa-nombre {
-            font-size: 10pt;
+            font-size: 11pt;
+            font-weight: 900;
             margin-bottom: 2px;
         }
 
         .documento-caja {
-            border: 1px solid #000;
-            margin: 10px 0;
-            padding: 5px;
-            font-size: 10pt;
+            border: 1.5px solid #000;
+            margin: 8px 0;
+            padding: 4px;
+            font-size: 11pt;
+            font-weight: 900;
         }
 
         /* Tablas */
         table {
             width: 100%;
             border-collapse: collapse;
-            margin: 5px 0;
+            margin: 4px 0;
+            color: #000;
         }
 
         .table-items thead {
-            border-bottom: 1px solid #000;
-            border-top: 1px solid #000;
+            border-bottom: 2px solid #000;
+            border-top: 2px solid #000;
         }
 
         .table-items td {
             vertical-align: top;
-            padding: 2px 2px;
-            font-size: 7.5pt;
+            padding: 3px 1px;
+            font-size: 8.5pt;
         }
 
         .text-right {
@@ -65,22 +65,29 @@
         }
 
         .hr {
-            border-top: 1px dashed #000;
-            margin: 5px 0;
+            border-top: 2px dashed #000;
+            margin: 6px 0;
         }
 
         .qr-section {
-            margin-top: 10px;
+            margin-top: 8px;
         }
 
         .qr-section img {
             width: 100px;
             height: 100px;
+            /* Filtro para asegurar negro puro */
+            filter: contrast(200%);
         }
 
         .monto-letras {
+            font-size: 9pt;
+            margin: 6px 0;
+            font-style: italic;
+        }
+        
+        .small {
             font-size: 8pt;
-            margin: 5px 0;
         }
     </style>
 </head>
