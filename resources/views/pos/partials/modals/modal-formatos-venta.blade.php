@@ -70,11 +70,44 @@
         }
     }
 
-    function recargarPaginaVenta() {
+    async function recargarPaginaVenta() {
         if (typeof limpiarVentaCompletada === 'function') {
-            limpiarVentaCompletada();
+            await limpiarVentaCompletada();
         }
-        window.location.reload();
+        
+        // En lugar de recargar toda la página (que interrumpe la impresión), 
+        // simplemente reseteamos el estado del TPV vía JS
+        if (typeof renderTicket === 'function') {
+            renderTicket();
+        }
+        
+        // Resetear campos de entrada
+        const inputEntrega = document.getElementById('input-entrega');
+        if (inputEntrega) {
+            inputEntrega.value = '0.00';
+            if (typeof window !== 'undefined') window.pagaConManual = false;
+        }
+        
+        const inputObs = document.getElementById('input-observaciones');
+        if (inputObs) inputObs.value = '';
+
+        // Resetear selects si existen
+        const metodoSelect = document.getElementById('medio-pago-select');
+        if (metodoSelect) metodoSelect.selectedIndex = 0;
+        
+        const docSelect = document.getElementById('tipo-documento-select');
+        if (docSelect) docSelect.selectedIndex = 0;
+
+        // Cerrar el modal con Bootstrap
+        const modalEl = document.getElementById('modalFormatosVenta');
+        if (modalEl && typeof bootstrap !== 'undefined') {
+            const modalInstance = bootstrap.Modal.getInstance(modalEl);
+            if (modalInstance) modalInstance.hide();
+        }
+        
+        if (typeof mostrarNotificacion === 'function') {
+            mostrarNotificacion('✅ Punto de venta listo');
+        }
     }
 
     // Usar evento delegado para capturar clics en los botones de formato
@@ -96,7 +129,7 @@
                 // Cerrar modal y limpiar automáticamente después de enviar a impresión
                 setTimeout(() => {
                     recargarPaginaVenta();
-                }, 1000); 
+                }, 2000); 
             }
         }
 
