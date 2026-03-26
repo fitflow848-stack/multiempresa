@@ -1,14 +1,14 @@
-<div id="modal-editar-cliente-pos" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; display: none; justify-content: center; align-items: center;">
-    <div style="background: white; padding: 0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); width: 400px; font-family: Arial, sans-serif; overflow: hidden;">
+<div id="modal-editar-cliente-pos" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; display: none; justify-content: center; align-items: center; padding: 20px;">
+    <div style="background: white; padding: 0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); width: 100%; max-width: 450px; max-height: 95vh; display: flex; flex-direction: column; font-family: Arial, sans-serif; overflow: hidden;">
         <!-- Header -->
         <div style="background: #17a2b8; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
             <h3 style="margin: 0; font-size: 16px;"><i class='bx bx-edit'></i> Editar Cliente</h3>
             <button onclick="cerrarModalEditarCliente()" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">×</button>
         </div>
         
-        <form id="form-editar-cliente-pos" onsubmit="guardarEdicionCliente(event)">
+        <form id="form-editar-cliente-pos" onsubmit="guardarEdicionCliente(event)" style="display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; margin: 0;">
             <input type="hidden" id="edit-cliente-id">
-            <div style="padding: 20px;">
+            <div style="padding: 20px; overflow-y: auto; flex-grow: 1;">
                 <div style="margin-bottom: 15px;">
                     <label style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #444;">Nombre / Razón Social</label>
                     <input type="text" id="edit-cliente-nombre" class="form-control-new" readonly style="background: #f8f9fa;">

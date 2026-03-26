@@ -1,5 +1,5 @@
-<div id="modal-nuevo-cliente" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2001; display: none; justify-content: center; align-items: center; backdrop-filter: blur(4px);">
-    <div style="background: white; padding: 0; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 550px; overflow: hidden; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+<div id="modal-nuevo-cliente" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2001; display: none; justify-content: center; align-items: center; backdrop-filter: blur(4px); padding: 20px;">
+    <div style="background: white; padding: 0; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 550px; max-height: 95vh; display: flex; flex-direction: column; overflow: hidden; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
         
         <!-- Header con diseño premium -->
         <div style="background: linear-gradient(135deg, #28a745 0%, #218838 100%); color: white; padding: 20px; text-align: center; position: relative;">
@@ -12,7 +12,7 @@
             </button>
         </div>
 
-        <div style="padding: 25px;">
+        <div style="padding: 25px; overflow-y: auto; flex-grow: 1;">
             <!-- Selector de Tipo de Cliente (Persona / Empresa) -->
             <div style="display: flex; gap: 10px; margin-bottom: 25px;">
                 <button type="button" id="btn-tipo-persona" onclick="setTipoCliente('Particular')" style="flex: 1; padding: 12px; border: 2px solid #28a745; border-radius: 8px; background: #eafaf1; color: #1e7e34; font-weight: 700; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; transition: all 0.2s;">

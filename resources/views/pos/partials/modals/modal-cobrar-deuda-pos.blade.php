@@ -1,14 +1,14 @@
-<div id="modal-cobrar-deuda-pos" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; display: none; justify-content: center; align-items: center;">
-    <div style="background: white; padding: 0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); width: 400px; font-family: Arial, sans-serif; overflow: hidden;">
+<div id="modal-cobrar-deuda-pos" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; display: none; justify-content: center; align-items: center; padding: 20px;">
+    <div style="background: white; padding: 0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); width: 100%; max-width: 450px; max-height: 95vh; display: flex; flex-direction: column; font-family: Arial, sans-serif; overflow: hidden;">
         <!-- Header -->
         <div style="background: #28a745; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
             <h3 style="margin: 0; font-size: 16px;"><i class='bx bx-money-withdraw'></i> Cobrar Deuda</h3>
             <button onclick="cerrarModalCobrarDeuda()" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">×</button>
         </div>
         
-        <form id="form-cobrar-deuda-pos" onsubmit="procesarCobroDeuda(event)">
+        <form id="form-cobrar-deuda-pos" onsubmit="procesarCobroDeuda(event)" style="display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; margin: 0;">
             <input type="hidden" id="cobrar-cliente-id">
-            <div style="padding: 20px;">
+            <div style="padding: 20px; overflow-y: auto; flex-grow: 1;">
                 <div style="margin-bottom: 20px; padding: 12px; background: #e8f5e9; border-radius: 6px; border-left: 4px solid #28a745;">
                     <span id="cobrar-cliente-nombre" style="font-weight: bold; color: #1b5e20; display: block; margin-bottom: 5px;">CLIENTE</span>
                     <span style="font-size: 13px; color: #388e3c;">Total Deuda Pendiente: </span>
