@@ -176,6 +176,11 @@
                                 <input type="number" step="0.01" id="cierre_caja"
                                     class="form-control form-control-lg border-primary fw-bold"
                                     value="{{ $cierre->monto_cierre }}" placeholder="0.00">
+                                @if(!$cierre->fecha_cierre)
+                                <button class="btn btn-outline-primary" type="button" onclick="cuadrarConTeorico()" title="Cuadrar con monto teórico">
+                                    <i class="fas fa-magic"></i>
+                                </button>
+                                @endif
                             </div>
                         </div>
 
@@ -885,9 +890,25 @@
             } catch (e) {}
         }
 
+        function cuadrarConTeorico() {
+            const teorico = parseFloat(document.getElementById('teorico_cierre').value) || 0;
+            document.getElementById('cierre_caja').value = teorico.toFixed(2);
+            recalcular();
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             loadPartidas();
             recalcular();
+
+            // Si es una sesión abierta y el cierre está en 0, sugerir el teórico
+            if (!isCajaClosed && (parseFloat(document.getElementById('cierre_caja').value) || 0) === 0) {
+                // Solo si el teórico es > 0
+                const t = parseFloat(document.getElementById('teorico_cierre').value) || 0;
+                if (t > 0) {
+                    document.getElementById('cierre_caja').value = t.toFixed(2);
+                    recalcular();
+                }
+            }
 
             // Guardar nueva partida
             document.getElementById('pa_save').addEventListener('click', async () => {

@@ -37,57 +37,35 @@
 		
 		<div class="row">
 			<div class="col-md-6">
-				<div class="mb-2">
-					<label class="form-label small fw-bold">
-						Saldo Inicial
+				<div class="mb-4">
+					<label class="form-label small fw-bold text-primary" style="font-size: 1rem;">
+						🚀 Saldo Inicial en Caja (Efectivo)
 						@if(isset($ultimoCierre))
-							<small class="text-muted">(último cierre: {{ $ultimoCierre->fecha_cierre->format('d/m/Y H:i') }})</small>
+							<div class="small text-muted fw-normal">(Traído del último cierre: {{ $ultimoCierre->fecha_cierre->format('d/m/Y H:i') }})</div>
 						@endif
 					</label>
-					<input type="number" step="0.01" name="monto_apertura" id="saldo_inicial" class="form-control form-control-sm" value="{{ $saldoInicial ?? '0.00' }}">
-				</div>
-
-				<div class="mb-2">
-					<label class="form-label small fw-bold">Ingresos</label>
-					<input type="number" step="0.01" name="ingresos" id="ingresos" class="form-control form-control-sm" value="0.00">
-				</div>
-
-				<div class="mb-2">
-					<label class="form-label small fw-bold">Gastos</label>
-					<input type="number" step="0.01" name="egresos" id="gastos" class="form-control form-control-sm" value="0.00">
-				</div>
-
-				<div class="mb-2">
-					<label class="form-label small fw-bold">Aportaciones</label>
-					<input type="number" step="0.01" name="aportaciones" id="aportaciones" class="form-control form-control-sm" value="0.00">
-				</div>
-
-				<div class="mb-2">
-					<label class="form-label small fw-bold">Sustracciones</label>
-					<input type="number" step="0.01" name="sustracciones" id="sustracciones" class="form-control form-control-sm" value="0.00">
-				</div>
-
-				<div class="mb-2">
-					<label class="form-label small fw-bold">Teórico Cierre</label>
-					<input type="text" id="teorico_cierre" readonly class="form-control form-control-sm" value="0.00">
+					<div class="input-group input-group-lg">
+						<span class="input-group-text bg-primary text-white border-primary">S/</span>
+						<input type="number" step="0.01" name="monto_apertura" id="saldo_inicial" 
+							class="form-control border-primary fw-bold" 
+							value="{{ $saldoInicial ?? '0.00' }}" autofocus>
+					</div>
+					<small class="text-muted mt-1 d-block">Indica cuánto dinero físico hay en la caja en este momento.</small>
 				</div>
 			</div>
 
 			<div class="col-md-6">
 				<div class="mb-2">
-					<label class="form-label small fw-bold">Cierre Caja (Efectivo)</label>
-					<input type="number" step="0.01" name="monto_cierre" id="cierre_caja" class="form-control form-control-sm" value="0.00">
+					<label class="form-label small fw-bold">Observaciones de Apertura</label>
+					<textarea name="observaciones" class="form-control form-control-sm" rows="4" placeholder="Notas sobre el estado de la caja al abrir..."></textarea>
 				</div>
-
-				<div class="mb-2">
-					<label class="form-label small fw-bold" id="label_descuadre">Descuadre Caja</label>
-					<input type="text" id="descuadre" readonly class="form-control form-control-sm" value="0.00">
-				</div>
-
-				<div class="mb-2">
-					<label class="form-label small fw-bold">Observaciones</label>
-					<textarea name="observaciones" class="form-control form-control-sm" rows="4"></textarea>
-				</div>
+				
+				{{-- Campos ocultos para mantener compatibilidad con validación del controlador si fuera necesario --}}
+				<input type="hidden" name="ingresos" value="0.00">
+				<input type="hidden" name="egresos" value="0.00">
+				<input type="hidden" name="aportaciones" value="0.00">
+				<input type="hidden" name="sustracciones" value="0.00">
+				<input type="hidden" name="monto_cierre" value="0.00">
 			</div>
 		</div>
 
@@ -99,40 +77,9 @@
 </div>
 
 <script>
-	function val(id){ return parseFloat(document.getElementById(id).value) || 0; }
-
-	function recalcular(){
-		const saldoIni = val('saldo_inicial');
-		const ingresos = val('ingresos');
-		const gastos = val('gastos');
-		const aportes = val('aportaciones');
-		const sustrac = val('sustracciones');
-		const cierreReal = val('cierre_caja');
-
-		const teorico = saldoIni + ingresos - gastos + aportes - sustrac;
-		document.getElementById('teorico_cierre').value = teorico.toFixed(2);
-
-		const diferencia = cierreReal - teorico;
-		const desc = document.getElementById('descuadre');
-		const label = document.getElementById('label_descuadre');
-		desc.value = Math.abs(diferencia).toFixed(2);
-
-		if (diferencia < 0) { label.innerText = 'DESCUADRE CAJA: FALTANTE'; desc.style.color = 'red'; }
-		else if (diferencia > 0) { label.innerText = 'DESCUADRE CAJA: SOBRANTE'; desc.style.color = 'blue'; }
-		else { label.innerText = 'DESCUADRE CAJA'; desc.style.color = 'green'; }
-	}
-
-	document.addEventListener('input', function(e){
-		const inputs = ['saldo_inicial','ingresos','gastos','aportaciones','sustracciones','cierre_caja'];
-		if (inputs.includes(e.target.id)) recalcular();
-	});
-
 	document.getElementById('arqueoForm').addEventListener('submit', function(e){
-		if (!confirm('¿Confirmar guardado del cierre de caja?')) { e.preventDefault(); }
+		if (!confirm('¿Confirmar apertura de caja con este saldo inicial?')) { e.preventDefault(); }
 	});
-
-	// Inicializa cálculo al cargar
-	document.addEventListener('DOMContentLoaded', function(){ recalcular(); });
 </script>
 
 

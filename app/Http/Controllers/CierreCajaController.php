@@ -221,13 +221,15 @@ class CierreCajaController extends Controller
         $data = $request->validate([
             'fecha_cierre' => 'nullable|date',
             'monto_apertura' => 'required|numeric',
-            'monto_cierre' => 'required|numeric',
+            'monto_cierre' => 'nullable|numeric',
             'ingresos' => 'nullable|numeric',
             'egresos' => 'nullable|numeric',
-            'aportaciones' => 'nullable|numeric', // Nuevo campo
-            'sustracciones' => 'nullable|numeric', // Nuevo campo
+            'aportaciones' => 'nullable|numeric',
+            'sustracciones' => 'nullable|numeric',
             'observaciones' => 'nullable|string',
         ]);
+
+        $data['monto_cierre'] = $data['monto_cierre'] ?? 0;
 
         /** @var \App\Models\User $user */
         $user = Auth::user();
