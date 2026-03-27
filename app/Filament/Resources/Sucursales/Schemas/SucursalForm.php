@@ -9,6 +9,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\Repeater;
 use Filament\Schemas\Components\Section;
+use Filament\Actions\Action;
 
 class SucursalForm
 {
@@ -92,7 +93,14 @@ class SucursalForm
                         ->collapsible()
                         ->defaultItems(1)
                         ->addActionLabel('Agregar Caja')
-                        ->itemLabel(fn(array $state): ?string => $state['nombre'] ?? 'Nueva Caja'),
+                        ->itemLabel(fn(array $state): ?string => $state['nombre'] ?? 'Nueva Caja')
+                        ->deleteAction(
+                            fn (Action $action) => $action->requiresConfirmation()
+                                ->modalHeading('¿Eliminar caja?')
+                                ->modalDescription('Esta acción no se puede deshacer. Si la caja tiene historial de cierres, estos quedarán huérfanos.')
+                                ->modalSubmitActionLabel('Sí, eliminar')
+                        )
+                        ->deletable(fn ($record) => $record ? ($record->cierres()->count() === 0 && !$record->is_boveda) : true),
                 ])
                 ->description('Agregue y configure las cajas registradoras de esta sucursal'),
         ];
