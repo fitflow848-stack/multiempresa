@@ -455,16 +455,7 @@
                             <input id="op_concepto" class="form-control form-control-sm"
                                 placeholder="Describa el motivo...">
                         </div>
-                        <div class="col-md-6">
-                            <label class="label-custom">Método de Pago</label>
-                            <select id="op_metodo" class="form-select form-select-sm">
-                                <option value="Efectivo">💵 Efectivo</option>
-                                <option value="Yape/Plin">📱 Yape / Plin</option>
-                                <option value="Transferencia">🏦 Transferencia</option>
-                                <option value="Tarjeta">💳 Tarjeta</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
+                        <div class="col-md-12">
                             <label class="label-custom">Importe (S/)</label>
                             <input id="op_importe" type="number" step="0.01"
                                 class="form-control form-control-sm text-center fw-bold" value="0.00">
@@ -738,7 +729,6 @@
             document.getElementById('op_tipo').value = 'ingreso';
             document.getElementById('op_partida').value = '';
             document.getElementById('op_concepto').value = '';
-            document.getElementById('op_metodo').value = 'Efectivo';
             document.getElementById('op_importe').value = '0.00';
             document.querySelector('#modal-operacion .modal-title').innerText = 'Registrar Operación Manual';
             document.getElementById('modal-operacion').style.display = 'block';
@@ -750,8 +740,7 @@
                 document.getElementById('op_id').value = btnEl.getAttribute('data-id');
                 document.getElementById('op_tipo').value = btnEl.getAttribute('data-tipo');
                 document.getElementById('op_concepto').value = btnEl.getAttribute('data-concepto');
-                document.getElementById('op_metodo').value = btnEl.getAttribute('data-metodo') ||
-                    'Efectivo';
+
                 document.getElementById('op_importe').value = parseFloat(btnEl.getAttribute('data-importe'))
                     .toFixed(2);
 
@@ -813,7 +802,7 @@
                 tipo: document.getElementById('op_tipo').value,
                 partida: document.getElementById('op_partida').value,
                 concepto: document.getElementById('op_concepto').value,
-                metodo_pago: document.getElementById('op_metodo').value,
+                metodo_pago: 'Efectivo',
                 importe: parseFloat(document.getElementById('op_importe').value) || 0,
                 cierre_caja_id: cierreId
             };
