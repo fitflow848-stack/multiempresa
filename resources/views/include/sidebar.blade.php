@@ -150,6 +150,13 @@
             </button>
             <a href="{{ route('principal.index') }}" class="navbar-brand d-flex align-items-center">
                 <span class="fw-bolder" style="color: #566a7f; font-size: 1.2rem;">Wolvix</span>
+                @if (isset($current_branch) && $current_branch)
+                    <span class="ms-2 d-lg-none badge bg-label-primary border-0 shadow-none px-2 py-1"
+                        style="font-size: 0.6rem; font-weight: 600; text-transform: uppercase;">
+                        <i class="bx bx-map-pin" style="font-size: 0.6rem;"></i>
+                        {{ Str::limit($current_branch->nombre, 15) }}
+                    </span>
+                @endif
             </a>
         </div>
 
@@ -515,6 +522,11 @@
                             <div class="d-flex flex-column text-end me-2">
                                 <span class="fw-bold small lh-1 text-dark">{{ Auth::user()->name }}</span>
                                 <small class="text-muted" style="font-size: 0.65rem;">{{ $roleLabel }}</small>
+                                @if (isset($current_branch) && $current_branch)
+                                    <small class="text-primary fw-bold d-lg-none" style="font-size: 0.65rem;">
+                                        <i class="bx bx-map-pin" style="font-size: 0.6rem;"></i> {{ $current_branch->nombre }}
+                                    </small>
+                                @endif
                             </div>
                             <div class="avatar-wrapper bg-white rounded-circle d-flex align-items-center justify-content-center"
                                 style="width: 32px; height: 32px; border: 1px solid #eef2f7;">

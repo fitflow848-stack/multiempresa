@@ -28,10 +28,16 @@ class EnsureCompanyScope
         // Super Admin: acceso total sin restricciones, pero compartimos contexto si lo tiene
         if ($user->hasRole('super_admin')) {
             $activeCompanyId = session('active_company_id');
+            $activeBranchId = session('active_branch_id');
             view()->share('is_super_admin', true);
             view()->share('current_company_id', $activeCompanyId);
-            view()->share('current_branch_id', session('active_branch_id'));
+            view()->share('current_branch_id', $activeBranchId);
             view()->share('current_user_cajas', collect());
+
+            if ($activeBranchId) {
+                view()->share('current_branch', \App\Models\Sucursal::find($activeBranchId));
+            }
+
             return $next($request);
         }
 
