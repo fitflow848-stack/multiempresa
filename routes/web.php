@@ -42,6 +42,9 @@ Route::get('/prueba', function () {
 });
 
 Route::get('/', function () {
+    if (auth()->check()) {
+        return redirect()->route('principal.index');
+    }
     return redirect('/login');
 });
 
