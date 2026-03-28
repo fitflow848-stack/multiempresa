@@ -18,4 +18,16 @@ class EditUser extends EditRecord
             DeleteAction::make(),
         ];
     }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        $user = auth()->user();
+        
+        // Si el usuario no es super_admin, preservar la empresa original
+        if (!$user->isSuperAdmin()) {
+            $data['company_id'] = $this->record->company_id;
+        }
+
+        return $data;
+    }
 }

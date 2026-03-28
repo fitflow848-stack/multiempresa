@@ -68,14 +68,20 @@ class UserForm
                         ->preload()
                         ->native(false)
                         ->reactive()
-                        ->required(fn ($get) => !auth()->user()->isSuperAdmin())
-                        ->nullable()
-                        ->hidden(fn () => !auth()->user()->isSuperAdmin())
-                        ->default(fn () => auth()->user()->company_id)
+                        ->required(fn ($get) => auth()->user()->isSuperAdmin()) // Solo requerido para super_admin
+                        ->visible(fn () => auth()->user()->isSuperAdmin()) // Solo visible para super_admin
+                        ->default(fn () => auth()->user()->company_id) // Default a la empresa del usuario autenticado
                         ->dehydrated(true)
                         ->afterStateUpdated(function (callable $set) {
                             $set('branches', []);
                             $set('cajas', []);
+                        })
+                        ->helperText(function () {
+                            if (auth()->user()->isSuperAdmin()) {
+                                return 'Como Super Admin, puedes asignar cualquier empresa.';
+                            }
+                            $currentCompany = auth()->user()->company->razon_social ?? 'Sin empresa';
+                            return "Se asignará automáticamente tu empresa: {$currentCompany}";
                         }),
 
                     Select::make('branches')
