@@ -20,10 +20,14 @@
         if (input) input.value = '';
     }
 
-    function cargarListaClientes() {
+    function cargarListaClientes(termino = '') {
         const tbody = document.getElementById('lista-clientes-tbody');
-        tbody.innerHTML =
-            '<tr><td colspan="5" style="padding: 20px; text-align: center; color: #6c757d;">Cargando clientes...</td></tr>';
+        
+        // Si no hay término, mostramos cargando inicialmente
+        if (!termino) {
+            tbody.innerHTML =
+                '<tr><td colspan="5" style="padding: 20px; text-align: center; color: #6c757d;">Cargando clientes...</td></tr>';
+        }
 
         fetch(`{{ route('clientes.buscar-pos') }}`, {
             method: 'POST',
@@ -31,17 +35,22 @@
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
             },
-            body: JSON.stringify({})
+            body: JSON.stringify({ q: termino })
         })
             .then(response => response.json())
             .then(data => {
-                clientesDisponibles = data;
+                // Si no hay término, actualizamos la lista base
+                if (!termino) {
+                    clientesDisponibles = data;
+                }
                 currentFilteredList = data; // Set initial filtered list
                 renderizarListaClientes(currentFilteredList);
             })
             .catch(error => {
-                tbody.innerHTML =
-                    '<tr><td colspan="5" style="padding: 20px; text-align: center; color: #dc3545;">Error al cargar clientes</td></tr>';
+                if (!termino) {
+                    tbody.innerHTML =
+                        '<tr><td colspan="5" style="padding: 20px; text-align: center; color: #dc3545;">Error al cargar clientes</td></tr>';
+                }
                 console.error('Error:', error);
             });
     }
@@ -358,8 +367,9 @@
         guardarVentaPersistente();
     }
 
+    let busquedaClienteTimeout = null;
     function buscarClientes() {
-        const termino = document.getElementById('buscar-cliente-input').value.toLowerCase();
+        const termino = document.getElementById('buscar-cliente-input').value.trim();
 
         if (termino.length === 0) {
             currentFilteredList = clientesDisponibles;
@@ -367,12 +377,20 @@
             return;
         }
 
+        // Primero filtramos localmente para respuesta instantánea
         currentFilteredList = clientesDisponibles.filter(cliente =>
-            (cliente.nombre && cliente.nombre.toLowerCase().includes(termino)) ||
+            (cliente.nombre && cliente.nombre.toLowerCase().includes(termino.toLowerCase())) ||
             (cliente.numero_documento && cliente.numero_documento.includes(termino))
         );
-
         renderizarListaClientes(currentFilteredList);
+
+        // Si el término tiene al menos 2 caracteres, buscamos en el servidor (debounced)
+        if (termino.length >= 2) {
+            clearTimeout(busquedaClienteTimeout);
+            busquedaClienteTimeout = setTimeout(() => {
+                cargarListaClientes(termino);
+            }, 500);
+        }
     }
 
     function mostrarFormularioDNI() {

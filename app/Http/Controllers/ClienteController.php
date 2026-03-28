@@ -354,10 +354,11 @@ class ClienteController extends Controller
         $clientes = Cliente::where('company_id', $user->company_id)
             ->activos()
             ->when($termino, function ($query, $termino) {
+                // Si hay término de búsqueda, buscamos específicamente
                 $query->buscar($termino);
             })
             ->orderBy('nombre')
-            ->limit(50)
+            ->limit($termino ? 100 : 500) // Si busca, damos hasta 100, si no busca (carga inicial) damos 500
             ->get()
             ->map(function ($cliente) {
                 return [
