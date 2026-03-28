@@ -144,7 +144,7 @@
         </tr>
         @endif
         <tr>
-            <td class="bold">Cajero:</td>
+            <td class="bold">Le atendió:</td>
             <td>{{ $venta->user->name ?? '-' }}</td>
         </tr>
     </table>
