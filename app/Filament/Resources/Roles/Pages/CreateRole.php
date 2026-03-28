@@ -13,4 +13,12 @@ class CreateRole extends CreateRecord
     {
         return 'full';
     }
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        // Asegurar que el guard_name sea siempre 'admin'
+        $data['guard_name'] = 'admin';
+        
+        return $data;
+    }
 }

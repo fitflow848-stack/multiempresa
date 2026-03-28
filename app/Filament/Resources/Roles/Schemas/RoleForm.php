@@ -19,7 +19,17 @@ class RoleForm
                         ->label('Nombre del Rol')
                         ->required()
                         ->maxLength(255)
-                        ->unique(ignoreRecord: true)
+                        ->unique(
+                            table: 'roles', 
+                            column: 'name',
+                            ignoreRecord: true,
+                            modifyRuleUsing: function ($rule, $component, $record) {
+                                if ($record) {
+                                    return $rule->ignore($record->id);
+                                }
+                                return $rule;
+                            }
+                        )
                         ->helperText('Nombre único para el rol (ej: admin, vendedor, cajero)'),
 
                     TextInput::make('guard_name')

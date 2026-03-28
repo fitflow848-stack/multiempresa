@@ -21,4 +21,12 @@ class EditRole extends EditRecord
     {
         return 'full';
     }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        // Asegurar que el guard_name se mantenga como 'admin'
+        $data['guard_name'] = 'admin';
+        
+        return $data;
+    }
 }
