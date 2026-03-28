@@ -91,6 +91,17 @@
                             </select>
                         </div>
                         <div class="col-md-2">
+                            <label>Local / Sucursal</label>
+                            <select name="sucursal_id" class="form-control">
+                                <option value="">Todas (Consolidado)</option>
+                                @foreach($sucursales as $suc)
+                                    <option value="{{ $suc->id }}" {{ request('sucursal_id') == $suc->id ? 'selected' : '' }}>
+                                        {{ $suc->nombre }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2">
                             <label>Desde</label>
                             <input type="date" name="fecha_desde" class="form-control"
                                 value="{{ request('fecha_desde') }}">

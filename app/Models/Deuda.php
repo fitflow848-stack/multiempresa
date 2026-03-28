@@ -72,7 +72,7 @@ class Deuda extends Model
     // Scopes
     public function scopePendientes($query)
     {
-        return $query->whereIn('estado', [self::ESTADO_PENDIENTE, self::ESTADO_PARCIAL]);
+        return $query->whereIn('estado', [self::ESTADO_PENDIENTE, self::ESTADO_PARCIAL, self::ESTADO_VENCIDA]);
     }
 
     public function scopeVencidas($query)

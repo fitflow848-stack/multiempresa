@@ -57,7 +57,7 @@ class ClienteController extends Controller
         }
 
         $clientes = $query->withSum(['deudas' => function ($query) {
-            $query->whereIn('estado', ['pendiente', 'parcial']);
+            $query->whereIn('estado', ['pendiente', 'parcial', 'vencida']);
         }], 'monto_deuda')->get()->map(function ($cliente) {
             $montoDeuda = $cliente->deudas_sum_monto_deuda ?: 0;
             return [

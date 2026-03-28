@@ -18,16 +18,33 @@ class DeudaController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
+        
+        // Cargar sucursales para el filtro
+        $sucursales = \App\Models\Sucursal::where('company_id', $user->company_id)->get();
 
-        // Obtener clientes con deudas filtradas
-        $query = Cliente::where('company_id', $user->company_id)
-            ->where('sucursal_id', $user->branch_id)
-            ->whereHas('deudas', function ($q) use ($request) {
+        // Si el usuario es super_admin o admin_empresa, permitimos ver de otras sucursales
+        // O si el usuario específicamente quiere ver "todas" (consolidado)
+        // Para igualar al reporte, por defecto si no hay filtro mostramos lo de la empresa
+        
+        $query = Cliente::query();
+        
+        // Filtro opcional por sucursal (si se desea mantener el comportamiento por defecto de la sesión)
+        // Pero el reporte muestra todo por defecto si no se filtra local.
+        if ($request->has('sucursal_id') && !empty($request->sucursal_id)) {
+            $query->where('sucursal_id', $request->sucursal_id);
+        }
+
+        $query->whereHas('deudas', function ($q) use ($request) {
                 if ($request->has('estado') && !empty($request->estado)) {
                     $q->where('estado', $request->estado);
                 } elseif (!$request->has('mostrar_todas')) {
                     $q->where('estado', '!=', Deuda::ESTADO_PAGADA);
                 }
+                
+                if ($request->has('sucursal_id') && !empty($request->sucursal_id)) {
+                    $q->where('sucursal_id', $request->sucursal_id);
+                }
+
                 if ($request->fecha_desde)
                     $q->where('fecha_venta', '>=', $request->fecha_desde);
                 if ($request->fecha_hasta)
@@ -39,6 +56,9 @@ class DeudaController extends Controller
                         $q->where('estado', $request->estado);
                     } elseif (!$request->has('mostrar_todas')) {
                         $q->where('estado', '!=', Deuda::ESTADO_PAGADA);
+                    }
+                    if ($request->has('sucursal_id') && !empty($request->sucursal_id)) {
+                        $q->where('sucursal_id', $request->sucursal_id);
                     }
                     if ($request->fecha_desde)
                         $q->where('fecha_venta', '>=', $request->fecha_desde);
@@ -53,6 +73,9 @@ class DeudaController extends Controller
                     } elseif (!$request->has('mostrar_todas')) {
                         $q->where('estado', '!=', Deuda::ESTADO_PAGADA);
                     }
+                    if ($request->has('sucursal_id') && !empty($request->sucursal_id)) {
+                        $q->where('sucursal_id', $request->sucursal_id);
+                    }
                     if ($request->fecha_desde)
                         $q->where('fecha_venta', '>=', $request->fecha_desde);
                     if ($request->fecha_hasta)
@@ -65,6 +88,9 @@ class DeudaController extends Controller
                         $q->where('estado', $request->estado);
                     } elseif (!$request->has('mostrar_todas')) {
                         $q->where('estado', '!=', Deuda::ESTADO_PAGADA);
+                    }
+                    if ($request->has('sucursal_id') && !empty($request->sucursal_id)) {
+                        $q->where('sucursal_id', $request->sucursal_id);
                     }
                     if ($request->fecha_desde)
                         $q->where('fecha_venta', '>=', $request->fecha_desde);
@@ -85,14 +111,19 @@ class DeudaController extends Controller
         $clientes = $query->orderByDesc('deudas_sum_monto_deuda')
             ->paginate(15);
 
-        // Estadísticas rápidas (Globales)
+        // Estadísticas rápidas (Empresa-wide por defecto si no se filtra)
+        $statsQuery = Deuda::query();
+        if ($request->has('sucursal_id') && !empty($request->sucursal_id)) {
+            $statsQuery->where('sucursal_id', $request->sucursal_id);
+        }
+
         $estadisticas = [
-            'total_pendiente' => Deuda::where('sucursal_id', $user->branch_id)->pendientes()->sum('monto_deuda'),
-            'cantidad_pendiente' => Deuda::where('sucursal_id', $user->branch_id)->pendientes()->count(),
-            'vencidas' => Deuda::where('sucursal_id', $user->branch_id)->vencidas()->count(),
+            'total_pendiente' => (clone $statsQuery)->pendientes()->sum('monto_deuda'),
+            'cantidad_pendiente' => (clone $statsQuery)->pendientes()->count(),
+            'vencidas' => (clone $statsQuery)->vencidas()->count(),
         ];
 
-        return view('deudas.index', compact('clientes', 'estadisticas'));
+        return view('deudas.index', compact('clientes', 'estadisticas', 'sucursales'));
     }
 
     public function deudasPorCliente(Request $request, $id)

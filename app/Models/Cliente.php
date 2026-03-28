@@ -52,11 +52,11 @@ class Cliente extends Model
     {
         if ($this->relationLoaded('deudas')) {
             return $this->deudas
-                ->whereIn('estado', ['pendiente', 'parcial'])
+                ->whereIn('estado', ['pendiente', 'parcial', 'vencida'])
                 ->sum('monto_deuda');
         }
 
-        return $this->deudas()->whereIn('estado', ['pendiente', 'parcial'])->sum('monto_deuda') ?: 0;
+        return $this->deudas()->whereIn('estado', ['pendiente', 'parcial', 'vencida'])->sum('monto_deuda') ?: 0;
     }
 
     public function scopeActivos($query)
