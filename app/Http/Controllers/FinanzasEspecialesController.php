@@ -85,29 +85,13 @@ class FinanzasEspecialesController extends Controller
         // Validar caja abierta
         $user = auth()->user();
         
-        // Primero intentar con la caja seleccionada en sesión
-        $selectedCajaId = session('selected_caja_id');
-        $cajaAbierta = null;
-
-        if ($selectedCajaId) {
-            $cajaAbierta = CierreCaja::where('user_id', $user->id)
-                ->where('caja_id', $selectedCajaId)
-                ->whereNull('fecha_cierre')
-                ->first();
-        }
-
-        // Si no hay seleccionada o no está abierta, buscar cualquier caja abierta del usuario
-        if (!$cajaAbierta) {
-            $cajaAbierta = CierreCaja::where('user_id', $user->id)
-                ->whereNull('fecha_cierre')
-                ->first();
-        }
-
-        if (!$cajaAbierta) {
+        try {
+            $cajaAbierta = requireSelectedCaja('saldar el adelanto');
+        } catch (\Exception $e) {
             if (request()->expectsJson()) {
-                return response()->json(['success' => false, 'message' => 'No tienes una caja abierta.'], 422);
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
             }
-            return redirect()->back()->with('error', 'No se puede saldar el adelanto porque no tienes una caja abierta en esta sucursal.');
+            return redirect()->back()->with('error', $e->getMessage());
         }
 
         $activo = ActivoCorriente::findOrFail($id);
@@ -338,21 +322,7 @@ class FinanzasEspecialesController extends Controller
             $esEfectivo = (strtolower($metodoPago) === 'efectivo' || $metodoPago === '1' || $metodoPago === 1) ? 1 : 0;
 
             if ($esEfectivo) {
-                $selectedCajaId = session('selected_caja_id');
-                $cajaAbierta = null;
-
-                if ($selectedCajaId) {
-                    $cajaAbierta = CierreCaja::where('user_id', $user->id)
-                        ->where('caja_id', $selectedCajaId)
-                        ->whereNull('fecha_cierre')
-                        ->first();
-                }
-
-                if (!$cajaAbierta) {
-                    $cajaAbierta = CierreCaja::where('user_id', $user->id)
-                        ->whereNull('fecha_cierre')
-                        ->first();
-                }
+                $cajaAbierta = getSelectedCaja(); // Obtener caja seleccionada sin requerir obligatoriamente
 
                 if ($cajaAbierta) {
                     // Actualizar montos en la caja (Como sustracción por requerimiento)

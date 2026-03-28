@@ -210,26 +210,14 @@ class ComprobantesController extends Controller
 
                 if ($montoADescontar > 0) {
                     // Buscar caja para registrar la salida
-                    $selectedCajaId = session('selected_caja_id');
-                    $cajaActual = null;
-
-                    if ($selectedCajaId) {
-                        $cajaActual = \App\Models\CierreCaja::where('user_id', Auth::id())
-                            ->where('caja_id', $selectedCajaId)
-                            ->whereNull('fecha_cierre')
-                            ->first();
-                    } else {
-                        $cajaActual = \App\Models\CierreCaja::where('user_id', Auth::id())
-                            ->whereNull('fecha_cierre')
-                            ->first();
-                    }
+                    $cajaActual = getSelectedCaja();
 
                     $isSameBox = $cajaActual && $cajaActual->id == $venta->cierre_caja_id;
 
                     // NOTA: Si es la misma caja, simplemente desaparece la venta en el query dinámico y no restamos
                     if (!$isSameBox) {
                         if (!$cajaActual) {
-                            throw new \Exception("La venta {$venta->serie}-{$venta->numero} requiere una devolución de dinero, pero no tienes una caja abierta. Y la caja original ya está cerrada.");
+                            throw new \Exception("La venta {$venta->serie}-{$venta->numero} requiere una devolución de dinero, pero no tienes una caja específicamente seleccionada. Por favor, seleccione una caja desde el menú lateral antes de continuar.");
                         }
 
                         if ($cajaActual) {
@@ -410,23 +398,7 @@ class ComprobantesController extends Controller
 
                 // 2. Registrar salida de dinero (Devolución)
                 if ($venta->total > 0) {
-                    $selectedCajaId = session('selected_caja_id');
-                    $cajaAbierta = null;
-
-                    if ($selectedCajaId) {
-                        $cajaAbierta = CierreCaja::where('user_id', Auth::id())
-                            ->where('caja_id', $selectedCajaId)
-                            ->whereNull('fecha_cierre')
-                            ->first();
-                    } else {
-                        $cajaAbierta = CierreCaja::where('user_id', Auth::id())
-                            ->whereNull('fecha_cierre')
-                            ->first();
-                    }
-
-                    if (!$cajaAbierta) {
-                        throw new \Exception('No se puede procesar la devolución porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
-                    }
+                    $cajaAbierta = requireSelectedCaja('procesar la devolución');
 
                     if ($cajaAbierta) {
                         OperacionCaja::create([

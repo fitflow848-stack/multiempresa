@@ -62,25 +62,7 @@ class PasivoController extends Controller
                 $metodoPago = $request->input('metodo_pago', 'Efectivo');
                 $esEfectivo = (strtolower($metodoPago) === 'efectivo' || $metodoPago === '1' || $metodoPago === 1) ? 1 : 0;
 
-                $selectedCajaId = session('selected_caja_id');
-                $cajaAbierta = null;
-
-                if ($selectedCajaId) {
-                    $cajaAbierta = CierreCaja::where('user_id', Auth::id())
-                        ->where('caja_id', $selectedCajaId)
-                        ->whereNull('fecha_cierre')
-                        ->first();
-                }
-
-                if (!$cajaAbierta) {
-                    $cajaAbierta = CierreCaja::where('user_id', Auth::id())
-                        ->whereNull('fecha_cierre')
-                        ->first();
-                }
-
-                if (!$cajaAbierta) {
-                    throw new \Exception('No se puede registrar este ' . $tipo . ' porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
-                }
+                $cajaAbierta = requireSelectedCaja('registrar este ' . $tipo);
 
                 if ($esEfectivo) {
                     $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $pasivo->monto;
@@ -203,25 +185,7 @@ class PasivoController extends Controller
 
             // Registrar en OperacionCaja
             if (true) {
-                $selectedCajaId = session('selected_caja_id');
-                $cajaAbierta = null;
-
-                if ($selectedCajaId) {
-                    $cajaAbierta = CierreCaja::where('user_id', Auth::id())
-                        ->where('caja_id', $selectedCajaId)
-                        ->whereNull('fecha_cierre')
-                        ->first();
-                }
-
-                if (!$cajaAbierta) {
-                    $cajaAbierta = CierreCaja::where('user_id', Auth::id())
-                        ->whereNull('fecha_cierre')
-                        ->first();
-                }
-
-                if (!$cajaAbierta) {
-                    throw new \Exception('No se puede registrar el pago porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
-                }
+                $cajaAbierta = requireSelectedCaja('registrar el pago');
 
                 $metodoPago = $request->metodo_pago ?? 'Efectivo';
                 $esEfectivo = (strtolower($metodoPago) === 'efectivo' || $metodoPago === '1' || $metodoPago === 1) ? 1 : 0;

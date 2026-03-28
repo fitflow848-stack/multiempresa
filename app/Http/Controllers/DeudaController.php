@@ -189,24 +189,7 @@ class DeudaController extends Controller
 
         DB::beginTransaction();
         try {
-            $selectedCajaId = session('selected_caja_id');
-            $cajaAbierta = null;
-
-            if ($selectedCajaId) {
-                $cajaAbierta = \App\Models\CierreCaja::where('caja_id', $selectedCajaId)
-                    ->whereNull('fecha_cierre')
-                    ->first();
-            }
-
-            if (!$cajaAbierta) {
-                $cajaAbierta = \App\Models\CierreCaja::where('user_id', Auth::id())
-                    ->whereNull('fecha_cierre')
-                    ->first();
-            }
-
-            if (!$cajaAbierta) {
-                throw new \Exception('No se puede registrar el pago porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
-            }
+            $cajaAbierta = requireSelectedCaja('registrar el pago');
 
             $pago = DeudaPago::create([
                 'deuda_id' => $deuda->id,
@@ -319,24 +302,7 @@ class DeudaController extends Controller
 
         DB::beginTransaction();
         try {
-            $selectedCajaId = session('selected_caja_id');
-            $cajaAbierta = null;
-
-            if ($selectedCajaId) {
-                $cajaAbierta = \App\Models\CierreCaja::where('caja_id', $selectedCajaId)
-                    ->whereNull('fecha_cierre')
-                    ->first();
-            }
-
-            if (!$cajaAbierta) {
-                $cajaAbierta = \App\Models\CierreCaja::where('user_id', Auth::id())
-                    ->whereNull('fecha_cierre')
-                    ->first();
-            }
-
-            if (!$cajaAbierta) {
-                throw new \Exception('No se puede registrar el pago acumulado porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
-            }
+            $cajaAbierta = requireSelectedCaja('registrar el pago acumulado');
 
             $pagoIds = [];
             $batchId = 'BT-' . strtoupper(Str::random(10));

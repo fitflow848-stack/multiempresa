@@ -77,34 +77,8 @@ class VentaService
         ]);
 
         try {
-            // 1. Priorizar caja seleccionada en sesión
-            $selectedCajaId = session('selected_caja_id');
-            $openCaja = null;
-
-            if ($selectedCajaId) {
-                $openCaja = CierreCaja::where('caja_id', $selectedCajaId)
-                    ->where('user_id', $user->id)
-                    ->whereNull('fecha_cierre')
-                    ->latest()
-                    ->first();
-            }
-
-            // 2. Si no hay seleccionada o no se encontró, buscar la abierta por el usuario
-            if (!$openCaja) {
-                $openCajas = CierreCaja::where('user_id', $user->id)
-                    ->whereNull('fecha_cierre')
-                    ->get();
-
-                if ($openCajas->count() == 1) {
-                    $openCaja = $openCajas->first();
-                } elseif ($openCajas->count() > 1) {
-                    $openCaja = $openCajas->sortByDesc('id')->first();
-                }
-            }
-
-            if (!$openCaja) {
-                throw new Exception('No se encontró una caja abierta para realizar la venta. Por favor, abre una caja o selecciona la correcta.');
-            }
+            // Requerir caja específicamente seleccionada
+            $openCaja = requireSelectedCaja('realizar la venta');
 
             // Calcular totales considerando el tipo de impuesto de los productos
             $total = 0;

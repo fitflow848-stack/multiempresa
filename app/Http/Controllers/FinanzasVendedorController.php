@@ -328,25 +328,14 @@ class FinanzasVendedorController extends Controller
             $pasivo = null; // Se creará después de la lógica de caja
 
             // Lógica de Caja
-            $selectedCajaId = session('selected_caja_id');
             $cajaAbierta = null;
-
-            if ($selectedCajaId) {
-                $cajaAbierta = CierreCaja::where('user_id', Auth::id())
-                    ->where('caja_id', $selectedCajaId)
-                    ->whereNull('fecha_cierre')
-                    ->first();
-            } else {
-                // Si no hay seleccionada, buscar la única abierta por el usuario
-                $cajaAbierta = CierreCaja::where('user_id', Auth::id())
-                    ->whereNull('fecha_cierre')
-                    ->first();
-            }
-
+            
             // Validar que haya caja para operaciones que mueven efectivo (adelantos)
             // Las compras a crédito no afectan caja inicialmente, así que no requieren caja abierta obligatoria
-            if (!$cajaAbierta && $tipoOperacion !== 'compras_credito') {
-                throw new \Exception('No se puede registrar esta operación porque no tienes una caja abierta. Por favor, abre una caja antes de continuar.');
+            if ($tipoOperacion !== 'compras_credito') {
+                $cajaAbierta = requireSelectedCaja('registrar esta operación');
+            } else {
+                $cajaAbierta = getSelectedCaja(); // Para compras crédito, obtener si existe pero no requerir
             }
 
             $operacionCajaId = null;
@@ -575,23 +564,7 @@ class FinanzasVendedorController extends Controller
 
         DB::beginTransaction();
         try {
-            $selectedCajaId = session('selected_caja_id');
-            $cajaAbierta = null;
-
-            if ($selectedCajaId) {
-                $cajaAbierta = CierreCaja::where('user_id', Auth::id())
-                    ->where('caja_id', $selectedCajaId)
-                    ->whereNull('fecha_cierre')
-                    ->first();
-            } else {
-                $cajaAbierta = CierreCaja::where('user_id', Auth::id())
-                    ->whereNull('fecha_cierre')
-                    ->first();
-            }
-
-            if (!$cajaAbierta) {
-                throw new \Exception('No se puede registrar el pago porque no tienes una caja abierta.');
-            }
+            $cajaAbierta = requireSelectedCaja('registrar el pago');
 
             foreach ($pasivos as $pasivo) {
                 if ($montoRestante <= 0) break;

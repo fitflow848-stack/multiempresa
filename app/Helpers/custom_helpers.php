@@ -398,6 +398,54 @@ if (! function_exists('get_fecha_formateada')) {
     }
 }
 
+if (!function_exists('getSelectedCaja')) {
+    /**
+     * Obtiene la caja específicamente seleccionada en la sesión del usuario.
+     * NO hace fallback a cualquier caja abierta - solo devuelve la caja si está específicamente seleccionada.
+     * 
+     * @return \App\Models\CierreCaja|null La caja seleccionada y abierta, o null si no hay una caja específicamente seleccionada
+     */
+    function getSelectedCaja()
+    {
+        $selectedCajaId = session('selected_caja_id');
+        
+        if (!$selectedCajaId) {
+            return null; // No hay caja seleccionada
+        }
+        
+        return \App\Models\CierreCaja::where('caja_id', $selectedCajaId)
+            ->whereNull('fecha_cierre')
+            ->first();
+    }
+}
+
+if (!function_exists('requireSelectedCaja')) {
+    /**
+     * Requiere que haya una caja específicamente seleccionada.
+     * Lanza una excepción si no hay una caja seleccionada.
+     * 
+     * @param string $contexto Descripción del contexto donde se requiere la caja (ej: "realizar un pago")
+     * @return \App\Models\CierreCaja La caja seleccionada y abierta
+     * @throws \Exception Si no hay una caja específicamente seleccionada
+     */
+    function requireSelectedCaja($contexto = 'realizar esta operación')
+    {
+        $cajaAbierta = getSelectedCaja();
+        
+        if (!$cajaAbierta) {
+            $selectedCajaId = session('selected_caja_id');
+            
+            if (!$selectedCajaId) {
+                throw new \Exception('Para ' . $contexto . ' debe seleccionar una caja específica. Por favor, seleccione una caja desde el menú lateral antes de continuar.');
+            } else {
+                throw new \Exception('La caja seleccionada no está abierta o no tiene una sesión activa. Por favor, abra la caja o seleccione una caja diferente antes de continuar.');
+            }
+        }
+        
+        return $cajaAbierta;
+    }
+}
+
 if(! function_exists('obtenerSerieDocumento')) {
     /**
      * Obtener la serie correspondiente según el tipo de documento
