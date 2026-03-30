@@ -7,6 +7,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Schemas\Components\Section;
 use Spatie\Permission\Models\Permission;
+use Illuminate\Validation\Rule;
 
 class RoleForm
 {
@@ -19,17 +20,15 @@ class RoleForm
                         ->label('Nombre del Rol')
                         ->required()
                         ->maxLength(255)
-                        ->unique(
-                            table: 'roles', 
-                            column: 'name',
-                            ignoreRecord: true,
-                            modifyRuleUsing: function ($rule, $component, $record) {
-                                if ($record) {
-                                    return $rule->ignore($record->id);
-                                }
-                                return $rule;
-                            }
-                        )
+                        ->rules(function ($get, $record) {
+                            return [
+                                'required',
+                                'max:255',
+                                Rule::unique('roles', 'name')
+                                    ->where('guard_name', 'admin')
+                                    ->ignore($record?->id)
+                            ];
+                        })
                         ->helperText('Nombre único para el rol (ej: admin, vendedor, cajero)'),
 
                     TextInput::make('guard_name')
