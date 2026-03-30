@@ -18,7 +18,11 @@ use Filament\Tables\Table;
 class TesoreriaResource extends Resource
 {
     protected static ?string $model = Caja::class;
-
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+        return $user && ($user->can('tesoreria.ver') || $user->hasRole(['super_admin', 'admin_empresa']));
+    }
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-archive-box';
 
     protected static string|UnitEnum|null $navigationGroup = 'Finanzas y Caja';

@@ -19,6 +19,12 @@ class SucursalResource extends Resource
 {
     protected static ?string $model = Sucursal::class;
 
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+        return $user && ($user->can('sucursales.ver') || $user->hasRole(['super_admin', 'admin_empresa']));
+    }
+
     // Use a known heroicon name to avoid SvgNotFound (reuse Company icon)
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-building-office';
 

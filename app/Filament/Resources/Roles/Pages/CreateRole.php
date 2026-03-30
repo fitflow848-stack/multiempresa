@@ -21,4 +21,20 @@ class CreateRole extends CreateRecord
         
         return $data;
     }
+
+    protected function handleRecordCreation(array $data): \Illuminate\Database\Eloquent\Model
+    {
+        // Crear el rol
+        $role = \Spatie\Permission\Models\Role::create([
+            'name' => $data['name'],
+            'guard_name' => 'admin'
+        ]);
+
+        // Asignar permisos
+        if (isset($data['permissions']) && is_array($data['permissions'])) {
+            $role->syncPermissions($data['permissions']);
+        }
+
+        return $role;
+    }
 }

@@ -22,7 +22,7 @@ class RolePolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasRole('admin_empresa');
+        return $user->can('roles.ver') || $user->hasRole('admin_empresa');
     }
 
     /**
@@ -30,7 +30,7 @@ class RolePolicy
      */
     public function view(User $user, Role $role): bool
     {
-        return $user->hasRole('admin_empresa');
+        return $user->can('roles.ver') || $user->hasRole('admin_empresa');
     }
 
     /**

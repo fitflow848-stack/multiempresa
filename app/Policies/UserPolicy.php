@@ -21,7 +21,7 @@ class UserPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->hasRole('admin_empresa');
+        return $user->can('usuarios.ver') || $user->hasRole('admin_empresa');
     }
 
     /**
@@ -29,7 +29,8 @@ class UserPolicy
      */
     public function view(User $user, User $model): bool
     {
-        return $user->hasRole('admin_empresa') && $user->company_id === $model->company_id;
+        $canView = $user->can('usuarios.ver') || $user->hasRole('admin_empresa');
+        return $canView && $user->company_id === $model->company_id;
     }
 
     /**
@@ -37,7 +38,7 @@ class UserPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasRole('admin_empresa');
+        return $user->can('usuarios.crear') || $user->hasRole('admin_empresa');
     }
 
     /**
@@ -45,7 +46,8 @@ class UserPolicy
      */
     public function update(User $user, User $model): bool
     {
-        return $user->hasRole('admin_empresa') && $user->company_id === $model->company_id;
+        $canUpdate = $user->can('usuarios.editar') || $user->hasRole('admin_empresa');
+        return $canUpdate && $user->company_id === $model->company_id;
     }
 
     /**
@@ -53,8 +55,7 @@ class UserPolicy
      */
     public function delete(User $user, User $model): bool
     {
-        // Evitar que un admin se borre a sí mismo o borre a otros admins si así se desea
-        // Por ahora, permitimos borrar usuarios de su propia empresa
-        return $user->hasRole('admin_empresa') && $user->company_id === $model->company_id && $user->id !== $model->id;
+        $canDelete = $user->can('usuarios.eliminar') || $user->hasRole('admin_empresa');
+        return $canDelete && $user->company_id === $model->company_id && $user->id !== $model->id;
     }
 }

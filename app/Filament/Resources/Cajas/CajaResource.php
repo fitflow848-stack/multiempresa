@@ -19,6 +19,12 @@ class CajaResource extends Resource
 {
     protected static ?string $model = Caja::class;
 
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+        return $user && ($user->can('cajas.ver') || $user->hasRole(['super_admin', 'admin_empresa']));
+    }
+
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-calculator';
 
     protected static string|UnitEnum|null $navigationGroup = 'Estructura';

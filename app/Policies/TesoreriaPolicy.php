@@ -8,12 +8,21 @@ use Illuminate\Auth\Access\Response;
 
 class TesoreriaPolicy
 {
+    public function before(User $user, string $ability): ?bool
+    {
+        if ($user->hasRole('super_admin')) {
+            return true;
+        }
+
+        return null;
+    }
+
     /**
      * Determine whether the user can view any models.
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->can('tesoreria.ver') || $user->hasRole('admin_empresa');
     }
 
     /**
@@ -21,7 +30,8 @@ class TesoreriaPolicy
      */
     public function view(User $user, Tesoreria $tesoreria): bool
     {
-        return false;
+        $canView = $user->can('tesoreria.ver') || $user->hasRole('admin_empresa');
+        return $canView && $user->company_id === $tesoreria->company_id;
     }
 
     /**
@@ -29,7 +39,7 @@ class TesoreriaPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return $user->can('tesoreria.crear') || $user->hasRole('admin_empresa');
     }
 
     /**
@@ -37,7 +47,8 @@ class TesoreriaPolicy
      */
     public function update(User $user, Tesoreria $tesoreria): bool
     {
-        return false;
+        $canUpdate = $user->can('tesoreria.editar') || $user->hasRole('admin_empresa');
+        return $canUpdate && $user->company_id === $tesoreria->company_id;
     }
 
     /**
@@ -45,22 +56,7 @@ class TesoreriaPolicy
      */
     public function delete(User $user, Tesoreria $tesoreria): bool
     {
-        return false;
-    }
-
-    /**
-     * Determine whether the user can restore the model.
-     */
-    public function restore(User $user, Tesoreria $tesoreria): bool
-    {
-        return false;
-    }
-
-    /**
-     * Determine whether the user can permanently delete the model.
-     */
-    public function forceDelete(User $user, Tesoreria $tesoreria): bool
-    {
-        return false;
+        $canDelete = $user->can('tesoreria.eliminar') || $user->hasRole('admin_empresa');
+        return $canDelete && $user->company_id === $tesoreria->company_id;
     }
 }

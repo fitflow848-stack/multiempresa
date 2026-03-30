@@ -24,6 +24,12 @@ class RoleResource extends Resource
 
     protected static ?int $navigationSort = 2;
 
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+        return $user && ($user->can('roles.ver') || $user->hasRole(['super_admin', 'admin_empresa']));
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->schema(

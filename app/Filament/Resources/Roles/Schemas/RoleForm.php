@@ -44,17 +44,19 @@ class RoleForm
                 ->schema([
                     CheckboxList::make('permissions')
                         ->label('Accesos Disponibles')
-                        ->relationship(
-                            'permissions', 
-                            'name',
-                            fn($query) => $query->where('guard_name', 'admin') // Filtrar siempre por guard admin para evitar duplicados
-                                ->when(!auth()->user()->isSuperAdmin(), fn($q) => 
-                                    $q->whereNotIn('name', [
-                                        'empresas.crear', 'empresas.eliminar',
-                                        'sucursales.crear', 'sucursales.eliminar'
-                                    ])
-                                )
-                        )
+                        ->options(function () {
+                            $query = Permission::where('guard_name', 'admin');
+                            
+                            // Filtrar permisos según el usuario
+                            if (!auth()->user()->isSuperAdmin()) {
+                                $query->whereNotIn('name', [
+                                    'empresas.crear', 'empresas.eliminar',
+                                    'sucursales.crear', 'sucursales.eliminar'
+                                ]);
+                            }
+                            
+                            return $query->pluck('name', 'id')->toArray();
+                        })
                         ->searchable()
                         ->bulkToggleable()
                         ->columns(3)
