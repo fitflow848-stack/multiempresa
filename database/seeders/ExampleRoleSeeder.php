@@ -22,20 +22,34 @@ class ExampleRoleSeeder extends Seeder
 
         // Asignar permisos específicos al vendedor
         $permisos = [
+            // Usuarios y sistema
             'usuarios.ver',          // Puede ver usuarios
+            
+            // Productos e inventario
             'productos.ver',         // Puede ver productos
             'productos.crear',       // Puede crear productos
             'productos.editar',      // Puede editar productos
+            'inventario.ver',        // Puede ver inventario
+            
+            // Clientes y operaciones comerciales
             'clientes.ver',          // Puede ver clientes
             'clientes.crear',        // Puede crear clientes
             'clientes.editar',       // Puede editar clientes
+            'cotizaciones.ver',      // Puede ver cotizaciones
+            'cotizaciones.crear',    // Puede crear cotizaciones
+            'cotizaciones.convertir', // Puede convertir cotizaciones
+            
+            // Ventas y POS
             'ventas.ver',            // Puede ver ventas
             'ventas.crear',          // Puede realizar ventas
-            'pos.ver',               // Puede acceder al POS
-            'pos.crear',             // Puede crear ventas en POS
+            'ventas.pos',            // Puede usar POS
+            
+            // Caja y equipos
             'cajas.ver',             // Puede ver cajas
+            'equipos_caja.ver',      // Puede ver equipos de caja
             'tesoreria.ver',         // Puede ver tesorería (solo lectura)
-            'inventario.ver',        // Puede ver inventario
+            
+            // Reportes
             'reportes.ver',          // Puede ver reportes básicos
         ];
 
@@ -54,13 +68,31 @@ class ExampleRoleSeeder extends Seeder
 
         // Asignar permisos específicos al cajero
         $permisosCajero = [
+            // Clientes
             'clientes.ver',          // Puede ver clientes
             'clientes.crear',        // Puede crear clientes
+            
+            // Ventas y POS
             'ventas.ver',            // Puede ver ventas
             'ventas.crear',          // Puede realizar ventas
-            'cajas.ver',             // Puede ver cajas
+            'ventas.pos',            // Puede usar POS
+            
+            // Productos (consulta)
             'productos.ver',         // Puede consultar productos
+            
+            // Operaciones de caja específicas
+            'cajas.ver',             // Puede ver cajas
+            'cajas.abrir_cerrar',    // Puede abrir/cerrar cajas
+            'cajas.ajustar',         // Puede hacer ajustes de caja
+            'cajas.arquear',         // Puede realizar arqueos
+            'equipos_caja.ver',      // Puede ver equipos de caja
+            'equipos_caja.asignar',  // Puede asignarse equipos
+            
+            // Tesorería básica
             'tesoreria.ver',         // Puede ver tesorería básica
+            
+            // Reportes básicos de caja
+            'reportes.ver',          // Puede ver reportes de caja
         ];
 
         foreach ($permisosCajero as $permiso) {
@@ -78,15 +110,39 @@ class ExampleRoleSeeder extends Seeder
 
         // Asignar permisos específicos al contador
         $permisosContador = [
+            // Finanzas completas
             'finanzas.ver',          // Puede ver finanzas
             'finanzas.balance',      // Puede ver balance
             'finanzas.estado_resultados', // Puede ver estado de resultados
+            
+            // Deudas y pagos
+            'deudas.ver',            // Puede ver deudas
+            'deudas.pagar',          // Puede registrar pagos
+            'deudas.reporte',        // Puede generar reportes de deudas
+            
+            // Tesorería y caja
+            'tesoreria.ver',         // Puede ver tesorería
+            'tesoreria.crear',       // Puede crear movimientos de tesorería
+            'cajas.ver',             // Puede ver cajas
+            
+            // Compras y proveedores
+            'compras.ver',           // Puede ver compras
+            'compras.crear',         // Puede registrar compras
+            'proveedores.ver',       // Puede ver proveedores
+            'proveedores.crear',     // Puede crear proveedores
+            
+            // Inventario
+            'inventario.ver',        // Puede ver inventario
+            'productos.ver',         // Puede ver productos
+            
+            // Reportes completos
             'reportes.ver',          // Puede ver reportes
             'reportes.crear',        // Puede generar reportes
-            'tesoreria.ver',         // Puede ver tesorería
-            'compras.ver',           // Puede ver compras
-            'inventario.ver',        // Puede ver inventario
-            'proveedores.ver',       // Puede ver proveedores
+            'reportes.exportar',     // Puede exportar reportes
+            
+            // Guías de remisión
+            'guias_remision.ver',    // Puede ver guías
+            'guias_remision.crear',  // Puede crear guías
         ];
 
         foreach ($permisosContador as $permiso) {

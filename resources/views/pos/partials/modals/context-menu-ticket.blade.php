@@ -9,11 +9,13 @@
         <span style="margin-left: auto;">▶</span>
     </div>
 
-    <div class="context-menu-item" onclick="modificarPrecioLinea()"
-        style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px;">
-        <span style="color: #2196F3;">💲</span>
-        <span>Modificar precio</span>
-    </div>
+    @can('productos.modificar_precio')
+        <div class="context-menu-item" onclick="modificarPrecioLinea()"
+            style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px;">
+            <span style="color: #2196F3;">💲</span>
+            <span>Modificar precio</span>
+        </div>
+    @endcan
 
     <div class="context-menu-item" onclick="modificarDescuentoLinea()"
         style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px;">

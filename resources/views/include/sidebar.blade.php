@@ -209,7 +209,7 @@
                     </li>
                 @endcan
 
-                @canany(['pos.ver', 'ventas.ver', 'cotizaciones.ver'])
+                @canany(['ventas.pos', 'ventas.ver', 'cotizaciones.ver'])
                     <li class="nav-item dropdown">
                         <a href="#"
                             class="nav-link dropdown-toggle {{ request()->is('pos*') || request()->is('cotizaciones*') ? 'active' : '' }}"
@@ -311,7 +311,7 @@
                                 </li>
                             @endif
 
-                            @can('pos.ver')
+                            @can('ventas.pos')
                                 <li>
                                     <a class="dropdown-item" href="{{ route('pos.index') }}">
                                         Punto de Venta

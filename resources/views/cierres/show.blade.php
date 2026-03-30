@@ -339,11 +339,13 @@
                                                             data-importe="{{ $movimiento->importe }}" title="Editar">
                                                             <i class="bx bx-edit"></i>
                                                         </button>
-                                                        <button
-                                                            class="btn btn-sm btn-outline-danger px-2 py-0 border-0 fs-6 delete-operacion"
-                                                            data-id="{{ $movimiento->id_movimiento }}" title="Eliminar">
-                                                            <i class="bx bx-trash"></i>
-                                                        </button>
+                                                        @can('operaciones_caja.eliminar')
+                                                            <button
+                                                                class="btn btn-sm btn-outline-danger px-2 py-0 border-0 fs-6 delete-operacion"
+                                                                data-id="{{ $movimiento->id_movimiento }}" title="Eliminar">
+                                                                <i class="bx bx-trash"></i>
+                                                            </button>
+                                                        @endcan
                                                     @endif
                                                 </td>
                                             @endif

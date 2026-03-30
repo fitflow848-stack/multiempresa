@@ -13,24 +13,40 @@ class PermissionsSeeder extends Seeder
      */
     public function run(): void
     {
-        // Lista de permisos para cada módulo
+        // Permisos organizados por áreas funcionales
         $modules = [
+            // === ADMINISTRACIÓN DEL SISTEMA ===
             'usuarios' => ['ver', 'crear', 'editar', 'eliminar'],
             'roles' => ['ver', 'crear', 'editar', 'eliminar'],
-            'empresas' => ['ver', 'crear', 'editar', 'eliminar'],
+            'empresas' => ['ver', 'editar'],
             'sucursales' => ['ver', 'crear', 'editar', 'eliminar'],
-            'cajas' => ['ver', 'crear', 'editar', 'eliminar'],
+            'configuracion' => ['ver', 'editar'],
+            
+            // === GESTIÓN DE CAJA Y FINANZAS ===
+            'cajas' => ['ver', 'crear', 'editar', 'eliminar', 'abrir_cerrar', 'ajustar', 'arquear'],
+            'operaciones_caja' => ['eliminar'], // Solo administradores pueden eliminar
+            'equipos_caja' => ['ver', 'crear', 'editar', 'eliminar', 'asignar'], // Dispositivos/hardware de caja
             'tesoreria' => ['ver', 'crear', 'editar', 'eliminar'],
-            'productos' => ['ver', 'crear', 'editar', 'eliminar'],
+            'finanzas' => ['ver', 'crear', 'editar', 'eliminar', 'balance', 'estado_resultados'],
+            'deudas' => ['ver', 'pagar', 'reporte'],
+            
+            // === INVENTARIO Y PRODUCTOS ===
+            'productos' => ['ver', 'crear', 'editar', 'eliminar', 'modificar_precio'],
+            'inventario' => ['ver', 'crear', 'editar', 'eliminar'],
+            'catalogos' => ['ver', 'gestionar'],
+            
+            // === CLIENTES Y PROVEEDORES ===
             'clientes' => ['ver', 'crear', 'editar', 'eliminar'],
             'proveedores' => ['ver', 'crear', 'editar', 'eliminar'],
-            'ventas' => ['ver', 'crear', 'editar', 'eliminar'],
+            
+            // === VENTAS Y OPERACIONES COMERCIALES ===
+            'ventas' => ['ver', 'crear', 'editar', 'eliminar', 'pos'], // POS integrado en ventas
+            'cotizaciones' => ['ver', 'crear', 'editar', 'eliminar', 'convertir'],
             'compras' => ['ver', 'crear', 'editar', 'eliminar'],
-            'inventario' => ['ver', 'crear', 'editar', 'eliminar'],
-            'reportes' => ['ver', 'crear', 'editar', 'eliminar'],
-            'finanzas' => ['ver', 'crear', 'editar', 'eliminar', 'balance', 'estado_resultados'],
-            'configuracion' => ['ver', 'editar'],
-            'pos' => ['ver', 'crear', 'editar'],  // Permisos de POS agregados
+            'guias_remision' => ['ver', 'crear', 'editar', 'eliminar', 'enviar'],
+            
+            // === REPORTES Y EXPORTACIONES ===
+            'reportes' => ['ver', 'crear', 'editar', 'eliminar', 'exportar'],
         ];
 
         // Crear permisos para cada módulo

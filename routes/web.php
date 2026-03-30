@@ -77,10 +77,10 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
 
     Route::get('/arqueo', [ArqueoCajaController::class, 'index'])->name('arqueo.index');
 
-    Route::prefix('pos')->name('pos.')->middleware('can:pos.ver')->group(function () {
+    Route::prefix('pos')->name('pos.')->middleware('can:ventas.pos')->group(function () {
         Route::get('/', [PosController::class, 'index'])->name('index');
-        Route::get('/precios', [PosController::class, 'precios'])->name('precios')->middleware('can:productos.editar');
-        Route::post('/precios/update', [PosController::class, 'updatePrecios'])->name('precios.update')->middleware('can:productos.editar');
+        Route::get('/precios', [PosController::class, 'precios'])->name('precios')->middleware('can:productos.modificar_precio');
+        Route::post('/precios/update', [PosController::class, 'updatePrecios'])->name('precios.update')->middleware('can:productos.modificar_precio');
         Route::get('/emitir', [PosController::class, 'emitir'])->name('emitir')->middleware('can:ventas.crear');
         Route::post('/emitir', [PosController::class, 'emitir'])->name('emitir.post')->middleware('can:ventas.crear');
         Route::post('/save-venta', [PosController::class, 'saveVenta'])->name('save-venta')->middleware('can:ventas.crear');
@@ -148,7 +148,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
     // Operaciones de caja (aportes/ingresos/gastos/sustracciones)
     Route::post('/operaciones-caja', [OperacionCajaController::class, 'store'])->name('operaciones-caja.store');
     Route::put('/operaciones-caja/{id}', [OperacionCajaController::class, 'update'])->name('operaciones-caja.update');
-    Route::delete('/operaciones-caja/{id}', [OperacionCajaController::class, 'destroy'])->name('operaciones-caja.destroy');
+    Route::delete('/operaciones-caja/{id}', [OperacionCajaController::class, 'destroy'])->name('operaciones-caja.destroy')->middleware('can:operaciones_caja.eliminar');
 
     // Pase Caja → Bóveda (lo realiza el cajero)
     Route::post('/boveda/pase-caja-a-boveda', [OperacionCajaController::class, 'transferenciaCajaABoveda'])->name('boveda.caja-a-boveda');

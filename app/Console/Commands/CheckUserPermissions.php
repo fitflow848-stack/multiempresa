@@ -47,6 +47,7 @@ class CheckUserPermissions extends Command
         $testPermissions = [
             'usuarios.ver',
             'productos.ver', 
+            'productos.modificar_precio',   // Nuevo permiso agregado
             'ventas.ver',
             'tesoreria.ver',         // Cambiado de 'finanzas.ver' 
             'cajas.ver'
