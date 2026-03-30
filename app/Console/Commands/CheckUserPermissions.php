@@ -48,7 +48,7 @@ class CheckUserPermissions extends Command
             'usuarios.ver',
             'productos.ver', 
             'ventas.ver',
-            'finanzas.ver',
+            'tesoreria.ver',         // Cambiado de 'finanzas.ver' 
             'cajas.ver'
         ];
         

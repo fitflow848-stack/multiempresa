@@ -31,7 +31,10 @@ class ExampleRoleSeeder extends Seeder
             'clientes.editar',       // Puede editar clientes
             'ventas.ver',            // Puede ver ventas
             'ventas.crear',          // Puede realizar ventas
+            'pos.ver',               // Puede acceder al POS
+            'pos.crear',             // Puede crear ventas en POS
             'cajas.ver',             // Puede ver cajas
+            'tesoreria.ver',         // Puede ver tesorería (solo lectura)
             'inventario.ver',        // Puede ver inventario
             'reportes.ver',          // Puede ver reportes básicos
         ];

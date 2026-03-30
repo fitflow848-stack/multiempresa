@@ -114,11 +114,20 @@
                             class="btn btn-success me-1">
                             <i class="bx bx-export me-1"></i> Excel
                         </a>
-                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalRegistro">
-                            <i class="bx bx-plus me-1"></i> Registrar
-                        </button>
+                        @if(auth()->user()->hasRole(['super_admin', 'admin_empresa']))
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalRegistro">
+                                <i class="bx bx-plus me-1"></i> Registrar
+                            </button>
+                        @endif
                     </div>
                 </div>
+
+                @if(!auth()->user()->hasRole(['super_admin', 'admin_empresa']))
+                    <div class="alert alert-warning mb-3">
+                        <i class="bx bx-info-circle me-2"></i>
+                        <strong>Modo Solo Lectura:</strong> Solo los administradores pueden crear, editar o eliminar registros de finanzas para evitar inconsistencias con la caja.
+                    </div>
+                @endif
 
                 @if (!$agrupar)
                     <div class="table-responsive text-nowrap">
@@ -206,22 +215,24 @@
     @include('finanzas_vendedor.partials.modal_pagar', ['op' => $op, 'esAdelanto' => $esAdelanto])
                                                     @endif
 
-                                                    <button type="button"
-                                                        class="btn btn-xs btn-icon btn-edit-operacion text-warning"
-                                                        data-id="{{ $op->id }}" title="Editar">
-                                                        <i class="bx bx-edit fs-5"></i>
-                                                    </button>
-
-                                                    <form action="{{ route('finanzas_vendedor.destroy', $op->id) }}"
-                                                        method="POST" class="d-inline">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="btn btn-xs btn-icon text-danger"
-                                                            title="Eliminar"
-                                                            onclick="return confirm('¿Seguro?')">
-                                                            <i class="bx bx-trash fs-5"></i>
+                                                    @if(auth()->user()->hasRole(['super_admin', 'admin_empresa']))
+                                                        <button type="button"
+                                                            class="btn btn-xs btn-icon btn-edit-operacion text-warning"
+                                                            data-id="{{ $op->id }}" title="Editar">
+                                                            <i class="bx bx-edit fs-5"></i>
                                                         </button>
-                                                    </form>
+
+                                                        <form action="{{ route('finanzas_vendedor.destroy', $op->id) }}"
+                                                            method="POST" class="d-inline">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="btn btn-xs btn-icon text-danger"
+                                                                title="Eliminar"
+                                                                onclick="return confirm('¿Seguro?')">
+                                                                <i class="bx bx-trash fs-5"></i>
+                                                            </button>
+                                                        </form>
+                                                    @endif
 
                                                     @php
                                                         $printRoute = route('pasivos.ticket_registro', $op->id);
@@ -264,21 +275,23 @@
                                                         </form>
                                                     @endif
 
-                                                    <button type="button"
-                                                        class="btn btn-xs btn-icon btn-edit-operacion text-warning"
-                                                        data-id="{{ $op->id }}" title="Editar">
-                                                        <i class="bx bx-edit fs-5"></i>
-                                                    </button>
-
-                                                    <form action="{{ route('finanzas_vendedor.destroy', $op->id) }}"
-                                                        method="POST" class="d-inline">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="submit" class="btn btn-xs btn-icon text-danger"
-                                                            onclick="return confirm('¿Seguro?')">
-                                                            <i class="bx bx-trash fs-5"></i>
+                                                    @if(auth()->user()->hasRole(['super_admin', 'admin_empresa']))
+                                                        <button type="button"
+                                                            class="btn btn-xs btn-icon btn-edit-operacion text-warning"
+                                                            data-id="{{ $op->id }}" title="Editar">
+                                                            <i class="bx bx-edit fs-5"></i>
                                                         </button>
-                                                    </form>
+
+                                                        <form action="{{ route('finanzas_vendedor.destroy', $op->id) }}"
+                                                            method="POST" class="d-inline">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="submit" class="btn btn-xs btn-icon text-danger"
+                                                                onclick="return confirm('¿Seguro?')">
+                                                                <i class="bx bx-trash fs-5"></i>
+                                                            </button>
+                                                        </form>
+                                                    @endif
 
                                                     <a href="{{ route('finanzas.ticket-personal', $op->_activo_id) }}"
                                                         target="_blank" class="btn btn-xs btn-icon text-primary">

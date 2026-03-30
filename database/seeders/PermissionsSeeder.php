@@ -30,6 +30,7 @@ class PermissionsSeeder extends Seeder
             'reportes' => ['ver', 'crear', 'editar', 'eliminar'],
             'finanzas' => ['ver', 'crear', 'editar', 'eliminar', 'balance', 'estado_resultados'],
             'configuracion' => ['ver', 'editar'],
+            'pos' => ['ver', 'crear', 'editar'],  // Permisos de POS agregados
         ];
 
         // Crear permisos para cada módulo
