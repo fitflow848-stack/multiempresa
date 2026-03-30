@@ -21,8 +21,8 @@ class SucursalResource extends Resource
 
     public static function canAccess(): bool
     {
-        $user = auth()->user();
-        return $user && ($user->can('sucursales.ver') || $user->hasRole(['super_admin', 'admin_empresa']));
+        $user = auth('admin')->user();
+        return $user && ($user->can('sucursales.ver', 'admin') || $user->hasRole(['super_admin', 'admin_empresa']));
     }
 
     // Use a known heroicon name to avoid SvgNotFound (reuse Company icon)

@@ -32,7 +32,13 @@ class CreateRole extends CreateRecord
 
         // Asignar permisos
         if (isset($data['permissions']) && is_array($data['permissions'])) {
-            $role->syncPermissions($data['permissions']);
+            // Convertir IDs a nombres de permisos
+            $permissionNames = \Spatie\Permission\Models\Permission::whereIn('id', $data['permissions'])
+                ->where('guard_name', 'admin')
+                ->pluck('name')
+                ->toArray();
+            
+            $role->syncPermissions($permissionNames);
         }
 
         return $role;

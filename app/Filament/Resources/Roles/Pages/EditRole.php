@@ -53,7 +53,15 @@ class EditRole extends EditRecord
 
         // Sincronizar permisos
         if (isset($data['permissions'])) {
-            $record->syncPermissions($data['permissions']);
+            // Convertir IDs a nombres de permisos
+            $permissionNames = \Spatie\Permission\Models\Permission::whereIn('id', $data['permissions'])
+                ->where('guard_name', 'admin')
+                ->pluck('name')
+                ->toArray();
+            
+            $record->syncPermissions($permissionNames);
+        } else {
+            $record->syncPermissions([]);
         }
 
         return $record;
