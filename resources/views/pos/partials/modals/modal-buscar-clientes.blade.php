@@ -35,7 +35,7 @@
                             <th style="padding: 8px; text-align: left; font-size: 12px; border-bottom: 1px solid #dee2e6;">#</th>
                             <th style="padding: 8px; text-align: left; font-size: 12px; border-bottom: 1px solid #dee2e6;">DNI/RUC</th>
                             <th style="padding: 8px; text-align: left; font-size: 12px; border-bottom: 1px solid #dee2e6;">Cliente</th>
-                            <th style="padding: 8px; text-align: right; font-size: 12px; border-bottom: 1px solid #dee2e6;">Debe</th>
+                            <th style="text-align: right; font-size: 12px; border-bottom: 1px solid #dee2e6;">Debe</th>
                             <th style="padding: 8px; text-align: center; font-size: 12px; border-bottom: 1px solid #dee2e6;">Acc.</th>
                         </tr>
                     </thead>
