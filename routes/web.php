@@ -136,12 +136,12 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
     });
 
     // Rutas del módulo de cierre de caja
-    Route::prefix('cierre-caja')->name('cierre-caja.')->middleware('can:caja.ver')->group(function () {
+    Route::prefix('cierre-caja')->name('cierre-caja.')->middleware('can:cajas.ver')->group(function () {
         Route::get('/', [CierreCajaController::class, 'index'])->name('index');
-        Route::get('/create', [CierreCajaController::class, 'create'])->name('create')->middleware('can:caja.abrir_cerrar');
-        Route::post('/', [CierreCajaController::class, 'store'])->name('store')->middleware('can:caja.abrir_cerrar');
+        Route::get('/create', [CierreCajaController::class, 'create'])->name('create')->middleware('can:cajas.abrir_cerrar');
+        Route::post('/', [CierreCajaController::class, 'store'])->name('store')->middleware('can:cajas.abrir_cerrar');
         Route::get('/{cierre}', [CierreCajaController::class, 'show'])->name('show');
-        Route::post('/{cierre}/close', [CierreCajaController::class, 'close'])->name('close')->middleware('can:caja.abrir_cerrar');
+        Route::post('/{cierre}/close', [CierreCajaController::class, 'close'])->name('close')->middleware('can:cajas.abrir_cerrar');
         Route::get('/caja/open', [CierreCajaController::class, 'getOpenCaja'])->name('caja.open');
     });
 

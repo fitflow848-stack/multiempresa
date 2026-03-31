@@ -30,6 +30,8 @@ class ExampleRoleSeeder extends Seeder
             'productos.crear',       // Puede crear productos
             'productos.editar',      // Puede editar productos
             'inventario.ver',        // Puede ver inventario
+            'inventario.kardex',     // Puede ver kardex/movimientos
+            'inventario.transferir', // Puede realizar transferencias
             
             // Clientes y operaciones comerciales
             'clientes.ver',          // Puede ver clientes
@@ -44,8 +46,13 @@ class ExampleRoleSeeder extends Seeder
             'ventas.crear',          // Puede realizar ventas
             'ventas.pos',            // Puede usar POS
             
+            // Comprobantes
+            'comprobantes.ver',      // Puede ver comprobantes
+            'comprobantes.imprimir', // Puede imprimir comprobantes
+            
             // Caja y equipos
             'cajas.ver',             // Puede ver cajas
+            'cajas.abrir_cerrar',    // Puede abrir/cerrar cajas
             'equipos_caja.ver',      // Puede ver equipos de caja
             'tesoreria.ver',         // Puede ver tesorería (solo lectura)
             
@@ -79,6 +86,10 @@ class ExampleRoleSeeder extends Seeder
             
             // Productos (consulta)
             'productos.ver',         // Puede consultar productos
+            
+            // Comprobantes
+            'comprobantes.ver',      // Puede ver comprobantes
+            'comprobantes.imprimir', // Puede imprimir comprobantes
             
             // Operaciones de caja específicas
             'cajas.ver',             // Puede ver cajas
@@ -115,6 +126,11 @@ class ExampleRoleSeeder extends Seeder
             'finanzas.balance',      // Puede ver balance
             'finanzas.estado_resultados', // Puede ver estado de resultados
             
+            // Contabilidad
+            'contabilidad.ver',              // Puede ver balance general
+            'contabilidad.gestionar_activos', // Puede gestionar activos
+            'contabilidad.gestionar_pasivos', // Puede gestionar pasivos
+            
             // Deudas y pagos
             'deudas.ver',            // Puede ver deudas
             'deudas.pagar',          // Puede registrar pagos
@@ -128,12 +144,20 @@ class ExampleRoleSeeder extends Seeder
             // Compras y proveedores
             'compras.ver',           // Puede ver compras
             'compras.crear',         // Puede registrar compras
+            'compras.recibir',       // Puede recibir productos de compras
             'proveedores.ver',       // Puede ver proveedores
             'proveedores.crear',     // Puede crear proveedores
             
             // Inventario
             'inventario.ver',        // Puede ver inventario
+            'inventario.kardex',     // Puede ver kardex/movimientos
             'productos.ver',         // Puede ver productos
+            
+            // Comprobantes
+            'comprobantes.ver',      // Puede ver comprobantes
+            'comprobantes.imprimir', // Puede imprimir comprobantes
+            'comprobantes.cancelar', // Puede cancelar comprobantes
+            'comprobantes.anular',   // Puede anular comprobantes
             
             // Reportes completos
             'reportes.ver',          // Puede ver reportes

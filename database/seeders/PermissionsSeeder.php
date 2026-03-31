@@ -14,6 +14,8 @@ class PermissionsSeeder extends Seeder
     public function run(): void
     {
         // Permisos organizados por áreas funcionales
+        // IMPORTANTE: Cada permiso aquí debe coincidir exactamente con lo que usan
+        // las rutas (middleware can:), sidebar (@can) y Filament Resources (canAccess)
         $modules = [
             // === ADMINISTRACIÓN DEL SISTEMA ===
             'usuarios' => ['ver', 'crear', 'editar', 'eliminar'],
@@ -32,7 +34,7 @@ class PermissionsSeeder extends Seeder
             
             // === INVENTARIO Y PRODUCTOS ===
             'productos' => ['ver', 'crear', 'editar', 'eliminar', 'modificar_precio'],
-            'inventario' => ['ver', 'crear', 'editar', 'eliminar'],
+            'inventario' => ['ver', 'crear', 'editar', 'eliminar', 'ajustar', 'kardex', 'transferir'],
             'catalogos' => ['ver', 'gestionar'],
             
             // === CLIENTES Y PROVEEDORES ===
@@ -42,8 +44,12 @@ class PermissionsSeeder extends Seeder
             // === VENTAS Y OPERACIONES COMERCIALES ===
             'ventas' => ['ver', 'crear', 'editar', 'eliminar', 'pos'], // POS integrado en ventas
             'cotizaciones' => ['ver', 'crear', 'editar', 'eliminar', 'convertir'],
-            'compras' => ['ver', 'crear', 'editar', 'eliminar'],
+            'compras' => ['ver', 'crear', 'editar', 'eliminar', 'recibir'],
+            'comprobantes' => ['ver', 'imprimir', 'cancelar', 'anular'],
             'guias_remision' => ['ver', 'crear', 'editar', 'eliminar', 'enviar'],
+            
+            // === CONTABILIDAD ===
+            'contabilidad' => ['ver', 'gestionar_activos', 'gestionar_pasivos'],
             
             // === REPORTES Y EXPORTACIONES ===
             'reportes' => ['ver', 'crear', 'editar', 'eliminar', 'exportar'],

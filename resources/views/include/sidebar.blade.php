@@ -352,7 +352,7 @@
                                     </a>
                                 </li>
                             @endcan
-                            @can('caja.ver')
+                            @can('cajas.ver')
                                 <li>
                                     <a class="dropdown-item {{ request()->is('cierre-caja*') && request()->get('tipo') == 'tesoreria' ? 'active' : '' }}"
                                         href="{{ route('cierre-caja.index', ['tipo' => 'tesoreria']) }}">
