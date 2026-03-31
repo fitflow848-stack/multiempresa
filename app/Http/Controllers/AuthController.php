@@ -45,12 +45,18 @@ class AuthController extends Controller
                  cookie()->queue(cookie()->forget('remember_email'));
              }
 
-             // Redirigir a la ruta solicitada originalmente o al POS
-             $intended = $request->session()->get('url.intended', route('principal.index'));
-             
-             // Si la ruta pretendida es parte del admin, pero el usuario entró por el POS, 
-             // es mejor mandarlo al POS para evitar confusión, a menos que sea explícito.
-             if (str_contains($intended, '/admin')) {
+             // Redirigir a la ruta solicitada originalmente o al principal
+             $intended = $request->session()->pull('url.intended', route('principal.index'));
+
+             // Ignorar rutas que no son válidas como destino tras login:
+             // - Rutas del panel admin
+             // - Páginas de resultados/búsqueda con query params (reportes, buscar, etc.)
+             $parsedPath = parse_url($intended, PHP_URL_PATH) ?? '';
+             $hasQueryString = !empty(parse_url($intended, PHP_URL_QUERY));
+             $blockedPaths = ['/admin', '/reportes/buscar', '/login'];
+             $isBlocked = $hasQueryString || collect($blockedPaths)->contains(fn($p) => str_contains($parsedPath, $p));
+
+             if ($isBlocked) {
                  $intended = route('principal.index');
              }
 

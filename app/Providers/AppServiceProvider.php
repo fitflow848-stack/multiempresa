@@ -6,6 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Pagination\Paginator;
 use Spatie\Permission\Models\Permission;
 
 class AppServiceProvider extends ServiceProvider
@@ -24,6 +25,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Paginator::useBootstrapFive();
+
         if (app()->environment('production')) {
             // Forzamos a que Laravel sepa que su raíz es la subcarpeta
             URL::forceRootUrl(config('app.url'));
