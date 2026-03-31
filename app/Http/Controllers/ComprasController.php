@@ -229,36 +229,21 @@ class ComprasController extends Controller
                 $newPvcDto = isset($pvcDtos[$i]) ? (float)$pvcDtos[$i] : ($productLine->pvc_dto ?? 0);
                 $newPvDocena = isset($pvDocenas[$i]) ? (float)$pvDocenas[$i] : ($productLine->pv_docena ?? 0);
 
-                // SI el precio es nuevo (o simplemente lo enviamos), afecta a TODO el producto
-                // Usuario: "si el precio es nuevo debería afectar a todos los lotes de ese producto"
-                if ($productId) {
-                    // 1. Actualizar Producto (Padre)
-                    DB::table('productos')->where('id', $productId)->update([
-                        'pvp' => $newPvp,
-                        'pvc' => $newPvc,
-                        'pvp_dto' => $newPvpDto,
-                        'pvc_dto' => $newPvcDto,
-                        'pv_docena' => $newPvDocena,
-                    ]);
-
-                    // 2. Actualizar todas las Líneas/Variantes del producto
-                    ProductoLinea::where('producto_id', $productId)->update([
-                        'pvp' => $newPvp,
-                        'pvc' => $newPvc,
-                        'pvp_dto' => $newPvpDto,
-                        'pvc_dto' => $newPvcDto,
-                        'pv_docena' => $newPvDocena,
-                    ]);
-
-                    // 3. Actualizar todos los lotes activos en el almacén (para POS y vista Almacén)
+                // Actualizar solo los lotes del local destino (no afectar otros locales)
+                if ($productId && !empty($data['local_destino'])) {
                     DB::table('almacen_ingreso_detalle')
                         ->where('producto_id', $productId)
+                        ->whereIn('ingreso_id', function ($q) use ($data, $compra) {
+                            $q->select('id')
+                                ->from('almacen_ingresos')
+                                ->where('sucursal_id', $data['local_destino'])
+                                ->where('company_id', $compra->company_id);
+                        })
                         ->update([
-                            'pvp' => $newPvp,
-                            'pvc' => $newPvc,
-                            'pvpd' => $newPvpDto, // Pvpd = PvP con Descuento (usado en Almacén y POS)
-                            'pvcd' => $newPvcDto, // Pvcd = PVC con Descuento
-                            // Nota: Si pv_docena no existe en esta tabla, se consume del producto en otros puntos
+                            'pvp'  => $newPvp,
+                            'pvc'  => $newPvc,
+                            'pvpd' => $newPvpDto,
+                            'pvcd' => $newPvcDto,
                         ]);
                 }
 

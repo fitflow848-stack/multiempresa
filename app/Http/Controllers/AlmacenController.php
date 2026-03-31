@@ -252,14 +252,11 @@ class AlmacenController extends Controller
             $productoUpdate = Producto::find($detalleOriginal->producto_id);
             $canModificarPrecio = $user->can('productos.modificar_precio');
             if ($productoUpdate) {
+                // Solo actualizamos atributos globales del producto (no precios, que son por sucursal/lote)
                 $updateData = [
                     'peso' => $request->filled('peso') ? $request->peso : $productoUpdate->peso,
                     'pv_docena' => ($canModificarPrecio && $request->filled('pv_docena')) ? $request->pv_docena : $productoUpdate->pv_docena,
                 ];
-                if ($canModificarPrecio) {
-                    $updateData['precio_compra'] = $request->precio_compra;
-                    $updateData['pvp'] = $request->pvp;
-                }
                 $productoUpdate->update($updateData);
             }
 
