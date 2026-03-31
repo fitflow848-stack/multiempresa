@@ -362,8 +362,12 @@ class ClienteController extends Controller
             ->with(['deudas'])
             ->get()
             ->map(function ($cliente) {
+                $hoy = now()->startOfDay();
                 $debeVencido = $cliente->deudas
-                    ->where('estado', 'vencida')
+                    ->filter(fn($d) => $d->estado !== 'pagada'
+                        && $d->fecha_vencimiento
+                        && $d->fecha_vencimiento->lt($hoy)
+                    )
                     ->sum('monto_deuda');
                 return [
                     'id' => $cliente->id,

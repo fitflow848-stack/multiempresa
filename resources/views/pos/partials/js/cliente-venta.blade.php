@@ -127,7 +127,7 @@
             let debeColor, debeBg, debeLabel;
             if (debeVencido > 0) {
                 debeColor = '#b91c1c'; debeBg = '#fee2e2';
-                debeLabel = `<span style="font-size:10px;display:block;color:#b91c1c;">⚠ VENCIDO</span>`;
+                debeLabel = `<span style="font-size:10px;display:block;color:#b91c1c;font-weight:700;">VENCIDO</span>`;
             } else if (debeNumero > 0) {
                 debeColor = '#c05621'; debeBg = '#fff7ed';
                 debeLabel = `<span style="font-size:10px;display:block;color:#c05621;">pendiente</span>`;
