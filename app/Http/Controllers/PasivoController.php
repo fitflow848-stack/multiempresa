@@ -221,7 +221,8 @@ class PasivoController extends Controller
                     'user_id' => Auth::id(),
                     'tipo' => $tipoOp,
                     'partida' => $partida,
-                    'concepto' => ($tipoOp === 'ingreso' ? 'Recepción de pago/saldado: ' : 'Pago de ') . $pasivo->tipo->nombre . ': ' . $pasivo->nombre,
+                    'concepto' => ($tipoOp === 'ingreso' ? 'Recepción de pago/saldado: ' : 'Pago de ') . $pasivo->tipo->nombre . ': ' . ($pasivo->empresa_persona ?? $pasivo->nombre) . ($pasivo->documento ? ' | ' . $pasivo->documento : ''),
+
                     'importe' => $monto,
                     'metodo_pago' => $metodoPago,
                     'es_efectivo' => $esEfectivo,

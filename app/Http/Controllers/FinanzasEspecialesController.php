@@ -338,7 +338,7 @@ class FinanzasEspecialesController extends Controller
                         'tipo' => 'sustraccion',
                         'partida' => 'Pago Compra Crédito',
                         'pago_id' => $pago->id,
-                        'concepto' => 'Pago de compra a crédito: ' . $pasivo->nombre . ' (Empresa: ' . ($pasivo->empresa_persona ?? 'N/A') . ')',
+                        'concepto' => 'Pago de Compras a Crédito: ' . ($pasivo->empresa_persona ?? $pasivo->nombre) . ($pasivo->documento ? ' | ' . $pasivo->documento : ''),
                         'importe' => $request->monto,
                         'metodo_pago' => $metodoPago,
                         'es_efectivo' => 1,
