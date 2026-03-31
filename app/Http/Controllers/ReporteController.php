@@ -137,6 +137,8 @@ class ReporteController extends Controller
                 if ($request->input('hasta'))
                     $q->whereDate('fecha_emision', '<=', $request->input('hasta'));
                 // Apply local/seller filters
+                if ($request->input('local_id'))
+                    $q->where('sucursal', $request->input('local_id'));
                 if ($request->input('vendedor_id'))
                     $q->where('id_usuario', $request->input('vendedor_id'));
             });
@@ -280,6 +282,8 @@ class ReporteController extends Controller
             $query->whereDate('fecha_emision', '>=', $request->input('desde'));
         if ($request->input('hasta'))
             $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
+        if ($request->input('local_id'))
+            $query->where('sucursal', $request->input('local_id'));
         if ($request->input('vendedor_id'))
             $query->where('id_usuario', $request->input('vendedor_id')); // Venta tiene id_usuario? Verificar modelo
 
@@ -301,6 +305,8 @@ class ReporteController extends Controller
             $query->whereDate('fecha_emision', '>=', $request->input('desde'));
         if ($request->input('hasta'))
             $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
+        if ($request->input('local_id'))
+            $query->where('sucursal', $request->input('local_id'));
         if ($request->input('vendedor_id'))
             $query->where('id_usuario', $request->input('vendedor_id'));
 
@@ -363,6 +369,8 @@ class ReporteController extends Controller
             $query->whereDate('fecha_emision', '>=', $request->input('desde'));
         if ($request->input('hasta'))
             $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
+        if ($request->input('local_id'))
+            $query->where('sucursal', $request->input('local_id'));
         if ($request->input('vendedor_id'))
             $query->where('id_usuario', $request->input('vendedor_id'));
 
@@ -423,6 +431,8 @@ class ReporteController extends Controller
             $query->whereDate('fecha_emision', '>=', $request->input('desde'));
         if ($request->input('hasta'))
             $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
+        if ($request->input('local_id'))
+            $query->where('sucursal', $request->input('local_id'));
         if ($request->input('vendedor_id'))
             $query->where('id_usuario', $request->input('vendedor_id'));
 
@@ -449,6 +459,8 @@ class ReporteController extends Controller
             $query->whereDate('fecha_emision', '>=', $request->input('desde'));
         if ($request->input('hasta'))
             $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
+        if ($request->input('local_id'))
+            $query->where('sucursal', $request->input('local_id'));
         if ($request->input('vendedor_id'))
             $query->where('id_usuario', $request->input('vendedor_id'));
 
@@ -549,6 +561,8 @@ class ReporteController extends Controller
                     $q->whereDate('fecha_emision', '>=', $request->input('desde'));
                 if ($request->input('hasta'))
                     $q->whereDate('fecha_emision', '<=', $request->input('hasta'));
+                if ($request->input('local_id'))
+                    $q->where('sucursal', $request->input('local_id'));
                 if ($request->input('vendedor_id'))
                     $q->where('user_id', $request->input('vendedor_id'));
             })
@@ -580,6 +594,8 @@ class ReporteController extends Controller
             $query->whereDate('fecha_emision', '>=', $request->input('desde'));
         if ($request->input('hasta'))
             $query->whereDate('fecha_emision', '<=', $request->input('hasta'));
+        if ($request->input('local_id'))
+            $query->where('sucursal', $request->input('local_id'));
 
         $resultados = $query->with('user')->get();
         return [
@@ -608,6 +624,8 @@ class ReporteController extends Controller
                     $q->whereDate('fecha_emision', '>=', $request->input('desde'));
                 if ($request->input('hasta'))
                     $q->whereDate('fecha_emision', '<=', $request->input('hasta'));
+                if ($request->input('local_id'))
+                    $q->where('sucursal', $request->input('local_id'));
                 if ($request->input('vendedor_id'))
                     $q->where('id_usuario', $request->input('vendedor_id'));
             })
@@ -639,6 +657,8 @@ class ReporteController extends Controller
                     $q->whereDate('fecha_emision', '>=', $request->input('desde'));
                 if ($request->input('hasta'))
                     $q->whereDate('fecha_emision', '<=', $request->input('hasta'));
+                if ($request->input('local_id'))
+                    $q->where('sucursal', $request->input('local_id'));
                 if ($request->input('vendedor_id'))
                     $q->where('id_usuario', $request->input('vendedor_id'));
             })
@@ -675,6 +695,8 @@ class ReporteController extends Controller
         if ($request->input('hasta'))
             $query->whereDate('fecha_cierre', '<=', $request->input('hasta'));
 
+        if ($request->input('local_id'))
+            $query->where('sucursal_id', $request->input('local_id'));
         if ($porUsuario || $request->input('vendedor_id')) {
             if ($request->input('vendedor_id')) {
                 $query->where('user_id', $request->input('vendedor_id'));
@@ -813,6 +835,8 @@ class ReporteController extends Controller
             $query->whereDate('ventas.fecha_emision', '>=', $request->input('desde'));
         if ($request->input('hasta'))
             $query->whereDate('ventas.fecha_emision', '<=', $request->input('hasta'));
+        if ($request->input('local_id'))
+            $query->where('ventas.sucursal', $request->input('local_id'));
 
         $resultados = $query->with('producto')->limit(100)->get();
         return [
