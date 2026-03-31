@@ -11,6 +11,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
 use Filament\Actions\Action;
+use Filament\Actions\DeleteAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Notifications\Notification;
@@ -135,6 +136,17 @@ class CajasTable
             ->recordActions([
                 ViewAction::make(),
                 EditAction::make(),
+                DeleteAction::make()
+                    ->before(function ($record, $action) {
+                        if ($record->getSaldo() > 0) {
+                            Notification::make()
+                                ->title('No se puede eliminar')
+                                ->body("La caja \"{$record->nombre}\" tiene un saldo de S/ " . number_format($record->getSaldo(), 2) . ". Debe estar en S/ 0.00 para poder eliminarla.")
+                                ->danger()
+                                ->send();
+                            $action->halt();
+                        }
+                    }),
 
                 // Forzar cierre de caja abierta
                 Action::make('forzarCierre')
@@ -172,7 +184,24 @@ class CajasTable
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->using(function ($records) {
+                            $bloqueadas = [];
+                            foreach ($records as $record) {
+                                if ($record->getSaldo() > 0) {
+                                    $bloqueadas[] = $record->nombre . ' (S/ ' . number_format($record->getSaldo(), 2) . ')';
+                                } else {
+                                    $record->delete();
+                                }
+                            }
+                            if (!empty($bloqueadas)) {
+                                Notification::make()
+                                    ->title('Algunas cajas no se eliminaron')
+                                    ->body('Las siguientes cajas tienen saldo mayor a S/ 0.00: ' . implode(', ', $bloqueadas))
+                                    ->warning()
+                                    ->send();
+                            }
+                        }),
                 ]),
             ])
             ->defaultSort('sucursal_id', 'asc')

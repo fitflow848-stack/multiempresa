@@ -56,6 +56,15 @@ class Caja extends Model
     }
 
     /**
+     * Saldo actual: monto_apertura del último cierre de caja
+     */
+    public function getSaldo(): float
+    {
+        $ultimo = $this->cierres()->latest()->first();
+        return $ultimo ? (float) $ultimo->monto_apertura : 0.0;
+    }
+
+    /**
      * Obtener la empresa a través de la sucursal
      */
     public function getCompanyAttribute()
