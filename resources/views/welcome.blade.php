@@ -444,15 +444,26 @@
             </div>
 
             <div class="stat-card purple">
-                <div class="icon"><i class="bx bx-wallet"></i></div>
-                <div class="label">Capital Invertido</div>
-                <div class="value">S/ {{ number_format($capital_costo, 2) }}</div>
+                <div class="icon"><i class="bx bx-calendar-check"></i></div>
+                <div class="label">Venta del Mes</div>
+                <div class="value">S/ {{ number_format($chartData['ventaMes'], 2) }}</div>
+                @php
+                    $diffMes = $chartData['ventaMes'] - $chartData['ventaMesPasado'];
+                    $pctMes = $chartData['ventaMesPasado'] > 0 ? round(($diffMes / $chartData['ventaMesPasado']) * 100, 1) : 0;
+                @endphp
+                <div class="comparison {{ $diffMes >= 0 ? 'up' : 'down' }}">
+                    <i class="bx bx-{{ $diffMes >= 0 ? 'up' : 'down' }}-arrow-alt"></i>
+                    {{ abs($pctMes) }}% vs mes pasado
+                </div>
             </div>
 
             <div class="stat-card orange">
-                <div class="icon"><i class="bx bx-trending-up"></i></div>
-                <div class="label">Margen Utilidad</div>
-                <div class="value">S/ {{ number_format($capital_utilidad, 2) }}</div>
+                <div class="icon"><i class="bx bx-calendar-minus"></i></div>
+                <div class="label">Mes Pasado</div>
+                <div class="value">S/ {{ number_format($chartData['ventaMesPasado'], 2) }}</div>
+                <div class="comparison" style="color:#94a3b8; font-size:0.75rem;">
+                    {{ \Carbon\Carbon::now()->subMonth()->translatedFormat('F Y') }}
+                </div>
             </div>
         </div>
 

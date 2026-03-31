@@ -249,6 +249,14 @@ class PrincipalController extends Controller
         if ($branchId) $ventaMesQuery->where('sucursal', $branchId);
         $ventaMes = $ventaMesQuery->sum('total');
 
+        // Venta del mes pasado
+        $ventaMesPasadoQuery = Venta::where('id_empresa', $companyId)
+            ->where('estado', '!=', 0)
+            ->whereMonth('created_at', Carbon::now()->subMonth()->month)
+            ->whereYear('created_at', Carbon::now()->subMonth()->year);
+        if ($branchId) $ventaMesPasadoQuery->where('sucursal', $branchId);
+        $ventaMesPasado = $ventaMesPasadoQuery->sum('total');
+
         $chartData = [
             'mesesLabels' => $mesesLabels,
             'ventasData' => $ventasData,
@@ -260,6 +268,7 @@ class PrincipalController extends Controller
             'ventaHoy' => round($ventaHoy, 2),
             'ventaAyer' => round($ventaAyer, 2),
             'ventaMes' => round($ventaMes, 2),
+            'ventaMesPasado' => round($ventaMesPasado, 2),
         ];
 
         return view('welcome', compact(
