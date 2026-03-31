@@ -35,11 +35,9 @@ class CierreCajaController extends Controller
         // Filtro por empresa
         $query->where('id_empresa', $user->company_id);
 
-        // Filtro por sucursal activa
-        if ($user->hasAnyRole(['admin_empresa', 'supervisor']) && $user->branch_id) {
-            $query->whereHas('caja', function($q) use ($user) {
-                $q->where('sucursal_id', $user->branch_id);
-            });
+        // Filtro por sucursal: aplica a todos los usuarios con sucursal asignada
+        if ($user->branch_id) {
+            $query->where('sucursal_id', $user->branch_id);
         }
 
         // Lógica de filtro por caja: si selecciona una explícitamente, o si tiene una en sesión
@@ -172,7 +170,9 @@ class CierreCajaController extends Controller
             // Guardar en sesión para que store() lo use
             session(['boveda_caja_id' => $cajaBoveda->id]);
 
-            $ultimoCierre = CierreCaja::where('caja_id', $cajaBoveda->id)
+            $ultimoCierre = CierreCaja::withoutGlobalScopes()
+                ->where('caja_id', $cajaBoveda->id)
+                ->where('id_empresa', $user->company_id)
                 ->whereNotNull('fecha_cierre')
                 ->orderBy('created_at', 'desc')
                 ->first();
@@ -214,8 +214,10 @@ class CierreCajaController extends Controller
             return redirect()->route('cierre-caja.index')->with('error', $msg);
         }
 
-        // Obtener el último cierre de la caja seleccionada
-        $ultimoCierre = CierreCaja::where('caja_id', $selectedCajaId)
+        // Obtener el último cierre de la caja seleccionada (solo de esta empresa)
+        $ultimoCierre = CierreCaja::withoutGlobalScopes()
+            ->where('caja_id', $selectedCajaId)
+            ->where('id_empresa', $user->company_id)
             ->whereNotNull('fecha_cierre')
             ->orderBy('created_at', 'desc')
             ->first();
@@ -258,6 +260,7 @@ class CierreCajaController extends Controller
         $data['id_empresa'] = $user->company_id;
 
         // Si viene de apertura de bóveda, usar el caja_id de la bóveda guardado en sesión
+        // (sucursal_id se asigna abajo desde la caja real)
         $isTesoreria = $request->boolean('is_tesoreria', false);
         if ($isTesoreria && session('boveda_caja_id')) {
             $data['caja_id'] = session('boveda_caja_id');
@@ -268,6 +271,12 @@ class CierreCajaController extends Controller
 
         if (!$data['caja_id']) {
             return back()->with('error', 'Error: No hay una caja activa seleccionada.');
+        }
+
+        // Asignar sucursal desde la caja real (no desde la sesión del usuario)
+        $cajaReal = Caja::withoutGlobalScopes()->find($data['caja_id']);
+        if ($cajaReal) {
+            $data['sucursal_id'] = $cajaReal->sucursal_id;
         }
 
         // Validación final de seguridad: Solo una sesión abierta por Caja ID

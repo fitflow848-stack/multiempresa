@@ -71,6 +71,11 @@ class CajasActivasWidget extends BaseWidget
             $query->where('id_empresa', $companyId);
         }
 
+        $branchId = $user?->branch_id;
+        if ($branchId) {
+            $query->where('sucursal_id', $branchId);
+        }
+
         return $query;
     }
 }
