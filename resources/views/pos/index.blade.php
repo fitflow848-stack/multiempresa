@@ -2,6 +2,7 @@
 
 @section('content')
 @php $canModificarPrecio = auth()->user()->can('productos.modificar_precio') ? 'true' : 'false'; @endphp
+<script>window.__canModificarPrecio = {{ $canModificarPrecio }};</script>
 <link rel="stylesheet" href="{{ asset('css/pos-horizontal.css') }}">
 <script>
     // Ocultar navbar por defecto en POS
@@ -2249,6 +2250,7 @@
 
     // Función para actualizar precio unitario directamente
     function actualizarPrecio(index, nuevoPrecio) {
+        if (!window.__canModificarPrecio) { renderTicket(); return; }
         const producto = ticket[index];
         const precio = parseFloat(nuevoPrecio);
         

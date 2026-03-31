@@ -35,7 +35,7 @@
                             </div>
                             <div>
                                 <label style="display: block; font-size: 12px; font-weight: 700; color: #6c757d; text-transform: uppercase; margin-bottom: 8px;">Precio Unit.</label>
-                                <input id="modal-cantidad-precio" type="text" value="${precio}" style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 10px; font-size: 18px; font-weight: 600; text-align: center; color: #2d3436; outline: none;">
+                                <input id="modal-cantidad-precio" type="text" value="${precio}" ${!window.__canModificarPrecio ? 'readonly' : ''} style="width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 10px; font-size: 18px; font-weight: 600; text-align: center; color: #2d3436; outline: none; ${!window.__canModificarPrecio ? 'background: #f1f5f9; cursor: not-allowed;' : ''}">
                             </div>
                             <div>
                                 <label style="display: block; font-size: 12px; font-weight: 700; color: #007bff; text-transform: uppercase; margin-bottom: 8px;">Total Item</label>
@@ -108,7 +108,7 @@
         // Keypad behavior: track focused field and handle clicks
         let focusedField = 'cantidad';
         qty.addEventListener('focus', () => focusedField = 'cantidad');
-        price.addEventListener('focus', () => focusedField = 'precio');
+        price.addEventListener('focus', () => { if (window.__canModificarPrecio) focusedField = 'precio'; });
 
         function appendToFocused(text) {
             if (focusedField === 'cantidad') {

@@ -140,6 +140,7 @@
     }
 
     function modificarPrecioLinea() {
+        if (!window.__canModificarPrecio) return alert('No tienes permiso para modificar precios');
         const idx = findTicketIndexFromCurrent();
         cerrarContextMenuTicket();
         if (idx === -1) return alert('No se encontró la línea del ticket');
