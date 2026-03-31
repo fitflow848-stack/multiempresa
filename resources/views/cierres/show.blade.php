@@ -329,16 +329,18 @@
                                                     @if (isset($movimiento->origen_movimiento) &&
                                                             $movimiento->origen_movimiento === 'operacion' &&
                                                             ($movimiento->operacion ?? '') !== 'Cobro Deuda')
-                                                        <button
-                                                            class="btn btn-sm btn-outline-primary px-2 py-0 border-0 fs-6 edit-operacion"
-                                                            data-id="{{ $movimiento->id_movimiento }}"
-                                                            data-tipo="{{ $movimiento->tipo_movimiento }}"
-                                                            data-partida="{{ $movimiento->operacion }}"
-                                                            data-concepto="{{ $movimiento->concepto }}"
-                                                            data-metodo="{{ $movimiento->metodo_pago }}"
-                                                            data-importe="{{ $movimiento->importe }}" title="Editar">
-                                                            <i class="bx bx-edit"></i>
-                                                        </button>
+                                                        @can('cajas.ajustar')
+                                                            <button
+                                                                class="btn btn-sm btn-outline-primary px-2 py-0 border-0 fs-6 edit-operacion"
+                                                                data-id="{{ $movimiento->id_movimiento }}"
+                                                                data-tipo="{{ $movimiento->tipo_movimiento }}"
+                                                                data-partida="{{ $movimiento->operacion }}"
+                                                                data-concepto="{{ $movimiento->concepto }}"
+                                                                data-metodo="{{ $movimiento->metodo_pago }}"
+                                                                data-importe="{{ $movimiento->importe }}" title="Editar">
+                                                                <i class="bx bx-edit"></i>
+                                                            </button>
+                                                        @endcan
                                                         @can('operaciones_caja.eliminar')
                                                             <button
                                                                 class="btn btn-sm btn-outline-danger px-2 py-0 border-0 fs-6 delete-operacion"

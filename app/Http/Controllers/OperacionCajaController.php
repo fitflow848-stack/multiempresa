@@ -374,6 +374,10 @@ class OperacionCajaController extends Controller
 
     public function update(Request $request, $id)
     {
+        if (!auth()->user()->can('cajas.ajustar')) {
+            return response()->json(['success' => false, 'message' => 'No tienes permiso para editar operaciones de caja.'], 403);
+        }
+
         $operacion = OperacionCaja::findOrFail($id);
 
         if ($operacion->partida === 'Cobro Deuda') {
