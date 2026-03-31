@@ -3,6 +3,7 @@
 @section('title', 'Ajustar Existencias')
 
 @section('content')
+@php $canModificarPrecio = auth()->user()->can('productos.modificar_precio'); @endphp
     <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
@@ -61,48 +62,52 @@
 
                     <div class="col-md-4">
                         <label class="form-label">Precio Compra</label>
-                        <input type="number" step="0.01" name="precio_compra" class="form-control"
-                            value="{{ old('precio_compra', $producto['precio_compra'] ?? '') }}" required>
+                        <input type="number" step="0.01" name="precio_compra" class="form-control {{ !$canModificarPrecio ? 'bg-light' : '' }}"
+                            value="{{ old('precio_compra', $producto['precio_compra'] ?? '') }}" {{ !$canModificarPrecio ? 'readonly' : '' }} required>
                     </div>
 
                     <div class="col-md-4">
                         <label class="form-label">Costo Operativo</label>
-                        <input type="number" step="0.01" name="costo_operativo" class="form-control"
-                            value="{{ old('costo_operativo', $producto['costo_operativo'] ?? '') }}">
+                        <input type="number" step="0.01" name="costo_operativo" class="form-control {{ !$canModificarPrecio ? 'bg-light' : '' }}"
+                            value="{{ old('costo_operativo', $producto['costo_operativo'] ?? '') }}" {{ !$canModificarPrecio ? 'readonly' : '' }}>
                     </div>
 
                     <div class="col-12 mt-2">
-                        <h6 class="mb-2">Precios de Venta</h6>
+                        <h6 class="mb-2">Precios de Venta
+                            @if(!$canModificarPrecio)
+                                <span class="badge bg-secondary ms-2" style="font-size:0.7rem;">Solo lectura — sin permiso modificar_precio</span>
+                            @endif
+                        </h6>
                     </div>
 
                     <div class="col-md-3">
                         <label class="form-label">PVP</label>
-                        <input type="number" step="0.01" name="pvp" class="form-control"
-                            value="{{ old('pvp', $producto['pvp'] ?? '') }}" required>
+                        <input type="number" step="0.01" name="pvp" class="form-control {{ !$canModificarPrecio ? 'bg-light' : '' }}"
+                            value="{{ old('pvp', $producto['pvp'] ?? '') }}" {{ !$canModificarPrecio ? 'readonly' : '' }} required>
                     </div>
 
                     <div class="col-md-3">
                         <label class="form-label">PVP/Dcto.</label>
-                        <input type="number" step="0.01" name="pvp_dcto" class="form-control"
-                            value="{{ old('pvp_dcto', $producto['pvp_dcto'] ?? '') }}">
+                        <input type="number" step="0.01" name="pvp_dcto" class="form-control {{ !$canModificarPrecio ? 'bg-light' : '' }}"
+                            value="{{ old('pvp_dcto', $producto['pvp_dcto'] ?? '') }}" {{ !$canModificarPrecio ? 'readonly' : '' }}>
                     </div>
 
                     <div class="col-md-3">
                         <label class="form-label">PVC</label>
-                        <input type="number" step="0.01" name="pvc" class="form-control"
-                            value="{{ old('pvc', $producto['pvc'] ?? '') }}">
+                        <input type="number" step="0.01" name="pvc" class="form-control {{ !$canModificarPrecio ? 'bg-light' : '' }}"
+                            value="{{ old('pvc', $producto['pvc'] ?? '') }}" {{ !$canModificarPrecio ? 'readonly' : '' }}>
                     </div>
 
                     <div class="col-md-3">
                         <label class="form-label">PVC/Dcto.</label>
-                        <input type="number" step="0.01" name="pvc_dcto" class="form-control"
-                            value="{{ old('pvc_dcto', $producto['pvc_dcto'] ?? '') }}">
+                        <input type="number" step="0.01" name="pvc_dcto" class="form-control {{ !$canModificarPrecio ? 'bg-light' : '' }}"
+                            value="{{ old('pvc_dcto', $producto['pvc_dcto'] ?? '') }}" {{ !$canModificarPrecio ? 'readonly' : '' }}>
                     </div>
 
                     <div class="col-md-4">
                         <label class="form-label">PV/Docena</label>
-                        <input type="number" step="0.01" name="pv_docena" class="form-control"
-                            value="{{ old('pv_docena', $producto['pv_docena'] ?? '') }}">
+                        <input type="number" step="0.01" name="pv_docena" class="form-control {{ !$canModificarPrecio ? 'bg-light' : '' }}"
+                            value="{{ old('pv_docena', $producto['pv_docena'] ?? '') }}" {{ !$canModificarPrecio ? 'readonly' : '' }}>
                     </div>
 
                     <div class="col-12">

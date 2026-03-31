@@ -1,6 +1,7 @@
 @extends('layout.app')
 
 @section('content')
+@php $canModificarPrecio = auth()->user()->can('productos.modificar_precio') ? 'true' : 'false'; @endphp
 <link rel="stylesheet" href="{{ asset('css/pos-horizontal.css') }}">
 <script>
     // Ocultar navbar por defecto en POS
@@ -1962,6 +1963,7 @@
     function renderTicket() {
         const tbody = document.getElementById('ticket-tbody');
         tbody.innerHTML = '';
+        const canModificarPrecio = {{ $canModificarPrecio }};
 
         let total = 0;
 
@@ -2029,8 +2031,8 @@
                     <div style="display: flex; align-items: center; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; height: 32px;" onclick="event.stopPropagation()">
                         <span style="background: #f1f5f9; padding: 0 6px; font-size: 10px; color: #64748b; font-weight: 700; height: 100%; display: flex; align-items: center; border-right: 1px solid #ddd;">S/</span>
                         <input type="number" value="${parseFloat(p.precio || 0).toFixed(2)}" step="0.01" 
-                               style="width: 70px; border: none; text-align: center; padding: 2px 4px; font-weight: 700; color: #334155; height: 100%; font-size: 13px;"
-                               onchange="actualizarPrecio(${idx}, this.value)">
+                               style="width: 70px; border: none; text-align: center; padding: 2px 4px; font-weight: 700; color: #334155; height: 100%; font-size: 13px; ${!canModificarPrecio ? 'background:#f1f5f9; cursor:not-allowed;' : ''}"
+                               ${canModificarPrecio ? `onchange="actualizarPrecio(${idx}, this.value)"` : 'readonly'}>
                     </div>
                 </td>
 

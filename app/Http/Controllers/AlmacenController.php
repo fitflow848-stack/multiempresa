@@ -250,13 +250,17 @@ class AlmacenController extends Controller
 
             // Siempre actualizamos los datos del producto base si vienen en el request
             $productoUpdate = Producto::find($detalleOriginal->producto_id);
+            $canModificarPrecio = $user->can('productos.modificar_precio');
             if ($productoUpdate) {
-                $productoUpdate->update([
+                $updateData = [
                     'peso' => $request->filled('peso') ? $request->peso : $productoUpdate->peso,
-                    'pv_docena' => $request->filled('pv_docena') ? $request->pv_docena : $productoUpdate->pv_docena,
-                    'precio_compra' => $request->precio_compra,
-                    'pvp' => $request->pvp
-                ]);
+                    'pv_docena' => ($canModificarPrecio && $request->filled('pv_docena')) ? $request->pv_docena : $productoUpdate->pv_docena,
+                ];
+                if ($canModificarPrecio) {
+                    $updateData['precio_compra'] = $request->precio_compra;
+                    $updateData['pvp'] = $request->pvp;
+                }
+                $productoUpdate->update($updateData);
             }
 
             // Si hay una diferencia en cantidad, creamos un registro de ajuste para el Kardex
@@ -275,15 +279,15 @@ class AlmacenController extends Controller
                     'producto_id' => $detalleOriginal->producto_id,
                     'producto_linea_id' => $detalleOriginal->producto_linea_id,
                     'cantidad' => $diferencia,
-                    'costo' => $request->precio_compra,
+                    'costo' => $canModificarPrecio ? $request->precio_compra : $detalleOriginal->costo,
                     'cop' => $request->get('costo_operativo', $detalleOriginal->cop),
                     'mu' => $detalleOriginal->mu,
                     'mud' => $detalleOriginal->mud,
                     'mup' => $detalleOriginal->mup,
-                    'pvp' => $request->pvp,
-                    'pvpd' => $request->pvp_dcto,
-                    'pvc' => $request->pvc,
-                    'pvcd' => $request->pvc_dcto,
+                    'pvp' => $canModificarPrecio ? $request->pvp : $detalleOriginal->pvp,
+                    'pvpd' => $canModificarPrecio ? $request->pvp_dcto : $detalleOriginal->pvpd,
+                    'pvc' => $canModificarPrecio ? $request->pvc : $detalleOriginal->pvc,
+                    'pvcd' => $canModificarPrecio ? $request->pvc_dcto : $detalleOriginal->pvcd,
                     'lote' => $detalleOriginal->lote ?? 'AJUSTE',
                     'fecha_vencimiento' => $detalleOriginal->fecha_vencimiento,
                     'stock_min' => $detalleOriginal->stock_min,
@@ -296,13 +300,16 @@ class AlmacenController extends Controller
                 }
             } else {
                 // Si la cantidad es la misma, actualizamos los datos del registro de lote específico
-                $detalleOriginal->update([
-                    'costo' => $request->precio_compra,
-                    'pvp' => $request->pvp,
-                    'pvpd' => $request->pvp_dcto,
-                    'pvc' => $request->pvc,
-                    'pvcd' => $request->pvc_dcto,
-                ]);
+                $detalleUpdate = [
+                    'costo' => $canModificarPrecio ? $request->precio_compra : $detalleOriginal->costo,
+                ];
+                if ($canModificarPrecio) {
+                    $detalleUpdate['pvp']  = $request->pvp;
+                    $detalleUpdate['pvpd'] = $request->pvp_dcto;
+                    $detalleUpdate['pvc']  = $request->pvc;
+                    $detalleUpdate['pvcd'] = $request->pvc_dcto;
+                }
+                $detalleOriginal->update($detalleUpdate);
             }
 
             DB::commit();

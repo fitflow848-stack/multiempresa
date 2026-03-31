@@ -336,7 +336,7 @@
                     </li>
                 @endcanany
 
-                @hasanyrole('vendedor|admin_empresa|super_admin')
+                @if(auth()->user()->hasAnyRole(['vendedor', 'admin_empresa', 'super_admin']) || auth()->user()->canAny(['deudas.ver', 'cajas.ver', 'tesoreria.ver']))
                     <li class="nav-item dropdown">
                         <a href="#"
                             class="nav-link dropdown-toggle {{ request()->routeIs('finanzas_vendedor.*') || request()->is('deudas*') || request()->is('cierre-caja*') ? 'active' : '' }}"
@@ -398,9 +398,9 @@
                             </li>
                         </ul>
                     </li>
-                @endhasanyrole
+                @endif
 
-                @canany(['reportes.ver', 'contabilidad.ver', 'guias_remision.ver'])
+                @canany(['reportes.ver', 'contabilidad.ver', 'guias_remision.ver', 'comprobantes.ver'])
                     <li class="nav-item dropdown">
                         <a href="#"
                             class="nav-link dropdown-toggle {{ request()->is('reportes*') || request()->is('balance*') || request()->is('guia*') ? 'active' : '' }}"
