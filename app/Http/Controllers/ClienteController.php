@@ -359,8 +359,12 @@ class ClienteController extends Controller
             })
             ->orderBy('nombre')
             ->limit($termino ? 100 : 500) // Si busca, damos hasta 100, si no busca (carga inicial) damos 500
+            ->with(['deudas'])
             ->get()
             ->map(function ($cliente) {
+                $debeVencido = $cliente->deudas
+                    ->where('estado', 'vencida')
+                    ->sum('monto_deuda');
                 return [
                     'id' => $cliente->id,
                     'tipo_documento' => $cliente->tipo_documento,
@@ -369,7 +373,8 @@ class ClienteController extends Controller
                     'direccion' => $cliente->direccion,
                     'telefono' => $cliente->telefono,
                     'email' => $cliente->email,
-                    'debe' => $cliente->debe
+                    'debe' => $cliente->debe,
+                    'debe_vencido' => $debeVencido ?: 0,
                 ];
             });
 

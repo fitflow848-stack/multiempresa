@@ -120,13 +120,30 @@
 
             // Convertir debe a número para evitar errores
             const debeNumero = parseFloat(cliente.debe) || 0;
+            const debeVencido = parseFloat(cliente.debe_vencido) || 0;
             const esContable = cliente.id === 999999 || (cliente.nombre && cliente.nombre.includes('CONTABLE'));
+
+            // Color: rojo=vencido, naranja=pendiente sin vencer, verde=sin deuda
+            let debeColor, debeBg, debeLabel;
+            if (debeVencido > 0) {
+                debeColor = '#b91c1c'; debeBg = '#fee2e2';
+                debeLabel = `<span style="font-size:10px;display:block;color:#b91c1c;">⚠ VENCIDO</span>`;
+            } else if (debeNumero > 0) {
+                debeColor = '#c05621'; debeBg = '#fff7ed';
+                debeLabel = `<span style="font-size:10px;display:block;color:#c05621;">pendiente</span>`;
+            } else {
+                debeColor = '#15803d'; debeBg = 'transparent';
+                debeLabel = '';
+            }
 
             tr.innerHTML = `
                     <td style="padding: 8px; border-bottom: 1px solid #eee;">${icono}</td>
                     <td style="padding: 8px; border-bottom: 1px solid #eee; font-family: monospace;">${cliente.numero_documento}</td>
                     <td style="padding: 8px; border-bottom: 1px solid #eee;">${cliente.nombre}</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; color: ${debeNumero > 0 ? '#dc3545' : '#28a745'}; font-weight: bold;">S/ ${debeNumero.toFixed(2)}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; background:${debeBg}; border-radius:6px;">
+                        <span style="color:${debeColor}; font-weight: bold;">S/ ${debeNumero.toFixed(2)}</span>
+                        ${debeLabel}
+                    </td>
                     <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: center;">
                         <div style="display: flex; gap: 5px; justify-content: center;">
                             ${debeNumero > 0 ? `
