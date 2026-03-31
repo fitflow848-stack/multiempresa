@@ -352,6 +352,10 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::delete('/{id}', [ActivoFijoController::class, 'destroy'])->name('activos.destroy');
     });
 
+    // Tickets de pasivos y finanzas (accesibles con finanzas.ver o contabilidad)
+    Route::get('/pasivos/ticket/{id}', [PasivoController::class, 'ticketPago'])->name('pasivos.ticket');
+    Route::get('/pasivos/ticket-registro/{id}', [PasivoController::class, 'ticketRegistro'])->name('pasivos.ticket_registro');
+
     // Pasivos Corrientes
     Route::prefix('pasivos')->middleware('can:contabilidad.gestionar_pasivos')->group(function () {
         Route::get('/', [PasivoController::class, 'index'])->name('pasivos.index');
@@ -359,8 +363,6 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::post('/tipo', [PasivoController::class, 'storeTipo'])->name('pasivos.storeTipo');
         Route::post('/convertir-aporte/{id}', [PasivoController::class, 'convertirAporte'])->name('pasivos.convertir-aporte');
         Route::post('/pagar/{id}', [PasivoController::class, 'registrarPago'])->name('pasivos.pagar');
-        Route::get('/ticket/{id}', [PasivoController::class, 'ticketPago'])->name('pasivos.ticket');
-        Route::get('/ticket-registro/{id}', [PasivoController::class, 'ticketRegistro'])->name('pasivos.ticket_registro');
         Route::get('/{id}/edit', [PasivoController::class, 'edit'])->name('pasivos.edit');
         Route::post('/{id}/update', [PasivoController::class, 'update'])->name('pasivos.update');
         Route::delete('/{id}', [PasivoController::class, 'destroy'])->name('pasivos.destroy');
@@ -370,12 +372,12 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
     Route::get('/finanzas-vendedor', [App\Http\Controllers\FinanzasVendedorController::class, 'index'])->name('finanzas_vendedor.index')->middleware('can:tesoreria.ver');
     Route::get('/finanzas-vendedor/export', [App\Http\Controllers\FinanzasVendedorController::class, 'export'])->name('finanzas_vendedor.export')->middleware('can:tesoreria.ver');
     
-    // Solo administradores pueden crear, editar y eliminar registros de finanzas
-    Route::post('/finanzas-vendedor', [App\Http\Controllers\FinanzasVendedorController::class, 'store'])->name('finanzas_vendedor.store')->middleware('role:super_admin|admin_empresa');
-    Route::get('/finanzas-vendedor/{id}/edit', [App\Http\Controllers\FinanzasVendedorController::class, 'edit'])->name('finanzas_vendedor.edit')->middleware('role:super_admin|admin_empresa');
-    Route::post('/finanzas-vendedor/{id}/update', [App\Http\Controllers\FinanzasVendedorController::class, 'update'])->name('finanzas_vendedor.update')->middleware('role:super_admin|admin_empresa');
-    Route::delete('/finanzas-vendedor/{id}', [App\Http\Controllers\FinanzasVendedorController::class, 'destroy'])->name('finanzas_vendedor.destroy')->middleware('role:super_admin|admin_empresa');
-    Route::post('/finanzas-vendedor/pagar-acumulado', [App\Http\Controllers\FinanzasVendedorController::class, 'registrarPagoAcumulado'])->name('finanzas_vendedor.pagar_acumulado')->middleware('role:super_admin|admin_empresa');
+    // Crear, editar y eliminar registros de finanzas (por permiso)
+    Route::post('/finanzas-vendedor', [App\Http\Controllers\FinanzasVendedorController::class, 'store'])->name('finanzas_vendedor.store')->middleware('can:finanzas.crear');
+    Route::get('/finanzas-vendedor/{id}/edit', [App\Http\Controllers\FinanzasVendedorController::class, 'edit'])->name('finanzas_vendedor.edit')->middleware('can:finanzas.editar');
+    Route::post('/finanzas-vendedor/{id}/update', [App\Http\Controllers\FinanzasVendedorController::class, 'update'])->name('finanzas_vendedor.update')->middleware('can:finanzas.editar');
+    Route::delete('/finanzas-vendedor/{id}', [App\Http\Controllers\FinanzasVendedorController::class, 'destroy'])->name('finanzas_vendedor.destroy')->middleware('can:finanzas.eliminar');
+    Route::post('/finanzas-vendedor/pagar-acumulado', [App\Http\Controllers\FinanzasVendedorController::class, 'registrarPagoAcumulado'])->name('finanzas_vendedor.pagar_acumulado')->middleware('can:finanzas.crear');
 
 
     // Balance Route
