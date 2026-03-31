@@ -1,5 +1,5 @@
 <div id="modal-buscar-clientes" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: none; justify-content: center; align-items: center;">
-        <div style="background: white; padding: 0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); max-width: 700px; max-height: 80%; overflow: hidden; font-family: Arial, sans-serif;">
+        <div style="background: white; padding: 0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); width: 90vw; max-width: 1000px; max-height: 90vh; overflow: hidden; font-family: Arial, sans-serif; display: flex; flex-direction: column;">
             <!-- Header -->
             <div style="background: #17a2b8; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
                 <h3 style="margin: 0; font-size: 16px;">📋 Selección de Cliente</h3>
@@ -28,7 +28,7 @@
             </div>
             
             <!-- Lista de clientes -->
-            <div style="max-height: 400px; overflow-y: auto;">
+            <div style="flex: 1; overflow-y: auto; min-height: 0;">
                 <table style="width: 100%; border-collapse: collapse;">
                     <thead style="background: #f8f9fa; position: sticky; top: 0;">
                         <tr>
