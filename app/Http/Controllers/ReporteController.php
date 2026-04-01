@@ -128,7 +128,12 @@ class ReporteController extends Controller
     private function reportePorProducto(Request $request)
     {
         // Logic for "Por Producto" - agrupado por comprobante y producto
-        $query = VentaDetalle::with(['venta.user', 'producto', 'almacenIngresoDetalle.productoLinea'])
+        $query = VentaDetalle::with([
+                'venta' => fn($q) => $q->withoutGlobalScope('sucursal'),
+                'venta.user',
+                'producto',
+                'almacenIngresoDetalle.productoLinea',
+            ])
             ->whereHas('venta', function ($q) use ($request) {
                 $q->withoutGlobalScope('sucursal');
                 $q->where('estado', '!=', '0');
@@ -556,7 +561,12 @@ class ReporteController extends Controller
     private function reportePorServicio(Request $request)
     {
         // Ventas de productos que son servicios (Unidad 'ZZ' o similar)
-        $query = VentaDetalle::with(['venta.cliente', 'producto', 'venta.user'])
+        $query = VentaDetalle::with([
+                'venta' => fn($q) => $q->withoutGlobalScope('sucursal'),
+                'venta.cliente',
+                'venta.user',
+                'producto',
+            ])
             ->whereHas('venta', function ($q) use ($request) {
                 $q->withoutGlobalScope('sucursal');
                 if ($request->input('desde'))
