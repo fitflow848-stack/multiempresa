@@ -54,7 +54,7 @@ class PasivoController extends Controller
         try {
             DB::beginTransaction();
 
-            $pasivo = Pasivo::create($request->all());
+            $pasivo = Pasivo::create(array_merge($request->all(), ['user_id' => Auth::id()]));
 
             // Si es Adelanto de Cliente, registrar en Caja (Aporte ya no afecta caja directamente)
             $tipo = $pasivo->tipo->nombre;
