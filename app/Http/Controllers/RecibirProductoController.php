@@ -155,6 +155,27 @@ class RecibirProductoController extends Controller
                         'pvc_dto' => $item['pvcd'] ?? 0,
                     ]);
                 }
+
+                // Actualizar precios en lotes existentes SOLO para este local
+                $lineaId = $item['producto_id_linea'] ?? null;
+                if ($lineaId) {
+                    DB::table('almacen_ingreso_detalle')
+                        ->where('producto_id', $item['producto_id'])
+                        ->where('producto_linea_id', $lineaId)
+                        ->whereIn('ingreso_id', function ($q) use ($sucursalId, $ingreso) {
+                            $q->select('id')
+                                ->from('almacen_ingresos')
+                                ->where('sucursal_id', $sucursalId)
+                                ->where('company_id', $ingreso->company_id)
+                                ->where('id', '<>', $ingreso->id); // excluir el recién creado
+                        })
+                        ->update([
+                            'pvp'  => $item['pvp'] ?? 0,
+                            'pvpd' => $item['pvpd'] ?? 0,
+                            'pvc'  => $item['pvc'] ?? 0,
+                            'pvcd' => $item['pvcd'] ?? 0,
+                        ]);
+                }
             }
 
             Compra::where('id', $request->compraId)->update(['recibido' => 1, 'received_at' => now()]);
