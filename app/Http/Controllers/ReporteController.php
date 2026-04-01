@@ -130,6 +130,7 @@ class ReporteController extends Controller
         // Logic for "Por Producto" - agrupado por comprobante y producto
         $query = VentaDetalle::with(['venta.user', 'producto', 'almacenIngresoDetalle.productoLinea'])
             ->whereHas('venta', function ($q) use ($request) {
+                $q->withoutGlobalScope('sucursal');
                 $q->where('estado', '!=', '0');
                 // Apply date filters
                 if ($request->input('desde'))
@@ -268,7 +269,7 @@ class ReporteController extends Controller
 
     private function reporteClientesFrecuentes(Request $request)
     {
-        $query = Venta::select(
+        $query = Venta::withoutGlobalScope('sucursal')->select(
             'id_cliente',
             DB::raw('count(*) as total_compras'),
             DB::raw('sum(total) as total_gastado')
@@ -297,7 +298,7 @@ class ReporteController extends Controller
 
     private function reporteComprobantes(Request $request)
     {
-        $query = Venta::with(['cliente.deudas', 'user', 'tipoPago', 'deuda'])
+        $query = Venta::withoutGlobalScope('sucursal')->with(['cliente.deudas', 'user', 'tipoPago', 'deuda'])
             ->where('estado', '!=', '0')
             ->orderByDesc('fecha_emision');
 
@@ -360,7 +361,7 @@ class ReporteController extends Controller
     private function reporteVentasUsuario(Request $request)
     {
         // Detalle de ventas agrupado/ordenado por usuario
-        $query = Venta::with(['cliente', 'user'])
+        $query = Venta::withoutGlobalScope('sucursal')->with(['cliente', 'user'])
             ->where('estado', '!=', '0')
             ->orderBy('id_usuario')
             ->orderByDesc('fecha_emision');
@@ -384,7 +385,7 @@ class ReporteController extends Controller
     private function reporteDevoluciones(Request $request)
     {
         // Asumiendo que devoluciones son Notas de Crédito
-        $query = Venta::with(['cliente', 'user'])
+        $query = Venta::withoutGlobalScope('sucursal')->with(['cliente', 'user'])
             ->where('tipo_documento', 'like', '%nota%credito%') // Ajustar valor exacto
             ->orWhere('serie', 'like', 'NC%')
             ->orderByDesc('fecha_emision');
@@ -422,7 +423,7 @@ class ReporteController extends Controller
     private function reportePorClientes(Request $request)
     {
         // Ventas listadas por cliente
-        $query = Venta::with(['cliente', 'user', 'tipoPago'])
+        $query = Venta::withoutGlobalScope('sucursal')->with(['cliente', 'user', 'tipoPago'])
             ->where('estado', '!=', '0')
             ->orderBy('id_cliente')
             ->orderByDesc('fecha_emision');
@@ -446,7 +447,7 @@ class ReporteController extends Controller
     private function reportePorClientesConsolidado(Request $request)
     {
         // Ventas sumadas por cliente
-        $query = Venta::select(
+        $query = Venta::withoutGlobalScope('sucursal')->select(
             'id_cliente',
             DB::raw('count(*) as total_transacciones'),
             DB::raw('sum(total) as monto_total')
@@ -557,6 +558,7 @@ class ReporteController extends Controller
         // Ventas de productos que son servicios (Unidad 'ZZ' o similar)
         $query = VentaDetalle::with(['venta.cliente', 'producto', 'venta.user'])
             ->whereHas('venta', function ($q) use ($request) {
+                $q->withoutGlobalScope('sucursal');
                 if ($request->input('desde'))
                     $q->whereDate('fecha_emision', '>=', $request->input('desde'));
                 if ($request->input('hasta'))
@@ -581,7 +583,7 @@ class ReporteController extends Controller
     private function reportePorUsuario(Request $request)
     {
         // Ventas agrupadas por usuario (creador)
-        $query = Venta::select(
+        $query = Venta::withoutGlobalScope('sucursal')->select(
             'id_usuario',
             DB::raw('count(*) as total_ventas'),
             DB::raw('sum(total) as monto_total')
@@ -619,6 +621,7 @@ class ReporteController extends Controller
             DB::raw('sum(importe) as total_venta')
         )
             ->whereHas('venta', function ($q) use ($request) {
+                $q->withoutGlobalScope('sucursal');
                 $q->where('estado', '!=', '0');
                 if ($request->input('desde'))
                     $q->whereDate('fecha_emision', '>=', $request->input('desde'));
@@ -652,6 +655,7 @@ class ReporteController extends Controller
             DB::raw('sum(importe) as total_venta')
         )
             ->whereHas('venta', function ($q) use ($request) {
+                $q->withoutGlobalScope('sucursal');
                 $q->where('estado', '!=', '0');
                 if ($request->input('desde'))
                     $q->whereDate('fecha_emision', '>=', $request->input('desde'));
@@ -1492,37 +1496,36 @@ class ReporteController extends Controller
         $familia_id = $request->input('familia_id');
         $company_id = Auth::user()->company_id;
 
-        // Solo productos que tienen al menos un ingreso en este local
-        $productosConIngreso = DB::table('almacen_ingreso_detalle as ad')
+        // Stock por línea (presentación/concentración) para este local
+        $lineasConIngreso = DB::table('almacen_ingreso_detalle as ad')
             ->join('almacen_ingresos as ai', 'ai.id', '=', 'ad.ingreso_id')
+            ->join('producto_lineas as pl', 'pl.id', '=', 'ad.producto_linea_id')
+            ->join('productos as p', 'p.id', '=', 'ad.producto_id')
+            ->leftJoin('familias as f', 'f.id', '=', 'p.familia_id')
+            ->leftJoin('marcas as m', 'm.id', '=', 'p.marca_id')
             ->where('ai.sucursal_id', $local_id)
             ->where('ai.company_id', $company_id)
-            ->distinct()
-            ->pluck('ad.producto_id');
-
-        $query = Producto::with(['familia', 'marca'])
-            ->whereIn('id', $productosConIngreso);
-
-        if ($familia_id) {
-            $query->where('familia_id', $familia_id);
-        }
-
-        $resultados = $query->get()->map(function($p) use ($local_id) {
-            $stock = DB::table('almacen_ingreso_detalle as ad')
-                ->join('almacen_ingresos as ai', 'ai.id', '=', 'ad.ingreso_id')
-                ->where('ad.producto_id', $p->id)
-                ->where('ai.sucursal_id', $local_id)
-                ->sum('ad.cantidad');
-
-            $p->stock_actual = (float) $stock;
-            return $p;
-        })->filter(function($p) {
-            return $p->stock_actual <= ($p->stock_minimo ?? 0);
-        })->sortBy('stock_actual')->values();
+            ->when($familia_id, fn($q) => $q->where('p.familia_id', $familia_id))
+            ->select(
+                'ad.producto_linea_id',
+                'p.id as producto_id',
+                'p.nombre as producto_nombre',
+                'pl.presentacion',
+                'pl.concentracion',
+                'f.nombre as familia_nombre',
+                'm.nombre as marca_nombre',
+                DB::raw('MAX(ad.stock_min) as stock_min'),
+                DB::raw('SUM(ad.cantidad) as stock_actual')
+            )
+            ->groupBy('ad.producto_linea_id', 'p.id', 'p.nombre', 'pl.presentacion', 'pl.concentracion', 'f.nombre', 'm.nombre')
+            ->get()
+            ->filter(fn($r) => (float)$r->stock_actual <= (float)($r->stock_min ?? 0))
+            ->sortBy('stock_actual')
+            ->values();
 
         return [
             'view' => 'reportes.partials.stock_critico',
-            'data' => compact('resultados')
+            'data' => ['resultados' => $lineasConIngreso]
         ];
     }
 
@@ -1532,37 +1535,35 @@ class ReporteController extends Controller
         $familia_id = $request->input('familia_id');
         $company_id = Auth::user()->company_id;
 
-        // Solo productos que tienen al menos un ingreso en este local
-        $productosConIngreso = DB::table('almacen_ingreso_detalle as ad')
+        // Stock por línea (presentación/concentración) para este local
+        $lineasConIngreso = DB::table('almacen_ingreso_detalle as ad')
             ->join('almacen_ingresos as ai', 'ai.id', '=', 'ad.ingreso_id')
+            ->join('producto_lineas as pl', 'pl.id', '=', 'ad.producto_linea_id')
+            ->join('productos as p', 'p.id', '=', 'ad.producto_id')
+            ->leftJoin('familias as f', 'f.id', '=', 'p.familia_id')
+            ->leftJoin('marcas as m', 'm.id', '=', 'p.marca_id')
             ->where('ai.sucursal_id', $local_id)
             ->where('ai.company_id', $company_id)
-            ->distinct()
-            ->pluck('ad.producto_id');
-
-        $query = Producto::with(['familia', 'marca'])
-            ->whereIn('id', $productosConIngreso);
-
-        if ($familia_id) {
-            $query->where('familia_id', $familia_id);
-        }
-
-        $resultados = $query->get()->map(function($p) use ($local_id) {
-            $stock = DB::table('almacen_ingreso_detalle as ad')
-                ->join('almacen_ingresos as ai', 'ai.id', '=', 'ad.ingreso_id')
-                ->where('ad.producto_id', $p->id)
-                ->where('ai.sucursal_id', $local_id)
-                ->sum('ad.cantidad');
-
-            $p->stock_actual = (float) $stock;
-            return $p;
-        })->filter(function($p) {
-            return $p->stock_actual <= 0;
-        })->values();
+            ->when($familia_id, fn($q) => $q->where('p.familia_id', $familia_id))
+            ->select(
+                'ad.producto_linea_id',
+                'p.id as producto_id',
+                'p.nombre as producto_nombre',
+                'p.stock_minimo',
+                'pl.presentacion',
+                'pl.concentracion',
+                'f.nombre as familia_nombre',
+                'm.nombre as marca_nombre',
+                DB::raw('SUM(ad.cantidad) as stock_actual')
+            )
+            ->groupBy('ad.producto_linea_id', 'p.id', 'p.nombre', 'p.stock_minimo', 'pl.presentacion', 'pl.concentracion', 'f.nombre', 'm.nombre')
+            ->get()
+            ->filter(fn($r) => $r->stock_actual <= 0)
+            ->values();
 
         return [
             'view' => 'reportes.partials.sin_stock',
-            'data' => compact('resultados')
+            'data' => ['resultados' => $lineasConIngreso]
         ];
     }
 
