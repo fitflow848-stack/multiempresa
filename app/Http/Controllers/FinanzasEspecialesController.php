@@ -359,7 +359,7 @@ class FinanzasEspecialesController extends Controller
      */
     public function ticketPersonal($id)
     {
-        $activo = ActivoCorriente::with('tipo')->findOrFail($id);
+        $activo = ActivoCorriente::with(['tipo', 'user'])->findOrFail($id);
         $company = Company::first();
 
         $pdf = Pdf::loadView('activos.ticket_adelanto', compact('activo', 'company'))
@@ -373,7 +373,7 @@ class FinanzasEspecialesController extends Controller
      */
     public function ticketPasivo($id)
     {
-        $pasivo = Pasivo::with('tipo')->findOrFail($id);
+        $pasivo = Pasivo::with(['tipo', 'user'])->findOrFail($id);
         $company = Company::first();
 
         $pdf = Pdf::loadView('pasivos.ticket_registro', compact('pasivo', 'company'))

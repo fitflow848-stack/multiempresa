@@ -87,6 +87,7 @@
         @if ($pasivo->metodo_pago)
             <strong>Método:</strong> {{ $pasivo->metodo_pago }}<br>
         @endif
+        <strong>Registrado por:</strong> {{ $pasivo->user->name ?? 'Sistema' }}<br>
     </div>
 
     <div class="divider"></div>

@@ -251,7 +251,7 @@ class PasivoController extends Controller
 
     public function ticketRegistro($id)
     {
-        $pasivo = Pasivo::with(['tipo', 'sucursal', 'company'])->findOrFail($id);
+        $pasivo = Pasivo::with(['tipo', 'sucursal', 'company', 'user'])->findOrFail($id);
         $company = $pasivo->company ?? Company::first();
 
         $pdf = Pdf::loadView('pasivos.ticket_registro', compact('pasivo', 'company'))
