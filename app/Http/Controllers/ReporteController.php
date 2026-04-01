@@ -1490,9 +1490,19 @@ class ReporteController extends Controller
     {
         $local_id = $request->input('local_id') ?: Auth::user()->branch_id;
         $familia_id = $request->input('familia_id');
+        $company_id = Auth::user()->company_id;
 
-        $query = Producto::with(['familia', 'marca']);
-        
+        // Solo productos que tienen al menos un ingreso en este local
+        $productosConIngreso = DB::table('almacen_ingreso_detalle as ad')
+            ->join('almacen_ingresos as ai', 'ai.id', '=', 'ad.ingreso_id')
+            ->where('ai.sucursal_id', $local_id)
+            ->where('ai.company_id', $company_id)
+            ->distinct()
+            ->pluck('ad.producto_id');
+
+        $query = Producto::with(['familia', 'marca'])
+            ->whereIn('id', $productosConIngreso);
+
         if ($familia_id) {
             $query->where('familia_id', $familia_id);
         }
@@ -1503,7 +1513,7 @@ class ReporteController extends Controller
                 ->where('ad.producto_id', $p->id)
                 ->where('ai.sucursal_id', $local_id)
                 ->sum('ad.cantidad');
-            
+
             $p->stock_actual = (float) $stock;
             return $p;
         })->filter(function($p) {
@@ -1520,9 +1530,19 @@ class ReporteController extends Controller
     {
         $local_id = $request->input('local_id') ?: Auth::user()->branch_id;
         $familia_id = $request->input('familia_id');
+        $company_id = Auth::user()->company_id;
 
-        $query = Producto::with(['familia', 'marca']);
-        
+        // Solo productos que tienen al menos un ingreso en este local
+        $productosConIngreso = DB::table('almacen_ingreso_detalle as ad')
+            ->join('almacen_ingresos as ai', 'ai.id', '=', 'ad.ingreso_id')
+            ->where('ai.sucursal_id', $local_id)
+            ->where('ai.company_id', $company_id)
+            ->distinct()
+            ->pluck('ad.producto_id');
+
+        $query = Producto::with(['familia', 'marca'])
+            ->whereIn('id', $productosConIngreso);
+
         if ($familia_id) {
             $query->where('familia_id', $familia_id);
         }
@@ -1533,7 +1553,7 @@ class ReporteController extends Controller
                 ->where('ad.producto_id', $p->id)
                 ->where('ai.sucursal_id', $local_id)
                 ->sum('ad.cantidad');
-            
+
             $p->stock_actual = (float) $stock;
             return $p;
         })->filter(function($p) {
