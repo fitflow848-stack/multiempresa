@@ -216,14 +216,20 @@ class BalanceController extends Controller
         
         // APORTES FLOTANTES: Aportes que no entraron a la caja física (POS) pero son activos de la empresa
         // Esto permite que el balance cuadre sin afectar el arqueo del día.
-        $aportesFlotantes = \App\Models\Pasivo::withoutGlobalScopes()
+        $aportesFlotantesQuery = \App\Models\Pasivo::withoutGlobalScopes()
             ->where('company_id', $user->company_id)
             ->whereHas('tipo', function($q) {
-                $q->where('nombre', 'Aporte');
+                $q->where('nombre', 'Aporte')
+                  ->orWhere('nombre', 'like', 'Aportes%');
             })
             ->whereNull('id_operacion_caja')
-            ->whereDate('fecha_registro', '<=', $fecha)
-            ->sum(DB::raw('monto - monto_pagado'));
+            ->whereDate('fecha_registro', '<=', $fecha);
+
+        if ($sucursalId) {
+            $aportesFlotantesQuery->where('sucursal_id', $sucursalId);
+        }
+
+        $aportesFlotantes = $aportesFlotantesQuery->sum(DB::raw('monto - monto_pagado'));
             
         $caja += floatval($aportesFlotantes);
 
