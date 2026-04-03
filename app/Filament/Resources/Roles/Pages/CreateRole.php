@@ -24,10 +24,14 @@ class CreateRole extends CreateRecord
 
     protected function handleRecordCreation(array $data): \Illuminate\Database\Eloquent\Model
     {
-        // Crear el rol
+        // Obtener el ID de la empresa del usuario actual
+        $companyId = auth()->user()->company_id;
+
+        // Crear el rol asegurando que incluimos el company_id
         $role = \Spatie\Permission\Models\Role::create([
             'name' => $data['name'],
-            'guard_name' => 'admin'
+            'guard_name' => 'admin',
+            'company_id' => $companyId
         ]);
 
         // Asignar permisos

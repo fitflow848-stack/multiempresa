@@ -69,6 +69,9 @@ class RoleResource extends Resource
         $query->where('guard_name', 'admin');
 
         if ($user && !$user->isSuperAdmin()) {
+            // El admin_empresa solo ve roles de su propia empresa
+            $query->where('company_id', $user->company_id);
+            
             // Los roles de sistema no deben ser editables por el dueño del negocio
             $systemRoles = ['super_admin', 'admin_empresa'];
             $query->whereNotIn('name', $systemRoles);

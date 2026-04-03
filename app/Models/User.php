@@ -59,17 +59,21 @@ class User extends Authenticatable implements FilamentUser
         ];
     }
 
-    /**
-     * Accessor para obtener la empresa activa desde la sesión si es el usuario autenticado.
-     * Esto permite que $user->company_id devuelva la empresa en la que el super_admin está trabajando.
-     */
     public function getCompanyIdAttribute($value)
     {
         // Solo aplicar lógica de sesión para el usuario que está navegando
-        $authenticatedUserId = auth()->guard('admin')->id() ?? auth()->guard('web')->id();
+        $authenticatedUserId = auth()->id();
         
         if ($authenticatedUserId === $this->id) {
-            if ($this->hasRole('super_admin')) {
+            // Nota: Evitamos hasRole() aquí para no causar recursión infinita
+            // ya que hasRole() podría llamar a company_id si Spatie está configurado para teams
+            $isSuperAdmin = \Illuminate\Support\Facades\DB::table('model_has_roles')
+                ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+                ->where('model_has_roles.model_id', $this->id)
+                ->where('roles.name', 'super_admin')
+                ->exists();
+
+            if ($isSuperAdmin) {
                 return session('active_company_id', $value);
             }
         }
@@ -131,16 +135,21 @@ class User extends Authenticatable implements FilamentUser
      */
     public function isSuperAdmin(): bool
     {
-        return $this->roles()->where('name', 'super_admin')->exists();
+        // Bypasseamos Spatie para esta comprobación crítica para evitar problemas de scoping al inicio
+        return \Illuminate\Support\Facades\DB::table('model_has_roles')
+            ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+            ->where('model_has_roles.model_id', $this->id)
+            ->where('roles.name', 'super_admin')
+            ->exists();
     }
 
-    /**
-     * ¿Es administrador (empresa o general)?
-     * Incluye super_admin y admin_empresa pero NO el rol legacy 'admin'.
-     */
     public function isAdmin(): bool
     {
-        return $this->roles()->whereIn('name', ['super_admin', 'admin_empresa'])->exists();
+        return \Illuminate\Support\Facades\DB::table('model_has_roles')
+            ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+            ->where('model_has_roles.model_id', $this->id)
+            ->whereIn('roles.name', ['super_admin', 'admin_empresa'])
+            ->exists();
     }
 
     /**
@@ -149,7 +158,12 @@ class User extends Authenticatable implements FilamentUser
      */
     public function isAdminEmpresa(): bool
     {
-        return $this->hasAnyRole(['admin_empresa', 'admin', 'administrador']);
+        // Usar DB directa para evitar problemas de scoping durante carga inicial/login
+        return \Illuminate\Support\Facades\DB::table('model_has_roles')
+            ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+            ->where('model_has_roles.model_id', $this->id)
+            ->whereIn('roles.name', ['admin_empresa', 'admin', 'administrador', 'super_admin'])
+            ->exists();
     }
 
     /**
@@ -215,6 +229,11 @@ class User extends Authenticatable implements FilamentUser
      */
     public function canAccessPanel(Panel $panel): bool
     {
+        // Asegurar que el team id esté configurado para la verificación de roles
+        if (config('permission.teams') && $this->company_id) {
+            setPermissionsTeamId($this->company_id);
+        }
+        
         return $this->hasAnyRole(['super_admin', 'admin', 'admin_empresa', 'supervisor']);
     }
 }

@@ -21,15 +21,24 @@ class RoleForm
                         ->required()
                         ->maxLength(255)
                         ->rules(function ($get, $record) {
+                            $user = auth()->user();
                             return [
                                 'required',
                                 'max:255',
                                 Rule::unique('roles', 'name')
                                     ->where('guard_name', 'admin')
+                                    ->where('company_id', $user->company_id)
                                     ->ignore($record?->id)
                             ];
                         })
-                        ->helperText('Nombre único para el rol (ej: admin, vendedor, cajero)'),
+                        ->helperText('Nombre único para el rol en esta empresa (ej: vendedor, cajero)'),
+
+                    TextInput::make('company_id')
+                        ->label('Empresa ID')
+                        ->default(fn() => auth()->user()->company_id)
+                        ->hidden()
+                        ->dehydrated()
+                        ->required(),
 
                     TextInput::make('guard_name')
                         ->label('Guard')

@@ -19,6 +19,7 @@ class CreateCompany extends CreateRecord
         /** @var \App\Models\Company $record */
         $record = $this->record;
 
+        // 1. Configuración de SUNAT (Existente)
         if ($record->cert_file && $record->cert_password) {
             $sunatService = app(\App\Services\Sunat::class);
 
@@ -32,6 +33,22 @@ class CreateCompany extends CreateRecord
                     ->success()
                     ->send();
             }
+        }
+
+        // 2. Sembrar ROLES por defecto para la nueva empresa
+        // Copiamos los roles globales (que tienen company_id NULL)
+        $templateRoles = \Spatie\Permission\Models\Role::whereNull('company_id')->get();
+
+        foreach ($templateRoles as $template) {
+            $newRole = \Spatie\Permission\Models\Role::create([
+                'name' => $template->name,
+                'guard_name' => $template->guard_name,
+                'company_id' => $record->id
+            ]);
+
+            // Copiar los permisos del rol plantilla
+            $permissionNames = $template->permissions()->pluck('name')->toArray();
+            $newRole->syncPermissions($permissionNames);
         }
     }
 }

@@ -357,15 +357,21 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
     Route::get('/pasivos/ticket-registro/{id}', [PasivoController::class, 'ticketRegistro'])->name('pasivos.ticket_registro');
 
     // Pasivos Corrientes
-    Route::prefix('pasivos')->middleware('can:contabilidad.gestionar_pasivos')->group(function () {
-        Route::get('/', [PasivoController::class, 'index'])->name('pasivos.index');
-        Route::post('/', [PasivoController::class, 'store'])->name('pasivos.store');
-        Route::post('/tipo', [PasivoController::class, 'storeTipo'])->name('pasivos.storeTipo');
-        Route::post('/convertir-aporte/{id}', [PasivoController::class, 'convertirAporte'])->name('pasivos.convertir-aporte');
-        Route::post('/pagar/{id}', [PasivoController::class, 'registrarPago'])->name('pasivos.pagar');
-        Route::get('/{id}/edit', [PasivoController::class, 'edit'])->name('pasivos.edit');
-        Route::post('/{id}/update', [PasivoController::class, 'update'])->name('pasivos.update');
-        Route::delete('/{id}', [PasivoController::class, 'destroy'])->name('pasivos.destroy');
+    Route::prefix('pasivos')->group(function () {
+        Route::middleware('can:contabilidad.gestionar_pasivos')->group(function () {
+            Route::get('/', [PasivoController::class, 'index'])->name('pasivos.index');
+            Route::post('/', [PasivoController::class, 'store'])->name('pasivos.store');
+            Route::post('/tipo', [PasivoController::class, 'storeTipo'])->name('pasivos.storeTipo');
+            Route::post('/convertir-aporte/{id}', [PasivoController::class, 'convertirAporte'])->name('pasivos.convertir-aporte');
+            Route::get('/{id}/edit', [PasivoController::class, 'edit'])->name('pasivos.edit');
+            Route::post('/{id}/update', [PasivoController::class, 'update'])->name('pasivos.update');
+            Route::delete('/{id}', [PasivoController::class, 'destroy'])->name('pasivos.destroy');
+        });
+
+        // Esta ruta debe ser accesible tanto por contabilidad como por finanzas (Pagar)
+        Route::post('/pagar/{id}', [PasivoController::class, 'registrarPago'])
+            ->name('pasivos.pagar')
+            ->middleware('canany:contabilidad.gestionar_pasivos,finanzas.crear');
     });
 
     // Finanzas para Vendedores

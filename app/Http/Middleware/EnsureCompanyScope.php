@@ -38,6 +38,11 @@ class EnsureCompanyScope
                 view()->share('current_branch', \App\Models\Sucursal::find($activeBranchId));
             }
 
+            // Establecer el team id para el filtrado de roles/permisos
+            if ($activeCompanyId) {
+                setPermissionsTeamId($activeCompanyId);
+            }
+
             return $next($request);
         }
 
@@ -62,6 +67,9 @@ class EnsureCompanyScope
         if ($user->branch) {
             view()->share('current_branch_logo', $user->branch->logo_url);
         }
+
+        // Establecer el team id para el filtrado de roles/permisos
+        setPermissionsTeamId($user->company_id);
 
         return $next($request);
     }
