@@ -48,16 +48,33 @@ class UsersTable
 
                 TextColumn::make('roles.name')
                     ->label('Rol')
+                    ->getStateUsing(function ($record) {
+                        // Bypasear el team-scope de Spatie para mostrar los roles correctamente
+                        return \Illuminate\Support\Facades\DB::table('model_has_roles')
+                            ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+                            ->where('model_has_roles.model_id', $record->id)
+                            ->where('roles.guard_name', 'admin')
+                            ->where(function ($q) use ($record) {
+                                $q->where('model_has_roles.company_id', $record->getRawOriginal('company_id'))
+                                  ->orWhereNull('model_has_roles.company_id');
+                            })
+                            ->pluck('roles.name')
+                            ->unique()
+                            ->values()
+                            ->toArray();
+                    })
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
                         'super_admin'   => 'danger',
                         'admin_empresa' => 'warning',
                         'admin'         => 'danger',
+                        'administrador' => 'danger',
                         'supervisor'    => 'warning',
                         'vendedor'      => 'success',
                         'cajero'        => 'info',
                         default         => 'gray',
                     })
+                    ->separator(', ')
                     ->placeholder('Sin roles'),
 
                 TextColumn::make('cajas.nombre')

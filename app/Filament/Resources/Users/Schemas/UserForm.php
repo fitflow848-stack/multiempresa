@@ -127,13 +127,31 @@ class UserForm
                         ->relationship(
                             'roles',
                             'name',
-                            fn($query) => $query->where('guard_name', 'admin') // Filtrar por guard admin para evitar duplicados
-                                ->when(!auth()->user()->isSuperAdmin(), fn($q) => $q->where('name', '!=', 'super_admin'))
+                            function ($query, $get) {
+                                $authUser = auth()->user();
+                                $query->where('roles.guard_name', 'admin');
+
+                                if ($authUser->isSuperAdmin()) {
+                                    $companyId = $get('company_id');
+                                    if ($companyId) {
+                                        $query->where('roles.company_id', $companyId);
+                                    } else {
+                                        $query->whereNull('roles.company_id');
+                                    }
+                                } else {
+                                    $rawCompanyId = $authUser->getRawOriginal('company_id') ?? $authUser->company_id;
+                                    $query->where('roles.company_id', $rawCompanyId)
+                                          ->whereNotIn('roles.name', ['super_admin']);
+                                }
+
+                                return $query->orderBy('roles.name');
+                            }
                         )
                         ->multiple()
                         ->preload()
                         ->native(false)
-                        ->default(fn () => \Spatie\Permission\Models\Role::where('name', 'admin_empresa')->where('guard_name', 'admin')->pluck('id')->toArray()),
+                        ->reactive()
+                        ->default(fn () => []),
 
                     Toggle::make('is_active')
                         ->label('Usuario Activo')
