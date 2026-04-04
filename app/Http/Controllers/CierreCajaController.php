@@ -209,8 +209,14 @@ class CierreCajaController extends Controller
                     ->with('info', 'Ya tienes una sesión abierta para esta caja.');
             }
 
-            // Si es otro usuario
-            $msg = "La caja '" . $openCaja->caja->nombre . "' ya está siendo utilizada por el usuario " . $openCaja->user->name . ". Debe esperar a que cierre su sesión.";
+            // Si es un administrador, permitirle entrar a la sesión abierta por otro usuario
+            if ($user->isAdmin() || $user->hasRole('supervisor')) {
+                return redirect()->route('cierre-caja.show', $openCaja->id)
+                    ->with('info', 'La caja ya está abierta por ' . ($openCaja->user->name ?? 'otro usuario') . '. Ha ingresado como administrador.');
+            }
+
+            // Si es otro usuario normal
+            $msg = "La caja '" . $openCaja->caja->nombre . "' ya está siendo utilizada por el usuario " . ($openCaja->user->name ?? 'otro') . ". Debe esperar a que cierre su sesión.";
             return redirect()->route('cierre-caja.index')->with('error', $msg);
         }
 
@@ -368,13 +374,19 @@ class CierreCajaController extends Controller
      */
     public function getOpenCaja(Request $request)
     {
+        /** @var \App\Models\User $user */
         $user = Auth::user();
         $selectedCajaId = session('selected_caja_id');
 
-        $openCaja = CierreCaja::where('user_id', $user->id)
-            ->where('caja_id', $selectedCajaId)
-            ->whereNull('fecha_cierre')
-            ->first();
+        $query = CierreCaja::where('caja_id', $selectedCajaId)
+            ->whereNull('fecha_cierre');
+
+        // Si no es admin, solo puede ver SU propia caja abierta
+        if (!$user->isAdmin()) {
+            $query->where('user_id', $user->id);
+        }
+
+        $openCaja = $query->first();
 
         if ($openCaja) {
             // Obtener ventas asociadas a esta caja (si la columna existe)
