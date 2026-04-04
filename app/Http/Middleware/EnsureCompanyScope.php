@@ -26,7 +26,9 @@ class EnsureCompanyScope
         }
 
         // Super Admin: acceso total sin restricciones, pero compartimos contexto si lo tiene
-        if ($user->hasRole('super_admin')) {
+        // NOTA: usamos isSuperAdmin() (DB directa) en lugar de hasRole() para evitar que Spatie
+        // cachee la relación 'roles' con team_id=NULL antes de que se llame setPermissionsTeamId()
+        if ($user->isSuperAdmin()) {
             $activeCompanyId = session('active_company_id');
             $activeBranchId = session('active_branch_id');
             view()->share('is_super_admin', true);
@@ -70,6 +72,8 @@ class EnsureCompanyScope
 
         // Establecer el team id para el filtrado de roles/permisos
         setPermissionsTeamId($user->company_id);
+        // Limpiar la relación 'roles' cacheada para que se recargue con el team_id correcto
+        $user->unsetRelation('roles');
 
         return $next($request);
     }
