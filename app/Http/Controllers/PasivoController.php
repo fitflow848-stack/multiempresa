@@ -164,6 +164,12 @@ class PasivoController extends Controller
 
     public function registrarPago(Request $request, $id)
     {
+        // Verificar que el usuario tiene al menos uno de los permisos requeridos
+        $user = auth()->user();
+        if (!$user->hasPermissionTo('contabilidad.gestionar_pasivos') && !$user->hasPermissionTo('finanzas.crear')) {
+            abort(403, 'No tienes permiso para registrar pagos.');
+        }
+
         $request->validate([
             'monto' => 'required|numeric|min:0.01',
             'metodo_pago' => 'required|string',

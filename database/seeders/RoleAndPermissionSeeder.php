@@ -54,6 +54,9 @@ class RoleAndPermissionSeeder extends Seeder
 
             // Inventario
             'inventario.ver',
+            'inventario.crear',
+            'inventario.editar',
+            'inventario.eliminar',
             'inventario.ajustar',
             'inventario.transferir',
             'inventario.kardex',
@@ -61,6 +64,7 @@ class RoleAndPermissionSeeder extends Seeder
             'productos.crear',
             'productos.editar',
             'productos.eliminar',
+            'productos.modificar_precio',
 
             // Compras y Proveedores
             'compras.ver',
@@ -91,9 +95,13 @@ class RoleAndPermissionSeeder extends Seeder
             'cajas.crear',
             'cajas.editar',
             'cajas.eliminar',
+            'cajas.abrir_cerrar',
+            'cajas.ajustar',
+            'cajas.arquear',
             'operaciones_caja.ver',
             'operaciones_caja.ver_todo',
             'operaciones_caja.crear',
+            'operaciones_caja.eliminar',
 
             // Documentos
             'guias_remision.ver',
@@ -111,6 +119,16 @@ class RoleAndPermissionSeeder extends Seeder
             'contabilidad.ver',
             'contabilidad.gestionar_activos',
             'contabilidad.gestionar_pasivos',
+            'finanzas.ver',
+            'finanzas.crear',
+            'finanzas.editar',
+            'finanzas.eliminar',
+            'finanzas.balance',
+            'finanzas.estado_resultados',
+            'tesoreria.ver',
+            'tesoreria.crear',
+            'tesoreria.editar',
+            'tesoreria.eliminar',
 
             // Catálogos (Marcas, Familias, etc.)
             'catalogos.ver',
@@ -118,6 +136,9 @@ class RoleAndPermissionSeeder extends Seeder
 
             // Reportes
             'reportes.ver',
+            'reportes.crear',
+            'reportes.editar',
+            'reportes.eliminar',
             'reportes.exportar',
 
             // Configuración del sistema

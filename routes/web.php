@@ -370,8 +370,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
 
         // Esta ruta debe ser accesible tanto por contabilidad como por finanzas (Pagar)
         Route::post('/pagar/{id}', [PasivoController::class, 'registrarPago'])
-            ->name('pasivos.pagar')
-            ->middleware('canany:contabilidad.gestionar_pasivos,finanzas.crear');
+            ->name('pasivos.pagar');
     });
 
     // Finanzas para Vendedores
