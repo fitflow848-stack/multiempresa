@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Aporte;
 use App\Models\TipoAporte;
+use App\Models\OperacionCaja;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class AporteController extends Controller
 {
@@ -41,11 +43,53 @@ class AporteController extends Controller
             'observaciones' => 'nullable|string'
         ]);
 
-        $aporte = new Aporte($request->all());
-        $aporte->user_id = Auth::id();
-        $aporte->save();
+        try {
+            DB::beginTransaction();
+            
+            // 1. Verificar que hay una caja abierta para registrar el movimiento físico
+            $cajaAbierta = getSelectedCaja();
+            
+            if (!$cajaAbierta) {
+                return redirect()->back()
+                    ->with('error', 'No hay una caja abierta. Debe abrir una caja antes de registrar un aporte.')
+                    ->withInput();
+            }
 
-        return redirect()->route('aportes.index')->with('success', 'Aporte registrado correctamente');
+            // 2. Crear el registro contable del aporte
+            $aporte = new Aporte($request->all());
+            $aporte->user_id = Auth::id();
+            $aporte->save();
+
+            // 3. Crear la operación de caja física para que el dinero entre realmente
+            $operacionCaja = new OperacionCaja([
+                'company_id' => auth()->user()->company_id,
+                'sucursal_id' => $cajaAbierta->sucursal_id,
+                'cierre_caja_id' => $cajaAbierta->id,
+                'user_id' => Auth::id(),
+                'tipo' => 'ingreso',
+                'partida' => 'Aporte - ' . $aporte->nombre,
+                'concepto' => $request->observaciones ?? 'Aporte registrado: ' . $aporte->nombre,
+                'importe' => $aporte->monto,
+                'es_efectivo' => true,
+                'metodo_pago' => 'efectivo'
+            ]);
+            $operacionCaja->save();
+
+            // 4. Actualizar el saldo de la caja en tiempo real
+            $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $aporte->monto;
+            $cajaAbierta->save();
+
+            DB::commit();
+
+            return redirect()->route('aportes.index')
+                ->with('success', 'Aporte registrado correctamente y dinero agregado a la caja.');
+                
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->with('error', 'Error al registrar el aporte: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 
     public function destroy($id)

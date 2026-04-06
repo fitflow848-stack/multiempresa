@@ -36,4 +36,26 @@ class Aporte extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * Verificar si este aporte tiene una operación de caja asociada
+     */
+    public function operacionCaja()
+    {
+        return $this->hasOne(OperacionCaja::class, 'concepto', 'nombre')
+            ->where('tipo', 'ingreso')
+            ->where('partida', 'like', 'Aporte - %');
+    }
+
+    /**
+     * Obtener operación de caja por importe y fecha similar
+     */
+    public function getOperacionCaja()
+    {
+        return OperacionCaja::where('tipo', 'ingreso')
+            ->where('importe', $this->monto)
+            ->whereDate('created_at', $this->fecha_registro)
+            ->where('partida', 'like', '%' . $this->nombre . '%')
+            ->first();
+    }
 }
