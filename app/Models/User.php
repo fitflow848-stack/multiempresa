@@ -148,22 +148,17 @@ class User extends Authenticatable implements FilamentUser
         return \Illuminate\Support\Facades\DB::table('model_has_roles')
             ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
             ->where('model_has_roles.model_id', $this->id)
-            ->whereIn('roles.name', ['super_admin', 'admin_empresa'])
+            ->whereIn('roles.name', ['super_admin', 'admin_empresa', 'admin', 'administrador'])
             ->exists();
     }
 
     /**
-     * ¿Es administrador de una empresa (dueño del negocio)?
+     * ¿Es administrador de una empresa (dueño del negocio) o administrador general?
      * Este rol gestiona usuarios, roles, cajas y configuración de su empresa.
      */
     public function isAdminEmpresa(): bool
     {
-        // Usar DB directa para evitar problemas de scoping durante carga inicial/login
-        return \Illuminate\Support\Facades\DB::table('model_has_roles')
-            ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
-            ->where('model_has_roles.model_id', $this->id)
-            ->whereIn('roles.name', ['admin_empresa', 'admin', 'administrador', 'super_admin'])
-            ->exists();
+        return $this->isAdmin();
     }
 
     /**
