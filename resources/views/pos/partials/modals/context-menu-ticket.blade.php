@@ -213,7 +213,7 @@
             // Guardamos el texto como porcentaje para que el resto de tu sistema lo procese
             const descuentoTexto = `${porcentajeCalculado.toFixed(2)}%`;
 
-            actualizarDescuento(idx, descuentoTexto);
+            actualizarDescuento(idx, descuentoTexto, true); // skipValidation: ya validado arriba
 
         } catch (e) {
             console.error(e);

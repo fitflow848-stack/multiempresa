@@ -2279,7 +2279,8 @@
     }
 
     // Función para actualizar descuento (porcentaje o monto fijo)
-    function actualizarDescuento(index, valorDescuento) {
+    // skipValidation=true cuando ya fue validado externamente (ej: modificarDescuentoLinea)
+    async function actualizarDescuento(index, valorDescuento, skipValidation = false) {
         const producto = ticket[index];
         const valor = valorDescuento.toString().trim();
 
@@ -2302,13 +2303,24 @@
             // Descuento porcentual
             const porcentaje = parseFloat(valor.replace('%', ''));
 
-            if (!isAdmin && (isNaN(porcentaje) || porcentaje < 0 || porcentaje > 100)) {
+            if (isNaN(porcentaje) || porcentaje < 0 || porcentaje > 100) {
                 alert('El descuento debe estar entre 0% y 100%');
                 renderTicket();
                 return;
             }
 
             montoDescuento = subtotalSinDescuento * porcentaje / 100;
+
+            // Validar contra el descuento máximo configurado por producto (solo vendedores)
+            if (!isAdmin && !skipValidation) {
+                const maxPermitido = await obtenerMaxDescuentoProducto(producto);
+                if (maxPermitido !== null && montoDescuento > (maxPermitido + 0.01)) {
+                    alert(`¡Error! El descuento máximo para este producto es de S/ ${maxPermitido.toFixed(2)}. No puede aplicar S/ ${montoDescuento.toFixed(2)}`);
+                    renderTicket();
+                    return;
+                }
+            }
+
             producto.descuento = porcentaje;
             producto.descuentoFijo = 0;
             producto.descuentoTexto = `${porcentaje}%`;
@@ -2323,10 +2335,20 @@
                 return;
             }
 
-            if (!isAdmin && montoFijo >= subtotalSinDescuento) {
+            if (montoFijo >= subtotalSinDescuento) {
                 alert('El descuento no puede ser mayor o igual al subtotal del producto');
                 renderTicket();
                 return;
+            }
+
+            // Validar contra el descuento máximo configurado por producto (solo vendedores)
+            if (!isAdmin && !skipValidation) {
+                const maxPermitido = await obtenerMaxDescuentoProducto(producto);
+                if (maxPermitido !== null && montoFijo > (maxPermitido + 0.01)) {
+                    alert(`¡Error! El descuento máximo para este producto es de S/ ${maxPermitido.toFixed(2)}. No puede aplicar S/ ${montoFijo.toFixed(2)}`);
+                    renderTicket();
+                    return;
+                }
             }
 
             montoDescuento = montoFijo;
@@ -2347,8 +2369,32 @@
         }
     }
 
+    // Función auxiliar para obtener el descuento máximo permitido de un producto
+    async function obtenerMaxDescuentoProducto(producto) {
+        try {
+            const q = new URLSearchParams({
+                producto_id: producto.producto_id || '',
+                almacen_detalle_id: producto.almacen_detalle_id || '',
+                cantidad: producto.cantidad || 1,
+                precio: producto.precio || 0,
+                tipo: producto.es_precio_corporativo ? 'corporativo' : 'publico'
+            });
+
+            const resp = await fetch(`{{ route('pos.pvpd') }}?${q.toString()}`);
+            if (!resp.ok) return null;
+
+            const data = await resp.json();
+            const maxAmount = parseFloat(data.maxAmount);
+
+            return isNaN(maxAmount) ? null : maxAmount;
+        } catch (e) {
+            console.error('Error al obtener descuento máximo:', e);
+            return null; // En caso de error, permitir (no bloquear la venta)
+        }
+    }
+
     // Función para aplicar descuento global a todo el ticket
-    function aplicarDescuentoGlobal() {
+    async function aplicarDescuentoGlobal() {
         if (ticket.length === 0) {
             alert('No hay productos en el ticket');
             return;
@@ -2375,7 +2421,18 @@
             return;
         }
 
+        // Para vendedores, obtener los límites de descuento de cada producto antes de aplicar
+        let limitesProductos = {};
+        if (!isAdmin) {
+            for (const producto of ticket) {
+                const maxPermitido = await obtenerMaxDescuentoProducto(producto);
+                const key = `${producto.producto_id}_${producto.almacen_detalle_id}`;
+                limitesProductos[key] = maxPermitido;
+            }
+        }
+
         let totalDescuentoAplicado = 0;
+        let productosExcedidos = [];
         let tipoDescuento = '';
 
         if (valor.includes('S/') || valor.includes('s/')) {
@@ -2389,21 +2446,31 @@
 
             ticket.forEach(producto => {
                 const subtotalSinDescuento = producto.cantidad * producto.precio;
+                const key = `${producto.producto_id}_${producto.almacen_detalle_id}`;
+                const maxPermitido = limitesProductos[key];
+                let descuentoAplicar = montoFijo;
 
-                if (!isAdmin && montoFijo >= subtotalSinDescuento) {
-                    // Si el descuento es mayor al subtotal, aplicar máximo posible
-                    const descuentoMaximo = subtotalSinDescuento - 0.01; // Dejar al menos 1 centavo
+                // Validar contra máximo permitido por producto
+                if (!isAdmin && maxPermitido !== null && maxPermitido !== undefined) {
+                    if (descuentoAplicar > (maxPermitido + 0.01)) {
+                        descuentoAplicar = maxPermitido;
+                        productosExcedidos.push(producto.nombre);
+                    }
+                }
+
+                if (descuentoAplicar >= subtotalSinDescuento) {
+                    const descuentoMaximo = subtotalSinDescuento - 0.01;
                     producto.descuentoFijo = descuentoMaximo;
                     producto.descuento = 0;
                     producto.descuentoTexto = `S/${descuentoMaximo.toFixed(2)}`;
                     producto.importe = 0.01;
                     totalDescuentoAplicado += descuentoMaximo;
                 } else {
-                    producto.descuentoFijo = montoFijo;
+                    producto.descuentoFijo = descuentoAplicar;
                     producto.descuento = 0;
-                    producto.descuentoTexto = `S/${montoFijo.toFixed(2)}`;
-                    producto.importe = subtotalSinDescuento - montoFijo;
-                    totalDescuentoAplicado += montoFijo;
+                    producto.descuentoTexto = `S/${descuentoAplicar.toFixed(2)}`;
+                    producto.importe = subtotalSinDescuento - descuentoAplicar;
+                    totalDescuentoAplicado += descuentoAplicar;
                 }
             });
 
@@ -2413,18 +2480,29 @@
             // Descuento porcentual
             const porcentaje = parseFloat(valor.replace('%', ''));
 
-            if (!isAdmin && (isNaN(porcentaje) || porcentaje < 0 || porcentaje > 100)) {
+            if (isNaN(porcentaje) || porcentaje < 0 || porcentaje > 100) {
                 alert('El descuento debe estar entre 0% y 100%');
                 return;
             }
 
             ticket.forEach(producto => {
                 const subtotalSinDescuento = producto.cantidad * producto.precio;
-                const montoDescuento = subtotalSinDescuento * porcentaje / 100;
+                let montoDescuento = subtotalSinDescuento * porcentaje / 100;
+                const key = `${producto.producto_id}_${producto.almacen_detalle_id}`;
+                const maxPermitido = limitesProductos[key];
 
-                producto.descuento = porcentaje;
+                // Validar contra máximo permitido por producto
+                if (!isAdmin && maxPermitido !== null && maxPermitido !== undefined) {
+                    if (montoDescuento > (maxPermitido + 0.01)) {
+                        montoDescuento = maxPermitido;
+                        productosExcedidos.push(producto.nombre);
+                    }
+                }
+
+                const porcentajeReal = (montoDescuento / subtotalSinDescuento) * 100;
+                producto.descuento = porcentajeReal;
                 producto.descuentoFijo = 0;
-                producto.descuentoTexto = `${porcentaje}%`;
+                producto.descuentoTexto = `${porcentajeReal.toFixed(2)}%`;
 
                 const prevImporte = subtotalSinDescuento;
                 producto.importe = Math.max(0, subtotalSinDescuento - montoDescuento);
@@ -2432,6 +2510,10 @@
             });
 
             tipoDescuento = `Descuento del ${porcentaje}%`;
+        }
+
+        if (productosExcedidos.length > 0) {
+            mostrarNotificacion(`Descuento ajustado al máximo permitido en: ${productosExcedidos.join(', ')}`);
         }
 
         mostrarNotificacion(
