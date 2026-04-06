@@ -201,27 +201,3 @@ class CheckUserPermissions extends Command
         $this->line("  php artisan permissions:check --fix-guards");
     }
 }
-            'ventas.ver',
-            'tesoreria.ver',         // Cambiado de 'finanzas.ver' 
-            'cajas.ver'
-        ];
-        
-        $this->info("\nVerificación de permisos específicos:");
-        foreach ($testPermissions as $permission) {
-            // Simular autenticación en guard admin para testing
-            auth('admin')->login($user);
-            
-            $hasPermissionAdmin = $user->can($permission);
-            $hasPermissionDirect = $user->hasPermissionTo($permission, 'admin');
-            
-            $statusAdmin = $hasPermissionAdmin ? '✓' : '✗';
-            $statusDirect = $hasPermissionDirect ? '✓' : '✗';
-            
-            $this->line("  {$statusAdmin} {$permission} (via can())");
-            $this->line("  {$statusDirect} {$permission} (via hasPermissionTo())");
-            
-            // Logout para el siguiente test
-            auth('admin')->logout();
-        }
-    }
-}
