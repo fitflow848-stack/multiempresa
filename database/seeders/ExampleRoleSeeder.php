@@ -17,7 +17,7 @@ class ExampleRoleSeeder extends Seeder
         // Crear rol de ejemplo: Vendedor
         $vendedorRole = Role::firstOrCreate([
             'name' => 'vendedor',
-            'guard_name' => 'admin'
+            'guard_name' => 'web'
         ]);
 
         // Asignar permisos específicos al vendedor
@@ -58,10 +58,13 @@ class ExampleRoleSeeder extends Seeder
             
             // Reportes
             'reportes.ver',          // Puede ver reportes básicos
+            
+            // NUEVOS PERMISOS PARA PAGOS
+            'finanzas.crear',        // Puede registrar pagos (limitado)
         ];
 
         foreach ($permisos as $permiso) {
-            $permission = Permission::where('name', $permiso)->where('guard_name', 'admin')->first();
+            $permission = Permission::where('name', $permiso)->where('guard_name', 'web')->first();
             if ($permission) {
                 $vendedorRole->givePermissionTo($permission);
             }
@@ -70,7 +73,7 @@ class ExampleRoleSeeder extends Seeder
         // Crear rol de ejemplo: Cajero
         $cajeroRole = Role::firstOrCreate([
             'name' => 'cajero',
-            'guard_name' => 'admin'
+            'guard_name' => 'web'
         ]);
 
         // Asignar permisos específicos al cajero
@@ -107,7 +110,7 @@ class ExampleRoleSeeder extends Seeder
         ];
 
         foreach ($permisosCajero as $permiso) {
-            $permission = Permission::where('name', $permiso)->where('guard_name', 'admin')->first();
+            $permission = Permission::where('name', $permiso)->where('guard_name', 'web')->first();
             if ($permission) {
                 $cajeroRole->givePermissionTo($permission);
             }
@@ -116,7 +119,7 @@ class ExampleRoleSeeder extends Seeder
         // Crear rol de ejemplo: Contador
         $contadorRole = Role::firstOrCreate([
             'name' => 'contador',
-            'guard_name' => 'admin'
+            'guard_name' => 'web'
         ]);
 
         // Asignar permisos específicos al contador
@@ -170,7 +173,7 @@ class ExampleRoleSeeder extends Seeder
         ];
 
         foreach ($permisosContador as $permiso) {
-            $permission = Permission::where('name', $permiso)->where('guard_name', 'admin')->first();
+            $permission = Permission::where('name', $permiso)->where('guard_name', 'web')->first();
             if ($permission) {
                 $contadorRole->givePermissionTo($permission);
             }
