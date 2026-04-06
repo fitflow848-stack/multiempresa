@@ -526,11 +526,33 @@ class PosController extends Controller
                         ->where('almacen_ingresos.sucursal_id', $ingreso->sucursal_id)
                         ->update(["almacen_ingreso_detalle.{$field}" => $request->value]);
                 } else {
-                    // Fallback to single row update if no ingreso linked
                     $detalle->$field = $request->value;
                     $detalle->save();
                 }
-                
+
+                // Mapeo de campos almacen_ingreso_detalle → producto_lineas/productos
+                $fieldMap = [
+                    'costo' => 'precio_compra',
+                    'pvp'   => 'pvp',
+                    'pvpd'  => 'pvp_dto',
+                    'pvc'   => 'pvc',
+                    'pvcd'  => 'pvc_dto',
+                ];
+
+                $masterField = $fieldMap[$field] ?? null;
+
+                // Sincronizar a producto_lineas
+                if ($masterField && $detalle->producto_linea_id) {
+                    \App\Models\ProductoLinea::where('id', $detalle->producto_linea_id)
+                        ->update([$masterField => $request->value]);
+                }
+
+                // Sincronizar a producto principal
+                if ($masterField && $detalle->producto_id) {
+                    \App\Models\Producto::where('id', $detalle->producto_id)
+                        ->update([$masterField => $request->value]);
+                }
+
                 return response()->json(['success' => true]);
             }
 

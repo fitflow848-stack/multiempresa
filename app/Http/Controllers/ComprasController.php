@@ -247,6 +247,36 @@ class ComprasController extends Controller
                         ]);
                 }
 
+                // Actualizar precios en producto_lineas
+                $newCosto = isset($costos[$i]) && $costos[$i] !== '' ? (float)$costos[$i] : null;
+                if ($productLine) {
+                    $productLine->update(array_filter([
+                        'precio_compra' => $newCosto,
+                        'pvp'           => $newPvp,
+                        'pvc'           => $newPvc,
+                        'pvp_dto'       => $newPvpDto,
+                        'pvc_dto'       => $newPvcDto,
+                        'pv_docena'     => $newPvDocena,
+                    ], fn($v) => $v !== null && $v !== 0.0));
+                }
+
+                // Actualizar precios en producto principal
+                if ($productId) {
+                    $productoToUpdate = Producto::find($productId);
+                    if ($productoToUpdate) {
+                        $updateData = [];
+                        if ($newCosto !== null) $updateData['precio_compra'] = $newCosto;
+                        if ($newPvp > 0)       $updateData['pvp'] = $newPvp;
+                        if ($newPvc > 0)        $updateData['pvc'] = $newPvc;
+                        if ($newPvpDto > 0)     $updateData['pvp_dto'] = $newPvpDto;
+                        if ($newPvcDto > 0)     $updateData['pvc_dto'] = $newPvcDto;
+                        if ($newPvDocena > 0)   $updateData['pv_docena'] = $newPvDocena;
+                        if (!empty($updateData)) {
+                            $productoToUpdate->update($updateData);
+                        }
+                    }
+                }
+
                 CompraLinea::create([
                     'compra_id' => $compra->id,
                     'product_id' => $productId,
