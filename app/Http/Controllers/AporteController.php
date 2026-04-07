@@ -29,6 +29,8 @@ class AporteController extends Controller
 
         $aportes = $query->paginate(20);
 
+        $aportes = $query->paginate(20);
+
         return view('aportes.index', compact('tipos', 'aportes'));
     }
 
@@ -46,12 +48,12 @@ class AporteController extends Controller
         try {
             DB::beginTransaction();
             
-            // 1. Verificar que hay una caja abierta para registrar el movimiento físico
+            // 1. Verificar que hay una caja abierta en sesión
             $cajaAbierta = getSelectedCaja();
             
             if (!$cajaAbierta) {
                 return redirect()->back()
-                    ->with('error', 'No hay una caja abierta. Debe abrir una caja antes de registrar un aporte.')
+                    ->with('error', 'No hay una caja abierta. Debe seleccionar y abrir una caja antes de registrar un aporte.')
                     ->withInput();
             }
 
@@ -66,7 +68,7 @@ class AporteController extends Controller
                 'sucursal_id' => $cajaAbierta->sucursal_id,
                 'cierre_caja_id' => $cajaAbierta->id,
                 'user_id' => Auth::id(),
-                'tipo' => 'ingreso',
+                'tipo' => 'aportacion',
                 'partida' => 'Aporte - ' . $aporte->nombre,
                 'concepto' => $request->observaciones ?? 'Aporte registrado: ' . $aporte->nombre,
                 'importe' => $aporte->monto,
@@ -75,14 +77,15 @@ class AporteController extends Controller
             ]);
             $operacionCaja->save();
 
-            // 4. Actualizar el saldo de la caja en tiempo real
-            $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $aporte->monto;
+            // 4. Actualizar el saldo de aportaciones de la caja en tiempo real
+            $cajaAbierta->aportaciones = ($cajaAbierta->aportaciones ?? 0) + $aporte->monto;
             $cajaAbierta->save();
 
             DB::commit();
 
+            $cajaNombre = $cajaAbierta->caja->nombre ?? 'Caja';
             return redirect()->route('aportes.index')
-                ->with('success', 'Aporte registrado correctamente y dinero agregado a la caja.');
+                ->with('success', "Aporte registrado correctamente. S/ " . number_format($aporte->monto, 2) . " agregado a {$cajaNombre}.");
                 
         } catch (\Exception $e) {
             DB::rollBack();
