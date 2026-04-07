@@ -412,12 +412,17 @@ class ProductoController extends Controller
 
         $lineas = $query->limit(100)->get();
 
-        // Calcular stock actual por línea en una sola consulta
+        // Calcular stock actual por línea en una sola consulta (filtrado por sucursal activa)
         $lineaIds = $lineas->pluck('id')->toArray();
-        $stockPorLinea = \Illuminate\Support\Facades\DB::table('almacen_ingreso_detalle as ad')
+        $activeBranchId = session('active_branch_id') ?? $user->branch_id ?? null;
+        $stockQuery = \Illuminate\Support\Facades\DB::table('almacen_ingreso_detalle as ad')
             ->join('almacen_ingresos as ai', 'ai.id', '=', 'ad.ingreso_id')
             ->where('ai.company_id', $user->company_id)
-            ->whereIn('ad.producto_linea_id', $lineaIds)
+            ->whereIn('ad.producto_linea_id', $lineaIds);
+        if ($activeBranchId) {
+            $stockQuery->where('ai.sucursal_id', $activeBranchId);
+        }
+        $stockPorLinea = $stockQuery
             ->select('ad.producto_linea_id', \Illuminate\Support\Facades\DB::raw('SUM(ad.cantidad) as stock_actual'))
             ->groupBy('ad.producto_linea_id')
             ->get()
