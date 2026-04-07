@@ -37,6 +37,10 @@ class ComprasController extends Controller
         $start = intval($request->input('start', 0));
         $length = intval($request->input('length', 10));
         $search = $request->input('search.value');
+        $proveedorFilter = $request->input('proveedor_filter');
+        $fechaDesde = $request->input('fecha_desde');
+        $fechaHasta = $request->input('fecha_hasta');
+        $estadoFilter = $request->input('estado_filter');
 
         $query = Compra::leftJoin('proveedores', 'compras.proveedor_id', 'proveedores.id')
             ->select(
@@ -64,6 +68,24 @@ class ComprasController extends Controller
                     ->orWhere('proveedores.nombre_comercial', 'like', "%{$search}%")
                     ->orWhere('compras.total_neto', 'like', "%{$search}%");
             });
+        }
+
+        if ($proveedorFilter) {
+            $query->where('proveedores.nombre_comercial', 'like', "%{$proveedorFilter}%");
+        }
+
+        if ($fechaDesde) {
+            $query->whereDate('compras.fecha_emision', '>=', $fechaDesde);
+        }
+
+        if ($fechaHasta) {
+            $query->whereDate('compras.fecha_emision', '<=', $fechaHasta);
+        }
+
+        if ($estadoFilter === 'completado') {
+            $query->whereNotNull('compras.received_at');
+        } elseif ($estadoFilter === 'pendiente') {
+            $query->whereNull('compras.received_at');
         }
 
         $orderColIndex = intval($request->input('order.0.column', 1));
