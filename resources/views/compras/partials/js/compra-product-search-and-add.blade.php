@@ -41,6 +41,9 @@
                 const familia = p.familia || '';
                 const presentacion = p.presentacion || '';
                 const concentracion = p.concentracion || '';
+                const stockActual = p.stock_actual !== undefined ? Number(p.stock_actual) : 0;
+                const stockBadgeColor = stockActual <= 0 ? '#dc3545' : (p.stock_min && stockActual <= Number(p.stock_min) ? '#fd7e14' : '#198754');
+                const stockBadge = `<span class="badge" style="font-size:0.65rem; background:${stockBadgeColor}; color:#fff; font-weight:600;">Stock: ${stockActual % 1 === 0 ? stockActual : stockActual.toFixed(2)}</span>`;
 
                 const $item = $(`
             <div class="list-group-item d-flex align-items-center py-2">
@@ -54,6 +57,7 @@
                         <small class="text-muted" style="font-size: 0.7rem;">${escapeHtml(familia)}</small>
                         ${presentacion ? `<span class="badge bg-soft-info text-info border-info" style="font-size: 0.65rem; background: #e0f2fe; border: 1px solid #7dd3fc !important;">${escapeHtml(presentacion)}</span>` : ''}
                         ${concentracion ? `<span class="badge bg-soft-primary text-primary border-primary" style="font-size: 0.65rem; background: #eef2ff; border: 1px solid #a5b4fc !important;">${escapeHtml(concentracion)}</span>` : ''}
+                        ${stockBadge}
                     </div>
                 </div>
 
@@ -177,6 +181,12 @@
                 $('#detail-descuento').val(0.00);
                 $('#detail-stock-min').val(product.stock_min || 0);
                 $('#detail-stock-max').val(product.stock_max || 0);
+
+                // Mostrar stock actual
+                const stockActual = product.stock_actual !== undefined ? Number(product.stock_actual) : 0;
+                const $stockSpan = $('#detail-stock-actual');
+                $stockSpan.text(stockActual % 1 === 0 ? stockActual : stockActual.toFixed(2));
+                $stockSpan.css('color', stockActual <= 0 ? '#dc3545' : (product.stock_min && stockActual <= Number(product.stock_min) ? '#fd7e14' : '#198754'));
                 
                 // Precios sugeridos (viniendo de la línea)
                 const pl = product.precio_linea || {};

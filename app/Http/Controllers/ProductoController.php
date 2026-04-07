@@ -412,7 +412,18 @@ class ProductoController extends Controller
 
         $lineas = $query->limit(100)->get();
 
-        $result = $lineas->map(function ($linea) {
+        // Calcular stock actual por línea en una sola consulta
+        $lineaIds = $lineas->pluck('id')->toArray();
+        $stockPorLinea = \Illuminate\Support\Facades\DB::table('almacen_ingreso_detalle as ad')
+            ->join('almacen_ingresos as ai', 'ai.id', '=', 'ad.ingreso_id')
+            ->where('ai.company_id', $user->company_id)
+            ->whereIn('ad.producto_linea_id', $lineaIds)
+            ->select('ad.producto_linea_id', \Illuminate\Support\Facades\DB::raw('SUM(ad.cantidad) as stock_actual'))
+            ->groupBy('ad.producto_linea_id')
+            ->get()
+            ->keyBy('producto_linea_id');
+
+        $result = $lineas->map(function ($linea) use ($stockPorLinea) {
             $producto = $linea->producto;
             return [
                 'id' => $producto->id,
@@ -427,6 +438,7 @@ class ProductoController extends Controller
                 'precio_compra' => $linea->precio_compra !== null ? (float)$linea->precio_compra : null,
                 'pvp' => $linea->pvp !== null ? (float)$linea->pvp : null,
                 // Campos de stock, lote y fecha de vencimiento
+                'stock_actual' => (float) ($stockPorLinea[$linea->id]->stock_actual ?? 0),
                 'stock_min' => $linea->stock_minimo ?? $producto->stock_min ?? 0,
                 'stock_max' => $linea->stock_maximo ?? $producto->stock_max ?? 0,
                 'lote' => $linea->lote ?? '',

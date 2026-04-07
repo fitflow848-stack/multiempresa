@@ -12,6 +12,10 @@
                 <div class="mb-2">
                     <strong id="detail-codigo" class="text-muted"></strong>
                     <div id="detail-nombre" class="fw-semibold"></div>
+                    <div class="mt-1">
+                        <span class="text-muted" style="font-size:0.8rem;">Stock actual:</span>
+                        <span id="detail-stock-actual" class="fw-bold ms-1" style="font-size:0.9rem;">—</span>
+                    </div>
                 </div>
 
                 <div class="row g-2">
