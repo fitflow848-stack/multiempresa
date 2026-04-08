@@ -1448,7 +1448,7 @@ class ReporteController extends Controller
                 'cliente' => $v->cliente->nombre ?? 'Varios',
                 'documento' => $v->serie . '-' . str_pad($v->numero, 8, '0', STR_PAD_LEFT),
                 'metodo' => $v->tipoPago->nombre ?? 'S/N',
-                'monto' => $v->total,
+                'monto' => min($v->monto_recibido ?? $v->total, $v->total),
                 'vendedor' => $v->user->name ?? '-',
                 'tipo' => 'Venta Directa'
             ];
