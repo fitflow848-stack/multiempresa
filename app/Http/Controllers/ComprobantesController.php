@@ -69,7 +69,7 @@ class ComprobantesController extends Controller
 
         $ventas = $ventasQuery->orderBy('fecha_emision', 'desc')
             ->orderBy('id_venta', 'desc')
-            ->paginate(20);
+            ->paginate(500);
 
         // Calcular resumen
         $resumen = $this->calcularResumen($ventasQuery->get());
