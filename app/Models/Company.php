@@ -172,6 +172,7 @@ class Company extends Model
         'sol_password',
         'sunat_client_id',
         'sunat_client_secret',
+        'sunat_produccion',
         'sunat_local_code',
         'ose_provider',
         'ose_user',
@@ -201,6 +202,7 @@ class Company extends Model
     protected $casts = [
         'afecto_igv' => 'boolean',
         'is_active' => 'boolean',
+        'sunat_produccion' => 'boolean',
         'porcentaje_igv' => 'decimal:2',
         'cert_expires_at' => 'datetime',
         'fecha_alta' => 'datetime',

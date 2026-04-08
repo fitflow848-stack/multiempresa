@@ -71,7 +71,7 @@ class Sunat
     {
         $empresa = Company::where('id', Auth::user()->company_id)->first();
         $data = [
-            "endpoint" => "beta",
+            "endpoint" => $empresa->sunat_produccion ? "produccion" : "beta",
             "ruc" => $empresa->ruc,
             "usuario" => $empresa->sol_user,
             "clave" => $empresa->sol_password,
@@ -126,7 +126,7 @@ class Sunat
         $empresa = Company::where('id', Auth::user()->company_id)->first();
 
         $data = [
-            "endpoint" => "beta",
+            "endpoint" => $empresa->sunat_produccion ? "produccion" : "beta",
             "documento" => $documento,
             "empresa" => [
                 "ruc" => $empresa->ruc,
@@ -346,7 +346,7 @@ class Sunat
 
         $empresa = Company::where('id', Auth::user()->company_id)->first();
         $data = [
-            "endpoint" => "beta",
+            "endpoint" => $empresa->sunat_produccion ? "produccion" : "beta",
             "documento" => "credito",
             "serie" => (string)$ventaNC->serie,
             "numero" => (string)$numeroNCSinCeros,
@@ -392,7 +392,7 @@ class Sunat
     {
         $empresa = Company::where('id', Auth::user()->company_id)->first();
         $data = json_encode([
-            "endpoint" => "beta",
+            "endpoint" => $empresa->sunat_produccion ? "produccion" : "beta",
             "ruc" => $empresa->ruc,
             "usuario" => $empresa->sol_user,
             "clave" => $empresa->sol_password,
@@ -406,7 +406,7 @@ class Sunat
     {
         $empresa = Company::where('id', Auth::user()->company_id)->first();
         $data = [
-            "endpoint" => "beta",
+            "endpoint" => $empresa->sunat_produccion ? "produccion" : "beta",
             "ruc" => $empresa->ruc,
             "usuario" => $empresa->sol_user,
             "clave" => $empresa->sol_password,
@@ -422,7 +422,7 @@ class Sunat
     public function formatJsonGuiaRemision($guia, $empresa, $cliente, $transportista, $items, $motivo = '01', $mod_traslado = '01')
     {
         $data = [
-            "endpoint" => "beta",
+            "endpoint" => $empresa->sunat_produccion ? "produccion" : "beta",
             "documento" => "remitente",
             "serie" => (string)($guia->serie ?? 'T001'),
             "numero" => (string)($guia->numero ?? '1'),

@@ -244,6 +244,14 @@ class CompanyForm
                                     ->placeholder('Client Secret (API SUNAT)')
                                     ->password()
                                     ->prefixIcon('heroicon-m-key'),
+                                Toggle::make('sunat_produccion')
+                                    ->label('Modo Producción SUNAT')
+                                    ->helperText('Activado = Producción · Desactivado = Beta')
+                                    ->onIcon('heroicon-m-check-circle')
+                                    ->offIcon('heroicon-m-beaker')
+                                    ->onColor('success')
+                                    ->offColor('warning')
+                                    ->columnSpanFull(),
                             ])->columns(2),
 
                         Section::make('Régimen y Bancos')
