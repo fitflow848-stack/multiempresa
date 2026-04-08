@@ -36,7 +36,7 @@ class ProductRepository
                 p.id AS producto_id,
                 MAX(p.tipo_impuesto) as tipo_impuesto,
                 ad.producto_linea_id AS product_linea_id,
-                MAX(ad.id) AS id,
+                MIN(ad.id) AS id,
                 CONCAT_WS(' / ', 
                     MAX(p.nombre), 
                     NULLIF(CONCAT_WS(' ', 
