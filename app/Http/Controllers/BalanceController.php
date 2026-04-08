@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exports\BalanceExport;
+use App\Helpers\AccountingHelper;
 use Illuminate\Http\Request;
 use App\Models\AlmacenIngresoDetalle;
 use App\Models\Deuda;
@@ -11,9 +12,14 @@ use App\Models\CierreCaja;
 use App\Models\Venta;
 use App\Models\OperacionCaja;
 use App\Models\Caja;
+use App\Models\Pasivo;
+use App\Models\Sucursal;
+use App\Models\TipoActivo;
+use App\Models\TipoActivoCorriente;
+use App\Models\TipoPasivo;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use Maatwebsite\Excel\Excel;
+use Maatwebsite\Excel\Facades\Excel;
 
 class BalanceController extends Controller
 {
@@ -23,12 +29,12 @@ class BalanceController extends Controller
         $sucursal_id = $request->input('sucursal_id');
 
         // Asegurar que la empresa tenga los tipos por defecto para evitar errores de visualización y permitir registros
-        \App\Helpers\AccountingHelper::ensureDefaults(auth()->user()->company_id);
+        AccountingHelper::ensureDefaults(auth()->user()->company_id);
 
         $baseData = $this->calculateData($fecha, $sucursal_id);
         $data = $this->refineData($baseData);
         $data['fecha'] = $fecha;
-        $data['sucursales'] = \App\Models\Sucursal::where('company_id', auth()->user()->company_id)->activas()->get();
+        $data['sucursales'] = Sucursal::where('company_id', auth()->user()->company_id)->activas()->get();
         $data['sucursal_id'] = $sucursal_id;
         return view('balance.index', $data);
     }
@@ -54,12 +60,12 @@ class BalanceController extends Controller
         $sucursal_id = $request->input('sucursal_id');
 
         // Asegurar valores por defecto
-        \App\Helpers\AccountingHelper::ensureDefaults(auth()->user()->company_id);
+        AccountingHelper::ensureDefaults(auth()->user()->company_id);
 
         $baseData = $this->calculateData($fecha, $sucursal_id);
         $data = $this->refineData($baseData);
         $data['fecha'] = $fecha;
-        $data['sucursales'] = \App\Models\Sucursal::where('company_id', auth()->user()->company_id)->activas()->get();
+        $data['sucursales'] = Sucursal::where('company_id', auth()->user()->company_id)->activas()->get();
         $data['sucursal_id'] = $sucursal_id;
         return view('balance.graficos', $data);
     }
@@ -216,7 +222,7 @@ class BalanceController extends Controller
         
         // APORTES FLOTANTES: Aportes que no entraron a la caja física (POS) pero son activos de la empresa
         // Esto permite que el balance cuadre sin afectar el arqueo del día.
-        $aportesFlotantesQuery = \App\Models\Pasivo::withoutGlobalScopes()
+        $aportesFlotantesQuery = Pasivo::withoutGlobalScopes()
             ->where('company_id', $user->company_id)
             ->whereHas('tipo', function($q) {
                 $q->where('nombre', 'Aporte')
@@ -256,7 +262,7 @@ class BalanceController extends Controller
         $cxc = $cxcQuery->sum(DB::raw('monto_deuda'));
 
         // ACTIVOS CORRIENTES (Desde el nuevo módulo)
-        $tiposActivosCorrientes = \App\Models\TipoActivoCorriente::withoutGlobalScopes()
+        $tiposActivosCorrientes = TipoActivoCorriente::withoutGlobalScopes()
             ->where('company_id', $user->company_id)
             ->withSum([
                 'activos' => function ($q) use ($user, $fecha, $sucursalId) {
@@ -288,7 +294,7 @@ class BalanceController extends Controller
         $total_activo_corriente = $caja + $inventario + $tiposActivosCorrientes->sum('activos_sum_monto');
 
         // 2. ACTIVO NO CORRIENTE
-        $tiposActivosNoCorrientes = \App\Models\TipoActivo::withoutGlobalScopes()
+        $tiposActivosNoCorrientes = TipoActivo::withoutGlobalScopes()
             ->where('company_id', $user->company_id)
             ->withSum([
                 'activos' => function ($q) use ($user, $fecha, $sucursalId) {
@@ -307,7 +313,7 @@ class BalanceController extends Controller
         $compras_credito_auto = 0; // Se desactiva la integración automática de Compras (Panel de Compras)
 
         // Obtener Pasivos Manuales
-        $tiposPasivosCorrientes = \App\Models\TipoPasivo::withoutGlobalScopes()
+        $tiposPasivosCorrientes = TipoPasivo::withoutGlobalScopes()
             ->where('company_id', $user->company_id)
             ->withSum([
                 'pasivos' => function ($q) use ($user, $fecha, $sucursalId) {
@@ -337,7 +343,7 @@ class BalanceController extends Controller
         }
 
         // Patrimonio: Aportes (Calculado independientemente para incluir todos, incluso los pagados)
-        $total_aportes = \App\Models\Pasivo::withoutGlobalScopes()
+        $total_aportes = Pasivo::withoutGlobalScopes()
             ->where('company_id', $user->company_id)
             ->whereHas('tipo', function($q) {
                 // Buscamos cualquier tipo que contenga "Aporte"
