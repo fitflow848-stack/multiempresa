@@ -285,15 +285,15 @@
                             <tr>
                                 <td>{{ $index + 1 }}</td>
                                 <td>{{ $lote->lote ?? 'S/N' }}</td>
-                                <td>{{ $lote->fecha_formato }}</td>
-                                <td class="{{ $lote->cantidad > 0 ? 'stock-disponible' : 'stock-cero' }}">
-                                    {{ $lote->cantidad }}
+                                <td>{{ $lote->fecha_vencimiento ? date('d/m/Y', strtotime($lote->fecha_vencimiento)) : 'S/F' }}</td>
+                                <td class="{{ $lote->unidades > 0 ? 'stock-disponible' : 'stock-cero' }}">
+                                    {{ $lote->unidades }}
                                 </td>
                                 <td>{{ $lote->empaque }}</td>
                                 <td>{{ $lote->unidades }}</td>
                                 <td>
-                                    @if ($lote->cantidad > 0)
-                                        <input type="number" class="cantidad-input" min="0" max="{{ $lote->cantidad }}" value="0"
+                                    @if ($lote->unidades > 0)
+                                        <input type="number" class="cantidad-input" min="0" max="{{ $lote->unidades }}" value="0"
                                             data-lote-id="{{ $lote->id }}" data-precio="{{ $lote->pvp }}"
                                             onchange="actualizarCantidad(this)">
                                     @else
