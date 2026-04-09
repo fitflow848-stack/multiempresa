@@ -580,7 +580,7 @@ class PosController extends Controller
                 $detalle = DB::table('almacen_ingreso_detalle')
                     ->where('id', $almacen_detalle_id)
                     ->first();
-                if ($detalle) {
+                if ($detalle && floatval($detalle->$campo) > 0) {
                     $pvpd = $detalle->$campo;
                 }
             }
@@ -589,6 +589,7 @@ class PosController extends Controller
                 $detalle = DB::table('almacen_ingreso_detalle')
                     ->where('producto_id', $producto_id)
                     ->whereNotNull($campo)
+                    ->where($campo, '>', 0)
                     ->orderBy('id', 'desc')
                     ->first();
 
