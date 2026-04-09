@@ -693,7 +693,7 @@ class AlmacenController extends Controller
                         CASE WHEN aid.cantidad < 0 THEN ABS(aid.cantidad) ELSE 0 END as salida,
                         COALESCE(aid.costo, 0) as precio_unitario,
                         u.name as usuario,
-                        p.nombre as producto_nombre,
+                        CONCAT_WS(' / ', p.nombre, NULLIF(NULLIF(TRIM(COALESCE(pl.presentacion,'')), ''), '-- Ver --'), NULLIF(NULLIF(TRIM(COALESCE(pl.concentracion,'')), ''), '-- Ver --')) as producto_nombre,
                         CAST(0 AS DECIMAL(10,2)) as saldo_linea
                     FROM almacen_ingreso_detalle aid
                     JOIN almacen_ingresos ai ON ai.id = aid.ingreso_id
@@ -716,11 +716,13 @@ class AlmacenController extends Controller
                         CAST(vd.cantidad AS DECIMAL(10,2)) as salida,
                         vd.precio_unitario,
                         u.name as usuario,
-                        p.nombre as producto_nombre,
+                        CONCAT_WS(' / ', p.nombre, NULLIF(NULLIF(TRIM(COALESCE(pl_v.presentacion,'')), ''), '-- Ver --'), NULLIF(NULLIF(TRIM(COALESCE(pl_v.concentracion,'')), ''), '-- Ver --')) as producto_nombre,
                         CAST(0 AS DECIMAL(10,2)) as saldo_linea
                     FROM venta_detalles vd
                     JOIN ventas v ON v.id_venta = vd.id_venta
                     JOIN productos p ON p.id = vd.servicio_id
+                    LEFT JOIN almacen_ingreso_detalle aid_v ON aid_v.id = vd.almacen_ingreso_detalle_id
+                    LEFT JOIN producto_lineas pl_v ON pl_v.id = aid_v.producto_linea_id
                     LEFT JOIN sucursales s ON s.id = v.sucursal
                     LEFT JOIN users u ON u.id = v.id_usuario
                     WHERE v.sucursal = :suc2 AND v.estado != 0
