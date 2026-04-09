@@ -720,30 +720,42 @@ class AlmacenController extends Controller
             // Invertir para mostrar movimientos más recientes primero
             $movimientos = array_reverse($movimientos);
             
-            // Calcular saldo acumulado por producto en modo general (después del reverse)
-            // Necesitamos calcular desde el final hacia atrás para que los saldos sean correctos
-            $saldosFinales = [];
-            
-            // Primero, calcular el saldo final de cada producto
-            foreach ($movimientos as $mov) {
-                $key = $mov->producto_nombre ?? 'N/A';
-                if (!isset($saldosFinales[$key])) {
-                    $saldosFinales[$key] = 0;
-                }
-                $saldosFinales[$key] += floatval($mov->entrada) - floatval($mov->salida);
-            }
-            
-            // Ahora, calcular saldos acumulados hacia atrás (desde el más reciente)
-            $saldosPorProducto = [];
-            foreach ($saldosFinales as $key => $saldoFinal) {
-                $saldosPorProducto[$key] = $saldoFinal;
-            }
-            
-            foreach ($movimientos as $mov) {
-                $key = $mov->producto_nombre ?? 'N/A';
-                $mov->saldo_linea = $saldosPorProducto[$key];
-                // Para el siguiente movimiento (anterior en tiempo), restar este movimiento
-                $saldosPorProducto[$key] -= floatval($mov->entrada) - floatval($mov->salida);
+            // Para kardex sin filtro, calcular saldo acumulado por producto hasta cada fecha específica
+            // Esto es lo correcto: mostrar el saldo histórico de cada producto hasta ese momento
+            foreach ($movimientos as $index => $mov) {
+                $nombreProducto = $mov->producto_nombre ?? 'N/A';
+                $fechaMovimiento = $mov->fecha;
+                
+                // Calcular saldo hasta esta fecha para este producto específico
+                $saldoHastaFecha = DB::selectOne("
+                    SELECT 
+                        COALESCE(
+                            (SELECT SUM(aid.cantidad) 
+                             FROM almacen_ingreso_detalle aid
+                             JOIN almacen_ingresos ai ON ai.id = aid.ingreso_id
+                             JOIN productos p ON p.id = aid.producto_id
+                             LEFT JOIN producto_lineas pl ON pl.id = aid.producto_linea_id
+                             WHERE CONCAT_WS(' / ', p.nombre, 
+                                NULLIF(NULLIF(TRIM(COALESCE(pl.presentacion,'')), ''), '-- Ver --'),
+                                NULLIF(NULLIF(TRIM(COALESCE(pl.concentracion,'')), ''), '-- Ver --')) = ?
+                                AND ai.sucursal_id = ?
+                                AND ai.created_at <= ?), 0) -
+                        COALESCE(
+                            (SELECT SUM(vd.cantidad) 
+                             FROM venta_detalles vd
+                             JOIN ventas v ON v.id_venta = vd.id_venta
+                             JOIN productos p ON p.id = vd.servicio_id
+                             LEFT JOIN almacen_ingreso_detalle aid_v ON aid_v.id = vd.almacen_ingreso_detalle_id
+                             LEFT JOIN producto_lineas pl_v ON pl_v.id = aid_v.producto_linea_id
+                             WHERE CONCAT_WS(' / ', p.nombre,
+                                NULLIF(NULLIF(TRIM(COALESCE(pl_v.presentacion,'')), ''), '-- Ver --'),
+                                NULLIF(NULLIF(TRIM(COALESCE(pl_v.concentracion,'')), ''), '-- Ver --')) = ?
+                                AND v.sucursal = ?
+                                AND v.estado != 0
+                                AND v.created_at <= ?), 0) as saldo_calculado
+                ", [$nombreProducto, $sucursal_id, $fechaMovimiento, $nombreProducto, $sucursal_id, $fechaMovimiento]);
+                
+                $mov->saldo_linea = max(0, floatval($saldoHastaFecha->saldo_calculado ?? 0));
             }
         }
 
