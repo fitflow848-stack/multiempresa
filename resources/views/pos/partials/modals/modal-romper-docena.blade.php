@@ -1,5 +1,5 @@
 <div id="modal-romper-docena" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2005; display: none; justify-content: center; align-items: center; backdrop-filter: blur(3px);">
-    <div style="background: white; padding: 0; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.4); width: 100%; max-width: 550px; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; overflow-y: auto; max-height: 90vh; margin: 20px;">
+    <div style="background: white; padding: 0; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.4); width: 100%; max-width: 550px; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; max-height: 90vh; margin: 20px; display: flex; flex-direction: column;">
         
         <!-- Header -->
         <div style="background: #d63384; color: white; padding: 20px; display: flex; align-items: center; gap: 12px;">
@@ -8,7 +8,7 @@
             <button onclick="cerrarModalRomperDocena()" style="margin-left: auto; background: none; border: none; color: white; cursor: pointer; font-size: 1.5rem;">&times;</button>
         </div>
 
-        <div style="padding: 25px;">
+        <div style="padding: 25px; overflow-y: auto; overflow-x: visible; flex: 1;">
             <!-- Producto Origen (Saco) -->
             <div style="background: #fff0f6; border: 1.5px solid #d63384; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
                 <div style="font-size: 0.85rem; color: #d63384; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">📍 Producto a convertir (Bulk)</div>
@@ -40,7 +40,7 @@
                 </div>
                 
                 <!-- Resultados de búsqueda rápidos -->
-                <div id="romper-resultados-container" style="margin-top: 10px; max-height: 180px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px; display: none; background: #fafafa;">
+                <div id="romper-resultados-container" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 9999; margin-top: 4px; max-height: 220px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px; display: none; background: #fafafa; box-shadow: 0 6px 20px rgba(0,0,0,0.12);">
                     <!-- Se llenará con JS -->
                 </div>
 
