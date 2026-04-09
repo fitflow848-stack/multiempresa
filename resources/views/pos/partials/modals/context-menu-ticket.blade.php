@@ -180,13 +180,15 @@
             const data = await resp.json();
 
             const pvpd = parseFloat(data.pvpd); // Ej: 0.25 (25%)
-            const maxMontoPermitido = parseFloat(data.maxAmount); // Ej: S/ 50.00
+            const maxMontoPermitido = data.maxAmount !== null && data.maxAmount !== undefined ? parseFloat(data.maxAmount) : null; // Ej: S/ 50.00
             const subtotal = (ticket[idx].cantidad || 0) * (ticket[idx].precio || 0);
 
             if (isNaN(pvpd)) return alert('Este producto no tiene descuento máximo configurado.');
 
             // 2. Pedir el monto al usuario
-            const mensajeGuia = `Máximo descuento permitido: S/ ${maxMontoPermitido.toFixed(2)}`;
+            const mensajeGuia = (maxMontoPermitido !== null && !isNaN(maxMontoPermitido))
+                ? `Máximo descuento permitido: S/ ${maxMontoPermitido.toFixed(2)}`
+                : `Máximo descuento permitido: Sin límite definido`;
             const inputUsuario = prompt(`Ingrese el monto a descontar (S/):\n${mensajeGuia}`, '0');
 
             if (inputUsuario === null) return;
@@ -199,7 +201,7 @@
             }
 
             // 3. VALIDACIÓN ESTRICTA contra el monto de la ruta
-            if (!isAdmin && montoIngresado > (maxMontoPermitido + 0.01)) {
+            if (!isAdmin && maxMontoPermitido !== null && !isNaN(maxMontoPermitido) && montoIngresado > (maxMontoPermitido + 0.01)) {
                 return alert(
                     `¡Error! El descuento máximo para este producto es de S/ ${maxMontoPermitido.toFixed(2)}. No puede aplicar S/ ${montoIngresado.toFixed(2)}`
                 );

@@ -586,15 +586,20 @@ class PosController extends Controller
             }
 
             if ($pvpd === null && $producto_id) {
-                $detalle = DB::table('almacen_ingreso_detalle')
-                    ->where('producto_id', $producto_id)
-                    ->whereNotNull($campo)
-                    ->where($campo, '>', 0)
-                    ->orderBy('id', 'desc')
+                $user = Auth::user();
+                $query = DB::table('almacen_ingreso_detalle as d')
+                    ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
+                    ->where('d.producto_id', $producto_id)
+                    ->whereNotNull("d.{$campo}")
+                    ->where("d.{$campo}", '>', 0)
+                    ->where('i.company_id', $user->company_id)
+                    ->where('d.cantidad', '>', 0)
+                    ->orderBy('d.id', 'desc')
+                    ->select("d.{$campo}")
                     ->first();
 
-                if ($detalle) {
-                    $pvpd = $detalle->$campo;
+                if ($query) {
+                    $pvpd = $query->$campo;
                 }
             }
 
@@ -605,10 +610,12 @@ class PosController extends Controller
                     // pvpd es un porcentaje decimal (ej: 0.25 = 25%)
                     $maxAmount = $cantidad * $precio * $pvpd;
                 } else {
-                    // pvpd es el precio mínimo permitido
+                    // pvpd es el precio con descuento (precio mínimo permitido)
                     $maxAmount = ($precio - $pvpd) * $cantidad;
                     if ($maxAmount < 0) {
-                        $maxAmount = 0;
+                        // Si pvcd > precio actual, el precio fue reducido después de configurar pvcd.
+                        // Retornamos null para no bloquear descuentos (sin restricción)
+                        $maxAmount = null;
                     }
                 }
             }

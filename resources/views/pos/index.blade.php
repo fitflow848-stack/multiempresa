@@ -643,9 +643,6 @@
                     almacen_detalle_id: p.id // Usar el ID de lote directo del resultado
                 };
                 agregarProductoAlTicket(prodAdd);
-                if (typeof mostrarNotificacion === 'function') {
-                    mostrarNotificacion(`✅ ${p.nombre} agregado`);
-                }
             };
 
             // Anticlic (Click derecho): Abrir menú de opciones
@@ -868,32 +865,15 @@
                 window.currentVentaId = vid;
                 window.currentVentaData = data.data;
 
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Venta Realizada!',
-                    text: 'Se ha guardado la venta correctamente.',
-                    showConfirmButton: true,
-                    confirmButtonText: '<i class="bx bx-printer"></i> Imprimir Comprobante',
-                    showCancelButton: true,
-                    cancelButtonText: 'Cerrar Ventana',
-                    confirmButtonColor: '#4361ee',
-                    cancelButtonColor: '#6c757d',
-                    allowOutsideClick: false
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        if (typeof abrirModalFormatosVenta === 'function') {
-                            abrirModalFormatosVenta(vid, data.data.total);
-                        } else {
-                            limpiarVentaCompletada();
-                            window.location.reload();
-                        }
-                    } else {
-                        // Si le da a Cerrar, simplemente limpiar y recargar (o lo que corresponda)
-                        limpiarVentaCompletada();
-                        window.location.reload();
-                    }
-                    isProcessingEmission = false;
-                });
+                // Abrir directamente el modal de formatos de impresión
+                Swal.close();
+                if (typeof abrirModalFormatosVenta === 'function') {
+                    abrirModalFormatosVenta(vid, data.data.total);
+                } else {
+                    limpiarVentaCompletada();
+                    window.location.reload();
+                }
+                isProcessingEmission = false;
             } else {
                 Swal.fire('Error', data.message, 'error');
                 isProcessingEmission = false;
