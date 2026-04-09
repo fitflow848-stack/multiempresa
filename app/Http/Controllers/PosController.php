@@ -647,8 +647,11 @@ class PosController extends Controller
             $user = Auth::user();
 
             // 1. Obtener Lote Origen
-            $loteOrigen = AlmacenIngresoDetalle::find($request->origen_lote_id);
-            if (!$loteOrigen || DB::table('almacen_ingreso_detalle')->where('producto_id', $loteOrigen->producto_id)->where('lote', $loteOrigen->lote)->sum('cantidad') < $request->cantidad_origen) {
+            $loteOrigen = AlmacenIngresoDetalle::lockForUpdate()->find($request->origen_lote_id);
+            if (!$loteOrigen) {
+                throw new \Exception('Lote origen no encontrado.');
+            }
+            if ($loteOrigen->cantidad < $request->cantidad_origen) {
                 throw new \Exception('Stock insuficiente en el producto origen o lote no encontrado.');
             }
 
@@ -685,6 +688,12 @@ class PosController extends Controller
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
+
+            // Descontar el stock real del lote origen
+            $loteOrigen->decrement('cantidad', $request->cantidad_origen);
+            if ($loteOrigen->producto) {
+                $loteOrigen->producto->decrement('cantidad', $request->cantidad_origen);
+            }
 
             // 3. Crear Ajuste de ENTRADA para el Destino (Kardex)
             $ingresoEntradaId = DB::table('almacen_ingresos')->insertGetId([
@@ -731,6 +740,12 @@ class PosController extends Controller
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
+
+            // Incrementar el stock total del producto destino
+            $productoDestino = \App\Models\Producto::find($request->destino_producto_id);
+            if ($productoDestino) {
+                $productoDestino->increment('cantidad', $cantidadAumentar);
+            }
 
             DB::commit();
             return response()->json([
