@@ -367,7 +367,7 @@
 
             // Calcular stock total
             @foreach ($lotes as $lote)
-                stockTotal += {{ $lote->cantidad }};
+                stockTotal += {{ $lote->unidades }};
             @endforeach
 
             // Calcular cantidades seleccionadas
