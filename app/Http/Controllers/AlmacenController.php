@@ -720,43 +720,80 @@ class AlmacenController extends Controller
             // Invertir para mostrar movimientos más recientes primero
             $movimientos = array_reverse($movimientos);
             
-            // Para kardex sin filtro, calcular saldo acumulado por producto hasta cada fecha específica
-            // Esto es lo correcto: mostrar el saldo histórico de cada producto hasta ese momento
-            foreach ($movimientos as $index => $mov) {
-                $nombreProducto = $mov->producto_nombre ?? 'N/A';
-                $fechaMovimiento = $mov->fecha;
-                
-                // Calcular saldo hasta esta fecha para este producto específico
-                $saldoHastaFecha = DB::selectOne("
-                    SELECT 
-                        COALESCE(
-                            (SELECT SUM(aid.cantidad) 
-                             FROM almacen_ingreso_detalle aid
-                             JOIN almacen_ingresos ai ON ai.id = aid.ingreso_id
-                             JOIN productos p ON p.id = aid.producto_id
-                             LEFT JOIN producto_lineas pl ON pl.id = aid.producto_linea_id
-                             WHERE CONCAT_WS(' / ', p.nombre, 
-                                NULLIF(NULLIF(TRIM(COALESCE(pl.presentacion,'')), ''), '-- Ver --'),
+            // Calcular saldos acumulados por producto usando la misma lógica que funciona en el filtrado
+            $saldosAcumulados = [];
+            
+            // Primero obtener todos los productos únicos y sus saldos iniciales
+            $productosUnicos = [];
+            foreach ($movimientos as $mov) {
+                $key = $mov->producto_nombre ?? 'N/A';
+                if (!isset($productosUnicos[$key])) {
+                    $productosUnicos[$key] = true;
+                    
+                    // Calcular saldo inicial para este producto (hasta fecha_desde si está definida)
+                    $saldoInicial = 0;
+                    if (!empty($fecha_desde)) {
+                        // Usar la misma consulta que funciona en el kardex filtrado pero para este producto
+                        $saldoData = DB::selectOne("
+                            SELECT 
+                                COALESCE(SUM(
+                                    CASE 
+                                        WHEN ai.observacion LIKE '[AJUSTE]%' AND aid.cantidad >= 0 THEN aid.cantidad
+                                        WHEN ai.observacion NOT LIKE '[AJUSTE]%' THEN aid.cantidad
+                                        ELSE 0
+                                    END
+                                ), 0) - 
+                                COALESCE(SUM(
+                                    CASE 
+                                        WHEN ai.observacion LIKE '[AJUSTE]%' AND aid.cantidad < 0 THEN ABS(aid.cantidad)
+                                        ELSE 0
+                                    END
+                                ), 0) - 
+                                COALESCE((
+                                    SELECT SUM(vd.cantidad) 
+                                    FROM venta_detalles vd 
+                                    JOIN ventas v ON v.id_venta = vd.id_venta 
+                                    JOIN productos p ON p.id = vd.servicio_id
+                                    LEFT JOIN almacen_ingreso_detalle aid_v ON aid_v.id = vd.almacen_ingreso_detalle_id
+                                    LEFT JOIN producto_lineas pl_v ON pl_v.id = aid_v.producto_linea_id
+                                    WHERE v.sucursal = ? 
+                                    AND v.estado != 0 
+                                    AND v.created_at < ?
+                                    AND CONCAT_WS(' / ', p.nombre, 
+                                        NULLIF(NULLIF(TRIM(COALESCE(pl_v.presentacion,'')), ''), '-- Ver --'), 
+                                        NULLIF(NULLIF(TRIM(COALESCE(pl_v.concentracion,'')), ''), '-- Ver --')) = ?
+                                ), 0) as saldo_inicial
+                            FROM almacen_ingreso_detalle aid
+                            JOIN almacen_ingresos ai ON ai.id = aid.ingreso_id
+                            JOIN productos p ON p.id = aid.producto_id
+                            LEFT JOIN producto_lineas pl ON pl.id = aid.producto_linea_id
+                            WHERE ai.sucursal_id = ? 
+                            AND ai.created_at < ?
+                            AND CONCAT_WS(' / ', p.nombre, 
+                                NULLIF(NULLIF(TRIM(COALESCE(pl.presentacion,'')), ''), '-- Ver --'), 
                                 NULLIF(NULLIF(TRIM(COALESCE(pl.concentracion,'')), ''), '-- Ver --')) = ?
-                                AND ai.sucursal_id = ?
-                                AND ai.created_at <= ?), 0) -
-                        COALESCE(
-                            (SELECT SUM(vd.cantidad) 
-                             FROM venta_detalles vd
-                             JOIN ventas v ON v.id_venta = vd.id_venta
-                             JOIN productos p ON p.id = vd.servicio_id
-                             LEFT JOIN almacen_ingreso_detalle aid_v ON aid_v.id = vd.almacen_ingreso_detalle_id
-                             LEFT JOIN producto_lineas pl_v ON pl_v.id = aid_v.producto_linea_id
-                             WHERE CONCAT_WS(' / ', p.nombre,
-                                NULLIF(NULLIF(TRIM(COALESCE(pl_v.presentacion,'')), ''), '-- Ver --'),
-                                NULLIF(NULLIF(TRIM(COALESCE(pl_v.concentracion,'')), ''), '-- Ver --')) = ?
-                                AND v.sucursal = ?
-                                AND v.estado != 0
-                                AND v.created_at <= ?), 0) as saldo_calculado
-                ", [$nombreProducto, $sucursal_id, $fechaMovimiento, $nombreProducto, $sucursal_id, $fechaMovimiento]);
-                
-                $mov->saldo_linea = max(0, floatval($saldoHastaFecha->saldo_calculado ?? 0));
+                        ", [$sucursal_id, $fecha_desde, $key, $sucursal_id, $fecha_desde, $key]);
+                        
+                        $saldoInicial = floatval($saldoData->saldo_inicial ?? 0);
+                    }
+                    
+                    $saldosAcumulados[$key] = $saldoInicial;
+                }
             }
+            
+            // Procesar movimientos en orden cronológico (del más antiguo al más reciente) 
+            // pero mantener el array invertido para mostrar
+            $movimientosOrdenados = array_reverse($movimientos);
+            
+            foreach ($movimientosOrdenados as &$mov) {
+                $key = $mov->producto_nombre ?? 'N/A';
+                $saldosAcumulados[$key] += (floatval($mov->entrada) - floatval($mov->salida));
+                $mov->saldo_linea = $saldosAcumulados[$key];
+            }
+            unset($mov);
+            
+            // Los movimientos ya están en orden inverso (más recientes primero)
+            $movimientos = array_reverse($movimientosOrdenados);
         }
 
         return view('almacen.kardex', compact('movimientos', 'producto', 'user', 'company', 'sucursales', 'sucursal_id', 'fecha_desde', 'fecha_hasta', 'linea_id'));
