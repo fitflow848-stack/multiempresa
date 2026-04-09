@@ -654,7 +654,7 @@ class PosController extends Controller
             DB::beginTransaction();
             $user = Auth::user();
 
-            // 1. Obtener Lote Origen: buscar el más antiguo con stock >= cantidad_origen (FIFO)
+            // 1. Obtener el lote más antiguo con stock disponible (FIFO)
             $loteOrigen = AlmacenIngresoDetalle::lockForUpdate()
                 ->whereHas('ingreso', function($q) use ($user) {
                     $q->where('company_id', $user->company_id);
@@ -663,12 +663,26 @@ class PosController extends Controller
                     }
                 })
                 ->where('producto_id', $request->origen_producto_id)
-                ->where('cantidad', '>=', $request->cantidad_origen)
+                ->where('cantidad', '>', 0)
                 ->orderBy('id', 'asc')
                 ->first();
 
             if (!$loteOrigen) {
                 throw new \Exception('Stock insuficiente en el producto origen o lote no encontrado.');
+            }
+
+            // Validar stock total disponible del producto
+            $stockTotal = AlmacenIngresoDetalle::whereHas('ingreso', function($q) use ($user) {
+                    $q->where('company_id', $user->company_id);
+                    if ($user->branch_id) {
+                        $q->where('sucursal_id', $user->branch_id);
+                    }
+                })
+                ->where('producto_id', $request->origen_producto_id)
+                ->sum('cantidad');
+
+            if ($stockTotal < $request->cantidad_origen) {
+                throw new \Exception("Stock insuficiente. Disponible: {$stockTotal}, requerido: {$request->cantidad_origen}.");
             }
 
             $cantidadAumentar = $request->cantidad_origen * $request->factor;
