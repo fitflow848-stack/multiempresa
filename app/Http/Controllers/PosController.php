@@ -654,12 +654,20 @@ class PosController extends Controller
             DB::beginTransaction();
             $user = Auth::user();
 
-            // 1. Obtener Lote Origen
-            $loteOrigen = AlmacenIngresoDetalle::lockForUpdate()->find($request->origen_lote_id);
+            // 1. Obtener Lote Origen: buscar el más antiguo con stock >= cantidad_origen (FIFO)
+            $loteOrigen = AlmacenIngresoDetalle::lockForUpdate()
+                ->whereHas('ingreso', function($q) use ($user) {
+                    $q->where('company_id', $user->company_id);
+                    if ($user->branch_id) {
+                        $q->where('sucursal_id', $user->branch_id);
+                    }
+                })
+                ->where('producto_id', $request->origen_producto_id)
+                ->where('cantidad', '>=', $request->cantidad_origen)
+                ->orderBy('id', 'asc')
+                ->first();
+
             if (!$loteOrigen) {
-                throw new \Exception('Lote origen no encontrado.');
-            }
-            if ($loteOrigen->cantidad < $request->cantidad_origen) {
                 throw new \Exception('Stock insuficiente en el producto origen o lote no encontrado.');
             }
 
