@@ -112,7 +112,7 @@
                                             {{ floatval($mov->salida) > 0 ? number_format($mov->salida, 2) : '-' }}
                                         </td>
                                         <td class="text-right font-weight-bold bg-light">
-                                            {{ $producto ? number_format($mov->saldo_linea, 2) : '-' }}
+                                            {{ isset($mov->saldo_linea) ? number_format($mov->saldo_linea, 2) : '-' }}
                                         </td>
                                     </tr>
                                 @empty

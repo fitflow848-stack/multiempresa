@@ -728,12 +728,24 @@ class AlmacenController extends Controller
                     WHERE v.sucursal = :suc2 AND v.estado != 0
                     {$dateFilterV}
                 ) as historial
-                ORDER BY fecha DESC
+                ORDER BY fecha ASC
                 LIMIT 100
             ", [
                 'suc1' => $sucursal_id,
                 'suc2' => $sucursal_id
             ]);
+
+            // Calcular saldo acumulado por producto en modo general
+            $saldosPorProducto = [];
+            foreach ($movimientos as $mov) {
+                $key = $mov->producto_nombre ?? 'N/A';
+                if (!isset($saldosPorProducto[$key])) {
+                    $saldosPorProducto[$key] = 0;
+                }
+                $saldosPorProducto[$key] += floatval($mov->entrada) - floatval($mov->salida);
+                $mov->saldo_linea = $saldosPorProducto[$key];
+            }
+            $movimientos = array_reverse($movimientos);
         }
 
         return view('almacen.kardex', compact('movimientos', 'producto', 'user', 'company', 'sucursales', 'sucursal_id', 'fecha_desde', 'fecha_hasta', 'linea_id'));
