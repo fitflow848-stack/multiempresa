@@ -627,11 +627,18 @@ class AlmacenController extends Controller
                     'prod_id3' => $productoId, 'suc3' => $sucursal_id, 'line3_check' => $linea_id ? 1 : 0, 'line3_id' => $linea_id
                 ]);
 
-                // Calcular saldos acumulados (necesario si queremos mostrar en DESC pero con balances correctos)
+                // Calcular saldos acumulados desde el inicio (saldo inicial + movimientos en rango)
                 $saldoAcumulado = $saldoInicial;
-                
-                // Si el saldo inicial es distinto de cero o no hay movimientos en el rango, 
-                // podemos añadir una fila virtual de "Saldo Anterior" para claridad
+                foreach ($movimientos as &$mov) {
+                    $saldoAcumulado += (floatval($mov->entrada) - floatval($mov->salida));
+                    $mov->saldo_linea = $saldoAcumulado;
+                }
+                unset($mov);
+
+                // Invertir para mostrar el más reciente arriba
+                $movimientos = array_reverse($movimientos);
+
+                // Añadir fila de saldo anterior al final (aparece al inicio tras el reverse)
                 if ($saldoInicial != 0) {
                     $virtualSaldo = new \stdClass();
                     $virtualSaldo->fecha = Carbon::parse($fecha_desde)->startOfDay();
@@ -640,31 +647,6 @@ class AlmacenController extends Controller
                     $virtualSaldo->detalle = 'Saldo acumulado antes del ' . Carbon::parse($fecha_desde)->format('d/m/Y');
                     $virtualSaldo->entrada = $saldoInicial > 0 ? $saldoInicial : 0;
                     $virtualSaldo->salida = $saldoInicial < 0 ? abs($saldoInicial) : 0;
-                    $virtualSaldo->precio_unitario = 0;
-                    $virtualSaldo->usuario = '-';
-                    $virtualSaldo->saldo_linea = $saldoInicial;
-                    
-                    // No lo añadimos al array todavía para que el loop de abajo funcione correctamente
-                    // Pero guardamos la referencia si queremos mostrarlo al final/inicio
-                }
-
-                foreach ($movimientos as $mov) {
-                    $saldoAcumulado += (floatval($mov->entrada) - floatval($mov->salida));
-                    $mov->saldo_linea = $saldoAcumulado;
-                }
-
-                // Invertir para mostrar el más reciente arriba (fecha antigua abajo)
-                $movimientos = array_reverse($movimientos);
-                
-                // Añadir el saldo anterior al final (que será el inicio tras el reverse)
-                if ($saldoInicial != 0) {
-                    $virtualSaldo = new \stdClass();
-                    $virtualSaldo->fecha = Carbon::parse($fecha_desde)->startOfDay();
-                    $virtualSaldo->tipo = 'SALDO ANTERIOR';
-                    $virtualSaldo->sucursal = '-';
-                    $virtualSaldo->detalle = 'Saldo acumulado antes del ' . Carbon::parse($fecha_desde)->format('d/m/Y');
-                    $virtualSaldo->entrada = 0;
-                    $virtualSaldo->salida = 0;
                     $virtualSaldo->precio_unitario = 0;
                     $virtualSaldo->usuario = '-';
                     $virtualSaldo->saldo_linea = $saldoInicial;
