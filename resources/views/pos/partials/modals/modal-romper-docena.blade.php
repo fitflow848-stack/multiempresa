@@ -31,16 +31,16 @@
             <hr style="border: 0; border-top: 2px dashed #dee2e6; margin: 25px 0;">
 
             <!-- Producto Destino (Kilos) -->
-            <div style="margin-bottom: 20px;">
+            <div style="margin-bottom: 20px; position: relative;">
                 <label style="display: block; font-weight: 700; margin-bottom: 8px; color: #495057;">Destino: Escoger producto para pasar stock</label>
-                <div style="position: relative;">
-                    <i class='bx bx-search' style="position: absolute; left: 12px; top: 14px; color: #6c757d; font-size: 1.3rem;"></i>
+                <div>
+                    <i class='bx bx-search' style="position: absolute; left: 12px; top: 40px; color: #6c757d; font-size: 1.3rem; z-index: 1;"></i>
                     <input type="text" id="romper-search-target" placeholder="Buscar producto similar (ej. Kg, Suelto)..." 
                         style="width: 100%; padding: 12px 12px 12px 40px; border: 2px solid #ced4da; border-radius: 8px; font-size: 1rem;">
                 </div>
                 
                 <!-- Resultados de búsqueda rápidos -->
-                <div id="romper-resultados-container" style="position: absolute; top: 100%; left: 0; right: 0; z-index: 9999; margin-top: 4px; max-height: 220px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px; display: none; background: #fafafa; box-shadow: 0 6px 20px rgba(0,0,0,0.12);">
+                <div id="romper-resultados-container" style="position: absolute; left: 0; right: 0; z-index: 9999; margin-top: 2px; max-height: 220px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px; display: none; background: #fafafa; box-shadow: 0 6px 20px rgba(0,0,0,0.12);">
                     <!-- Se llenará con JS -->
                 </div>
 

@@ -46,13 +46,22 @@
         }
     });
 
+    document.getElementById('romper-search-target').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(typingTimer);
+            const query = this.value.trim();
+            if (query.length > 0) buscarProductoTargetRomper(query);
+        }
+    });
+
     async function buscarProductoTargetRomper(query) {
         const container = document.getElementById('romper-resultados-container');
         container.innerHTML = '<div style="padding: 10px; color: #666; font-size: 0.9rem;"><i class="bx bx-loader-alt bx-spin"></i> Buscando...</div>';
         container.style.display = 'block';
 
         try {
-            const resp = await fetch(`/pos/buscar-productos?q=${encodeURIComponent(query)}&include_empty=1`);
+            const resp = await fetch(`{{ route('pos.buscar') }}?q=${encodeURIComponent(query)}&include_empty=1`);
             const productos = await resp.json();
 
             container.innerHTML = '';
