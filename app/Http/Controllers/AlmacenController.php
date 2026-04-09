@@ -717,17 +717,34 @@ class AlmacenController extends Controller
                 'suc2' => $sucursal_id
             ]);
 
-            // Calcular saldo acumulado por producto en modo general
-            $saldosPorProducto = [];
+            // Invertir para mostrar movimientos más recientes primero
+            $movimientos = array_reverse($movimientos);
+            
+            // Calcular saldo acumulado por producto en modo general (después del reverse)
+            // Necesitamos calcular desde el final hacia atrás para que los saldos sean correctos
+            $saldosFinales = [];
+            
+            // Primero, calcular el saldo final de cada producto
             foreach ($movimientos as $mov) {
                 $key = $mov->producto_nombre ?? 'N/A';
-                if (!isset($saldosPorProducto[$key])) {
-                    $saldosPorProducto[$key] = 0;
+                if (!isset($saldosFinales[$key])) {
+                    $saldosFinales[$key] = 0;
                 }
-                $saldosPorProducto[$key] += floatval($mov->entrada) - floatval($mov->salida);
-                $mov->saldo_linea = $saldosPorProducto[$key];
+                $saldosFinales[$key] += floatval($mov->entrada) - floatval($mov->salida);
             }
-            $movimientos = array_reverse($movimientos);
+            
+            // Ahora, calcular saldos acumulados hacia atrás (desde el más reciente)
+            $saldosPorProducto = [];
+            foreach ($saldosFinales as $key => $saldoFinal) {
+                $saldosPorProducto[$key] = $saldoFinal;
+            }
+            
+            foreach ($movimientos as $mov) {
+                $key = $mov->producto_nombre ?? 'N/A';
+                $mov->saldo_linea = $saldosPorProducto[$key];
+                // Para el siguiente movimiento (anterior en tiempo), restar este movimiento
+                $saldosPorProducto[$key] -= floatval($mov->entrada) - floatval($mov->salida);
+            }
         }
 
         return view('almacen.kardex', compact('movimientos', 'producto', 'user', 'company', 'sucursales', 'sucursal_id', 'fecha_desde', 'fecha_hasta', 'linea_id'));
