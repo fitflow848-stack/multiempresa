@@ -98,11 +98,11 @@
             <img src="{{ $logo }}" style="max-width: 150px; height: auto;">
         @endif
 
-        <div class="bold empresa-nombre">{{ $empresa->nombre }}</div>
+        <div class="bold empresa-nombre">{{ $empresa->razon_social ?? $empresa->nombre ?? '' }}</div>
         <div class="small">
             RUC: {{ $empresa->ruc ?? '20538381978' }}<br>
-            {{ $empresa->direccion }}<br>
-            {{ $empresa->telefono }}
+            {{ isset($venta) && $venta->sucursal_ref && $venta->sucursal_ref->direccion ? $venta->sucursal_ref->direccion : $empresa->direccion }}<br>
+            Cel/Tel: {{ isset($venta) && $venta->sucursal_ref && $venta->sucursal_ref->telefono ? $venta->sucursal_ref->telefono : $empresa->telefono }}
         </div>
 
         <div class="documento-caja bold">

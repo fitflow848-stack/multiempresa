@@ -293,7 +293,6 @@ class CompanyForm
                                     ->tabs([
                                         Tab::make('Datos Básicos')
                                             ->icon('heroicon-o-building-office')
-                                            ->disabled($isNotSuperAdmin)
                                             ->schema([
                                                 TextInput::make('nombre')
                                                     ->required()
@@ -315,7 +314,8 @@ class CompanyForm
                                                     ->helperText('Si no se sube, usará el logo de la empresa'),
                                                 Toggle::make('is_active')
                                                     ->label('Sucursal Activa')
-                                                    ->default(true),
+                                                    ->default(true)
+                                                    ->disabled($isNotSuperAdmin),
                                             ])
                                             ->columns(2),
 

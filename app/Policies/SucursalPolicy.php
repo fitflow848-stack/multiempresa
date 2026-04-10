@@ -48,10 +48,12 @@ class SucursalPolicy
 
     /**
      * Solo el super_admin puede editar sucursales (gestionadas por before()).
+     * Excepto admin_empresa para sucursales de su propia empresa.
      */
     public function update(User $user, Sucursal $sucursal): bool
     {
-        return false; // Solo super_admin via before()
+        return $user->isAdminEmpresa()
+            && (int)$user->attributes['company_id'] === (int)$sucursal->company_id;
     }
 
     /**

@@ -135,10 +135,14 @@
             <div class="company-sub">{{ $empresa->descripcion }}</div>
         @endif
         @if ($empresa && $empresa->direccion)
-            <div>{{ $empresa->direccion }}</div>
+            <div>{{ isset($deuda) && $deuda->venta && $deuda->venta->sucursal_ref && $deuda->venta->sucursal_ref->direccion ? $deuda->venta->sucursal_ref->direccion : $empresa->direccion }}</div>
         @endif
-        @if ($empresa && ($empresa->telefono || $empresa->celular))
-            <div>Telf.: {{ implode(' – ', array_filter([$empresa->telefono ?? null, $empresa->celular ?? null])) }}</div>
+        @php
+            $telefonoSucursal = isset($deuda) && $deuda->venta && $deuda->venta->sucursal_ref && $deuda->venta->sucursal_ref->telefono ? $deuda->venta->sucursal_ref->telefono : ($empresa->telefono ?? null);
+            $telefonos = array_filter([$telefonoSucursal, $empresa->celular ?? null]);
+        @endphp
+        @if (!empty($telefonos))
+            <div>Telf.: {{ implode(' – ', $telefonos) }}</div>
         @endif
     </div>
 
