@@ -229,13 +229,16 @@
 
     {{-- PIE --}}
     <div class="footer">
-        @if ($empresa && $empresa->bank)
+        @if ($empresa && ($empresa->account_number || $empresa->bank))
             <div style="margin-bottom: 10px; text-align: left; border: 1px dashed #000; padding: 4px;">
                 <div style="font-weight: bold; text-align: center; margin-bottom: 2px;">CUENTAS BANCARIAS</div>
-                {{ $empresa->bank }} ({{ $empresa->account_type == 'corriente' ? 'Cta. Corriente' : 'Cta. Ahorros' }}):<br>
-                {{ $empresa->account_number }}
+                @if($empresa->bank) <strong>Banco:</strong> {{ $empresa->bank }}<br> @endif
+                @if($empresa->account_number)
+                    <strong>{{ $empresa->account_type == 'corriente' ? 'Cta. Corriente' : 'Cta. Ahorros' }}:</strong><br>
+                    {{ $empresa->account_number }}
+                @endif
                 @if($empresa->cci)
-                    <br>CCI: {{ $empresa->cci }}
+                    <br><strong>CCI:</strong> {{ $empresa->cci }}
                 @endif
             </div>
         @endif

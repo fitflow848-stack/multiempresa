@@ -99,12 +99,13 @@
         SALDO PENDIENTE: S/ {{ number_format($pasivo->saldo, 2) }}
     </div>
 
-    @if($company->bank)
+    @if($company->account_number || $company->bank)
     <div class="divider"></div>
     <div style="font-size: 10px;">
         <strong>DEPÓSITOS A:</strong><br>
-        {{ $company->bank }} ({{ $company->account_type == 'corriente' ? 'Cta. Corr.' : 'Cta. Aho.' }})<br>
-        Cta: {{ $company->account_number }}
+        @if($company->bank) {{ $company->bank }} @endif
+        @if($company->account_type) ({{ $company->account_type == 'corriente' ? 'Cta. Corr.' : 'Cta. Aho.' }}) @endif
+        @if($company->account_number) <br>Cta: {{ $company->account_number }} @endif
         @if($company->cci)
             <br>CCI: {{ $company->cci }}
         @endif

@@ -240,11 +240,13 @@
 
     <div class="hr"></div>
 
-    @if($empresa->bank)
+    @if($empresa->account_number || $empresa->bank)
     <div class="center small" style="border: 1px solid #000; padding: 4px; margin-bottom: 5px;">
         <div class="bold">CUENTAS BANCARIAS</div>
-        {{ $empresa->bank }} ({{ $empresa->account_type == 'corriente' ? 'Cta. Corr.' : 'Cta. Aho.' }})<br>
-        {{ $empresa->account_number }}
+        @if($empresa->bank) {{ $empresa->bank }} @endif
+        @if($empresa->account_type) ({{ $empresa->account_type == 'corriente' ? 'Cta. Corr.' : 'Cta. Aho.' }}) @endif
+        <br>
+        <strong>Cta: {{ $empresa->account_number }}</strong>
         @if($empresa->cci)
             <br>CCI: {{ $empresa->cci }}
         @endif
