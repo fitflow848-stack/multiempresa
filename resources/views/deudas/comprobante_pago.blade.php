@@ -138,7 +138,7 @@
             <div>{{ isset($deuda) && $deuda->venta && $deuda->venta->sucursal_ref && $deuda->venta->sucursal_ref->direccion ? $deuda->venta->sucursal_ref->direccion : $empresa->direccion }}</div>
         @endif
         @php
-            $telefonoSucursal = isset($deuda) && $deuda->venta && $deuda->venta->sucursal_ref && $deuda->venta->sucursal_ref->telefono ? $deuda->venta->sucursal_ref->telefono : ($empresa->telefono ?? null);
+            $telefonoSucursal = isset($deuda) && $deuda->venta && $deuda->venta->sucursal_ref && $deuda->venta->sucursal_ref->telefono ? $deuda->venta->sucursal_ref->telefono : ($empresa->phone ?? null);
             $telefonos = array_filter([$telefonoSucursal, $empresa->celular ?? null]);
         @endphp
         @if (!empty($telefonos))

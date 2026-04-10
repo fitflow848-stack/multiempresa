@@ -131,8 +131,9 @@
             <tr>
                 <td style="width: 20%;"><img src="{{ $logo }}" style="width: 120px;"></td>
                 <td style="width: 45%; text-align: center; padding-top: 10px;">
-                    <strong style="font-size: 11px;">{{ $empresa->nombre_comercial }}</strong><br>
-                    {{ $empresa->direccion_fiscal }}<br>
+                    <strong style="font-size: 11px;">{{ $empresa->razon_social }}</strong><br>
+                    {{ ($venta->sucursal_ref && $venta->sucursal_ref->direccion) ? $venta->sucursal_ref->direccion : $empresa->direccion_fiscal }}<br>
+                    Tel/Cel: {{ ($venta->sucursal_ref && $venta->sucursal_ref->telefono) ? $venta->sucursal_ref->telefono : ($empresa->phone ?? '-') }}<br>
                     {{ $empresa->email }}
                 </td>
                 <td style="width: 35%;" align="right">

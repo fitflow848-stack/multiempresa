@@ -8,7 +8,7 @@
         <h3>{{ $company->razon_social }}</h3>
         <p class="mb-1">RUC: {{ $company->ruc }}</p>
         <p class="mb-1">{{ isset($venta) && $venta->sucursal_ref && $venta->sucursal_ref->direccion ? $venta->sucursal_ref->direccion : $company->direccion }}</p>
-        <p class="mb-0">Tel: {{ isset($venta) && $venta->sucursal_ref && $venta->sucursal_ref->telefono ? $venta->sucursal_ref->telefono : $company->telefono }}</p>
+        <p class="mb-0">Tel: {{ isset($venta) && $venta->sucursal_ref && $venta->sucursal_ref->telefono ? $venta->sucursal_ref->telefono : ($company->phone ?? '-') }}</p>
     </div>
 
     <hr>

@@ -52,9 +52,10 @@
 
 <body>
     <div class="header">
-        <strong>{{ $company->nombre_comercial ?? 'WOLVIX' }}</strong><br>
+        <strong>{{ $company->razon_social }}</strong><br>
         RUC: {{ $company->ruc ?? '-' }}<br>
-        {{ $company->direccion_fiscal ?? '' }}
+        {{ ($pago->pasivo->sucursal && $pago->pasivo->sucursal->direccion) ? $pago->pasivo->sucursal->direccion : $company->direccion_fiscal }}<br>
+        Tel: {{ ($pago->pasivo->sucursal && $pago->pasivo->sucursal->telefono) ? $pago->pasivo->sucursal->telefono : ($company->phone ?? '-') }}
     </div>
 
     <div class="center">

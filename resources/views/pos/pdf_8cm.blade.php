@@ -102,7 +102,7 @@
         <div class="small">
             RUC: {{ $empresa->ruc ?? '20538381978' }}<br>
             {{ isset($venta) && $venta->sucursal_ref && $venta->sucursal_ref->direccion ? $venta->sucursal_ref->direccion : $empresa->direccion }}<br>
-            Cel/Tel: {{ isset($venta) && $venta->sucursal_ref && $venta->sucursal_ref->telefono ? $venta->sucursal_ref->telefono : $empresa->telefono }}
+            Cel/Tel: {{ isset($venta) && $venta->sucursal_ref && $venta->sucursal_ref->telefono ? $venta->sucursal_ref->telefono : ($empresa->phone ?? '-') }}
         </div>
 
         <div class="documento-caja bold">
