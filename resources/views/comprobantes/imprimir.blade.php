@@ -7,8 +7,8 @@
     <div class="company-header text-center mb-3">
         <h3>{{ $company->razon_social }}</h3>
         <p class="mb-1">RUC: {{ $company->ruc }}</p>
-        <p class="mb-1">{{ $company->direccion }}</p>
-        <p class="mb-0">Tel: {{ $company->telefono }}</p>
+        <p class="mb-1">{{ isset($venta) && $venta->sucursal_ref && $venta->sucursal_ref->direccion ? $venta->sucursal_ref->direccion : $company->direccion }}</p>
+        <p class="mb-0">Tel: {{ isset($venta) && $venta->sucursal_ref && $venta->sucursal_ref->telefono ? $venta->sucursal_ref->telefono : ($company->phone ?? '-') }}</p>
     </div>
 
     <hr>
@@ -93,6 +93,20 @@
     @endif
 
     <div class="footer text-center mt-4">
+        @if($company->account_number || $company->bank)
+        <div class="bank-accounts mb-3 p-3 border rounded text-start d-inline-block" style="min-width: 300px; background-color: #f8f9fa;">
+            <h6 class="mb-2 border-bottom pb-1"><strong>CUENTAS BANCARIAS</strong></h6>
+            @if($company->bank) <p class="mb-1"><strong>Banco:</strong> {{ $company->bank }}</p> @endif
+            @if($company->account_number)
+                <p class="mb-1"><strong>{{ $company->account_type == 'corriente' ? 'Cta. Corriente' : 'Cta. Ahorros' }}:</strong> {{ $company->account_number }}</p>
+            @endif
+            @if($company->cci)
+            <p class="mb-0"><strong>CCI:</strong> {{ $company->cci }}</p>
+            @endif
+        </div>
+        <br>
+        @endif
+
         <p class="mb-1">Estado: 
             <span class="badge bg-{{ $venta->pagado ? 'success' : 'warning' }}">
                 {{ $venta->pagado ? 'PAGADO' : 'PENDIENTE' }}

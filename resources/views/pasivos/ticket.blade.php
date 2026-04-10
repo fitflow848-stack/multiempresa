@@ -52,9 +52,10 @@
 
 <body>
     <div class="header">
-        <strong>{{ $company->nombre_comercial ?? 'WOLVIX' }}</strong><br>
+        <strong>{{ $company->razon_social }}</strong><br>
         RUC: {{ $company->ruc ?? '-' }}<br>
-        {{ $company->direccion_fiscal ?? '' }}
+        {{ ($pago->pasivo->sucursal && $pago->pasivo->sucursal->direccion) ? $pago->pasivo->sucursal->direccion : $company->direccion_fiscal }}<br>
+        Tel: {{ ($pago->pasivo->sucursal && $pago->pasivo->sucursal->telefono) ? $pago->pasivo->sucursal->telefono : ($company->phone ?? '-') }}
     </div>
 
     <div class="center">
@@ -86,6 +87,19 @@
     <div>
         <strong>Saldo Pendiente:</strong> S/ {{ number_format($pago->pasivo->saldo, 2) }}
     </div>
+
+    @if($company->account_number || $company->bank)
+    <div class="divider"></div>
+    <div style="font-size: 10px;">
+        <strong>DEPÓSITOS:</strong><br>
+        @if($company->bank) {{ $company->bank }} @endif
+        @if($company->account_type) ({{ $company->account_type == 'corriente' ? 'Cta. Corr.' : 'Cta. Aho.' }}) @endif
+        @if($company->account_number) <br>Cta: {{ $company->account_number }} @endif
+        @if($company->cci)
+            <br>CCI: {{ $company->cci }}
+        @endif
+    </div>
+    @endif
 
     <div class="footer">
         *** Gracias por su preferencia ***<br>

@@ -135,10 +135,14 @@
             <div class="company-sub">{{ $empresa->descripcion }}</div>
         @endif
         @if ($empresa && $empresa->direccion)
-            <div>{{ $empresa->direccion }}</div>
+            <div>{{ isset($deuda) && $deuda->venta && $deuda->venta->sucursal_ref && $deuda->venta->sucursal_ref->direccion ? $deuda->venta->sucursal_ref->direccion : $empresa->direccion }}</div>
         @endif
-        @if ($empresa && ($empresa->telefono || $empresa->celular))
-            <div>Telf.: {{ implode(' – ', array_filter([$empresa->telefono ?? null, $empresa->celular ?? null])) }}</div>
+        @php
+            $telefonoSucursal = isset($deuda) && $deuda->venta && $deuda->venta->sucursal_ref && $deuda->venta->sucursal_ref->telefono ? $deuda->venta->sucursal_ref->telefono : ($empresa->phone ?? null);
+            $telefonos = array_filter([$telefonoSucursal, $empresa->celular ?? null]);
+        @endphp
+        @if (!empty($telefonos))
+            <div>Telf.: {{ implode(' – ', $telefonos) }}</div>
         @endif
     </div>
 
@@ -225,6 +229,19 @@
 
     {{-- PIE --}}
     <div class="footer">
+        @if ($empresa && ($empresa->account_number || $empresa->bank))
+            <div style="margin-bottom: 10px; text-align: left; border: 1px dashed #000; padding: 4px;">
+                <div style="font-weight: bold; text-align: center; margin-bottom: 2px;">CUENTAS BANCARIAS</div>
+                @if($empresa->bank) <strong>Banco:</strong> {{ $empresa->bank }}<br> @endif
+                @if($empresa->account_number)
+                    <strong>{{ $empresa->account_type == 'corriente' ? 'Cta. Corriente' : 'Cta. Ahorros' }}:</strong><br>
+                    {{ $empresa->account_number }}
+                @endif
+                @if($empresa->cci)
+                    <br><strong>CCI:</strong> {{ $empresa->cci }}
+                @endif
+            </div>
+        @endif
         @if ($empresa && $empresa->ticket_footer_message)
             <p style="margin-bottom: 8px;"><strong>{{ $empresa->ticket_footer_message }}</strong></p>
         @endif

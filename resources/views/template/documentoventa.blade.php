@@ -131,8 +131,9 @@
             <tr>
                 <td style="width: 20%;"><img src="{{ $logo }}" style="width: 120px;"></td>
                 <td style="width: 45%; text-align: center; padding-top: 10px;">
-                    <strong style="font-size: 11px;">{{ $empresa->nombre_comercial }}</strong><br>
-                    {{ $empresa->direccion_fiscal }}<br>
+                    <strong style="font-size: 11px;">{{ $empresa->razon_social }}</strong><br>
+                    {{ ($venta->sucursal_ref && $venta->sucursal_ref->direccion) ? $venta->sucursal_ref->direccion : $empresa->direccion_fiscal }}<br>
+                    Tel/Cel: {{ ($venta->sucursal_ref && $venta->sucursal_ref->telefono) ? $venta->sucursal_ref->telefono : ($empresa->phone ?? '-') }}<br>
                     {{ $empresa->email }}
                 </td>
                 <td style="width: 35%;" align="right">
@@ -212,6 +213,18 @@
 
         <div class="bottom-section">
             <div style="float: left; width: 60%;">
+                @if($empresa->account_number || $empresa->bank)
+                <div style="margin-bottom: 10px; padding: 5px; border: 0.5px solid #ccc; font-size: 8px;">
+                    <strong style="color: #006BB6;">CUENTAS BANCARIAS:</strong><br>
+                    @if($empresa->bank) <strong>Banco:</strong> {{ $empresa->bank }} @endif
+                    @if($empresa->account_number)
+                        | <strong>{{ $empresa->account_type == 'corriente' ? 'Cta. Corriente' : 'Cta. Ahorros' }}:</strong> {{ $empresa->account_number }}
+                    @endif
+                    @if($empresa->cci)
+                        | <strong>CCI:</strong> {{ $empresa->cci }}
+                    @endif
+                </div>
+                @endif
                 <strong>SON:</strong> {{ numeroALetras($venta->total) }}<br><br>
                 <strong>Información Adicional:</strong><br>
                 {{ $observaciones ?? 'Sin observaciones' }}

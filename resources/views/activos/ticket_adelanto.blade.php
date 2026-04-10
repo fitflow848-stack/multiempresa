@@ -63,9 +63,10 @@
 
 <body>
     <div class="header">
-        <strong>{{ $company->nombre_comercial ?? 'WOLVIX' }}</strong><br>
+        <strong>{{ $company->razon_social }}</strong><br>
         RUC: {{ $company->ruc ?? '-' }}<br>
-        {{ $company->direccion_fiscal ?? '' }}
+        {{ ($activo->sucursal && $activo->sucursal->direccion) ? $activo->sucursal->direccion : $company->direccion_fiscal }}<br>
+        Tel: {{ ($activo->sucursal && $activo->sucursal->telefono) ? $activo->sucursal->telefono : ($company->phone ?? '-') }}
     </div>
 
     <div class="center">
@@ -97,6 +98,19 @@
         <div class="divider"></div>
         SALDO : S/ {{ $activo->is_settled ? '0.00' : number_format($activo->monto, 2) }}
     </div>
+
+    @if($company->account_number || $company->bank)
+    <div class="divider"></div>
+    <div style="font-size: 10px;">
+        <strong>DEPÓSITOS A:</strong><br>
+        @if($company->bank) {{ $company->bank }} @endif
+        @if($company->account_type) ({{ $company->account_type == 'corriente' ? 'Cta. Corr.' : 'Cta. Aho.' }}) @endif
+        @if($company->account_number) <br>Cta: {{ $company->account_number }} @endif
+        @if($company->cci)
+            <br>CCI: {{ $company->cci }}
+        @endif
+    </div>
+    @endif
 
     @if ($activo->observaciones)
         <div style="margin-top: 5px;">

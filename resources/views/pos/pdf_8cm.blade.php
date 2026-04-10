@@ -98,11 +98,11 @@
             <img src="{{ $logo }}" style="max-width: 150px; height: auto;">
         @endif
 
-        <div class="bold empresa-nombre">{{ $empresa->nombre }}</div>
+        <div class="bold empresa-nombre">{{ $empresa->razon_social ?? $empresa->nombre ?? '' }}</div>
         <div class="small">
             RUC: {{ $empresa->ruc ?? '20538381978' }}<br>
-            {{ $empresa->direccion }}<br>
-            {{ $empresa->telefono }}
+            {{ isset($venta) && $venta->sucursal_ref && $venta->sucursal_ref->direccion ? $venta->sucursal_ref->direccion : $empresa->direccion }}<br>
+            Cel/Tel: {{ isset($venta) && $venta->sucursal_ref && $venta->sucursal_ref->telefono ? $venta->sucursal_ref->telefono : ($empresa->phone ?? '-') }}
         </div>
 
         <div class="documento-caja bold">
@@ -239,6 +239,20 @@
     @endif
 
     <div class="hr"></div>
+
+    @if($empresa->account_number || $empresa->bank)
+    <div class="center small" style="border: 1px solid #000; padding: 4px; margin-bottom: 5px;">
+        <div class="bold">CUENTAS BANCARIAS</div>
+        @if($empresa->bank) {{ $empresa->bank }} @endif
+        @if($empresa->account_type) ({{ $empresa->account_type == 'corriente' ? 'Cta. Corr.' : 'Cta. Aho.' }}) @endif
+        <br>
+        <strong>Cta: {{ $empresa->account_number }}</strong>
+        @if($empresa->cci)
+            <br>CCI: {{ $empresa->cci }}
+        @endif
+    </div>
+    <div class="hr"></div>
+    @endif
 
     <div class="center small">
         Representación impresa de la {{ $venta->tipo_documento ?? 'COTIZACIÓN' }}<br>

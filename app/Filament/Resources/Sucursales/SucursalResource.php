@@ -22,7 +22,23 @@ class SucursalResource extends Resource
     public static function canAccess(): bool
     {
         $user = auth('admin')->user();
-        return $user && ($user->can('sucursales.ver', 'admin') || $user->hasRole(['super_admin', 'admin_empresa']));
+        return $user && ($user->isSuperAdmin() || $user->isAdminEmpresa());
+    }
+
+    public static function canCreate(): bool
+    {
+        $user = auth('admin')->user();
+        return $user && $user->isSuperAdmin();
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        $user = auth('admin')->user();
+        if (!$user) return false;
+        if ($user->hasRole('super_admin')) return true;
+        // admin_empresa can edit branches of their own company
+        return $user->isAdminEmpresa()
+            && (int)$user->attributes['company_id'] === (int)$record->company_id;
     }
 
     // Use a known heroicon name to avoid SvgNotFound (reuse Company icon)
