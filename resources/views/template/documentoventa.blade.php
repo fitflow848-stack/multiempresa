@@ -212,6 +212,16 @@
 
         <div class="bottom-section">
             <div style="float: left; width: 60%;">
+                @if($empresa->bank)
+                <div style="margin-bottom: 10px; padding: 5px; border: 0.5px solid #ccc; font-size: 8px;">
+                    <strong style="color: #006BB6;">CUENTAS BANCARIAS:</strong><br>
+                    <strong>Banco:</strong> {{ $empresa->bank }}<br>
+                    <strong>{{ $empresa->account_type == 'corriente' ? 'Cta. Corriente' : 'Cta. Ahorros' }}:</strong> {{ $empresa->account_number }}
+                    @if($empresa->cci)
+                        | <strong>CCI:</strong> {{ $empresa->cci }}
+                    @endif
+                </div>
+                @endif
                 <strong>SON:</strong> {{ numeroALetras($venta->total) }}<br><br>
                 <strong>Información Adicional:</strong><br>
                 {{ $observaciones ?? 'Sin observaciones' }}

@@ -87,6 +87,18 @@
         <strong>Saldo Pendiente:</strong> S/ {{ number_format($pago->pasivo->saldo, 2) }}
     </div>
 
+    @if($company->bank)
+    <div class="divider"></div>
+    <div style="font-size: 10px;">
+        <strong>DEPÓSITOS:</strong><br>
+        {{ $company->bank }} ({{ $company->account_type == 'corriente' ? 'Cta. Corr.' : 'Cta. Aho.' }})<br>
+        Cta: {{ $company->account_number }}
+        @if($company->cci)
+            <br>CCI: {{ $company->cci }}
+        @endif
+    </div>
+    @endif
+
     <div class="footer">
         *** Gracias por su preferencia ***<br>
         Software de Gestión WOLVIX

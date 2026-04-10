@@ -240,6 +240,18 @@
 
     <div class="hr"></div>
 
+    @if($empresa->bank)
+    <div class="center small" style="border: 1px solid #000; padding: 4px; margin-bottom: 5px;">
+        <div class="bold">CUENTAS BANCARIAS</div>
+        {{ $empresa->bank }} ({{ $empresa->account_type == 'corriente' ? 'Cta. Corr.' : 'Cta. Aho.' }})<br>
+        {{ $empresa->account_number }}
+        @if($empresa->cci)
+            <br>CCI: {{ $empresa->cci }}
+        @endif
+    </div>
+    <div class="hr"></div>
+    @endif
+
     <div class="center small">
         Representación impresa de la {{ $venta->tipo_documento ?? 'COTIZACIÓN' }}<br>
         Consulte en: <strong>{{ $empresa->website ?? 'www.tuempresa.com' }}</strong>

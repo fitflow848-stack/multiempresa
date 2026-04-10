@@ -93,6 +93,18 @@
     @endif
 
     <div class="footer text-center mt-4">
+        @if($company->bank)
+        <div class="bank-accounts mb-3 p-3 border rounded text-start d-inline-block" style="min-width: 300px; background-color: #f8f9fa;">
+            <h6 class="mb-2 border-bottom pb-1"><strong>CUENTAS BANCARIAS</strong></h6>
+            <p class="mb-1"><strong>Banco:</strong> {{ $company->bank }}</p>
+            <p class="mb-1"><strong>{{ $company->account_type == 'corriente' ? 'Cta. Corriente' : 'Cta. Ahorros' }}:</strong> {{ $company->account_number }}</p>
+            @if($company->cci)
+            <p class="mb-0"><strong>CCI:</strong> {{ $company->cci }}</p>
+            @endif
+        </div>
+        <br>
+        @endif
+
         <p class="mb-1">Estado: 
             <span class="badge bg-{{ $venta->pagado ? 'success' : 'warning' }}">
                 {{ $venta->pagado ? 'PAGADO' : 'PENDIENTE' }}
