@@ -146,8 +146,8 @@
                     onkeyup="calcularCambioPOS()" onchange="calcularCambioPOS()">
             </div>
             <div class="form-group">
-                <label>Cambio</label>
-                <div class="change-box">S/ <span id="label-cambio">0.00</span></div>
+                <label id="label-tipo-cambio">Cambio</label>
+                <div class="change-box" id="pago-status-box">S/ <span id="label-cambio">0.00</span></div>
             </div>
         </div>
 
@@ -714,11 +714,28 @@
     function calcularCambioPOS() {
         const total = ticket.reduce((sum, item) => sum + (item.importe || 0), 0);
         const amountPaid = parseFloat(document.getElementById('input-entrega').value) || 0;
-        const change = Math.max(0, amountPaid - total);
+        const change = amountPaid - total;
 
         const changeEl = document.getElementById('label-cambio');
-        if (changeEl) {
-            changeEl.innerText = change.toFixed(2);
+        const labelEl = document.getElementById('label-tipo-cambio');
+        const boxEl = document.getElementById('pago-status-box');
+
+        if (changeEl && labelEl && boxEl) {
+            if (change < 0) {
+                // Hay saldo pendiente (Crédito/Parcial)
+                labelEl.innerText = 'Saldo Pendiente';
+                labelEl.style.color = '#dc3545';
+                changeEl.innerText = Math.abs(change).toFixed(2);
+                boxEl.style.borderColor = '#dc3545';
+                boxEl.style.color = '#dc3545';
+            } else {
+                // Pago completo o vuelto
+                labelEl.innerText = 'Cambio';
+                labelEl.style.color = 'inherit';
+                changeEl.innerText = change.toFixed(2);
+                boxEl.style.borderColor = '#28a745';
+                boxEl.style.color = '#28a745';
+            }
         }
     }
 
@@ -776,19 +793,7 @@
 
             const tipoPagoString = document.getElementById('tipo-pago-hidden').value;
 
-            // VALIDACIÓN: Crédito requiere un cliente real
-            if (tipoPagoString === 'credito') {
-                if (!clienteActual || clienteActual.id == 999999 || (clienteActual.nombre && clienteActual.nombre.toUpperCase().includes('CONTABLE'))) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Cliente Requerido para Crédito',
-                        text: 'Las ventas a crédito requieren un cliente específico. Por favor seleccione o registre un cliente real.',
-                        confirmButtonColor: '#6b2e51'
-                    });
-                    isProcessingEmission = false;
-                    return;
-                }
-            }
+            // La validación de cliente para crédito se movió después del cálculo de totales para cubrir pagos parciales.
 
             // VALIDACIÓN: Documento seleccionado (Solo si NO es proforma)
             const tipoDoc = document.getElementById('tipo-documento-select').value;
@@ -806,6 +811,29 @@
 
             const total = ticket.reduce((sum, item) => sum + (item.importe || 0), 0);
             const amountPaid = parseFloat(document.getElementById('input-entrega').value) || 0;
+
+            // VALIDACIÓN: Crédito o Pago Parcial requieren un cliente real (No genérico)
+            if ((tipoPagoString === 'credito' || amountPaid < total) && tipoPagoString !== 'proforma') {
+                const esClienteGenerico = !clienteActual || !clienteActual.id || 
+                    clienteActual.id == 999999 || 
+                    (clienteActual.nombre && (
+                        clienteActual.nombre.toUpperCase().includes('CONTABLE') || 
+                        clienteActual.nombre.toUpperCase().includes('PARTICULAR') ||
+                        clienteActual.nombre.toUpperCase().includes('GENERAL')
+                    ));
+
+                if (esClienteGenerico) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Identificación de Cliente Requerida',
+                        text: 'Las ventas con saldo pendiente requieren identificar a un cliente real. Por favor, seleccione o registre un cliente para continuar.',
+                        confirmButtonColor: '#6b2e51'
+                    });
+                    isProcessingEmission = false;
+                    if (typeof cerrarModalTipoDocumento === 'function') cerrarModalTipoDocumento();
+                    return;
+                }
+            }
             const change = Math.max(0, amountPaid - total);
             const tipoPagoId = document.getElementById('medio-pago-select').value;
             const serie = document.getElementById('input-serie').value;
@@ -889,6 +917,35 @@
         if (ticket.length === 0) {
             Swal.fire('Atención', 'El ticket está vacío', 'warning');
             return;
+        }
+
+        const total = ticket.reduce((sum, item) => sum + (item.importe || 0), 0);
+        const amountPaid = parseFloat(document.getElementById('input-entrega').value) || 0;
+        const tipoPagoString = document.getElementById('tipo-pago-hidden').value;
+
+        // VALIDACIÓN: Crédito o Pago Parcial requieren un cliente real (No genérico)
+        if ((tipoPagoString === 'credito' || amountPaid < total) && tipoPagoString !== 'proforma') {
+            const esClienteGenerico = !window.clienteActual || !window.clienteActual.id || 
+                window.clienteActual.id == 999999 || 
+                (window.clienteActual.nombre && (
+                    window.clienteActual.nombre.toUpperCase().includes('CONTABLE') || 
+                    window.clienteActual.nombre.toUpperCase().includes('PARTICULAR') ||
+                    window.clienteActual.nombre.toUpperCase().includes('GENERAL')
+                ));
+
+            // También verificar por documento si es 00000000 o similar
+            const doc = String(window.clienteActual?.numero_documento || window.clienteActual?.documento || '');
+            const esDocGenerico = doc === '00000000' || doc === '0' || doc === '';
+
+            if (esClienteGenerico || esDocGenerico) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Identificación de Cliente Requerida',
+                    text: 'Las ventas con saldo pendiente requieren identificar a un cliente real. Por favor, seleccione o registre un cliente para continuar.',
+                    confirmButtonColor: '#6b2e51'
+                });
+                return;
+            }
         }
 
         // VALIDACIÓN: Caja abierta

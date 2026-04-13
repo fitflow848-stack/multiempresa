@@ -186,8 +186,13 @@ class VentaService
             $venta->descuento_porcentaje = ($total_descuento > 0 && ($total + $total_descuento) > 0) ? round(($total_descuento / ($total + $total_descuento)) * 100, 2) : 0;
             $venta->save();
 
-            // Si hay una deuda (pago parcial), crear registro de deuda
-            if ($entrega < $total && isset($clienteData['id']) && !empty($clienteData['id'])) {
+            // Si hay un saldo pendiente (crédito o pago parcial), REQUERIR UN CLIENTE REAL
+            if ($entrega < $total) {
+                // El ID 999999 suele ser el "Cliente Contado/Contable" genérico
+                if (!isset($clienteData['id']) || empty($clienteData['id']) || $clienteData['id'] == 999999) {
+                    throw new Exception('Las ventas al crédito o con pagos parciales requieren la identificación de un cliente específico en el sistema.');
+                }
+
                 $montoDeuda = $total - $entrega;
 
                 $deuda = new Deuda();

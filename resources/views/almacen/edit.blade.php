@@ -63,194 +63,190 @@
     <form action="{{ route('almacen.edit-detailed', $detalle->id) }}" method="POST" enctype="multipart/form-data">
         @csrf
         
-        <div class="tab-content">
-            <!-- TAB 1: Datos Básicos -->
-            <div class="tab-pane fade show active" id="datos-basicos">
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-lg-8">
-                                <div class="card card-primary card-outline">
-                                    <div class="card-header">
-                                        <h3 class="card-title"><i class="fas fa-cube me-2"></i>Datos del Producto</h3>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="row mb-3">
-                                            <div class="col-md-6">
-                                                <label class="form-label">Laboratorio</label>
-                                                <select name="laboratorio_id" class="form-select">
-                                                    <option value="">-- Seleccionar --</option>
-                                                    @foreach($laboratorios as $lab)
-                                                        <option value="{{ $lab->id }}" {{ $producto->laboratorio == $lab->id ? 'selected' : '' }}>{{ $lab->nombre }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Marca</label>
-                                                <select name="marca_id" class="form-select">
-                                                    <option value="">-- Seleccionar --</option>
-                                                    @foreach($marcas as $mar)
-                                                        <option value="{{ $mar->id }}" {{ $producto->marca_id == $mar->id ? 'selected' : '' }}>{{ $mar->nombre }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">Nombre del Producto <span class="text-danger">*</span></label>
-                                            <textarea name="nombre" class="form-control" rows="2" required>{{ $producto->nombre }}</textarea>
-                                        </div>
-                                        <div class="row mb-3">
-                                            <div class="col-md-6">
-                                                <label class="form-label">Unidad de Medida</label>
-                                                <select name="unidades_medida_id" class="form-select">
-                                                    <option value="">-- Seleccionar --</option>
-                                                    @foreach($unidades as $un)
-                                                        <option value="{{ $un->id }}" {{ $producto->unidad_medida_id == $un->id ? 'selected' : '' }}>{{ $un->nombre }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Tipo de Impuesto</label>
-                                                <select name="tipo_impuesto" class="form-select">
-                                                    <option value="gravado" {{ $producto->tipo_impuesto == 'gravado' ? 'selected' : '' }}>Gravado</option>
-                                                    <option value="exonerado" {{ $producto->tipo_impuesto == 'exonerado' ? 'selected' : '' }}>Exonerado</option>
-                                                    <option value="inafecto" {{ $producto->tipo_impuesto == 'inafecto' ? 'selected' : '' }}>Inafecto</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                        <div class="row mb-3">
-                                            <div class="col-md-6">
-                                                <label class="form-label">Presentación</label>
-                                                <select name="presentacion" class="form-select">
-                                                    <option value="">-- Seleccionar --</option>
-                                                    @foreach($presentaciones as $p)
-                                                        <option value="{{ $p->nombre }}" {{ old('presentacion', $detalle->productoLinea->presentacion ?? '') == $p->nombre ? 'selected' : '' }}>{{ $p->nombre }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <label class="form-label">Concentración</label>
-                                                <select name="concentracion" class="form-select">
-                                                    <option value="">-- Seleccionar --</option>
-                                                    @foreach($concentraciones as $c)
-                                                        <option value="{{ $c->nombre }}" {{ old('concentracion', $detalle->productoLinea->concentracion ?? '') == $c->nombre ? 'selected' : '' }}>{{ $c->nombre }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-lg-4">
-                                <div class="card card-info card-outline">
-                                    <div class="card-header">
-                                        <h3 class="card-title"><i class="bx bx-cog me-2"></i>Opciones</h3>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" name="attr_numero_serie" id="check-serie" {{ $producto->attr_numero_serie ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="check-serie">Número Serie</label>
-                                        </div>
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" name="attr_fecha_vencimiento" id="check-venc" {{ $producto->attr_fecha_vencimiento ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="check-venc">Fecha Vencimiento</label>
-                                        </div>
-                                        <div class="form-check mb-2">
-                                            <input class="form-check-input" type="checkbox" name="attr_lote_produccion" id="check-lote" {{ $producto->attr_lote_produccion ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="check-lote">Lote Producción</label>
-                                        </div>
-                                        <hr>
-                                        <button type="submit" class="btn btn-success w-100">
-                                            Siguiente <i class="fas fa-arrow-right ms-1"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB 2: Características -->
-            <div class="tab-pane fade" id="caracteristicas">
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="card card-primary card-outline">
-                                    <div class="card-header">
-                                        <h3 class="card-title">Propiedades Físicas</h3>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="row mb-3">
-                                            @php 
-                                                $props = $producto->caracteristicas['propiedades'] ?? [];
-                                                $almacenamiento = $producto->caracteristicas['almacenamiento'] ?? [];
-                                                $seguridad = $producto->caracteristicas['seguridad'] ?? [];
-                                            @endphp
-                                            <div class="col-md-4">
-                                                <label class="form-label small">Color</label>
-                                                <input type="text" class="form-control" name="caracteristicas[color]" value="{{ $props['color'] ?? '' }}">
-                                            </div>
-                                            <div class="col-md-4">
-                                                <label class="form-label small">Textura</label>
-                                                <input type="text" class="form-control" name="caracteristicas[textura]" value="{{ $props['textura'] ?? '' }}">
-                                            </div>
-                                            <div class="col-md-4">
-                                                <label class="form-label small">pH</label>
-                                                <input type="number" step="0.1" class="form-control" name="caracteristicas[ph]" value="{{ $props['ph'] ?? '' }}">
-                                            </div>
-                                        </div>
-                                        <hr>
-                                        <h5>Condiciones de Almacenamiento</h5>
-                                        <div class="row mb-3">
-                                            <div class="col-md-4">
-                                                <label class="form-label small">Temp. Mín. (°C)</label>
-                                                <input type="number" class="form-control" name="almacenamiento[temp_min]" value="{{ $almacenamiento['temp_min'] ?? '' }}">
-                                            </div>
-                                            <div class="col-md-4">
-                                                <label class="form-label small">Temp. Máx. (°C)</label>
-                                                <input type="number" class="form-control" name="almacenamiento[temp_max]" value="{{ $almacenamiento['temp_max'] ?? '' }}">
-                                            </div>
-                                            <div class="col-md-4">
-                                                <label class="form-label small">Humedad (%)</label>
-                                                <input type="number" class="form-control" name="almacenamiento[humedad]" value="{{ $almacenamiento['humedad'] ?? '' }}">
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB 3: Ficha Técnica -->
-            <div class="tab-pane fade" id="ficha-tecnica">
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <div class="card card-primary card-outline">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="tab-content">
+                    <!-- TAB 1: Datos Básicos -->
+                    <div class="tab-pane fade show active" id="datos-basicos">
+                        <div class="card card-primary card-outline shadow-sm">
                             <div class="card-header">
-                                <h3 class="card-title">Información Técnica Detallada</h3>
+                                <h3 class="card-title"><i class="fas fa-cube me-2 text-primary"></i>Datos del Producto</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold small text-muted">Laboratorio</label>
+                                        <select name="laboratorio_id" class="form-select">
+                                            <option value="">-- Seleccionar --</option>
+                                            @foreach($laboratorios as $lab)
+                                                <option value="{{ $lab->id }}" {{ $producto->laboratorio == $lab->id ? 'selected' : '' }}>{{ $lab->nombre }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold small text-muted">Marca</label>
+                                        <select name="marca_id" class="form-select">
+                                            <option value="">-- Seleccionar --</option>
+                                            @foreach($marcas as $mar)
+                                                <option value="{{ $mar->id }}" {{ $producto->marca_id == $mar->id ? 'selected' : '' }}>{{ $mar->nombre }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold small text-muted">Nombre del Producto <span class="text-danger">*</span></label>
+                                    <textarea name="nombre" class="form-control" rows="2" required>{{ $producto->nombre }}</textarea>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold small text-muted">Unidad de Medida</label>
+                                        <select name="unidades_medida_id" class="form-select">
+                                            <option value="">-- Seleccionar --</option>
+                                            @foreach($unidades as $un)
+                                                <option value="{{ $un->id }}" {{ $producto->unidad_medida_id == $un->id ? 'selected' : '' }}>{{ $un->nombre }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold small text-muted">Tipo de Impuesto</label>
+                                        <select name="tipo_impuesto" class="form-select">
+                                            <option value="gravado" {{ $producto->tipo_impuesto == 'gravado' ? 'selected' : '' }}>Gravado</option>
+                                            <option value="exonerado" {{ $producto->tipo_impuesto == 'exonerado' ? 'selected' : '' }}>Exonerado</option>
+                                            <option value="inafecto" {{ $producto->tipo_impuesto == 'inafecto' ? 'selected' : '' }}>Inafecto</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold small text-muted">Presentación</label>
+                                        <select name="presentacion" class="form-select">
+                                            <option value="">-- Seleccionar --</option>
+                                            @foreach($presentaciones as $p)
+                                                <option value="{{ $p->nombre }}" {{ old('presentacion', $detalle->productoLinea->presentacion ?? '') == $p->nombre ? 'selected' : '' }}>{{ $p->nombre }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold small text-muted">Concentración</label>
+                                        <select name="concentracion" class="form-select">
+                                            <option value="">-- Seleccionar --</option>
+                                            @foreach($concentraciones as $c)
+                                                <option value="{{ $c->nombre }}" {{ old('concentracion', $detalle->productoLinea->concentracion ?? '') == $c->nombre ? 'selected' : '' }}>{{ $c->nombre }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 2: Características -->
+                    <div class="tab-pane fade" id="caracteristicas">
+                        <div class="card card-primary card-outline shadow-sm">
+                            <div class="card-header">
+                                <h3 class="card-title"><i class="fas fa-cogs me-2 text-primary"></i>Propiedades Físicas</h3>
+                            </div>
+                            <div class="card-body">
+                                @php 
+                                    $props = $producto->caracteristicas['propiedades'] ?? [];
+                                    $almacenamiento = $producto->caracteristicas['almacenamiento'] ?? [];
+                                    $seguridad = $producto->caracteristicas['seguridad'] ?? [];
+                                @endphp
+                                <div class="row g-3 mb-4">
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold small text-muted">Color</label>
+                                        <input type="text" class="form-control" name="caracteristicas[color]" value="{{ $props['color'] ?? '' }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold small text-muted">Textura</label>
+                                        <input type="text" class="form-control" name="caracteristicas[textura]" value="{{ $props['textura'] ?? '' }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold small text-muted">pH</label>
+                                        <input type="number" step="0.1" class="form-control" name="caracteristicas[ph]" value="{{ $props['ph'] ?? '' }}">
+                                    </div>
+                                </div>
+                                
+                                <h5 class="border-bottom pb-2 mb-3 mt-4 text-primary fw-bold">
+                                    <i class="fas fa-warehouse me-2"></i>Condiciones de Almacenamiento
+                                </h5>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold small text-muted">Temp. Mín. (°C)</label>
+                                        <input type="number" class="form-control" name="almacenamiento[temp_min]" value="{{ $almacenamiento['temp_min'] ?? '' }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold small text-muted">Temp. Máx. (°C)</label>
+                                        <input type="number" class="form-control" name="almacenamiento[temp_max]" value="{{ $almacenamiento['temp_max'] ?? '' }}">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold small text-muted">Humedad (%)</label>
+                                        <input type="number" class="form-control" name="almacenamiento[humedad]" value="{{ $almacenamiento['humedad'] ?? '' }}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 3: Ficha Técnica -->
+                    <div class="tab-pane fade" id="ficha-tecnica">
+                        <div class="card card-primary card-outline shadow-sm">
+                            <div class="card-header">
+                                <h3 class="card-title"><i class="fas fa-file-alt me-2 text-primary"></i>Información Técnica Detallada</h3>
                             </div>
                             <div class="card-body">
                                 @php $ficha = $producto->ficha_tecnica ?? []; @endphp
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <label class="form-label small">Composición</label>
-                                        <textarea class="form-control" name="ficha_tecnica[composicion]" rows="4">{{ $ficha['composicion'] ?? '' }}</textarea>
+                                        <label class="form-label fw-bold small text-muted">Composición</label>
+                                        <textarea class="form-control" name="ficha_tecnica[composicion]" rows="4" placeholder="Detalle la composición...">{{ $ficha['composicion'] ?? '' }}</textarea>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label small">Mecanismo de Acción</label>
-                                        <textarea class="form-control" name="ficha_tecnica[mecanismo_accion]" rows="4">{{ $ficha['mecanismo_accion'] ?? '' }}</textarea>
+                                        <label class="form-label fw-bold small text-muted">Mecanismo de Acción</label>
+                                        <textarea class="form-control" name="ficha_tecnica[mecanismo_accion]" rows="4" placeholder="Describa el mecanismo...">{{ $ficha['mecanismo_accion'] ?? '' }}</textarea>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label small">Indicaciones de Uso</label>
-                                        <textarea class="form-control" name="ficha_tecnica[indicaciones]" rows="4">{{ $ficha['indicaciones'] ?? '' }}</textarea>
+                                        <label class="form-label fw-bold small text-muted">Indicaciones de Uso</label>
+                                        <textarea class="form-control" name="ficha_tecnica[indicaciones]" rows="4" placeholder="Instrucciones de uso...">{{ $ficha['indicaciones'] ?? '' }}</textarea>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label small">Contraindicaciones</label>
-                                        <textarea class="form-control" name="ficha_tecnica[contraindicaciones]" rows="4">{{ $ficha['contraindicaciones'] ?? '' }}</textarea>
+                                        <label class="form-label fw-bold small text-muted">Contraindicaciones</label>
+                                        <textarea class="form-control" name="ficha_tecnica[contraindicaciones]" rows="4" placeholder="Precauciones...">{{ $ficha['contraindicaciones'] ?? '' }}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB 4: Imágenes -->
+                    <div class="tab-pane fade" id="imagenes">
+                        <div class="card card-primary card-outline shadow-sm">
+                            <div class="card-header">
+                                <h3 class="card-title"><i class="fas fa-images me-2 text-primary"></i>Galería de Imágenes</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-4">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold small text-muted d-block text-center mb-3">Imagen Principal</label>
+                                        <div class="text-center mb-3">
+                                            @if($producto->imagen_principal)
+                                                <img src="{{ Storage::url($producto->imagen_principal) }}" class="img-thumbnail shadow-sm mb-3" style="max-height: 200px; width: auto;">
+                                            @else
+                                                <div class="bg-light border rounded d-flex align-items-center justify-content-center mx-auto mb-3" style="height: 200px; width: 200px;">
+                                                    <i class="fas fa-image fa-3x text-muted"></i>
+                                                </div>
+                                            @endif
+                                        </div>
+                                        <input type="file" name="imagen_principal" class="form-control" accept="image/*">
+                                    </div>
+                                    <div class="col-md-6 border-start">
+                                        <label class="form-label fw-bold small text-muted d-block text-center mb-3">Imágenes Adicionales</label>
+                                        <div class="bg-light p-4 rounded text-center mb-3">
+                                            <i class="fas fa-camera-retro fa-3x text-info opacity-50 mb-3"></i>
+                                            <p class="small text-muted">Seleccione una o varias fotos adicionales para el catálogo.</p>
+                                        </div>
+                                        <input type="file" name="imagenes_adicionales[]" class="form-control" multiple accept="image/*">
+                                        <p class="form-text small mt-2"><i class="fas fa-info-circle me-1"></i>Puede seleccionar varias imágenes a la vez.</p>
                                     </div>
                                 </div>
                             </div>
@@ -259,37 +255,48 @@
                 </div>
             </div>
 
-            <!-- TAB 4: Imágenes -->
-            <div class="tab-pane fade" id="imagenes">
-                <div class="card mb-3">
+            <!-- SIDEBAR: Acciones (Siempre visible) -->
+            <div class="col-lg-4">
+                <div class="card card-info card-outline shadow-sm sticky-top" style="top: 20px; z-index: 100;">
+                    <div class="card-header bg-white py-3 border-bottom">
+                        <h3 class="card-title h6 mb-0 text-info fw-bold">
+                            <i class="fas fa-cog me-2"></i>Opciones de Control
+                        </h3>
+                    </div>
                     <div class="card-body">
-                        <div class="card card-primary card-outline">
-                            <div class="card-header">
-                                <h3 class="card-title">Galería de Imágenes</h3>
+                        <div class="mb-4">
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" name="attr_numero_serie" id="check-serie" {{ $producto->attr_numero_serie ? 'checked' : '' }}>
+                                <label class="form-check-label fw-bold" for="check-serie">Control por Número de Serie</label>
                             </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Imagen Principal</label>
-                                        @if($producto->imagen_principal)
-                                            <div class="mb-2">
-                                                <img src="{{ Storage::url($producto->imagen_principal) }}" style="max-width: 200px;" class="img-thumbnail">
-                                            </div>
-                                        @endif
-                                        <input type="file" name="imagen_principal" class="form-control" accept="image/*">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Imágenes Adicionales</label>
-                                        <input type="file" name="imagenes_adicionales[]" class="form-control" multiple accept="image/*">
-                                        <small class="text-muted">Puede seleccionar varias imágenes</small>
-                                    </div>
-                                </div>
+                            <div class="form-check form-switch mb-3">
+                                <input class="form-check-input" type="checkbox" name="attr_fecha_vencimiento" id="check-venc" {{ $producto->attr_fecha_vencimiento ? 'checked' : '' }}>
+                                <label class="form-check-label fw-bold" for="check-venc">Control Fecha Vencimiento</label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="attr_lote_produccion" id="check-lote" {{ $producto->attr_lote_produccion ? 'checked' : '' }}>
+                                <label class="form-check-label fw-bold" for="check-lote">Control por Lote</label>
                             </div>
                         </div>
+                        
+                        <div class="alert alert-light border small text-muted mb-4">
+                            <i class="fas fa-info-circle me-1 text-info"></i> Al hacer clic en <strong>Siguiente</strong> se procederá a configurar los precios e inventario del producto.
+                        </div>
+
+                        <hr>
+                        
+                        <button type="submit" class="btn btn-primary btn-lg w-100 shadow-sm py-2">
+                             Siguiente <i class="fas fa-arrow-right ms-2"></i>
+                        </button>
+                        
+                        <a href="{{ route('almacen.index') }}" class="btn btn-link w-100 text-muted mt-2">
+                            Cancelar y salir
+                        </a>
                     </div>
                 </div>
             </div>
         </div>
+
     </form>
 </div>
 @endsection

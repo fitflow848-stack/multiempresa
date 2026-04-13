@@ -213,11 +213,11 @@ class ProductoController extends Controller
             }
 
             // Combinar todas las características en un solo JSON
-            $caracteristicas = json_encode([
+            $caracteristicas = [
                 'propiedades' => $propiedades,
                 'almacenamiento' => $almacenamiento,
                 'seguridad' => $seguridad,
-            ]);
+            ];
 
             $productoData = [
                 'id_empresa' => Auth::user()->company_id,
@@ -237,10 +237,10 @@ class ProductoController extends Controller
                 'attr_venta_menudeo' => $request->boolean('attr_venta_menudeo'),
                 // Campos JSON
                 'caracteristicas' => $caracteristicas,
-                'ficha_tecnica' => json_encode($fichatecnica),
+                'ficha_tecnica' => $fichatecnica,
                 // Campos de imágenes
                 'imagen_principal' => $imagenPrincipal,
-                'imagenes_adicionales' => json_encode($imagenesAdicionales),
+                'imagenes_adicionales' => $imagenesAdicionales,
                 'imagen_alt' => $request->input('imagen_alt'),
                 'imagen_titulo' => $request->input('imagen_titulo'),
                 'imagen_fuente' => $request->input('imagen_fuente'),

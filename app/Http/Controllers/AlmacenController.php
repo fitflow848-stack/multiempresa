@@ -781,8 +781,7 @@ class AlmacenController extends Controller
 
         $query = DB::table('almacen_ingreso_detalle as d')
             ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
-            ->leftJoin('sucursales as s', 's.id', '=', 'i.sucursal_id')
-            ->where('d.cantidad', '>', 0);
+            ->leftJoin('sucursales as s', 's.id', '=', 'i.sucursal_id');
 
         if ($sucursalId && $sucursalId !== 'undefined') {
             $query->where('i.sucursal_id', $sucursalId);
@@ -794,14 +793,18 @@ class AlmacenController extends Controller
             $query->where('d.producto_id', $productoId);
         }
 
+        // Agrupamos por lote y fecha de vencimiento para obtener el stock REAL sumando ajustes (negativos)
+        // Esto evita que registros de ajustes o salidas negativas inflen el stock disponible mostrado
         $lotes = $query->select(
-                'd.id',
+                DB::raw('MAX(d.id) as id'),
                 'd.lote',
                 'd.fecha_vencimiento',
-                'd.cantidad as stock',
+                DB::raw('SUM(d.cantidad) as stock'),
                 's.nombre as sucursal_nombre',
                 'i.sucursal_id'
             )
+            ->groupBy('d.lote', 'd.fecha_vencimiento', 's.nombre', 'i.sucursal_id')
+            ->having('stock', '>', 0)
             ->orderBy('d.fecha_vencimiento', 'asc')
             ->get();
 
@@ -1097,11 +1100,11 @@ class AlmacenController extends Controller
             }
 
             // 3. Preparar JSON de Características
-            $caracteristicas = json_encode([
+            $caracteristicas = [
                 'propiedades' => $request->input('caracteristicas', []),
                 'almacenamiento' => $request->input('almacenamiento', []),
                 'seguridad' => $request->input('seguridad', []),
-            ]);
+            ];
 
             // 4. Actualizar Producto
             $producto->update([
@@ -1114,9 +1117,9 @@ class AlmacenController extends Controller
                 'tipo_impuesto' => $request->tipo_impuesto,
                 'condicion_venta' => $request->condicion_venta,
                 'caracteristicas' => $caracteristicas,
-                'ficha_tecnica' => json_encode($request->input('ficha_tecnica', [])),
+                'ficha_tecnica' => $request->input('ficha_tecnica', []),
                 'imagen_principal' => $imagenPrincipal,
-                'imagenes_adicionales' => json_encode($imagenesAdicionales),
+                'imagenes_adicionales' => $imagenesAdicionales,
                 'imagen_alt' => $request->input('imagen_alt'),
                 'imagen_titulo' => $request->input('imagen_titulo'),
                 'imagen_fuente' => $request->input('imagen_fuente'),
