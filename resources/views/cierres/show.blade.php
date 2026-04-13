@@ -846,6 +846,7 @@
                 alert('Error de red al intentar guardar.');
                 btn.disabled = false;
                 btn.innerText = 'Guardar Registro';
+            }
         });
 
         // Cerrar Caja
