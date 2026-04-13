@@ -293,6 +293,8 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::get('/buscar', [AlmacenController::class, 'buscar'])->name('buscar');
         Route::get('/kardex', [AlmacenController::class, 'kardex'])->name('kardex')->middleware('can:inventario.kardex');
         Route::get('/transferir', [AlmacenController::class, 'transferir'])->name('transferir')->middleware('can:inventario.transferir');
+        Route::post('/transferir/draft', [AlmacenController::class, 'updateTransferDraft'])->name('transferir.draft.update');
+        Route::post('/transferir/draft/clear', [AlmacenController::class, 'clearTransferDraft'])->name('transferir.draft.clear');
         Route::post('/transferir', [AlmacenController::class, 'storeTransferencia'])->name('transferir.store')->middleware('can:inventario.transferir');
         Route::get('/transferencia/success/{codigo}', [AlmacenController::class, 'transferenciaSuccess'])->name('transferencia.success');
         Route::get('/transferencia/pdf/{codigo}', [AlmacenController::class, 'transferenciaPdf'])->name('transferencia.pdf');

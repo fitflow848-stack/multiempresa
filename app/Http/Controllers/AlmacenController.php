@@ -769,7 +769,36 @@ class AlmacenController extends Controller
             ->where('id', '!=', $originBranchId)
             ->get();
 
-        return view('almacen.transferir', compact('user', 'company', 'sucursalesDestino', 'originBranchId', 'sucursalActual'));
+        // Cargar datos del borrador de la sesión
+        $draft = [
+            'sucursal_destino_id' => session('transfer_draft_sucursal_destino_id'),
+            'observaciones' => session('transfer_draft_observaciones'),
+            'items' => session('transfer_draft_items', [])
+        ];
+
+        return view('almacen.transferir', compact('user', 'company', 'sucursalesDestino', 'originBranchId', 'sucursalActual', 'draft'));
+    }
+
+    public function updateTransferDraft(Request $request)
+    {
+        session([
+            'transfer_draft_sucursal_destino_id' => $request->sucursal_destino_id,
+            'transfer_draft_observaciones' => $request->observaciones,
+            'transfer_draft_items' => $request->items ?? []
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
+    public function clearTransferDraft()
+    {
+        session()->forget([
+            'transfer_draft_sucursal_destino_id',
+            'transfer_draft_observaciones',
+            'transfer_draft_items'
+        ]);
+
+        return redirect()->route('almacen.transferir')->with('success', 'Borrador de transferencia limpiado.');
     }
 
     public function getLotesAvailable(Request $request)
@@ -897,6 +926,13 @@ class AlmacenController extends Controller
             }
 
             DB::commit();
+
+            // Limpiar borrador de la sesión
+            session()->forget([
+                'transfer_draft_sucursal_destino_id',
+                'transfer_draft_observaciones',
+                'transfer_draft_items'
+            ]);
 
             return redirect()->route('almacen.transferencia.success', ['codigo' => $codigoTransferencia])
                 ->with('success', 'Transferencia realizada con éxito.');

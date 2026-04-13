@@ -45,7 +45,7 @@
                                 <select class="form-select form-select-lg shadow-sm border-primary" name="sucursal_destino_id" id="sucursal_destino_id" required>
                                     <option value="">Seleccionar local destino...</option>
                                     @foreach ($sucursalesDestino as $suc)
-                                        <option value="{{ $suc->id }}" {{ old('sucursal_destino_id') == $suc->id ? 'selected' : '' }}>
+                                        <option value="{{ $suc->id }}" {{ (isset($draft['sucursal_destino_id']) && $draft['sucursal_destino_id'] == $suc->id) || old('sucursal_destino_id') == $suc->id ? 'selected' : '' }}>
                                             {{ $suc->nombre }}
                                         </option>
                                     @endforeach
@@ -53,7 +53,7 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-bold">Observaciones Generales</label>
-                                <textarea class="form-control" name="observaciones" rows="3" placeholder="Opcional...">{{ old('observaciones') }}</textarea>
+                                <textarea class="form-control" name="observaciones" id="observaciones" rows="3" placeholder="Opcional...">{{ $draft['observaciones'] ?? old('observaciones') }}</textarea>
                             </div>
                         </div>
                     </div>
@@ -126,11 +126,18 @@
                                 <h5 class="text-muted fw-light">Aún no has agregado productos a la transferencia</h5>
                             </div>
                         </div>
-                        <div class="card-footer bg-white py-4 text-end">
-                            <a href="{{ route('almacen.index') }}" class="btn btn-light px-4 me-2">Cancelar</a>
-                            <button type="submit" class="btn btn-primary px-5 py-2 shadow" id="btnSubmit" disabled>
-                                <i class="fas fa-check-circle me-2"></i>Confirmar Transferencia Masiva
-                            </button>
+                        <div class="card-footer bg-white py-4 d-flex justify-content-between">
+                            <div>
+                                <button type="button" class="btn btn-outline-danger px-4" id="btnClearDraft">
+                                    <i class="fas fa-trash-alt me-2"></i>Limpiar Borrador
+                                </button>
+                            </div>
+                            <div>
+                                <a href="{{ route('almacen.index') }}" class="btn btn-light px-4 me-2">Cancelar</a>
+                                <button type="submit" class="btn btn-primary px-5 py-2 shadow" id="btnSubmit" disabled>
+                                    <i class="fas fa-check-circle me-2"></i>Confirmar Transferencia Masiva
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -155,6 +162,18 @@
             const $emptyState = $('#emptyState');
             const $btnSubmit = $('#btnSubmit');
             const $itemCount = $('#itemCount');
+
+            // Cargar items del borrador si existen
+            const draftItems = @json($draft['items'] ?? []);
+            if (draftItems && Object.keys(draftItems).length > 0) {
+                Object.values(draftItems).forEach(item => {
+                    // Nota: para el borrador no tenemos prodData.text ni loteText disponible directamente sin AJAX
+                    // pero podemos usar lo que la vista nos da o simplemente dejar que JavaScript lo pinte
+                    // Para persistencia real, el borrador debería tener los nombres.
+                    // Por ahora, asumimos que el borrador es lo que se sincroniza.
+                    addItemToTable(item.producto_id, item.producto_nombre || 'Producto', item.lote_origen_id, item.lote_nombre || 'Lote', item.cantidad, item.stock_max || item.cantidad);
+                });
+            }
 
             // Select2 para búsqueda de productos
             $('#search_producto').select2({
@@ -244,18 +263,29 @@
                     return;
                 }
 
+                addItemToTable(prodData.producto_id, prodData.text, loteId, loteText, cantidad, maxStock);
+                
+                // Limpiar selector para el siguiente
+                $('#search_producto').val(null).trigger('change');
+                $('#search_cantidad').val('');
+            });
+
+            function addItemToTable(productoId, productoNombre, loteId, loteNombre, cantidad, maxStock) {
                 const row = `
                     <tr id="item_${itemIndex}">
                         <td class="ps-4">
-                            <div class="fw-bold">${prodData.text}</div>
-                            <input type="hidden" name="items[${itemIndex}][producto_id]" value="${prodData.producto_id}">
+                            <div class="fw-bold">${productoNombre}</div>
+                            <input type="hidden" name="items[${itemIndex}][producto_id]" value="${productoId}">
+                            <input type="hidden" name="items[${itemIndex}][producto_nombre]" value="${productoNombre}">
                         </td>
                         <td>
-                            <div class="small text-muted">${$('#search_lote option:selected').text()}</div>
+                            <div class="small text-muted">${loteNombre}</div>
                             <input type="hidden" name="items[${itemIndex}][lote_origen_id]" class="lote-input" value="${loteId}">
+                            <input type="hidden" name="items[${itemIndex}][lote_nombre]" value="${loteNombre}">
+                            <input type="hidden" name="items[${itemIndex}][stock_max]" value="${maxStock}">
                         </td>
                         <td class="text-center">
-                            <input type="number" name="items[${itemIndex}][cantidad]" class="form-control form-control-sm text-center fw-bold" 
+                            <input type="number" name="items[${itemIndex}][cantidad]" class="form-control form-control-sm text-center fw-bold input-cantidad" 
                                    value="${cantidad}" step="0.01" min="0.01" max="${maxStock}" required>
                         </td>
                         <td class="text-end pe-4">
@@ -269,16 +299,54 @@
                 $itemsContainer.append(row);
                 itemIndex++;
                 updateUI();
-                
-                // Limpiar selector para el siguiente
-                $('#search_producto').val(null).trigger('change');
-                $('#search_cantidad').val('');
-            });
+                syncDraft();
+            }
 
             $itemsContainer.on('click', '.btnRemove', function() {
                 $($(this).data('target')).remove();
                 updateUI();
+                syncDraft();
             });
+
+            $itemsContainer.on('change', '.input-cantidad', function() {
+                syncDraft();
+            });
+
+            $('#sucursal_destino_id, #observaciones').on('change', function() {
+                syncDraft();
+            });
+
+            $('#btnClearDraft').on('click', function() {
+                Swal.fire({
+                    title: '¿Está seguro?',
+                    text: "Se borrarán todos los items cargados en el borrador.",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Sí, limpiar todo',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Crear un form temporal para hacer POST al clear
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = '{{ route('almacen.transferir.draft.clear') }}';
+                        const csrf = document.createElement('input');
+                        csrf.type = 'hidden';
+                        csrf.name = '_token';
+                        csrf.value = '{{ csrf_token() }}';
+                        form.appendChild(csrf);
+                        document.body.appendChild(form);
+                        form.submit();
+                    }
+                });
+            });
+
+            function syncDraft() {
+                const formData = $('#transferForm').serializeArray();
+                $.post('{{ route('almacen.transferir.draft.update') }}', formData);
+            }
 
             function updateUI() {
                 const count = $itemsContainer.children().length;
