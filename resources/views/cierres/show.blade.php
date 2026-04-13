@@ -787,7 +787,10 @@
                         }
                     });
                     if (res.ok) location.reload();
-                    else alert('Error al eliminar la operación.');
+                    else {
+                        const errorData = await res.json().catch(() => ({}));
+                        alert('Error al eliminar: ' + (errorData.message || 'No se pudo eliminar la operación (Error ' + res.status + ')'));
+                    }
                 } catch (err) {
                     console.error(err);
                     alert('Error de red al intentar eliminar.');
@@ -816,24 +819,33 @@
                 return;
             }
 
-            let url = "{{ route('operaciones-caja.store') }}";
-            let method = 'POST';
-            if (opId) {
-                url = `/operaciones-caja/${opId}`;
-                method = 'PUT';
-            }
+            const btn = document.getElementById('op_save');
+            btn.disabled = true;
+            btn.innerText = 'Guardando...';
 
-            const res = await fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify(payload)
-            });
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify(payload)
+                });
 
-            if (res.ok) location.reload();
-            else alert('Error al guardar la operación.');
+                if (res.ok) {
+                    location.reload();
+                } else {
+                    const errorData = await res.json().catch(() => ({}));
+                    alert('Error al guardar: ' + (errorData.message || 'No se pudo guardar la operación.'));
+                    btn.disabled = false;
+                    btn.innerText = 'Guardar Registro';
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error de red al intentar guardar.');
+                btn.disabled = false;
+                btn.innerText = 'Guardar Registro';
         });
 
         // Cerrar Caja
@@ -850,20 +862,34 @@
                 observaciones: document.querySelector('textarea[name="observaciones"]').value
             };
 
-            const res = await fetch("{{ route('cierre-caja.close', $cierre->id) }}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify(payload)
-            });
+            const btn = document.getElementById('btn-cerrar-caja');
+            btn.disabled = true;
+            btn.innerText = 'Cerrando...';
 
-            if (res.ok) {
-                alert('Caja cerrada exitosamente.');
-                location.reload();
-            } else {
-                alert('Error al cerrar caja.');
+            try {
+                const res = await fetch("{{ route('cierre-caja.close', $cierre->id) }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    alert('Caja cerrada exitosamente.');
+                    location.reload();
+                } else {
+                    const errorData = await res.json().catch(() => ({}));
+                    alert('Error al cerrar caja: ' + (errorData.message || 'No se pudo cerrar la caja.'));
+                    btn.disabled = false;
+                    btn.innerText = 'Finalizar Cierre de Caja';
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error de red al intentar cerrar caja.');
+                btn.disabled = false;
+                btn.innerText = 'Finalizar Cierre de Caja';
             }
         });
 
@@ -917,6 +943,10 @@
                     return;
                 }
 
+                const btn = document.getElementById('pa_save');
+                btn.disabled = true;
+                btn.innerText = 'Creando...';
+
                 try {
                     const res = await fetch("{{ route('partidas.store') }}", {
                         method: 'POST',
@@ -963,6 +993,9 @@
                         icon: 'error',
                         confirmButtonText: 'Entendido'
                     });
+                } finally {
+                    btn.disabled = false;
+                    btn.innerText = 'Crear';
                 }
             });
 
@@ -1074,6 +1107,10 @@
                     const total = parseFloat(document.getElementById('total-caja').innerText) || 0;
                     const notas = document.getElementById('arqueo-notas').value || null;
 
+                    const btn = document.getElementById('btn-save-arqueo');
+                    btn.disabled = true;
+                    btn.innerText = 'Registrando...';
+
                     try {
                         const token = '{{ csrf_token() }}';
                         const resp = await fetch('{{ route('arqueo.store') }}', {
@@ -1166,6 +1203,9 @@
                     } catch (e) {
                         console.error(e);
                         alert('Error al registrar arqueo');
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerText = 'Registrar Arqueo';
                     }
                 });
             })();

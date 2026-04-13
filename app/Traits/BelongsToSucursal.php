@@ -43,9 +43,9 @@ trait BelongsToSucursal
                 return;
             }
 
-            // Solo el super_admin ve todas las sucursales sin restricciones automáticas
-            if ($user->hasRole('super_admin')) {
-                logger()->info("Trait: User is super_admin, skipping branch scope");
+            // Solo el super_admin y admin_empresa ven todas las sucursales sin restricciones automáticas
+            if ($user->hasRole('super_admin') || (method_exists($user, 'isAdmin') && $user->isAdmin())) {
+                logger()->info("Trait: User is admin, skipping branch scope");
                 return;
             }
 

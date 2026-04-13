@@ -721,7 +721,8 @@
         const boxEl = document.getElementById('pago-status-box');
 
         if (changeEl && labelEl && boxEl) {
-            if (change < 0) {
+            // Usamos un pequeño margen de error para evitar problemas de precisión decimal
+            if (change < -0.001) {
                 // Hay saldo pendiente (Crédito/Parcial)
                 labelEl.innerText = 'Saldo Pendiente';
                 labelEl.style.color = '#dc3545';
@@ -813,7 +814,8 @@
             const amountPaid = parseFloat(document.getElementById('input-entrega').value) || 0;
 
             // VALIDACIÓN: Crédito o Pago Parcial requieren un cliente real (No genérico)
-            if ((tipoPagoString === 'credito' || amountPaid < total) && tipoPagoString !== 'proforma') {
+            // Usamos un margen de 0.01 para evitar errores por precisión de punto flotante
+            if ((tipoPagoString === 'credito' || (total - amountPaid) > 0.009) && tipoPagoString !== 'proforma') {
                 const esClienteGenerico = !clienteActual || !clienteActual.id || 
                     clienteActual.id == 999999 || 
                     (clienteActual.nombre && (

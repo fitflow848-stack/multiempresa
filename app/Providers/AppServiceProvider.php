@@ -43,6 +43,10 @@ class AppServiceProvider extends ServiceProvider
     private function registerPermissionGates()
     {
         Gate::before(function ($user, $ability) {
+            if ($user->isAdmin()) {
+                return true;
+            }
+
             if (method_exists($user, 'hasPermissionTo')) {
                 // Solo verificar permisos que siguen nuestro patrón (módulo.acción)
                 if (strpos($ability, '.') !== false) {
