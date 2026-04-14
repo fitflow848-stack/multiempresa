@@ -39,8 +39,13 @@ class ComprobantesController extends Controller
 
         // Query base - excluir anulados
         $ventasQuery = Venta::where('id_empresa', $company->id)
-            ->where('estado', '!=', 0) // No mostrar anulados
-            ->with(['cliente', 'detalles.producto.unidadMedida', 'tipoPago', 'ventaSunat', 'deuda'])
+            ->where('estado', '!=', 0); // No mostrar anulados
+
+        if ($user->branch_id) {
+            $ventasQuery->where('sucursal', $user->branch_id);
+        }
+
+        $ventasQuery->with(['cliente', 'detalles.producto.unidadMedida', 'tipoPago', 'ventaSunat', 'deuda'])
             ->whereBetween('fecha_emision', [
                 Carbon::parse($fechaDesde)->startOfDay(),
                 Carbon::parse($fechaHasta)->endOfDay()
@@ -137,8 +142,13 @@ class ComprobantesController extends Controller
         $cliente = $request->get('cliente', '');
         $tipoDocumento = $request->get('tipo_documento', 'todos');
 
-        $ventasQuery = Venta::where('id_empresa', $company->id)
-            ->whereBetween('fecha_emision', [
+        $ventasQuery = Venta::where('id_empresa', $company->id);
+
+        if ($user->branch_id) {
+            $ventasQuery->where('sucursal', $user->branch_id);
+        }
+
+        $ventasQuery->whereBetween('fecha_emision', [
                 Carbon::parse($fechaDesde)->startOfDay(),
                 Carbon::parse($fechaHasta)->endOfDay()
             ]);
