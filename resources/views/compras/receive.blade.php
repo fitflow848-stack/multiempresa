@@ -68,18 +68,19 @@
                 <div class="card-body">
                     <form action="{{ route('compras.receive.store', $compra->id) }}" method="POST">
                         @csrf
-                        <div class="mb-3">
-                            <label class="form-label">Fecha de recepción</label>
-                            <input type="date" name="received_at" class="form-control" value="{{ old('received_at', now()->format('Y-m-d')) }}">
-                        </div>
 
                         <div class="mb-3">
                             <label class="form-label">Observaciones</label>
-                            <textarea name="observaciones" class="form-control" rows="3">{{ old('observaciones') }}</textarea>
+                            <textarea name="observaciones" class="form-control" rows="3" placeholder="Opcional...">{{ old('observaciones') }}</textarea>
+                        </div>
+
+                        <div class="alert alert-info small mb-3">
+                            <i class="bx bx-info-circle me-1"></i>
+                            Al confirmar se ingresarán los productos al almacén y se actualizará el stock.
                         </div>
 
                         <div class="d-grid">
-                            <button class="btn btn-success">Registrar Recepción</button>
+                            <button class="btn btn-success">Recibir e Ingresar al Almacén</button>
                         </div>
                     </form>
                 </div>
