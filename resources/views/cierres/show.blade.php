@@ -823,6 +823,9 @@
             btn.disabled = true;
             btn.innerText = 'Guardando...';
 
+            const url = opId ? `/operaciones-caja/${opId}` : '/operaciones-caja';
+            const method = opId ? 'PUT' : 'POST';
+
             try {
                 const res = await fetch(url, {
                     method: method,
