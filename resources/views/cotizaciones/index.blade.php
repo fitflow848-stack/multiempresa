@@ -74,6 +74,11 @@
                 <h2 class="fw-bold text-dark mb-1">Cotizaciones</h2>
                 <p class="text-muted mb-0">Seguimiento de propuestas comerciales y preventas</p>
             </div>
+            <div class="col-md-6 text-md-end mt-3 mt-md-0">
+                <a href="{{ route('pos.index', ['type' => 'proforma']) }}" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                    <i class="bx bx-plus me-1"></i> Nueva Cotización
+                </a>
+            </div>
         </div>
 
 
@@ -244,7 +249,7 @@
                         class="mb-4">
                     <h5 class="text-muted">No encontramos cotizaciones</h5>
                     <p class="text-muted small">Prueba cambiando los filtros o crea una nueva propuesta.</p>
-                    <a href="{{ route('cotizaciones.create') }}" class="btn btn-primary rounded-pill px-4">
+                    <a href="{{ route('pos.index', ['type' => 'proforma']) }}" class="btn btn-primary rounded-pill px-4">
                         Crear mi primera cotización
                     </a>
                 </div>

@@ -482,6 +482,13 @@
         }
         
         cambiarTipoDocumento();
+
+        // Verificar si se solicita un tipo de pago específico por URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const requestedType = urlParams.get('type');
+        if (requestedType === 'proforma') {
+            cambiarTipoPago('proforma');
+        }
     });
 
     async function checkCajaStatus() {
