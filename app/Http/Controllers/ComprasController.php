@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\Compra;
 use App\Models\CompraLinea;
+use App\Models\AlmacenIngreso;
+use App\Models\AlmacenIngresoDetalle;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Producto;
@@ -419,11 +421,11 @@ class ComprasController extends Controller
      */
     public function storeReception(Request $request, Compra $compra)
     {
-        $data = $request->validate([
-            'received_at' => ['nullable', 'date'],
+        $request->validate([
+            'observaciones' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $compra->received_at = $data['received_at'] ?? now();
+        $compra->received_at = now();
         $compra->save();
 
         // Redirect to processing step where products can be received into almacén
@@ -445,9 +447,21 @@ class ComprasController extends Controller
     public function storeReceptionProducts(Request $request, Compra $compra)
     {
         $compra->load('lineas');
+        $sucursalId = $compra->local_destino ?? Auth::user()->branch_id;
 
         DB::beginTransaction();
         try {
+            // Crear ingreso en almacén
+            $ingreso = AlmacenIngreso::create([
+                'company_id' => $compra->company_id,
+                'empresa_id' => $compra->company_id,
+                'sucursal_id' => $sucursalId,
+                'user_id' => Auth::id(),
+                'compra_id' => $compra->id,
+                'fecha' => now(),
+                'observacion' => null,
+            ]);
+
             foreach ($compra->lineas as $line) {
                 if ($line->product_id) {
                     $producto = Producto::find($line->product_id);
@@ -455,8 +469,34 @@ class ComprasController extends Controller
                         $producto->cantidad = ($producto->cantidad ?? 0) + (int)$line->cantidad;
                         $producto->save();
                     }
+
+                    // Crear detalle de ingreso
+                    AlmacenIngresoDetalle::create([
+                        'ingreso_id' => $ingreso->id,
+                        'producto_id' => $line->product_id,
+                        'producto_linea_id' => $line->product_linea_id ?? null,
+                        'cantidad' => $line->cantidad,
+                        'costo' => $line->costo ?? 0,
+                        'cop' => $line->costo ?? 0,
+                        'mu' => 0,
+                        'mud' => 0,
+                        'mup' => 0,
+                        'pvp' => $line->pvp ?? 0,
+                        'pvpd' => $line->pvp_dto ?? 0,
+                        'pvc' => $line->pvc ?? 0,
+                        'pvcd' => $line->pvc_dto ?? 0,
+                        'stock_min' => $line->stock_min ?? 0,
+                        'stock_max' => $line->stock_max ?? 0,
+                        'lote' => $line->lote ?? null,
+                        'fecha_vencimiento' => $line->fecha_vencimiento ?? null,
+                    ]);
                 }
             }
+
+            // Marcar compra como recibida
+            $compra->update(['recibido' => 1, 'received_at' => now()]);
+
+            DB::commit();
 
             return redirect()->route('compras.show', $compra->id)->with('success', 'Productos recibidos en almacén correctamente.');
         } catch (\Throwable $e) {
@@ -523,11 +563,18 @@ class ComprasController extends Controller
         if ($compra) {
             DB::beginTransaction();
             try {
-                // mark as received if not already
-                if (! $compra->received_at) {
-                    $compra->received_at = now();
-                    $compra->save();
-                }
+                $sucursalId = $compra->local_destino ?? Auth::user()->branch_id;
+
+                // Crear ingreso en almacén
+                $ingreso = AlmacenIngreso::create([
+                    'company_id' => $compra->company_id,
+                    'empresa_id' => $compra->company_id,
+                    'sucursal_id' => $sucursalId,
+                    'user_id' => Auth::id(),
+                    'compra_id' => $compra->id,
+                    'fecha' => now(),
+                    'observacion' => null,
+                ]);
 
                 foreach ($compra->lineas as $line) {
                     if ($line->product_id) {
@@ -536,8 +583,31 @@ class ComprasController extends Controller
                             $producto->cantidad = ($producto->cantidad ?? 0) + (int)$line->cantidad;
                             $producto->save();
                         }
+
+                        AlmacenIngresoDetalle::create([
+                            'ingreso_id' => $ingreso->id,
+                            'producto_id' => $line->product_id,
+                            'producto_linea_id' => $line->product_linea_id ?? null,
+                            'cantidad' => $line->cantidad,
+                            'costo' => $line->costo ?? 0,
+                            'cop' => $line->costo ?? 0,
+                            'mu' => 0,
+                            'mud' => 0,
+                            'mup' => 0,
+                            'pvp' => $line->pvp ?? 0,
+                            'pvpd' => $line->pvp_dto ?? 0,
+                            'pvc' => $line->pvc ?? 0,
+                            'pvcd' => $line->pvc_dto ?? 0,
+                            'stock_min' => $line->stock_min ?? 0,
+                            'stock_max' => $line->stock_max ?? 0,
+                            'lote' => $line->lote ?? null,
+                            'fecha_vencimiento' => $line->fecha_vencimiento ?? null,
+                        ]);
                     }
                 }
+
+                // Marcar como recibida
+                $compra->update(['recibido' => 1, 'received_at' => now()]);
 
                 DB::commit();
             } catch (\Throwable $e) {
