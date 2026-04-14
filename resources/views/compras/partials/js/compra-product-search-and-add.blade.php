@@ -190,11 +190,22 @@
                 
                 // Precios sugeridos (viniendo de la línea)
                 const pl = product.precio_linea || {};
-                $('#detail-pvp').val(Number(product.pvp || pl.pvp || 0).toFixed(2));
-                $('#detail-pvc').val(Number(product.pvc || pl.pvc || 0).toFixed(2));
-                $('#detail-pvp-dto').val(Number(product.pvp_dto || pl.pvp_dto || 0).toFixed(2));
-                $('#detail-pvc-dto').val(Number(product.pvc_dto || pl.pvc_dto || 0).toFixed(2));
-                $('#detail-pv-docena').val(Number(product.pv_docena || pl.pv_docena || 0).toFixed(2));
+                const origPvp = Number(product.pvp || pl.pvp || 0).toFixed(2);
+                const origPvc = Number(product.pvc || pl.pvc || 0).toFixed(2);
+                const origPvpDto = Number(product.pvp_dto || pl.pvp_dto || 0).toFixed(2);
+                const origPvcDto = Number(product.pvc_dto || pl.pvc_dto || 0).toFixed(2);
+                const origPvDocena = Number(product.pv_docena || pl.pv_docena || 0).toFixed(2);
+                $('#detail-pvp').val(origPvp);
+                $('#detail-pvc').val(origPvc);
+                $('#detail-pvp-dto').val(origPvpDto);
+                $('#detail-pvc-dto').val(origPvcDto);
+                $('#detail-pv-docena').val(origPvDocena);
+
+                // Guardar precios originales para detectar cambios
+                $('#btn-confirm-add-product').data('orig_prices', {
+                    pvp: origPvp, pvc: origPvc, pvp_dto: origPvpDto,
+                    pvc_dto: origPvcDto, pv_docena: origPvDocena
+                });
 
                 $('#detail-lote').val(product.lote || '');
                 $('#detail-fecha-vencimiento').val(product.fecha_vencimiento || '');
@@ -228,6 +239,21 @@
                 .on('click.productDetailConfirm', '#btn-confirm-add-product', function() {
                     const original = $(this).data('product') || {};
 
+                    // Detectar si el usuario modificó algún precio
+                    const origPrices = $(this).data('orig_prices') || {};
+                    const curPvp = Number($('#detail-pvp').val()) || 0;
+                    const curPvc = Number($('#detail-pvc').val()) || 0;
+                    const curPvpDto = Number($('#detail-pvp-dto').val()) || 0;
+                    const curPvcDto = Number($('#detail-pvc-dto').val()) || 0;
+                    const curPvDocena = Number($('#detail-pv-docena').val()) || 0;
+                    const precioModificado = (
+                        curPvp.toFixed(2) !== origPrices.pvp ||
+                        curPvc.toFixed(2) !== origPrices.pvc ||
+                        curPvpDto.toFixed(2) !== origPrices.pvp_dto ||
+                        curPvcDto.toFixed(2) !== origPrices.pvc_dto ||
+                        curPvDocena.toFixed(2) !== origPrices.pv_docena
+                    ) ? 1 : 0;
+
                     const producto = {
                         id: original.id || '',
                         linea_id: original.linea_id || (original.precio_linea && original.precio_linea.id) || '',
@@ -238,11 +264,12 @@
                         descuento: Number($('#detail-descuento').val()) || 0,
                         stock_min: Number($('#detail-stock-min').val()) || 0,
                         stock_max: Number($('#detail-stock-max').val()) || 0,
-                        pvp: Number($('#detail-pvp').val()) || 0,
-                        pvc: Number($('#detail-pvc').val()) || 0,
-                        pvp_dto: Number($('#detail-pvp-dto').val()) || 0,
-                        pvc_dto: Number($('#detail-pvc-dto').val()) || 0,
-                        pv_docena: Number($('#detail-pv-docena').val()) || 0,
+                        pvp: curPvp,
+                        pvc: curPvc,
+                        pvp_dto: curPvpDto,
+                        pvc_dto: curPvcDto,
+                        pv_docena: curPvDocena,
+                        precio_modificado: precioModificado,
                         lote: $('#detail-lote').val() || '',
                         fecha_vencimiento: $('#detail-fecha-vencimiento').val() || ''
                     };
@@ -314,6 +341,7 @@
                         <input type="hidden" name="pvp_dto[]" value="${product.pvp_dto || 0}">
                         <input type="hidden" name="pvc_dto[]" value="${product.pvc_dto || 0}">
                         <input type="hidden" name="pv_docena[]" value="${product.pv_docena || 0}">
+                        <input type="hidden" name="precio_modificado[]" value="${product.precio_modificado || 0}">
                     </td>
                 <td>
                     <input name="codigo[]" type="text" class="form-control form-control-sm" 

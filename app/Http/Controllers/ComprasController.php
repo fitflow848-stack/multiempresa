@@ -175,6 +175,7 @@ class ComprasController extends Controller
             'pvp' => ['nullable', 'array'],
             'pvc_dto' => ['nullable', 'array'],
             'pv_docena' => ['nullable', 'array'],
+            'precio_modificado' => ['nullable', 'array'],
         ]);
 
         // Guardar en transacción
@@ -221,6 +222,7 @@ class ComprasController extends Controller
             $pvpDtos = $request->input('pvp_dto', []);
             $pvcDtos = $request->input('pvc_dto', []);
             $pvDocenas = $request->input('pv_docena', []);
+            $preciosModificados = $request->input('precio_modificado', []);
 
             $n = max(
                 count($productIds),
@@ -251,52 +253,63 @@ class ComprasController extends Controller
                 $newPvcDto = isset($pvcDtos[$i]) ? (float)$pvcDtos[$i] : ($productLine->pvc_dto ?? 0);
                 $newPvDocena = isset($pvDocenas[$i]) ? (float)$pvDocenas[$i] : ($productLine->pv_docena ?? 0);
 
-                // Actualizar solo los lotes del local destino (no afectar otros locales)
-                if ($productId && !empty($data['local_destino'])) {
-                    DB::table('almacen_ingreso_detalle')
-                        ->where('producto_id', $productId)
-                        ->whereIn('ingreso_id', function ($q) use ($data, $compra) {
-                            $q->select('id')
-                                ->from('almacen_ingresos')
-                                ->where('sucursal_id', $data['local_destino'])
-                                ->where('company_id', $compra->company_id);
-                        })
-                        ->update([
-                            'pvp'  => $newPvp,
-                            'pvc'  => $newPvc,
-                            'pvpd' => $newPvpDto,
-                            'pvcd' => $newPvcDto,
-                        ]);
-                }
+                // Solo actualizar precios en producto/lotes si el usuario modificó precios
+                $precioFueModificado = !empty($preciosModificados[$i]);
 
-                // Actualizar precios en producto_lineas
-                $newCosto = isset($costos[$i]) && $costos[$i] !== '' ? (float)$costos[$i] : null;
-                if ($productLine) {
-                    $productLine->update(array_filter([
-                        'precio_compra' => $newCosto,
-                        'pvp'           => $newPvp,
-                        'pvc'           => $newPvc,
-                        'pvp_dto'       => $newPvpDto,
-                        'pvc_dto'       => $newPvcDto,
-                        'pv_docena'     => $newPvDocena,
-                    ], fn($v) => $v !== null && $v !== 0.0));
-                }
+                if ($precioFueModificado) {
+                    // Actualizar solo los lotes del local destino (no afectar otros locales)
+                    if ($productId && !empty($data['local_destino'])) {
+                        DB::table('almacen_ingreso_detalle')
+                            ->where('producto_id', $productId)
+                            ->whereIn('ingreso_id', function ($q) use ($data, $compra) {
+                                $q->select('id')
+                                    ->from('almacen_ingresos')
+                                    ->where('sucursal_id', $data['local_destino'])
+                                    ->where('company_id', $compra->company_id);
+                            })
+                            ->update([
+                                'pvp'  => $newPvp,
+                                'pvc'  => $newPvc,
+                                'pvpd' => $newPvpDto,
+                                'pvcd' => $newPvcDto,
+                            ]);
+                    }
 
-                // Actualizar precios en producto principal
-                if ($productId) {
-                    $productoToUpdate = Producto::find($productId);
-                    if ($productoToUpdate) {
-                        $updateData = [];
-                        if ($newCosto !== null) $updateData['precio_compra'] = $newCosto;
-                        if ($newPvp > 0)       $updateData['pvp'] = $newPvp;
-                        if ($newPvc > 0)        $updateData['pvc'] = $newPvc;
-                        if ($newPvpDto > 0)     $updateData['pvp_dto'] = $newPvpDto;
-                        if ($newPvcDto > 0)     $updateData['pvc_dto'] = $newPvcDto;
-                        if ($newPvDocena > 0)   $updateData['pv_docena'] = $newPvDocena;
-                        if (!empty($updateData)) {
-                            $productoToUpdate->update($updateData);
+                    // Actualizar precios de venta en producto_lineas
+                    if ($productLine) {
+                        $productLine->update(array_filter([
+                            'pvp'           => $newPvp,
+                            'pvc'           => $newPvc,
+                            'pvp_dto'       => $newPvpDto,
+                            'pvc_dto'       => $newPvcDto,
+                            'pv_docena'     => $newPvDocena,
+                        ], fn($v) => $v !== null && $v !== 0.0));
+                    }
+
+                    // Actualizar precios de venta en producto principal
+                    if ($productId) {
+                        $productoToUpdate = Producto::find($productId);
+                        if ($productoToUpdate) {
+                            $updateData = [];
+                            if ($newPvp > 0)       $updateData['pvp'] = $newPvp;
+                            if ($newPvc > 0)        $updateData['pvc'] = $newPvc;
+                            if ($newPvpDto > 0)     $updateData['pvp_dto'] = $newPvpDto;
+                            if ($newPvcDto > 0)     $updateData['pvc_dto'] = $newPvcDto;
+                            if ($newPvDocena > 0)   $updateData['pv_docena'] = $newPvDocena;
+                            if (!empty($updateData)) {
+                                $productoToUpdate->update($updateData);
+                            }
                         }
                     }
+                }
+
+                // Actualizar precio de compra siempre (es dato de la compra actual)
+                $newCosto = isset($costos[$i]) && $costos[$i] !== '' ? (float)$costos[$i] : null;
+                if ($newCosto !== null && $productLine) {
+                    $productLine->update(['precio_compra' => $newCosto]);
+                }
+                if ($newCosto !== null && $productId) {
+                    Producto::where('id', $productId)->update(['precio_compra' => $newCosto]);
                 }
 
                 CompraLinea::create([
