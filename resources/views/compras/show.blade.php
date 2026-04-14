@@ -14,7 +14,9 @@
             <a href="{{ route('compras.pdf', $compra->id) }}" class="btn btn-info" target="_blank">
                 <i class="fas fa-print me-1"></i>Imprimir
             </a>
-            <a href="{{ route('compras.receive', $compra->id) }}" class="btn btn-primary">Recibir Ticket</a>
+            @if(!$compra->received_at)
+                <a href="{{ route('recibir-productos.index', ['id' => $compra->id]) }}" class="btn btn-primary">Recibir Ticket</a>
+            @endif
         </div>
     </div>
 

@@ -293,6 +293,13 @@
             let compraSeleccionada = null;
 
             $(function() {
+                @if(request()->has('id'))
+                    setTimeout(() => {
+                        const row = $('#tabla-compras tbody').find(`tr[data-compra-id="{{ request('id') }}"]`);
+                        if (row.length) row.click();
+                    }, 500);
+                @endif
+                
                 // 1. Selección de Fila
                 $('#tabla-compras tbody').on('click', 'tr', function() {
                     const $row = $(this);

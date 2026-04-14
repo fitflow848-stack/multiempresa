@@ -105,7 +105,7 @@ class ComprasController extends Controller
             $acciones = '';
             $acciones .= '<a href="' . route('compras.show', $r->id) . '" class="btn btn-sm btn-primary me-1">Ver</a>';
             if (! $r->received_at) {
-                $acciones .= '<a href="' . route('compras.receive', $r->id) . '" class="btn btn-sm btn-warning me-1">Recibir</a>';
+                $acciones .= '<a href="' . route('recibir-productos.index', ['id' => $r->id]) . '" class="btn btn-sm btn-warning me-1">Recibir</a>';
             }
             if (Auth::user()->can('compras.eliminar')) {
                 $acciones .= '<button class="btn btn-sm btn-danger btn-delete-compra" data-id="' . $r->id . '" title="Eliminar compra"><i class="bx bxs-trash"></i></button>';

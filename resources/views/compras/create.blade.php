@@ -611,8 +611,8 @@
                     $('#productos-tbody tr:not(#no-products)').each(function() {
                         const $row = $(this);
                         productos.push({
-                            linea_id: $row.data('linea-id') || '',
-                            producto_id: $row.find('input[name="product_id[]"]').val() || '',
+                            linea_id: $row.data('linea-id') || $row.find('input[name="linea_id[]"]').val() || '',
+                            producto_id: $row.find('input[name="product_id[]"]').val() || $row.data('producto-id') || '',
                             codigo: $row.find('input[name="codigo[]"]').val() || '',
                             descripcion: $row.find('input[name="descripcion[]"]').val() || '',
                             cantidad: $row.find('input[name="cantidad[]"]').val() || '1',
@@ -669,7 +669,7 @@
 
                                         const productoCompleto = {
                                             linea_id: producto.linea_id || '',
-                                            producto_id: producto.producto_id || '',
+                                            producto_id: producto.producto_id || producto.id || producto.product_id || '',
                                             codigo: producto.codigo || '',
                                             descripcion: producto.descripcion || '',
                                             cantidad: producto.cantidad || '1',

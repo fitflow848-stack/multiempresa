@@ -66,7 +66,7 @@
             <div class="card mb-4">
                 <div class="card-header">Registrar Recepción</div>
                 <div class="card-body">
-                    <form action="{{ route('recibir-productos.index') }}" method="GET">
+                    <form action="{{ route('compras.receive.store', $compra->id) }}" method="POST">
                         @csrf
                         <div class="mb-3">
                             <label class="form-label">Fecha de recepción</label>

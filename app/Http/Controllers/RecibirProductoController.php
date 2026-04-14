@@ -112,6 +112,10 @@ class RecibirProductoController extends Controller
             ]);
 
             foreach ($request->items as $item) {
+                if (empty($item['producto_id'])) {
+                    throw new \Exception("El ítem '" . ($item['nombre'] ?? 'Desconocido') . "' no tiene un producto válido enlazado al catálogo. Solo se pueden recibir productos registrados.");
+                }
+
                 AlmacenIngresoDetalle::create([
                     'ingreso_id' => $ingreso->id,
                     'producto_id' => $item['producto_id'],
