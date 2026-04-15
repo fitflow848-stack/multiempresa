@@ -60,6 +60,9 @@
                 if (clienteNombre) clienteNombre.textContent = 'CLIENTE CONTABLE';
                 if (clienteDoc) clienteDoc.textContent = '';
 
+                // Recargar cliente contable para restaurar su ID real
+                if (typeof crearClienteContable === 'function') crearClienteContable();
+
                 // Limpiar búsqueda de productos
                 const searchInput = document.querySelector('input[placeholder="Buscar productos..."]');
                 if (searchInput) {
@@ -175,6 +178,9 @@
         const clienteDoc = document.getElementById('cliente-info-documento');
         if (clienteNombre) clienteNombre.textContent = 'CLIENTE CONTABLE';
         if (clienteDoc) clienteDoc.textContent = '';
+
+        // Recargar cliente contable para restaurar su ID real
+        if (typeof crearClienteContable === 'function') crearClienteContable();
 
         // Limpiar búsqueda de productos
         const searchInputs = document.querySelectorAll('input[type="text"]');

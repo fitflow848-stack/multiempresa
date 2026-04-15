@@ -157,7 +157,7 @@ class VentaService
             $venta = new Venta();
             $venta->id_empresa = $company->id;
             $venta->id_tido = $documento->id_tido;
-            $venta->id_cliente = $clienteData['id'] ?? null;
+            $venta->id_cliente = $clienteData['id'] ?? 999999;
             $venta->id_tipo_pago = $tipoPagoId;
             $venta->fecha_emision = now();
             
