@@ -46,7 +46,7 @@ class AlmacenController extends Controller
                 'pl.concentracion',
                 's.nombre as almacen_nombre',
                 DB::raw('SUM(d.cantidad) as existencias'),
-                DB::raw('COALESCE(SUM(d.cantidad * d.costo) / NULLIF(SUM(d.cantidad), 0), (SELECT d2.costo FROM almacen_ingreso_detalle d2 WHERE d2.id = MAX(d.id))) as costo'),
+                DB::raw('COALESCE(SUM(d.cantidad * d.costo) / NULLIF(SUM(d.cantidad), 0), MAX(d.costo)) as costo'),
                 DB::raw('MAX(d.pvp) as pvp'),
                 DB::raw('MAX(d.pvpd) as pvpd'),
                 DB::raw('MAX(d.pvc) as pvc'),
