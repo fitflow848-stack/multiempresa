@@ -356,13 +356,67 @@ class ComprobantesController extends Controller
                 $venta->estado = 0; // 0: Anulada
                 $venta->save();
                 $count++;
+
+                // 5. Guardar los ítems de la venta anulada como pre-venta (venta guardada)
+                // para que el usuario pueda retomarla desde el POS sin tener que cargar todo de nuevo.
+                $ticketItems = $venta->detalles->map(function ($det, $idx) {
+                    return [
+                        'id' => 'anulado_' . $det->servicio_id . '_' . ($det->id ?? $idx),
+                        'nombre' => $det->nombre_servicio,
+                        'precio' => (float) $det->precio_unitario,
+                        'importe' => (float) $det->importe,
+                        'cantidad' => (float) $det->cantidad,
+                        'marca' => '',
+                        'descuento' => 0,
+                        'descuentoFijo' => 0,
+                        'descuentoTexto' => '0%',
+                        'es_precio_corporativo' => false,
+                        'es_precio_docena' => false,
+                        'es_lote_especifico' => false,
+                        'lote' => null,
+                        'producto_id' => $det->servicio_id,
+                        'producto_linea_id' => $det->servicio_id,
+                        'pvp' => (float) $det->precio_unitario,
+                        'pvc' => (float) $det->precio_unitario,
+                        'es_precio_publico' => true,
+                    ];
+                })->toArray();
+
+                $clienteData = null;
+                if ($venta->cliente) {
+                    $c = $venta->cliente;
+                    $clienteData = [
+                        'id' => $c->id,
+                        'nombre' => $c->nombre,
+                        'documento' => $c->numero_documento ?? '',
+                        'tipo_documento' => $c->tipo_documento ?? 'DNI',
+                        'direccion' => $c->direccion ?? '',
+                        'telefono' => $c->telefono ?? '',
+                        'email' => $c->email ?? '',
+                    ];
+                }
+
+                \App\Models\PosVentaGuardada::create([
+                    'user_id' => $user->id,
+                    'company_id' => $user->company_id,
+                    'branch_id' => $venta->sucursal ?? $user->branch_id,
+                    'cliente_nombre' => $venta->cliente->nombre ?? 'Cliente General',
+                    'total' => (float) $venta->total,
+                    'data' => [
+                        'ticket' => $ticketItems,
+                        'cliente' => $clienteData,
+                        'metodo_pago' => $venta->tipoPago->nombre ?? 'Efectivo',
+                        'credito' => false,
+                        'anulacion_origen' => $venta->serie . '-' . str_pad($venta->numero, 8, '0', STR_PAD_LEFT),
+                    ],
+                ]);
             }
 
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => "Se cancelaron $count comprobantes. ($ncsGenerated Notas de Crédito generadas)",
+                'message' => "Se cancelaron $count comprobantes. ($ncsGenerated Notas de Crédito generadas). Los ítems han sido guardados en Ventas en Espera para retomar desde el POS.",
                 'cancelados' => $count
             ]);
         } catch (\Exception $e) {
