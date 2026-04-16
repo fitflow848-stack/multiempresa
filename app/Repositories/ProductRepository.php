@@ -56,7 +56,7 @@ class ProductRepository
                 MAX(p.codigo_barras) AS codigo_barras,
                 MAX(p.imagen_principal) AS imagen_principal,
                 SUM(ad.cantidad) AS cantidad_total,
-                MAX(ad.costo) AS costo,
+                MAX(pl.precio_compra) AS costo,
                 MAX(ad.pvp) AS pvp,
                 MAX(ad.pvpd) AS pvpd,
                 MAX(ad.pvc) AS pvc,
