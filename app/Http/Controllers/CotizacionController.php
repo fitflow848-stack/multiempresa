@@ -519,11 +519,16 @@ class CotizacionController extends Controller
     private function generarNumero()
     {
         $year = now()->year;
-        
-        // Buscamos el último globalmente para evitar colisiones entre empresas
-        // ya que la tabla tiene un índice único global en 'numero'
-        $ultimo = Cotizacion::whereYear('fecha', $year)
+
+        // withoutGlobalScopes() es obligatorio: los traits BelongsToCompany y
+        // BelongsToSucursal filtran por empresa/sucursal del usuario actual,
+        // pero el índice unique 'cotizaciones_numero_unique' es GLOBAL en la BD.
+        // Sin esto, dos empresas distintas generarían el mismo número.
+        // lockForUpdate() evita la condición de carrera entre requests concurrentes.
+        $ultimo = Cotizacion::withoutGlobalScopes()
+            ->whereYear('fecha', $year)
             ->orderBy('id', 'desc')
+            ->lockForUpdate()
             ->first();
 
         if ($ultimo) {
@@ -536,9 +541,9 @@ class CotizacionController extends Controller
         }
 
         $finalNumero = 'COT-' . $year . '-' . str_pad($numero, 6, '0', STR_PAD_LEFT);
-        
-        // Verificación de seguridad por si acaso hubo saltos o ingresos manuales
-        while (Cotizacion::where('numero', $finalNumero)->exists()) {
+
+        // Verificación de seguridad por saltos o ingresos manuales
+        while (Cotizacion::withoutGlobalScopes()->where('numero', $finalNumero)->exists()) {
             $numero++;
             $finalNumero = 'COT-' . $year . '-' . str_pad($numero, 6, '0', STR_PAD_LEFT);
         }
