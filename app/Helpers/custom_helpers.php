@@ -382,13 +382,13 @@ if (! function_exists('get_fecha_formateada')) {
 
         if (count($parts) >= 2) {
             try {
-                $fechaInicio = \Carbon\Carbon::createFromFormat('d/m/Y', trim($parts[0]))->format('Y-m-d');
-                $fechaFin = \Carbon\Carbon::createFromFormat('d/m/Y', trim($parts[1]))->format('Y-m-d');
+                $fechaInicio = Carbon::createFromFormat('d/m/Y', trim($parts[0]))->format('Y-m-d');
+                $fechaFin = Carbon::createFromFormat('d/m/Y', trim($parts[1]))->format('Y-m-d');
             } catch (\Exception $e) {
                 // Si falla el formato d/m/Y, intentar otros formatos
                 try {
-                    $fechaInicio = \Carbon\Carbon::parse(trim($parts[0]))->format('Y-m-d');
-                    $fechaFin = \Carbon\Carbon::parse(trim($parts[1]))->format('Y-m-d');
+                    $fechaInicio = Carbon::parse(trim($parts[0]))->format('Y-m-d');
+                    $fechaFin = Carbon::parse(trim($parts[1]))->format('Y-m-d');
                 } catch (\Exception $e) {
                     // Si no se puede parsear, ignorar el filtro de fecha
                 }

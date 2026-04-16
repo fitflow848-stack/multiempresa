@@ -141,7 +141,9 @@ class CotizacionController extends Controller
             $total_con_igv = 0;
             if (is_array($ticket)) {
                 foreach ($ticket as $item) {
-                    if (isset($item['precio']) && isset($item['cantidad'])) {
+                    if (isset($item['importe'])) {
+                        $total_con_igv += floatval($item['importe']);
+                    } elseif (isset($item['precio']) && isset($item['cantidad'])) {
                         $total_con_igv += floatval($item['precio']) * intval($item['cantidad']);
                     }
                 }
@@ -512,18 +514,36 @@ class CotizacionController extends Controller
     }
 
     /**
-     * Generar número de cotización
+     * Generar número de cotización correlativo
      */
     private function generarNumero()
     {
-        $ultimo = Cotizacion::where('company_id', Auth::user()->company_id)
-            ->whereYear('created_at', now()->year)
+        $year = now()->year;
+        
+        // Buscamos el último globalmente para evitar colisiones entre empresas
+        // ya que la tabla tiene un índice único global en 'numero'
+        $ultimo = Cotizacion::whereYear('fecha', $year)
             ->orderBy('id', 'desc')
             ->first();
 
-        $numero = $ultimo ? ((int) substr($ultimo->numero, -6)) + 1 : 1;
+        if ($ultimo) {
+            // Extraer solo la parte numérica final
+            $partes = explode('-', $ultimo->numero);
+            $ultimoSecuencial = (int) end($partes);
+            $numero = $ultimoSecuencial + 1;
+        } else {
+            $numero = 1;
+        }
 
-        return 'COT-' . now()->year . '-' . str_pad($numero, 6, '0', STR_PAD_LEFT);
+        $finalNumero = 'COT-' . $year . '-' . str_pad($numero, 6, '0', STR_PAD_LEFT);
+        
+        // Verificación de seguridad por si acaso hubo saltos o ingresos manuales
+        while (Cotizacion::where('numero', $finalNumero)->exists()) {
+            $numero++;
+            $finalNumero = 'COT-' . $year . '-' . str_pad($numero, 6, '0', STR_PAD_LEFT);
+        }
+
+        return $finalNumero;
     }
 
     /**
