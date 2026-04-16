@@ -201,11 +201,11 @@
                         <td>UNIDAD</td>
                         <td>{{ number_format($item->cantidad, 2) }}</td>
                         <td style="text-align: right;">
-                            {{ number_format(($item->precio_unitario * $item->cantidad) - $item->importe, 2) }}
+                            {{ number_format(($item->precio_unitario * $item->cantidad) - $item->subtotal, 2) }}
                         </td>
                         <td style="text-align: right;">{{ number_format($item->precio_unitario, 2) }}</td>
                         <td style="text-align: right;">
-                            {{ number_format($item->importe, 2) }}</td>
+                            {{ number_format($item->subtotal, 2) }}</td>
                     </tr>
                 @endforeach
             </tbody>

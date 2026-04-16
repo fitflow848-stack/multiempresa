@@ -166,9 +166,9 @@
                     <td style="font-size: 7.5pt; line-height: 1.1;">
                         {{ $item->nombre_servicio ?? $item->descripcion }}
                     </td>
-                    <td class="text-right">{{ number_format(($item->precio_unitario * $item->cantidad) - $item->importe, 2) }}</td>
+                    <td class="text-right">{{ number_format(($item->precio_unitario * $item->cantidad) - $item->subtotal, 2) }}</td>
                     <td class="text-right">{{ number_format($item->precio_unitario, 2) }}</td>
-                    <td class="text-right" style="font-weight: bold;">{{ number_format($item->importe, 2) }}</td>
+                    <td class="text-right" style="font-weight: bold;">{{ number_format($item->subtotal, 2) }}</td>
                 </tr>
             @endforeach
         </tbody>
