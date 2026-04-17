@@ -201,6 +201,13 @@
                                             $pagado = 0;
                                             $estadoPago = 'CANCELADO';
                                         }
+
+                                        if ($isNotaCredito) {
+                                            $pendiente = 0;
+                                            $deudaTotal = 0;
+                                            $pagado = 0;
+                                            $estadoPago = 'ANULADO';
+                                        }
                                     @endphp
                                     <tr class="comprobante-row {{ $comprobanteSeleccionado && $comprobanteSeleccionado->id_venta == $venta->id_venta ? 'table-active' : '' }} {{ $isCancelado ? 'comprobante-cancelado' : '' }} {{ $isNotaCredito ? 'comprobante-nc' : '' }}"
                                         data-venta-id="{{ $venta->id_venta }}" data-total="{{ $venta->total }}"
@@ -243,7 +250,9 @@
                                             S/ {{ number_format($pendiente, 2) }}
                                         </td>
                                         <td class="text-center">
-                                            @if ($isCancelado)
+                                            @if ($isNotaCredito)
+                                                <span class="badge bg-danger">ANULADO</span>
+                                            @elseif ($isCancelado)
                                                 <span class="badge bg-danger">CANCELADA</span>
                                             @elseif(isset($venta->estado) && $venta->estado == 3)
                                                 <span class="badge bg-warning text-dark">DEVUELTO</span>
@@ -258,7 +267,9 @@
                                             S/ {{ number_format($venta->cliente ? $venta->cliente->debe : 0, 2) }}
                                         </td>
                                         <td class="text-center">
-                                            @if ($venta->enviado_sunat)
+                                            @if ($isNotaCredito)
+                                                <i class="bx bxs-x-circle text-danger fs-5" title="Nota de Crédito"></i>
+                                            @elseif ($venta->enviado_sunat)
                                                 <i class="bx bxs-check-circle text-success fs-5"
                                                     title="Enviado correctamente"></i>
                                             @elseif(strtolower($venta->tipo_documento) !== 'ticket')
@@ -275,7 +286,7 @@
                                             {{ $venta->observacion }}
                                         </td>
                                         <td class="text-end pe-3">
-                                            @if(!$isCancelado)
+                                            @if(!$isCancelado && !$isNotaCredito)
                                             <div class="d-flex justify-content-end gap-1">
                                                 @if(strtolower($venta->tipo_documento) !== 'ticket' && !$isCancelado && ($venta->enviado_sunat || $venta->ventaSunat))
                                                 <button type="button" class="btn btn-action-icon btn-light text-warning btn-guia-remision"
