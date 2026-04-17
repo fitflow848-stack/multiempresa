@@ -134,7 +134,7 @@ class Sunat
                 "clave" => $empresa->sol_password,
                 "razon_social" => $empresa->razon_social,
                 "direccion" => $empresa->direccion_fiscal,
-                "ubigeo" => $empresa->ubigeo,
+                "ubigeo" => $empresa->ubigeo ?: '150101',
                 "distrito" => $empresa->district,
                 "provincia" => $empresa->province,
                 "departamento" => $empresa->department
@@ -363,7 +363,7 @@ class Sunat
                 "clave" => $empresa->sol_password,
                 "razon_social" => $empresa->razon_social,
                 "direccion" => $empresa->direccion_fiscal,
-                "ubigeo" => $empresa->ubigeo,
+                "ubigeo" => $empresa->ubigeo ?: '150101',
                 "distrito" => $empresa->district,
                 "provincia" => $empresa->province,
                 "departamento" => $empresa->department

@@ -20,6 +20,15 @@ class CompanyDocument extends Model
         'number',
     ];
 
+    protected static function booted(): void
+    {
+        static::creating(function (CompanyDocument $document) {
+            if (empty($document->company_id) && $document->branch_id) {
+                $document->company_id = Sucursal::find($document->branch_id)?->company_id;
+            }
+        });
+    }
+
     public function company()
     {
         return $this->belongsTo(Company::class);
