@@ -323,6 +323,31 @@ class ComprobantesController extends Controller
                         if ($dataEnviar && isset($dataEnviar->estado) && $dataEnviar->estado) {
                             $nc->enviado_sunat = 1;
                             $nc->save();
+
+                            // Guardar CDR en storage
+                            try {
+                                $cdrFolder = 'cdrs';
+                                $cdrFileName = $dataEnviar->nombre ?? ('R-' . $ventaSunat->nombre_xml . '.zip');
+                                $cdrStoragePath = $cdrFolder . '/' . $cdrFileName;
+
+                                if (!Storage::disk('public')->exists($cdrFolder)) {
+                                    Storage::disk('public')->makeDirectory($cdrFolder);
+                                }
+
+                                $cdrRaw = $dataEnviar->cdr ?? '';
+                                $cdrBinary = (is_string($cdrRaw) && base64_decode($cdrRaw, true) !== false)
+                                    ? base64_decode($cdrRaw)
+                                    : (string)$cdrRaw;
+
+                                Storage::disk('public')->put($cdrStoragePath, $cdrBinary);
+
+                                $ventaSunat->update([
+                                    'cdr_nombre' => $cdrFileName,
+                                    'cdr_path'   => $cdrStoragePath,
+                                ]);
+                            } catch (\Exception $cdrEx) {
+                                \Illuminate\Support\Facades\Log::error("Error guardando CDR NC: " . $cdrEx->getMessage());
+                            }
                         }
 
                         // Guardar XML en storage
@@ -550,6 +575,31 @@ class ComprobantesController extends Controller
                         if ($dataEnviar && isset($dataEnviar->estado) && $dataEnviar->estado) {
                             $nc->enviado_sunat = 1;
                             $nc->save();
+
+                            // Guardar CDR en storage
+                            try {
+                                $cdrFolder = 'cdrs';
+                                $cdrFileName = $dataEnviar->nombre ?? ('R-' . $ventaSunat->nombre_xml . '.zip');
+                                $cdrStoragePath = $cdrFolder . '/' . $cdrFileName;
+
+                                if (!Storage::disk('public')->exists($cdrFolder)) {
+                                    Storage::disk('public')->makeDirectory($cdrFolder);
+                                }
+
+                                $cdrRaw = $dataEnviar->cdr ?? '';
+                                $cdrBinary = (is_string($cdrRaw) && base64_decode($cdrRaw, true) !== false)
+                                    ? base64_decode($cdrRaw)
+                                    : (string)$cdrRaw;
+
+                                Storage::disk('public')->put($cdrStoragePath, $cdrBinary);
+
+                                $ventaSunat->update([
+                                    'cdr_nombre' => $cdrFileName,
+                                    'cdr_path'   => $cdrStoragePath,
+                                ]);
+                            } catch (\Exception $cdrEx) {
+                                \Illuminate\Support\Facades\Log::error("Error guardando CDR NC devolución: " . $cdrEx->getMessage());
+                            }
                         }
 
                         // Guardar XML en storage
