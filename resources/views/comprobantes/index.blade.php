@@ -275,6 +275,7 @@
                                             {{ $venta->observacion }}
                                         </td>
                                         <td class="text-end pe-3">
+                                            @if(!$isCancelado)
                                             <div class="d-flex justify-content-end gap-1">
                                                 @if(strtolower($venta->tipo_documento) !== 'ticket' && !$isCancelado && ($venta->enviado_sunat || $venta->ventaSunat))
                                                 <button type="button" class="btn btn-action-icon btn-light text-warning btn-guia-remision"
@@ -331,6 +332,7 @@
                                                     </div>
                                                 @endif
                                             </div>
+                                            @endif
                                         </td>
                                     </tr>
                                 @empty
