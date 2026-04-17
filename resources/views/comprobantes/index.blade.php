@@ -81,6 +81,11 @@
             border-left: 4px solid #ef4444 !important;
             color: #6b0000 !important;
         }
+
+        .comprobante-nc {
+            background-color: #fde8e8 !important;
+            border-left: 4px solid #dc2626 !important;
+        }
     </style>
 
     <div class="container-fluid py-2">
@@ -172,6 +177,7 @@
                                             default => 'bg-info text-white',
                                         };
                                         $isCancelado = isset($venta->estado) && $venta->estado == 0;
+                                        $isNotaCredito = ($venta->id_tido == 5);
 
                                         $pendiente = 0;
                                         $deudaTotal = 0;
@@ -196,7 +202,7 @@
                                             $estadoPago = 'CANCELADO';
                                         }
                                     @endphp
-                                    <tr class="comprobante-row {{ $comprobanteSeleccionado && $comprobanteSeleccionado->id_venta == $venta->id_venta ? 'table-active' : '' }} {{ $isCancelado ? 'comprobante-cancelado' : '' }}"
+                                    <tr class="comprobante-row {{ $comprobanteSeleccionado && $comprobanteSeleccionado->id_venta == $venta->id_venta ? 'table-active' : '' }} {{ $isCancelado ? 'comprobante-cancelado' : '' }} {{ $isNotaCredito ? 'comprobante-nc' : '' }}"
                                         data-venta-id="{{ $venta->id_venta }}" data-total="{{ $venta->total }}"
                                         data-pagado_monto="{{ $venta->deuda ? $venta->deuda->monto_pagado : ($venta->pagado ? $venta->total : 0) }}"
                                         data-pendiente_monto="{{ $isCancelado ? 0 : ($venta->deuda ? $venta->deuda->monto_deuda : ($venta->pagado ? 0 : $venta->total)) }}"
