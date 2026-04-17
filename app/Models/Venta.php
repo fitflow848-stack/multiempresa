@@ -145,25 +145,32 @@ class Venta extends Model
      */
     public function getTipoDocumentoAttribute($value)
     {
-        // Si ya tiene valor en tipo_documento, usarlo
-        if ($value) {
-            return $value;
-        }
-
-        // Si no, intentar deducir del id_tido o serie
-        if ($this->serie) {
+        $tipo = $value;
+        
+        // Si no tiene valor, intentar deducir de la serie
+        if (!$tipo && $this->serie) {
             $serie = strtoupper($this->serie);
             if (str_starts_with($serie, 'F')) {
-                return 'factura';
+                $tipo = 'FACTURA';
             } elseif (str_starts_with($serie, 'B')) {
-                return 'boleta';
+                $tipo = 'BOLETA';
             } elseif (str_starts_with($serie, 'NV')) {
-                return 'nota-venta';
+                $tipo = 'NOTA DE VENTA';
             }
         }
 
-        // Por defecto, ticket
-        return 'ticket';
+        if (!$tipo) {
+            return 'TICKET';
+        }
+
+        // Mapeo a nombres largos electrónicos (Normativa SUNAT)
+        return match (mb_strtoupper($tipo)) {
+            'FACTURA'           => 'Factura Electrónica',
+            'BOLETA'            => 'Boleta de Venta Electrónica',
+            'BOLETA DE VENTA'   => 'Boleta de Venta Electrónica',
+            'NOTA DE VENTA'     => 'Nota de Venta',
+            default             => mb_convert_case($tipo, MB_CASE_TITLE, "UTF-8"),
+        };
     }
     /**
      * Relación con el usuario (vendedor)

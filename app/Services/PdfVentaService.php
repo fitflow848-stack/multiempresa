@@ -70,12 +70,12 @@ class PdfVentaService
 
         $serie_numero = ($venta->serie ?? 'F001') . '-' . $this->agregarCerosIzquierda($venta->numero ?? 1, 4);
         $tipoDocumento = match ($venta->id_tido) {
-            1 => 'Boleta',
-            2 => 'Factura',
+            1 => 'Boleta de Venta Electrónica',
+            2 => 'Factura Electrónica',
             3 => 'Nota de Venta',
             4 => 'Ticket',
             5 => 'Nota de Credito',
-            default => 'Boleta',
+            default => 'Boleta de Venta Electrónica',
         };
 
         // Preparar texto QR (reemplaza RUC por el de tu empresa si está en $empresa)
