@@ -343,6 +343,34 @@
                                                     </div>
                                                 @endif
                                             </div>
+                                            @elseif($isNotaCredito)
+                                            <div class="d-flex justify-content-end gap-1">
+                                                <button class="btn btn-action-icon btn-light text-secondary btn-imprimir"
+                                                    type="button" data-venta-id="{{ $venta->id_venta }}"
+                                                    data-tipo="{{ strtolower($venta->tipo_documento ?? 'ticket') }}"
+                                                    title="Imprimir">
+                                                    <i class="bx bx-printer"></i>
+                                                </button>
+                                                @if (isset($venta->ventaSunat->nombre_xml))
+                                                    <div class="dropdown">
+                                                        <button type="button"
+                                                            class="btn btn-action-icon btn-light text-dark"
+                                                            data-bs-toggle="dropdown">
+                                                            <i class="bx bx-dots-vertical-rounded"></i>
+                                                        </button>
+                                                        <ul class="dropdown-menu shadow-sm border-0">
+                                                            <li><a class="dropdown-item small"
+                                                                    href="{{ env('APP_URL') }}/storage/xml_sunat/{{ $venta->ventaSunat->nombre_xml }}.xml"
+                                                                    target="_blank">📄 Ver XML</a></li>
+                                                            @if ($venta->enviado_sunat)
+                                                                <li><a class="dropdown-item small"
+                                                                        href="{{ env('APP_URL') }}/storage/cdrs/R-{{ $venta->ventaSunat->nombre_xml }}.zip"
+                                                                        target="_blank">📦 Descargar CDR</a></li>
+                                                            @endif
+                                                        </ul>
+                                                    </div>
+                                                @endif
+                                            </div>
                                             @endif
                                         </td>
                                     </tr>
