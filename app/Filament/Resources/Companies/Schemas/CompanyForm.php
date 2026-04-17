@@ -283,8 +283,7 @@ class CompanyForm
 
                 Step::make('Sucursales y Documentos')
                     ->schema([
-                        Repeater::make('sucursales')
-                            ->relationship('sucursales')
+                        Repeater::make('sucursales_list')
                             ->label('Sucursales')
                             ->addable(fn ($get) => ! $isNotSuperAdmin())
                             ->deletable(fn ($get) => ! $isNotSuperAdmin())
@@ -294,6 +293,7 @@ class CompanyForm
                                         Tab::make('Datos Básicos')
                                             ->icon('heroicon-o-building-office')
                                             ->schema([
+                                                TextInput::make('id')->hidden(),
                                                 TextInput::make('nombre')
                                                     ->required()
                                                     ->label('Nombre de Sucursal'),
@@ -321,12 +321,12 @@ class CompanyForm
 
                                         Tab::make('Cajas Registradoras')
                                             ->icon('heroicon-o-calculator')
-                                            ->badge(fn($get) => count($get('cajas') ?? []))
+                                            ->badge(fn($get) => count($get('cajas_list') ?? []))
                                             ->schema([
-                                                Repeater::make('cajas')
-                                                    ->relationship('cajas')
+                                                Repeater::make('cajas_list')
                                                     ->label('')
                                                     ->schema([
+                                                        TextInput::make('id')->hidden(),
                                                         TextInput::make('nombre')
                                                             ->label('Nombre de la Caja')
                                                             ->required()
@@ -350,12 +350,12 @@ class CompanyForm
 
                                         Tab::make('Series de Documentos')
                                             ->icon('heroicon-o-document-text')
-                                            ->badge(fn($get) => count($get('documents') ?? []))
+                                            ->badge(fn($get) => count($get('documents_list') ?? []))
                                             ->schema([
-                                                Repeater::make('documents')
-                                                    ->relationship('documents')
+                                                Repeater::make('documents_list')
                                                     ->label('')
                                                     ->schema([
+                                                        TextInput::make('id')->hidden(),
                                                         Select::make('sunat_document_id')
                                                             ->label('Tipo de Documento')
                                                             ->options(fn() => DB::table('documentos_sunat')->pluck('nombre', 'id_tido'))
