@@ -31,6 +31,16 @@ class VentaDetalle extends Model
         'orden' => 'integer'
     ];
 
+    protected $appends = ['subtotal'];
+
+    /**
+     * Alias para importe (usado en plantillas PDF que comparten lógica con Cotizaciones)
+     */
+    public function getSubtotalAttribute()
+    {
+        return $this->importe;
+    }
+
     /**
      * Relación con la venta
      */
