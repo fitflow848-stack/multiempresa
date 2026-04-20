@@ -10,4 +10,4 @@ Artisan::command('inspire', function () {
 use Illuminate\Support\Facades\Schedule;
 use App\Jobs\SendSalesToSunatJob;
 
-Schedule::job(new SendSalesToSunatJob)->dailyAt('23:00');
+Schedule::job(new SendSalesToSunatJob)->dailyAt('00:00');
