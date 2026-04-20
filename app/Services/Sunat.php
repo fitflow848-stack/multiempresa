@@ -67,9 +67,13 @@ class Sunat
         return $this->sendRequest('/generar/nota', 'POST', $data);
     }
 
-    public function formatJsonFacturaBoleta($nombre_documento, $contenido_documento)
+    public function formatJsonFacturaBoleta($nombre_documento, $contenido_documento, $companyId = null)
     {
-        $empresa = Company::where('id', Auth::user()->company_id)->first();
+        $id = $companyId ?? (auth()->check() ? auth()->user()->company_id : null);
+        if (!$id) {
+            throw new \Exception("Company ID not provided and no authenticated user found.");
+        }
+        $empresa = Company::where('id', $id)->first();
         $data = [
             "endpoint" => $empresa->sunat_produccion ? "produccion" : "beta",
             "ruc" => $empresa->ruc,
@@ -123,7 +127,8 @@ class Sunat
             $clienteNumDoc = 11111111; // 8 unos para DNI genérico si es necesario
         }
 
-        $empresa = Company::where('id', Auth::user()->company_id)->first();
+        $id = $venta->id_empresa ?? (auth()->check() ? auth()->user()->company_id : null);
+        $empresa = Company::where('id', $id)->first();
 
         $data = [
             "endpoint" => $empresa->sunat_produccion ? "produccion" : "beta",
@@ -344,7 +349,8 @@ class Sunat
             ];
         }
 
-        $empresa = Company::where('id', Auth::user()->company_id)->first();
+        $id = $ventaNC->id_empresa ?? (auth()->check() ? auth()->user()->company_id : null);
+        $empresa = Company::where('id', $id)->first();
         $data = [
             "endpoint" => $empresa->sunat_produccion ? "produccion" : "beta",
             "documento" => "credito",
@@ -388,9 +394,10 @@ class Sunat
         return $this->sendRequest('/enviar/guia/remision', 'POST', $data);
     }
     
-    public function consultarGuiaRemision($ticker)
+    public function consultarGuiaRemision($ticker, $companyId = null)
     {
-        $empresa = Company::where('id', Auth::user()->company_id)->first();
+        $id = $companyId ?? (auth()->check() ? auth()->user()->company_id : null);
+        $empresa = Company::where('id', $id)->first();
         $data = json_encode([
             "endpoint" => $empresa->sunat_produccion ? "produccion" : "beta",
             "ruc" => $empresa->ruc,
@@ -402,9 +409,10 @@ class Sunat
         return $this->sendRequest('/consulta/documento/ticker/' . $ticker, 'POST', $data);
     }
 
-    public function formatJsonEnviarGuia($ruc, $nombre_documento, $contenido_documento)
+    public function formatJsonEnviarGuia($ruc, $nombre_documento, $contenido_documento, $companyId = null)
     {
-        $empresa = Company::where('id', Auth::user()->company_id)->first();
+        $id = $companyId ?? (auth()->check() ? auth()->user()->company_id : null);
+        $empresa = Company::where('id', $id)->first();
         $data = [
             "endpoint" => $empresa->sunat_produccion ? "produccion" : "beta",
             "ruc" => $empresa->ruc,

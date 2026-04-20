@@ -134,13 +134,15 @@ class SunatManager
             throw new Exception("Falta XML para la venta {$venta->id_venta}");
         }
 
-        $json = $this->sunatClient->formatJsonFacturaBoleta($ventaSunat->nombre_xml, $ventaSunat->content_xml);
+        $json = $this->sunatClient->formatJsonFacturaBoleta($ventaSunat->nombre_xml, $ventaSunat->content_xml, $venta->id_empresa);
         $response = $this->sunatClient->sendDocumentoBoletaFactura($json);
         $data = json_decode($response);
 
         if (!$data || empty($data->nombre) || empty($data->cdr)) {
+            $msg = $data->message ?? "Respuesta SUNAT inválida";
+            $this->logAttempt($venta, 'error', $msg, $data);
             Log::error("Respuesta SUNAT inválida para venta {$venta->id_venta}", ['response' => $response]);
-            throw new Exception("Respuesta SUNAT inválida para venta {$venta->id_venta}");
+            throw new Exception("Respuesta SUNAT inválida: " . $msg);
         }
 
         $cdrRaw = $data->cdr;
@@ -164,6 +166,8 @@ class SunatManager
 
         $publicUrl = Storage::disk('public')->exists($storagePath) ? asset('storage/' . $storagePath) : null;
 
+        $this->logAttempt($venta, 'success', 'Enviado correctamente', $data);
+
         return [
             'nombre_cdr' => $fileName,
             'storage_path' => $storagePath,
@@ -177,18 +181,37 @@ class SunatManager
     public function procesarPendientes(): array
     {
         $result = ['processed' => [], 'failed' => []];
-        $ventas = Venta::where('enviado_sunat', 0)->where('id_tido', '<>', 4)->get();
+        $ventas = Venta::withoutGlobalScopes()->where('enviado_sunat', 0)->where('id_tido', '<>', 4)->get();
 
         foreach ($ventas as $venta) {
             try {
                 $this->enviarDocumento($venta);
                 $result['processed'][] = $venta->id_venta;
             } catch (\Throwable $e) {
+                $this->logAttempt($venta, 'error', $e->getMessage());
                 Log::error("Error procesando pendiente venta {$venta->id_venta}: " . $e->getMessage());
                 $result['failed'][] = ['id' => $venta->id_venta, 'error' => $e->getMessage()];
             }
         }
 
         return $result;
+    }
+    public function logAttempt(Venta $venta, string $status, ?string $message = null, $responseData = null)
+    {
+        try {
+            $type = 'sale';
+            if ($venta->id_tido == 5) $type = 'nc';
+            
+            \App\Models\SunatLog::create([
+                'venta_id'               => $venta->id_venta,
+                'documento_identificador' => $venta->serie . '-' . str_pad($venta->numero, 8, '0', STR_PAD_LEFT),
+                'status'                 => $status,
+                'message'                => $message,
+                'response_data'          => $responseData,
+                'type'                   => $type,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error("Error saving SunatLog: " . $e->getMessage());
+        }
     }
 }
