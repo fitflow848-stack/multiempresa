@@ -14,7 +14,19 @@ class AuthHelper
         static $resolvedUser = null;
         if ($resolvedUser) return $resolvedUser;
 
-        foreach (['admin', 'web'] as $guard) {
+        // Priorizar el guard según el panel para no mezclar las sesiones (Admin vs POS)
+        $isAdminPanel = request()->is('admin') || request()->is('admin/*') || request()->routeIs('filament.*');
+        
+        if (request()->is('livewire/update')) {
+            $referer = request()->headers->get('referer', '');
+            if (str_contains($referer, '/admin')) {
+                $isAdminPanel = true;
+            }
+        }
+        
+        $guards = $isAdminPanel ? ['admin', 'web'] : ['web', 'admin'];
+
+        foreach ($guards as $guard) {
             $userId = auth()->guard($guard)->id();
             if ($userId) {
                 // Buscamos el usuario sin scopes para evitar loops infinitos
