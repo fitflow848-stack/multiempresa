@@ -825,14 +825,15 @@ class AlmacenController extends Controller
         // Agrupamos por lote y fecha de vencimiento para obtener el stock REAL sumando ajustes (negativos)
         // Esto evita que registros de ajustes o salidas negativas inflen el stock disponible mostrado
         $lotes = $query->select(
-                DB::raw('MAX(d.id) as id'),
                 'd.lote',
                 'd.fecha_vencimiento',
                 DB::raw('SUM(d.cantidad) as stock'),
                 's.nombre as sucursal_nombre',
-                'i.sucursal_id'
+                'i.sucursal_id',
+                // Seleccionar un ID válido (preferiblemente uno con cantidad > 0 para que el descuento funcione)
+                DB::raw("(SELECT id FROM almacen_ingreso_detalle d2 JOIN almacen_ingresos i2 ON i2.id = d2.ingreso_id WHERE i2.sucursal_id = i.sucursal_id AND d2.producto_id = d.producto_id AND COALESCE(d2.lote, '') = COALESCE(d.lote, '') AND d2.cantidad > 0 ORDER BY d2.id DESC LIMIT 1) as best_id")
             )
-            ->groupBy('d.lote', 'd.fecha_vencimiento', 's.nombre', 'i.sucursal_id')
+            ->groupBy('d.lote', 'd.fecha_vencimiento', 's.nombre', 'i.sucursal_id', 'd.producto_id')
             ->having('stock', '>', 0)
             ->orderBy('d.fecha_vencimiento', 'asc')
             ->get();
@@ -847,7 +848,7 @@ class AlmacenController extends Controller
             }
 
             return [
-                'id' => $lote->id,
+                'id' => $lote->best_id ?: $lote->id, // Usar best_id si existe
                 'text' => $texto,
                 'stock' => $lote->stock,
                 'sucursal_id' => $lote->sucursal_id
@@ -884,8 +885,18 @@ class AlmacenController extends Controller
                     throw new \Exception("Uno de los lotes seleccionados ya no existe.");
                 }
 
-                if ($loteOrigen->cantidad < $item['cantidad']) {
-                    throw new \Exception("Stock insuficiente para " . ($loteOrigen->producto->nombre ?? 'un producto') . ". Disponible: " . $loteOrigen->cantidad);
+                // Validar contra el stock TOTAL acumulado del lote en la sucursal, no solo contra el registro individual
+                // Esto previene el error cuando el ID seleccionado es un ajuste (ej. cantidad -1) pero el total es positivo
+                $stockActualLote = DB::table('almacen_ingreso_detalle as d')
+                    ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
+                    ->where('i.sucursal_id', $request->sucursal_origen_id)
+                    ->where('d.producto_id', $item['producto_id'])
+                    ->where('d.lote', $loteOrigen->lote)
+                    ->where('d.fecha_vencimiento', $loteOrigen->fecha_vencimiento)
+                    ->sum('d.cantidad');
+
+                if ($stockActualLote < $item['cantidad']) {
+                    throw new \Exception("Stock insuficiente para " . ($loteOrigen->producto->nombre ?? 'un producto') . ". Disponible: " . number_format($stockActualLote, 2));
                 }
 
                 $sucursalOrigenId = $loteOrigen->ingreso->sucursal_id;
