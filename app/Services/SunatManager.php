@@ -181,23 +181,30 @@ class SunatManager
     public function procesarPendientes(): array
     {
         $result = ['processed' => [], 'failed' => []];
-        $ventas = Venta::withoutGlobalScopes()
+        
+        Venta::withoutGlobalScopes()
             ->where('enviado_sunat', 0)
             ->where('estado', 1)
             ->whereIn('id_tido', [1, 2]) // 1: Boleta, 2: Factura
             ->where('fecha_emision', '>=', now()->subDays(2)->startOfDay())
-            ->get();
-
-        foreach ($ventas as $venta) {
-            try {
-                $this->enviarDocumento($venta);
-                $result['processed'][] = $venta->id_venta;
-            } catch (\Throwable $e) {
-                $this->logAttempt($venta, 'error', $e->getMessage());
-                Log::error("Error procesando pendiente venta {$venta->id_venta}: " . $e->getMessage());
-                $result['failed'][] = ['id' => $venta->id_venta, 'error' => $e->getMessage()];
-            }
-        }
+            ->chunk(10, function ($ventas) use (&$result) {
+                foreach ($ventas as $venta) {
+                    try {
+                        $this->enviarDocumento($venta);
+                        $result['processed'][] = $venta->id_venta;
+                        
+                        // Pausa de 1 segundo para evitar error 429
+                        sleep(1);
+                    } catch (\Throwable $e) {
+                        $this->logAttempt($venta, 'error', $e->getMessage());
+                        Log::error("Error procesando pendiente venta {$venta->id_venta}: " . $e->getMessage());
+                        $result['failed'][] = ['id' => $venta->id_venta, 'error' => $e->getMessage()];
+                        
+                        // También pausar en caso de error
+                        sleep(1);
+                    }
+                }
+            });
 
         return $result;
     }
