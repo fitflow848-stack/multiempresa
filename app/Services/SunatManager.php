@@ -181,7 +181,11 @@ class SunatManager
     public function procesarPendientes(): array
     {
         $result = ['processed' => [], 'failed' => []];
-        $ventas = Venta::withoutGlobalScopes()->where('enviado_sunat', 0)->where('id_tido', '<>', 4)->get();
+        $ventas = Venta::withoutGlobalScopes()
+            ->where('enviado_sunat', 0)
+            ->where('estado', 1)
+            ->whereIn('id_tido', [1, 2]) // 1: Boleta, 2: Factura
+            ->get();
 
         foreach ($ventas as $venta) {
             try {
