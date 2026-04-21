@@ -187,7 +187,7 @@ class SunatManager
             ->where('estado', 1)
             ->whereIn('id_tido', [1, 2]) // 1: Boleta, 2: Factura
             ->where('fecha_emision', '>=', now()->subDays(2)->startOfDay())
-            ->chunk(10, function ($ventas) use (&$result) {
+            ->chunkById(10, function ($ventas) use (&$result) {
                 foreach ($ventas as $venta) {
                     try {
                         $this->enviarDocumento($venta);
@@ -204,7 +204,7 @@ class SunatManager
                         sleep(1);
                     }
                 }
-            });
+            }, 'id_venta');
 
         return $result;
     }
