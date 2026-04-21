@@ -185,6 +185,7 @@ class SunatManager
             ->where('enviado_sunat', 0)
             ->where('estado', 1)
             ->whereIn('id_tido', [1, 2]) // 1: Boleta, 2: Factura
+            ->where('fecha_emision', '>=', now()->subDays(2)->startOfDay())
             ->get();
 
         foreach ($ventas as $venta) {
