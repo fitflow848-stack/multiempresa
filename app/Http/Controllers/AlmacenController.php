@@ -828,7 +828,7 @@ class AlmacenController extends Controller
         // Esto evita que registros de ajustes o salidas negativas inflen el stock disponible mostrado
         // best_id: preferir el lote original (no [ANULACION]/[DEVOLUCION]) con cantidad decente
         $bestIdSubquery = $lineaId
-            ? "(SELECT id FROM almacen_ingreso_detalle d2
+            ? "(SELECT d2.id FROM almacen_ingreso_detalle d2
                JOIN almacen_ingresos i2 ON i2.id = d2.ingreso_id
                WHERE i2.sucursal_id = i.sucursal_id
                AND d2.producto_linea_id = d.producto_linea_id
@@ -836,7 +836,7 @@ class AlmacenController extends Controller
                AND d2.cantidad > 0
                AND (i2.observacion NOT LIKE '[ANULACION]%' AND i2.observacion NOT LIKE '[DEVOLUCION]%')
                ORDER BY d2.id DESC LIMIT 1) as best_id"
-            : "(SELECT id FROM almacen_ingreso_detalle d2
+            : "(SELECT d2.id FROM almacen_ingreso_detalle d2
                JOIN almacen_ingresos i2 ON i2.id = d2.ingreso_id
                WHERE i2.sucursal_id = i.sucursal_id
                AND d2.producto_id = d.producto_id
@@ -850,6 +850,7 @@ class AlmacenController extends Controller
                 'd.fecha_vencimiento',
                 'd.producto_linea_id',
                 DB::raw('SUM(d.cantidad) as stock'),
+                DB::raw('MAX(d.id) as id'),
                 's.nombre as sucursal_nombre',
                 'i.sucursal_id',
                 DB::raw($bestIdSubquery)
