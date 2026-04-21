@@ -405,6 +405,7 @@ class FinanzasVendedorController extends Controller
                     'fecha_registro' => $fecha,
                     'documento' => $documento,
                     'observaciones' => $observaciones,
+                    'user_id' => Auth::id(),
                     'cierre_caja_id' => ($cajaAbierta && $tipoOperacion !== 'compras_credito') ? $cajaAbierta->id : null,
                     'id_operacion_caja' => $operacionCajaId,
                     'metodo_pago' => 'Efectivo'
