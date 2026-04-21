@@ -298,7 +298,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::post('/transferir', [AlmacenController::class, 'storeTransferencia'])->name('transferir.store')->middleware('can:inventario.transferir');
         Route::get('/transferencia/success/{codigo}', [AlmacenController::class, 'transferenciaSuccess'])->name('transferencia.success');
         Route::get('/transferencia/pdf/{codigo}', [AlmacenController::class, 'transferenciaPdf'])->name('transferencia.pdf');
-        Route::get('/api/lotes', [AlmacenController::class, 'getLotesAvailable'])->name('api.lotes');
+        Route::get('/api/lotes', [AlmacenController::class, 'getLotesAvailable'])->name('api.lotes')->withoutMiddleware('can:inventario.ver');
         Route::get('/edit/{id}', [AlmacenController::class, 'edit'])->name('edit')->middleware('can:inventario.ajustar');
         Route::post('/edit-detailed/{id}', [AlmacenController::class, 'editDetailed'])->name('edit-detailed')->middleware('can:inventario.ajustar');
         Route::post('/update/{id}', [AlmacenController::class, 'update'])->name('update')->middleware('can:inventario.ajustar');

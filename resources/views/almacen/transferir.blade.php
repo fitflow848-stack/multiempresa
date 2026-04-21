@@ -224,8 +224,11 @@
                             });
                             $loteSelect.prop('disabled', false);
                         } else {
-                            $loteSelect.append('<option value="">Sin stock disponible</option>');
+                            $loteSelect.append('<option value="">Sin stock disponible en esta sucursal</option>');
                         }
+                    }).fail(function(xhr) {
+                        $loteSelect.empty().append('<option value="">Error al cargar lotes. Recargue la página.</option>');
+                        console.error('Error cargando lotes:', xhr.responseText);
                     });
                 }
             });

@@ -826,16 +826,35 @@ class AlmacenController extends Controller
 
         // Agrupamos por lote y fecha de vencimiento para obtener el stock REAL sumando ajustes (negativos)
         // Esto evita que registros de ajustes o salidas negativas inflen el stock disponible mostrado
+        // best_id: preferir el lote original (no [ANULACION]/[DEVOLUCION]) con cantidad decente
+        $bestIdSubquery = $lineaId
+            ? "(SELECT id FROM almacen_ingreso_detalle d2
+               JOIN almacen_ingresos i2 ON i2.id = d2.ingreso_id
+               WHERE i2.sucursal_id = i.sucursal_id
+               AND d2.producto_linea_id = d.producto_linea_id
+               AND COALESCE(d2.lote, '') = COALESCE(d.lote, '')
+               AND d2.cantidad > 0
+               AND (i2.observacion NOT LIKE '[ANULACION]%' AND i2.observacion NOT LIKE '[DEVOLUCION]%')
+               ORDER BY d2.id DESC LIMIT 1) as best_id"
+            : "(SELECT id FROM almacen_ingreso_detalle d2
+               JOIN almacen_ingresos i2 ON i2.id = d2.ingreso_id
+               WHERE i2.sucursal_id = i.sucursal_id
+               AND d2.producto_id = d.producto_id
+               AND COALESCE(d2.lote, '') = COALESCE(d.lote, '')
+               AND d2.cantidad > 0
+               AND (i2.observacion NOT LIKE '[ANULACION]%' AND i2.observacion NOT LIKE '[DEVOLUCION]%')
+               ORDER BY d2.id DESC LIMIT 1) as best_id";
+
         $lotes = $query->select(
                 'd.lote',
                 'd.fecha_vencimiento',
+                'd.producto_linea_id',
                 DB::raw('SUM(d.cantidad) as stock'),
                 's.nombre as sucursal_nombre',
                 'i.sucursal_id',
-                // Seleccionar un ID válido (preferiblemente uno con cantidad > 0 para que el descuento funcione)
-                DB::raw("(SELECT id FROM almacen_ingreso_detalle d2 JOIN almacen_ingresos i2 ON i2.id = d2.ingreso_id WHERE i2.sucursal_id = i.sucursal_id AND d2.producto_id = d.producto_id AND COALESCE(d2.lote, '') = COALESCE(d.lote, '') AND d2.cantidad > 0 ORDER BY d2.id DESC LIMIT 1) as best_id")
+                DB::raw($bestIdSubquery)
             )
-            ->groupBy('d.lote', 'd.fecha_vencimiento', 's.nombre', 'i.sucursal_id', 'd.producto_id')
+            ->groupBy('d.lote', 'd.fecha_vencimiento', 's.nombre', 'i.sucursal_id', 'd.producto_id', 'd.producto_linea_id')
             ->having('stock', '>', 0)
             ->orderBy('d.fecha_vencimiento', 'asc')
             ->get();

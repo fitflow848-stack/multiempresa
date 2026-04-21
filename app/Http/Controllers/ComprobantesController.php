@@ -237,7 +237,7 @@ class ComprobantesController extends Controller
                                     'pvpd'                => $loteOriginal->pvpd,
                                     'pvc'                 => $loteOriginal->pvc,
                                     'pvcd'                => $loteOriginal->pvcd,
-                                    'lote'                => $loteOriginal->lote ?? 'DEVOLUCION',
+                                    'lote'                => $loteOriginal->lote, // Mantener lote original (puede ser null)
                                     'fecha_vencimiento'   => $loteOriginal->fecha_vencimiento,
                                     'stock_min'           => $loteOriginal->stock_min,
                                     'stock_max'           => $loteOriginal->stock_max,
