@@ -52,4 +52,9 @@ class ActivoCorriente extends Model
     {
         return $this->belongsTo(OperacionCaja::class, 'id_operacion_caja');
     }
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
 }

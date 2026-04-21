@@ -266,7 +266,7 @@ class PasivoController extends Controller
 
     public function ticketPago($id)
     {
-        $pago = PasivoPago::with(['pasivo.tipo', 'pasivo.company', 'user'])->findOrFail($id);
+        $pago = PasivoPago::with(['pasivo.tipo', 'pasivo.company', 'pasivo.sucursal', 'user'])->findOrFail($id);
         $company = $pago->pasivo->company ?? Company::first();
 
         $pdf = Pdf::loadView('pasivos.ticket', compact('pago', 'company'))
