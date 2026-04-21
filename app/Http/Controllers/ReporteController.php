@@ -136,7 +136,10 @@ class ReporteController extends Controller
             ])
             ->whereHas('venta', function ($q) use ($request) {
                 $q->withoutGlobalScope('sucursal');
-                $q->where('estado', '!=', '0');
+                // Excluir anuladas (0), devueltas (3) y Notas de Crédito (id_tido=5)
+                $q->where('estado', '!=', '0')
+                  ->where('estado', '!=', '3')
+                  ->where('id_tido', '!=', '5');
                 // Apply date filters
                 if ($request->input('desde'))
                     $q->whereDate('fecha_emision', '>=', $request->input('desde'));

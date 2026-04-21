@@ -451,22 +451,22 @@ class AlmacenController extends Controller
                         SELECT 
                             CASE 
                                 WHEN (aid.cantidad + 
-                                    COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
+                                    COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
                                     COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
                                 ) >= 0 THEN 
                                     (aid.cantidad + 
-                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
+                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
                                         COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
                                     ) 
                                 ELSE 0 
                             END as entrada,
                             CASE 
                                 WHEN (aid.cantidad + 
-                                    COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
+                                    COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
                                     COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
                                 ) < 0 THEN 
                                     ABS(aid.cantidad + 
-                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
+                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
                                         COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
                                     )
                                 ELSE 0 
@@ -488,7 +488,7 @@ class AlmacenController extends Controller
                         LEFT JOIN almacen_ingreso_detalle aid_lote_v ON aid_lote_v.id = vd.almacen_ingreso_detalle_id
                         WHERE vd.servicio_id = :prod_id2 
                         AND v.sucursal = :suc2
-                        AND v.estado != 0
+                        AND v.id_tido != 5
                         AND (:line2_check = 0 OR aid_lote_v.producto_linea_id = :line2_id)
                         {$dateFilterVPrev}
 
@@ -521,9 +521,11 @@ class AlmacenController extends Controller
                             CASE 
                                 WHEN ai.observacion LIKE '[AJUSTE]%' THEN 
                                     (CASE WHEN (aid.cantidad + 
-                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
+                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
                                         COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
                                     ) < 0 THEN 'SALIDA (AJUSTE)' ELSE 'ENTRADA (AJUSTE)' END)
+                                WHEN ai.observacion LIKE '[ANULACION]%' THEN 'ENTRADA (ANULACION)'
+                                WHEN ai.observacion LIKE '[DEVOLUCION]%' THEN 'ENTRADA (DEVOLUCION)'
                                 ELSE 'ENTRADA' 
                             END as tipo,
                             s.nombre as sucursal,
@@ -535,22 +537,22 @@ class AlmacenController extends Controller
                             ) as detalle,
                             CASE 
                                 WHEN (aid.cantidad + 
-                                    COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
+                                    COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
                                     COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
                                 ) >= 0 THEN 
                                     (aid.cantidad + 
-                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
+                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
                                         COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
                                     ) 
                                 ELSE 0 
                             END as entrada,
                             CASE 
                                 WHEN (aid.cantidad + 
-                                    COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
+                                    COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
                                     COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
                                 ) < 0 THEN 
                                     ABS(aid.cantidad + 
-                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.estado != 0), 0) +
+                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
                                         COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
                                     )
                                 ELSE 0 
@@ -571,10 +573,10 @@ class AlmacenController extends Controller
 
                         UNION ALL
 
-                        -- SALIDAS (Ventas)
+                        -- SALIDAS (Ventas) - incluye anuladas, excluye Notas de Crédito
                         SELECT
                             v.created_at as fecha,
-                            'SALIDA' as tipo,
+                            CASE WHEN v.estado = 0 THEN 'SALIDA (ANULADA)' ELSE 'SALIDA' END as tipo,
                             COALESCE(s.nombre, 'N/A') as sucursal,
                             CONCAT('Venta: ', COALESCE(v.serie, ''), '-', LPAD(COALESCE(v.numero, 0), 8, '0'), ' / ', COALESCE(pl.presentacion, ''), ' ', COALESCE(pl.concentracion, ''), ' / ', COALESCE(c.nombre, 'Cliente General')) as detalle,
                             CAST(0 AS DECIMAL(10,2)) as entrada,
@@ -592,7 +594,7 @@ class AlmacenController extends Controller
                         LEFT JOIN users u ON u.id = v.id_usuario
                         WHERE vd.servicio_id = :prod_id2 
                         AND v.sucursal = :suc2
-                        AND v.estado != 0
+                        AND v.id_tido != 5
                         AND (:line2_check = 0 OR aid_lote_v.producto_linea_id = :line2_id)
                         {$dateFilterV}
 
@@ -688,10 +690,10 @@ class AlmacenController extends Controller
 
                     UNION ALL
 
-                    -- VENTAS de hoy
+                    -- VENTAS de hoy - incluye anuladas, excluye Notas de Crédito
                     SELECT
                         v.created_at as fecha,
-                        'SALIDA (VENTA)' as tipo,
+                        CASE WHEN v.estado = 0 THEN 'SALIDA (ANULADA)' ELSE 'SALIDA (VENTA)' END as tipo,
                         COALESCE(s.nombre, 'N/A') as sucursal,
                         CONCAT(p.nombre, ' / ', COALESCE(v.serie, ''), '-', LPAD(COALESCE(v.numero, 0), 8, '0')) as detalle,
                         CAST(0 AS DECIMAL(10,2)) as entrada,
@@ -707,7 +709,7 @@ class AlmacenController extends Controller
                     LEFT JOIN producto_lineas pl_v ON pl_v.id = aid_v.producto_linea_id
                     LEFT JOIN sucursales s ON s.id = v.sucursal
                     LEFT JOIN users u ON u.id = v.id_usuario
-                    WHERE v.sucursal = :suc2 AND v.estado != 0
+                    WHERE v.sucursal = :suc2 AND v.id_tido != 5
                     {$dateFilterV}
                 ) as historial
                 ORDER BY fecha ASC

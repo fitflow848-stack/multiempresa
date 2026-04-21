@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Storage; // Added Storage
 
 use App\Services\Sunat;
 use App\Models\VentaSunat;
+use App\Models\AlmacenIngreso;
 use App\Models\AlmacenIngresoDetalle; // Asegurar importación
 
 class ComprobantesController extends Controller
@@ -51,9 +52,9 @@ class ComprobantesController extends Controller
                 Carbon::parse($fechaHasta)->endOfDay()
             ]);
 
-        // Filtrar por caja seleccionada en la sesión
+        // Filtrar por caja seleccionada en la sesión - solo si no se está buscando un cliente específico
         $selectedCajaId = session('selected_caja_id');
-        if ($selectedCajaId) {
+        if ($selectedCajaId && empty($cliente)) {
             $ventasQuery->whereHas('cierreCaja', function ($q) use ($selectedCajaId) {
                 $q->where('caja_id', $selectedCajaId);
             });
@@ -148,6 +149,14 @@ class ComprobantesController extends Controller
             $ventasQuery->where('sucursal', $user->branch_id);
         }
 
+        // Filtrar por caja seleccionada en la sesión - solo si no se está buscando un cliente específico
+        $selectedCajaId = session('selected_caja_id');
+        if ($selectedCajaId && empty($cliente)) {
+            $ventasQuery->whereHas('cierreCaja', function ($q) use ($selectedCajaId) {
+                $q->where('caja_id', $selectedCajaId);
+            });
+        }
+
         $ventasQuery->whereBetween('fecha_emision', [
                 Carbon::parse($fechaDesde)->startOfDay(),
                 Carbon::parse($fechaHasta)->endOfDay()
@@ -192,15 +201,51 @@ class ComprobantesController extends Controller
             $ncsGenerated = 0;
 
             foreach ($ventas as $venta) {
-                // 1. Restaurar Stock
+                // 1. Restaurar Stock mediante nuevo movimiento en Kardex (no altera histórico)
                 foreach ($venta->detalles as $detalle) {
                     if ($detalle->producto) {
                         $detalle->producto->increment('cantidad', $detalle->cantidad);
                     }
                     if ($detalle->almacen_ingreso_detalle_id) {
-                        $lote = \App\Models\AlmacenIngresoDetalle::find($detalle->almacen_ingreso_detalle_id);
-                        if ($lote) {
-                            $lote->increment('cantidad', $detalle->cantidad);
+                        $loteOriginal = \App\Models\AlmacenIngresoDetalle::find($detalle->almacen_ingreso_detalle_id);
+                        if ($loteOriginal) {
+                            // Obtener el ingreso original para copiar metadata (sucursal, empresa, etc.)
+                            $ingresoOriginal = \App\Models\AlmacenIngreso::withoutGlobalScopes()->find($loteOriginal->ingreso_id);
+
+                            if ($ingresoOriginal) {
+                                // Crear un nuevo registro de ingreso para que aparezca en el kardex
+                                $ingresoDevolucion = \App\Models\AlmacenIngreso::create([
+                                    'company_id'  => $ingresoOriginal->company_id,
+                                    'empresa_id'  => $ingresoOriginal->empresa_id,
+                                    'sucursal_id' => $ingresoOriginal->sucursal_id,
+                                    'user_id'     => Auth::id(),
+                                    'fecha'       => now(),
+                                    'observacion' => '[ANULACION] ' . ($venta->tipo_documento ?? 'Comprobante') . ' ' . $venta->serie . '-' . $venta->numero,
+                                ]);
+
+                                \App\Models\AlmacenIngresoDetalle::create([
+                                    'ingreso_id'          => $ingresoDevolucion->id,
+                                    'producto_id'         => $loteOriginal->producto_id,
+                                    'producto_linea_id'   => $loteOriginal->producto_linea_id,
+                                    'cantidad'            => $detalle->cantidad, // positivo = entrada
+                                    'costo'               => $loteOriginal->costo,
+                                    'cop'                 => $loteOriginal->cop,
+                                    'mu'                  => $loteOriginal->mu,
+                                    'mud'                 => $loteOriginal->mud,
+                                    'mup'                 => $loteOriginal->mup,
+                                    'pvp'                 => $loteOriginal->pvp,
+                                    'pvpd'                => $loteOriginal->pvpd,
+                                    'pvc'                 => $loteOriginal->pvc,
+                                    'pvcd'                => $loteOriginal->pvcd,
+                                    'lote'                => $loteOriginal->lote ?? 'DEVOLUCION',
+                                    'fecha_vencimiento'   => $loteOriginal->fecha_vencimiento,
+                                    'stock_min'           => $loteOriginal->stock_min,
+                                    'stock_max'           => $loteOriginal->stock_max,
+                                ]);
+                            } else {
+                                // Fallback: Si no se encuentra el ingreso original, incrementar directamente
+                                $loteOriginal->increment('cantidad', $detalle->cantidad);
+                            }
                         }
                     }
                 }
@@ -472,15 +517,48 @@ class ComprobantesController extends Controller
             $ncsGenerated = 0;
 
             foreach ($ventas as $venta) {
-                // 1. Restaurar Stock
+                // 1. Restaurar Stock mediante nuevo movimiento en Kardex (no altera histórico)
                 foreach ($venta->detalles as $detalle) {
                     if ($detalle->producto) {
                         $detalle->producto->increment('cantidad', $detalle->cantidad);
                     }
                     if ($detalle->almacen_ingreso_detalle_id) {
-                        $lote = \App\Models\AlmacenIngresoDetalle::find($detalle->almacen_ingreso_detalle_id);
-                        if ($lote) {
-                            $lote->increment('cantidad', $detalle->cantidad);
+                        $loteOriginal = \App\Models\AlmacenIngresoDetalle::find($detalle->almacen_ingreso_detalle_id);
+                        if ($loteOriginal) {
+                            $ingresoOriginal = \App\Models\AlmacenIngreso::withoutGlobalScopes()->find($loteOriginal->ingreso_id);
+
+                            if ($ingresoOriginal) {
+                                $ingresoDevolucion = \App\Models\AlmacenIngreso::create([
+                                    'company_id'  => $ingresoOriginal->company_id,
+                                    'empresa_id'  => $ingresoOriginal->empresa_id,
+                                    'sucursal_id' => $ingresoOriginal->sucursal_id,
+                                    'user_id'     => Auth::id(),
+                                    'fecha'       => now(),
+                                    'observacion' => '[DEVOLUCION] ' . ($venta->tipo_documento ?? 'Comprobante') . ' ' . $venta->serie . '-' . $venta->numero,
+                                ]);
+
+                                \App\Models\AlmacenIngresoDetalle::create([
+                                    'ingreso_id'        => $ingresoDevolucion->id,
+                                    'producto_id'       => $loteOriginal->producto_id,
+                                    'producto_linea_id' => $loteOriginal->producto_linea_id,
+                                    'cantidad'          => $detalle->cantidad,
+                                    'costo'             => $loteOriginal->costo,
+                                    'cop'               => $loteOriginal->cop,
+                                    'mu'                => $loteOriginal->mu,
+                                    'mud'               => $loteOriginal->mud,
+                                    'mup'               => $loteOriginal->mup,
+                                    'pvp'               => $loteOriginal->pvp,
+                                    'pvpd'              => $loteOriginal->pvpd,
+                                    'pvc'               => $loteOriginal->pvc,
+                                    'pvcd'              => $loteOriginal->pvcd,
+                                    'lote'              => $loteOriginal->lote ?? 'DEVOLUCION',
+                                    'fecha_vencimiento' => $loteOriginal->fecha_vencimiento,
+                                    'stock_min'         => $loteOriginal->stock_min,
+                                    'stock_max'         => $loteOriginal->stock_max,
+                                ]);
+                            } else {
+                                $loteOriginal->increment('cantidad', $detalle->cantidad);
+                            }
                         }
                     }
                 }
