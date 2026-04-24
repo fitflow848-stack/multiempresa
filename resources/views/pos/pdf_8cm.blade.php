@@ -157,11 +157,11 @@
     <table class="table-items">
         <thead>
             <tr class="bold">
-                <td width="10%">Cant</td>
-                <td width="8%">U.M.</td>
-                <td width="35%">Descripción</td>
-                <td width="16%" class="text-right">P.U.</td>
-                <td width="13%" class="text-right">Desc.</td>
+                <td width="11%" style="white-space: nowrap;">Cant</td>
+                <td width="11%" style="white-space: nowrap;">U.M.</td>
+                <td width="34%">Descripción</td>
+                <td width="14%" class="text-right">P.U.</td>
+                <td width="12%" class="text-right">Desc.</td>
                 <td width="18%" class="text-right">Total</td>
             </tr>
         </thead>
@@ -173,8 +173,8 @@
                     $nombreLimpio = trim($nombreLimpio, ' /');
                 @endphp
                 <tr>
-                    <td>{{ number_format($item->cantidad, 2) }}</td>
-                    <td style="font-size: 7pt;">{{ $umCodigo }}</td>
+                    <td style="white-space: nowrap;">{{ number_format($item->cantidad, 2) }}</td>
+                    <td style="font-size: 7pt; white-space: nowrap;">{{ $umCodigo }}</td>
                     <td style="font-size: 7.5pt; line-height: 1.1;">
                         {{ $nombreLimpio }}
                     </td>
