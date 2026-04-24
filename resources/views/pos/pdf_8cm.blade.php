@@ -54,10 +54,15 @@
             border-top: 2px solid #000;
         }
 
+        .table-items {
+            table-layout: fixed;
+        }
+
         .table-items td {
             vertical-align: top;
-            padding: 3px 1px;
+            padding: 3px 2px;
             font-size: 8.5pt;
+            word-wrap: break-word;
         }
 
         .text-right {
@@ -153,21 +158,28 @@
         <thead>
             <tr class="bold">
                 <td width="10%">Cant</td>
-                <td width="40%">Descripción</td>
-                <td width="15%" class="text-right">Desc.</td>
-                <td width="15%" class="text-right">P.U.</td>
-                <td width="20%" class="text-right">Total</td>
+                <td width="8%">U.M.</td>
+                <td width="35%">Descripción</td>
+                <td width="16%" class="text-right">P.U.</td>
+                <td width="13%" class="text-right">Desc.</td>
+                <td width="18%" class="text-right">Total</td>
             </tr>
         </thead>
         <tbody>
             @foreach ($servicios as $item)
+                @php
+                    $umCodigo = $item->almacenIngresoDetalle?->producto?->unidadMedida?->codigo ?? 'NIU';
+                    $nombreLimpio = str_replace(['(Precio Corp.)', '(Precio Publico)', '(Precio Pub.)'], '', $item->nombre_servicio ?? $item->descripcion ?? '');
+                    $nombreLimpio = trim($nombreLimpio, ' /');
+                @endphp
                 <tr>
                     <td>{{ number_format($item->cantidad, 2) }}</td>
+                    <td style="font-size: 7pt;">{{ $umCodigo }}</td>
                     <td style="font-size: 7.5pt; line-height: 1.1;">
-                        {{ $item->nombre_servicio ?? $item->descripcion }}
+                        {{ $nombreLimpio }}
                     </td>
-                    <td class="text-right">{{ number_format(($item->precio_unitario * $item->cantidad) - $item->subtotal, 2) }}</td>
                     <td class="text-right">{{ number_format($item->precio_unitario, 2) }}</td>
+                    <td class="text-right">{{ number_format(($item->precio_unitario * $item->cantidad) - $item->subtotal, 2) }}</td>
                     <td class="text-right" style="font-weight: bold;">{{ number_format($item->subtotal, 2) }}</td>
                 </tr>
             @endforeach

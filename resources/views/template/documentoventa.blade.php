@@ -192,13 +192,18 @@
             </thead>
             <tbody>
                 @foreach ($servicios as $i => $item)
+                    @php
+                        $umCodigo = $item->almacenIngresoDetalle?->producto?->unidadMedida?->codigo ?? 'NIU';
+                        $nombreLimpio = str_replace(['(Precio Corp.)', '(Precio Publico)', '(Precio Pub.)'], '', $item->nombre_servicio ?? $item->descripcion ?? '');
+                        $nombreLimpio = trim($nombreLimpio, ' /');
+                    @endphp
                     <tr>
                         <td>{{ $i + 1 }}</td>
                         <td>{{ $item->servicio_id ?? $item->producto_id }}</td>
                         <td style="text-align: left;">
-                            {{ str_replace('(Marca: ', '/ ', str_replace(')', '', $item->nombre_servicio ?? $item->descripcion)) }}
+                            {{ str_replace('(Marca: ', '/ ', str_replace(')', '', $nombreLimpio)) }}
                         </td>
-                        <td>UNIDAD</td>
+                        <td>{{ $umCodigo }}</td>
                         <td>{{ number_format($item->cantidad, 2) }}</td>
                         <td style="text-align: right;">
                             {{ number_format(($item->precio_unitario * $item->cantidad) - $item->subtotal, 2) }}
