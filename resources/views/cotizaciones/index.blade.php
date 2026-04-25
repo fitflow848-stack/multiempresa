@@ -231,6 +231,11 @@
                                                                     class="fas fa-trash-alt me-2"></i> Eliminar</a></li>
                                                     </ul>
                                                 </div>
+                                            @elseif ($cotizacion->estado === 'rechazada')
+                                                <button type="button" class="btn-action bg-danger-subtle text-danger border-0"
+                                                    onclick="eliminarCotizacion({{ $cotizacion->id }})" title="Eliminar">
+                                                    <i class="bx bx-trash fs-5"></i>
+                                                </button>
                                             @endif
                                         </div>
                                     </td>

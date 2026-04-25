@@ -450,11 +450,11 @@ class CotizacionController extends Controller
             abort(403);
         }
 
-        // Solo permitir eliminar cotizaciones pendientes
-        if ($cotizacion->estado !== 'pendiente') {
+        // Solo permitir eliminar cotizaciones pendientes o rechazadas
+        if ($cotizacion->estado !== 'pendiente' && $cotizacion->estado !== 'rechazada') {
             return response()->json([
                 'success' => false,
-                'message' => 'Solo se pueden eliminar cotizaciones pendientes'
+                'message' => 'Solo se pueden eliminar cotizaciones pendientes o rechazadas'
             ], 400);
         }
 

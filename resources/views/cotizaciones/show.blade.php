@@ -185,20 +185,22 @@
             </div>
 
             <!-- Acciones -->
-            @if($cotizacion->estado === 'pendiente')
+            @if($cotizacion->estado === 'pendiente' || $cotizacion->estado === 'rechazada')
                 <div class="card">
                     <div class="card-header">
                         <h5 class="card-title mb-0">Acciones</h5>
                     </div>
                     <div class="card-body">
                         <div class="d-grid gap-2">
-                            <button type="button" class="btn btn-success" onclick="cambiarEstado({{ $cotizacion->id }}, 'aprobada')">
-                                <i class="fas fa-check me-2"></i>Aprobar Cotización
-                            </button>
-                            <button type="button" class="btn btn-danger" onclick="cambiarEstado({{ $cotizacion->id }}, 'rechazada')">
-                                <i class="fas fa-times me-2"></i>Rechazar Cotización
-                            </button>
-                            <hr>
+                            @if($cotizacion->estado === 'pendiente')
+                                <button type="button" class="btn btn-success" onclick="cambiarEstado({{ $cotizacion->id }}, 'aprobada')">
+                                    <i class="fas fa-check me-2"></i>Aprobar Cotización
+                                </button>
+                                <button type="button" class="btn btn-danger" onclick="cambiarEstado({{ $cotizacion->id }}, 'rechazada')">
+                                    <i class="fas fa-times me-2"></i>Rechazar Cotización
+                                </button>
+                                <hr>
+                            @endif
                             <button type="button" class="btn btn-outline-danger" onclick="eliminarCotizacion({{ $cotizacion->id }})">
                                 <i class="fas fa-trash me-2"></i>Eliminar Cotización
                             </button>
