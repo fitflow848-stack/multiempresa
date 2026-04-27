@@ -1007,8 +1007,13 @@ class ReporteController extends Controller
 
         $totalQuery = clone $baseQuery;
         $total = $totalQuery->select(
-                DB::raw('SUM(almacen_ingreso_detalle.cantidad * almacen_ingreso_detalle.costo) as total_capital')
-            )->first()->total_capital ?? 0;
+                DB::raw('SUM(almacen_ingreso_detalle.cantidad) as stock'),
+                DB::raw('SUM(almacen_ingreso_detalle.cantidad * almacen_ingreso_detalle.costo) as valor')
+            )
+            ->groupBy('almacen_ingreso_detalle.producto_id', 'almacen_ingreso_detalle.producto_linea_id')
+            ->having('stock', '>', 0)
+            ->get()
+            ->sum('valor');
 
         $detalles = $baseQuery
             ->with(['producto.marca', 'producto.familia', 'producto.laboratorio', 'productoLinea'])
@@ -1053,8 +1058,13 @@ class ReporteController extends Controller
 
         $totalQuery = clone $baseQuery;
         $total = $totalQuery->select(
-                DB::raw('SUM(almacen_ingreso_detalle.cantidad * almacen_ingreso_detalle.costo) as total_capital')
-            )->first()->total_capital ?? 0;
+                DB::raw('SUM(almacen_ingreso_detalle.cantidad) as stock'),
+                DB::raw('SUM(almacen_ingreso_detalle.cantidad * almacen_ingreso_detalle.costo) as valor')
+            )
+            ->groupBy('almacen_ingreso_detalle.producto_id', 'almacen_ingreso_detalle.producto_linea_id')
+            ->having('stock', '>', 0)
+            ->get()
+            ->sum('valor');
 
         $detalles = $baseQuery
             ->with(['producto', 'productoLinea'])
