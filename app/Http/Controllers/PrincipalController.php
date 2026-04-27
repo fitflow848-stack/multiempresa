@@ -93,20 +93,22 @@ class PrincipalController extends Controller
             ->count();
 
         // --- CAPITAL ACTUAL ---
-        $stock_valuations = AlmacenIngresoDetalle::whereHas('ingreso', function($q) use ($branchId) {
+        $stock_valuations_query = AlmacenIngresoDetalle::whereHas('ingreso', function($q) use ($branchId) {
                 if ($branchId) {
                     $q->where('sucursal_id', $branchId);
                 }
             })
-            ->where('cantidad', '>', 0)
             ->select(
-                DB::raw('SUM(cantidad * costo) as total_costo'),
-                DB::raw('SUM(cantidad * pvp) as total_venta')
+                DB::raw('SUM(cantidad) as stock'),
+                DB::raw('SUM(cantidad * costo) as valor_costo'),
+                DB::raw('SUM(cantidad * pvp) as valor_venta')
             )
-            ->first();
+            ->groupBy('producto_id', 'producto_linea_id')
+            ->having('stock', '>', 0)
+            ->get();
 
-        $capital_costo = $stock_valuations->total_costo ?? 0;
-        $capital_venta = $stock_valuations->total_venta ?? 0;
+        $capital_costo = $stock_valuations_query->sum('valor_costo');
+        $capital_venta = $stock_valuations_query->sum('valor_venta');
 
         // --- ALERTAS DE STOCK ---
         // Productos donde la SUMA de existencias en el lote es <= stock_min

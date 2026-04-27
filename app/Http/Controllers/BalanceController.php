@@ -239,7 +239,6 @@ class BalanceController extends Controller
             
         $caja += floatval($aportesFlotantes);
 
-        // INVENTARIO: Valorizado al costo promedio o costo de entrada (Sistema)
         $inventario = AlmacenIngresoDetalle::withoutGlobalScopes()
             ->whereHas('ingreso', function ($q) use ($user, $sucursalId) {
                 $q->withoutGlobalScopes()->where('empresa_id', $user->company_id);
@@ -247,7 +246,14 @@ class BalanceController extends Controller
                     $q->where('sucursal_id', $sucursalId);
                 }
             })
-            ->sum(DB::raw('cantidad * costo'));
+            ->select(
+                DB::raw('SUM(cantidad) as stock'),
+                DB::raw('SUM(cantidad * costo) as valor')
+            )
+            ->groupBy('producto_id', 'producto_linea_id')
+            ->having('stock', '>', 0)
+            ->get()
+            ->sum('valor');
 
         // CUENTAS POR COBRAR: Monto de deuda pendiente de clientes
         $cxcQuery = Deuda::withoutGlobalScopes()
