@@ -168,6 +168,21 @@ class ReporteController extends Controller
 
         $detalles = $query->orderBy('id_venta')->get();
 
+        // Pre-calcular costo promedio ponderado por producto (para fallback cuando no hay lote)
+        $productoIds = $detalles->pluck('servicio_id')->filter()->unique()->values()->toArray();
+        $costosPromedio = [];
+        if (!empty($productoIds)) {
+            DB::table('almacen_ingreso_detalle')
+                ->whereIn('producto_id', $productoIds)
+                ->where('cantidad', '>', 0)
+                ->select('producto_id', DB::raw('SUM(cantidad * costo) / NULLIF(SUM(cantidad), 0) as costo_promedio'))
+                ->groupBy('producto_id')
+                ->get()
+                ->each(function ($row) use (&$costosPromedio) {
+                    $costosPromedio[(int)$row->producto_id] = (float)$row->costo_promedio;
+                });
+        }
+
         // Agrupar por comprobante y nombre del producto para sumar cantidades
         $agrupados = $detalles->groupBy(function ($item) {
             $nombreBase = $item->producto->nombre ?? $item->nombre_servicio ?? 'Sin nombre';
@@ -200,8 +215,9 @@ class ReporteController extends Controller
                 $costoItem = 0;
                 if ($item->almacenIngresoDetalle && $item->almacenIngresoDetalle->costo > 0) {
                     $costoItem = $item->almacenIngresoDetalle->costo;
-                } elseif ($item->producto && $item->producto->precio_compra > 0) {
-                    $costoItem = $item->producto->precio_compra;
+                } else {
+                    // Fallback: promedio ponderado de lotes actuales (no usar precio_compra desactualizado)
+                    $costoItem = $costosPromedio[$item->servicio_id] ?? ($item->producto->precio_compra ?? 0);
                 }
                 $costoTotalGrupo += $costoItem * $item->cantidad;
             }

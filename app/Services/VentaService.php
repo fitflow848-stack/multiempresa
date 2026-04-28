@@ -256,15 +256,19 @@ class VentaService
 
                 // Si no viene el lote, buscamos el más antiguo con stock (FIFO) de la sucursal actual
                 if (empty($almacenDetalleId)) {
-                    $lote = AlmacenIngresoDetalle::where('producto_id', $item['producto_id'])
+                    $lineaId = $item['product_linea_id'] ?? null;
+                    $loteQuery = AlmacenIngresoDetalle::where('producto_id', $item['producto_id'])
                         ->whereHas('ingreso', function($q) use ($user) {
                             if ($user->branch_id) {
                                 $q->where('sucursal_id', $user->branch_id);
                             }
                         })
                         ->where('cantidad', '>', 0)
-                        ->orderBy('id', 'asc')
-                        ->first();
+                        ->orderBy('id', 'asc');
+                    if ($lineaId) {
+                        $loteQuery->where('producto_linea_id', $lineaId);
+                    }
+                    $lote = $loteQuery->first();
 
                     if ($lote) {
                         $almacenDetalleId = $lote->id;
