@@ -168,27 +168,37 @@ class ReporteController extends Controller
 
         $detalles = $query->orderBy('id_venta')->get();
 
-        // Pre-calcular costo promedio ponderado por (producto_id, producto_linea_id) igual que inventario
+        // Pre-calcular costo promedio ponderado usando la misma fórmula y filtros que el inventario
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
         $productoIds = $detalles->pluck('servicio_id')->filter()->unique()->values()->toArray();
         $costosPromedio = [];      // clave: producto_id
         $costosPromedioPorLinea = []; // clave: "producto_id_linea_id"
         if (!empty($productoIds)) {
-            DB::table('almacen_ingreso_detalle')
-                ->whereIn('producto_id', $productoIds)
-                ->where('cantidad', '>', 0)
+            $costosQuery = DB::table('almacen_ingreso_detalle as d')
+                ->join('almacen_ingresos as ai', 'ai.id', '=', 'd.ingreso_id')
+                ->join('producto_lineas as pl', 'pl.id', '=', 'd.producto_linea_id')
+                ->whereIn('d.producto_id', $productoIds)
+                ->where('ai.company_id', $user->company_id)
                 ->select(
-                    'producto_id',
-                    'producto_linea_id',
-                    DB::raw('SUM(cantidad * costo) / NULLIF(SUM(cantidad), 0) as costo_promedio')
+                    'd.producto_id',
+                    'd.producto_linea_id',
+                    DB::raw('COALESCE(SUM(d.cantidad * d.costo) / NULLIF(SUM(d.cantidad), 0), MAX(pl.precio_compra)) as costo_promedio')
                 )
-                ->groupBy('producto_id', 'producto_linea_id')
-                ->get()
+                ->groupBy('d.producto_id', 'd.producto_linea_id');
+
+            // Filtro de sucursal: igual que el inventario
+            $branchId = $request->input('local_id') ?: session('active_branch_id') ?: $user->branch_id;
+            if ($branchId) {
+                $costosQuery->where('ai.sucursal_id', $branchId);
+            }
+
+            $costosQuery->get()
                 ->each(function ($row) use (&$costosPromedio, &$costosPromedioPorLinea) {
                     $pid = (int)$row->producto_id;
                     $lid = (int)$row->producto_linea_id;
                     $costo = (float)$row->costo_promedio;
                     $costosPromedioPorLinea["{$pid}_{$lid}"] = $costo;
-                    // Para fallback por producto (promedio simple entre líneas)
                     if (!isset($costosPromedio[$pid])) {
                         $costosPromedio[$pid] = $costo;
                     }
