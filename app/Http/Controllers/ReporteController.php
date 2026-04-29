@@ -168,41 +168,40 @@ class ReporteController extends Controller
 
         $detalles = $query->orderBy('id_venta')->get();
 
-        // Pre-calcular costo promedio ponderado usando la misma fórmula y filtros que el inventario
+        // Pre-calcular el costo del lote más reciente con stock por (producto_id, producto_linea_id)
+        // Usado como fallback cuando una venta no tiene lote asignado
         /** @var \App\Models\User $user */
         $user = Auth::user();
         $productoIds = $detalles->pluck('servicio_id')->filter()->unique()->values()->toArray();
-        $costosPromedio = [];      // clave: producto_id
-        $costosPromedioPorLinea = []; // clave: "producto_id_linea_id"
+        $costoUltimoLote = []; // clave: "producto_id_linea_id" → costo del lote más reciente con stock
+        $costoUltimoLotePorProducto = []; // clave: producto_id → fallback sin linea
         if (!empty($productoIds)) {
-            $costosQuery = DB::table('almacen_ingreso_detalle as d')
-                ->join('almacen_ingresos as ai', 'ai.id', '=', 'd.ingreso_id')
-                ->join('producto_lineas as pl', 'pl.id', '=', 'd.producto_linea_id')
-                ->whereIn('d.producto_id', $productoIds)
-                ->where('ai.company_id', $user->company_id)
-                ->select(
-                    'd.producto_id',
-                    'd.producto_linea_id',
-                    DB::raw('COALESCE(SUM(d.cantidad * d.costo) / NULLIF(SUM(d.cantidad), 0), MAX(pl.precio_compra)) as costo_promedio')
-                )
-                ->groupBy('d.producto_id', 'd.producto_linea_id');
-
-            // Filtro de sucursal: igual que el inventario
             $branchId = $request->input('local_id') ?: session('active_branch_id') ?: $user->branch_id;
+
+            $lotesQuery = DB::table('almacen_ingreso_detalle as d')
+                ->join('almacen_ingresos as ai', 'ai.id', '=', 'd.ingreso_id')
+                ->whereIn('d.producto_id', $productoIds)
+                ->where('d.cantidad', '>', 0)
+                ->where('ai.company_id', $user->company_id)
+                ->select('d.producto_id', 'd.producto_linea_id', 'd.costo', 'd.id')
+                ->orderBy('d.id', 'desc'); // más reciente primero
+
             if ($branchId) {
-                $costosQuery->where('ai.sucursal_id', $branchId);
+                $lotesQuery->where('ai.sucursal_id', $branchId);
             }
 
-            $costosQuery->get()
-                ->each(function ($row) use (&$costosPromedio, &$costosPromedioPorLinea) {
-                    $pid = (int)$row->producto_id;
-                    $lid = (int)$row->producto_linea_id;
-                    $costo = (float)$row->costo_promedio;
-                    $costosPromedioPorLinea["{$pid}_{$lid}"] = $costo;
-                    if (!isset($costosPromedio[$pid])) {
-                        $costosPromedio[$pid] = $costo;
-                    }
-                });
+            $lotesQuery->get()->each(function ($row) use (&$costoUltimoLote, &$costoUltimoLotePorProducto) {
+                $pid = (int)$row->producto_id;
+                $lid = (int)$row->producto_linea_id;
+                $key = "{$pid}_{$lid}";
+                // Solo guardar el más reciente (ya viene ordenado desc, tomamos el primero)
+                if (!isset($costoUltimoLote[$key])) {
+                    $costoUltimoLote[$key] = (float)$row->costo;
+                }
+                if (!isset($costoUltimoLotePorProducto[$pid])) {
+                    $costoUltimoLotePorProducto[$pid] = (float)$row->costo;
+                }
+            });
         }
 
         // Agrupar por comprobante y nombre del producto para sumar cantidades
@@ -215,7 +214,7 @@ class ReporteController extends Controller
                 if ($linea->concentracion) $nombreFull .= ' / ' . $linea->concentracion;
             }
             return $item->id_venta . '|||' . $nombreFull;
-        })->map(function ($grupo) use ($costosPromedio, $costosPromedioPorLinea) {
+        })->map(function ($grupo) use ($costoUltimoLote, $costoUltimoLotePorProducto) {
             $primero = $grupo->first();
             $cantidadTotal = $grupo->sum('cantidad');
 
@@ -231,22 +230,24 @@ class ReporteController extends Controller
                 if ($conc) $nombreFull .= ' / ' . $conc;
             }
 
-            // Calcular el costo usando promedio ponderado del inventario actual (igual que vista inventario)
+            // Costo por lote: usa el costo real del lote asignado a cada venta.
+            // Si no hay lote asignado, usa el costo del lote más reciente con stock.
             $costoTotalGrupo = 0;
             foreach ($grupo as $item) {
                 $pid = (int)$item->servicio_id;
                 $lid = $item->almacenIngresoDetalle->producto_linea_id ?? null;
                 $key = $lid ? "{$pid}_{$lid}" : null;
 
-                // 1) Promedio ponderado por (producto, linea) — más preciso
-                // 2) Promedio ponderado por producto — fallback cuando no hay linea
-                // 3) Costo del lote asignado — si no hay datos de inventario actual
-                // 4) precio_compra del producto — último recurso
-                $costoItem = ($key && isset($costosPromedioPorLinea[$key]))
-                    ? $costosPromedioPorLinea[$key]
-                    : ($costosPromedio[$pid]
-                        ?? ($item->almacenIngresoDetalle->costo
-                            ?? ($item->producto->precio_compra ?? 0)));
+                if ($item->almacenIngresoDetalle && $item->almacenIngresoDetalle->costo > 0) {
+                    // Costo real del lote usado en esta venta
+                    $costoItem = $item->almacenIngresoDetalle->costo;
+                } elseif ($key && isset($costoUltimoLote[$key])) {
+                    // Fallback: último lote con stock para este producto+linea
+                    $costoItem = $costoUltimoLote[$key];
+                } else {
+                    // Fallback final: último lote con stock para el producto (cualquier linea)
+                    $costoItem = $costoUltimoLotePorProducto[$pid] ?? ($item->producto->precio_compra ?? 0);
+                }
 
                 $costoTotalGrupo += $costoItem * $item->cantidad;
             }
