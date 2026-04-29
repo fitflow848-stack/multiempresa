@@ -168,18 +168,30 @@ class ReporteController extends Controller
 
         $detalles = $query->orderBy('id_venta')->get();
 
-        // Pre-calcular costo promedio ponderado por producto (para fallback cuando no hay lote)
+        // Pre-calcular costo promedio ponderado por (producto_id, producto_linea_id) igual que inventario
         $productoIds = $detalles->pluck('servicio_id')->filter()->unique()->values()->toArray();
-        $costosPromedio = [];
+        $costosPromedio = [];      // clave: producto_id
+        $costosPromedioPorLinea = []; // clave: "producto_id_linea_id"
         if (!empty($productoIds)) {
             DB::table('almacen_ingreso_detalle')
                 ->whereIn('producto_id', $productoIds)
                 ->where('cantidad', '>', 0)
-                ->select('producto_id', DB::raw('SUM(cantidad * costo) / NULLIF(SUM(cantidad), 0) as costo_promedio'))
-                ->groupBy('producto_id')
+                ->select(
+                    'producto_id',
+                    'producto_linea_id',
+                    DB::raw('SUM(cantidad * costo) / NULLIF(SUM(cantidad), 0) as costo_promedio')
+                )
+                ->groupBy('producto_id', 'producto_linea_id')
                 ->get()
-                ->each(function ($row) use (&$costosPromedio) {
-                    $costosPromedio[(int)$row->producto_id] = (float)$row->costo_promedio;
+                ->each(function ($row) use (&$costosPromedio, &$costosPromedioPorLinea) {
+                    $pid = (int)$row->producto_id;
+                    $lid = (int)$row->producto_linea_id;
+                    $costo = (float)$row->costo_promedio;
+                    $costosPromedioPorLinea["{$pid}_{$lid}"] = $costo;
+                    // Para fallback por producto (promedio simple entre líneas)
+                    if (!isset($costosPromedio[$pid])) {
+                        $costosPromedio[$pid] = $costo;
+                    }
                 });
         }
 
@@ -193,7 +205,7 @@ class ReporteController extends Controller
                 if ($linea->concentracion) $nombreFull .= ' / ' . $linea->concentracion;
             }
             return $item->id_venta . '|||' . $nombreFull;
-        })->map(function ($grupo) {
+        })->map(function ($grupo) use ($costosPromedio, $costosPromedioPorLinea) {
             $primero = $grupo->first();
             $cantidadTotal = $grupo->sum('cantidad');
 
@@ -209,16 +221,23 @@ class ReporteController extends Controller
                 if ($conc) $nombreFull .= ' / ' . $conc;
             }
 
-            // Calcular el costo total sumando cada item individualmente
+            // Calcular el costo usando promedio ponderado del inventario actual (igual que vista inventario)
             $costoTotalGrupo = 0;
             foreach ($grupo as $item) {
-                $costoItem = 0;
-                if ($item->almacenIngresoDetalle && $item->almacenIngresoDetalle->costo > 0) {
-                    $costoItem = $item->almacenIngresoDetalle->costo;
-                } else {
-                    // Fallback: promedio ponderado de lotes actuales (no usar precio_compra desactualizado)
-                    $costoItem = $costosPromedio[$item->servicio_id] ?? ($item->producto->precio_compra ?? 0);
-                }
+                $pid = (int)$item->servicio_id;
+                $lid = $item->almacenIngresoDetalle->producto_linea_id ?? null;
+                $key = $lid ? "{$pid}_{$lid}" : null;
+
+                // 1) Promedio ponderado por (producto, linea) — más preciso
+                // 2) Promedio ponderado por producto — fallback cuando no hay linea
+                // 3) Costo del lote asignado — si no hay datos de inventario actual
+                // 4) precio_compra del producto — último recurso
+                $costoItem = ($key && isset($costosPromedioPorLinea[$key]))
+                    ? $costosPromedioPorLinea[$key]
+                    : ($costosPromedio[$pid]
+                        ?? ($item->almacenIngresoDetalle->costo
+                            ?? ($item->producto->precio_compra ?? 0)));
+
                 $costoTotalGrupo += $costoItem * $item->cantidad;
             }
 
