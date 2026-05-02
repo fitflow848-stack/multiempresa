@@ -183,6 +183,7 @@ class ReporteController extends Controller
                 ->whereIn('d.producto_id', $productoIds)
                 ->where('d.cantidad', '>', 0)
                 ->where('ai.company_id', $user->company_id)
+                ->where('ai.observacion', 'NOT LIKE', '[AJUSTE]%')
                 ->select('d.producto_id', 'd.producto_linea_id', 'd.costo', 'd.id')
                 ->orderBy('d.id', 'desc'); // más reciente primero
 
@@ -1029,10 +1030,10 @@ class ReporteController extends Controller
         
         // Base query with scoping
         $baseQuery = AlmacenIngresoDetalle::withoutGlobalScopes()
-            // ->where('almacen_ingreso_detalle.cantidad', '>', 0) // Removido para incluir ajustes negativos
             ->whereHas('ingreso', function ($q) use ($user, $request) {
                 $q->withoutGlobalScopes()
-                  ->where('empresa_id', $user->company_id);
+                  ->where('empresa_id', $user->company_id)
+                  ->where('observacion', 'NOT LIKE', '[AJUSTE]%');
                 if ($request->input('local_id')) {
                     $q->where('sucursal_id', $request->input('local_id'));
                 }
@@ -1087,10 +1088,10 @@ class ReporteController extends Controller
         $user = Auth::user();
         
         $baseQuery = AlmacenIngresoDetalle::withoutGlobalScopes()
-            // ->where('almacen_ingreso_detalle.cantidad', '>', 0)
             ->whereHas('ingreso', function ($q) use ($user, $request) {
                 $q->withoutGlobalScopes()
-                  ->where('empresa_id', $user->company_id);
+                  ->where('empresa_id', $user->company_id)
+                  ->where('observacion', 'NOT LIKE', '[AJUSTE]%');
                 if ($request->input('local_id')) {
                     $q->where('sucursal_id', $request->input('local_id'));
                 }

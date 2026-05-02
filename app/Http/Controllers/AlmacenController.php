@@ -36,6 +36,7 @@ class AlmacenController extends Controller
             ->join('producto_lineas as pl', 'pl.id', '=', 'd.producto_linea_id')
             ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
             ->leftJoin('sucursales as s', 's.id', '=', 'i.sucursal_id')
+            ->where('i.observacion', 'NOT LIKE', '[AJUSTE]%')
             ->select(
                 DB::raw('MAX(d.id) as id'), // El ID representativo del lote más reciente para acciones
                 'd.producto_id',
@@ -175,6 +176,7 @@ class AlmacenController extends Controller
             ->join('producto_lineas as pl', 'pl.id', '=', 'd.producto_linea_id')
             ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
             ->leftJoin('sucursales as s', 's.id', '=', 'i.sucursal_id')
+            ->where('i.observacion', 'NOT LIKE', '[AJUSTE]%')
             ->select(
                 DB::raw('MAX(d.id) as id'),
                 'd.producto_id',
@@ -262,6 +264,29 @@ class AlmacenController extends Controller
 
             // Si hay una diferencia en cantidad, creamos un registro de ajuste para el Kardex
             if (abs($diferencia) > 0.0001) {
+                // Cuando se reduce stock, vaciar los lotes existentes (FIFO) para que el
+                // FIFO de ventas no vuelva a tomarlos. Los registros de ajuste negativos
+                // solo sirven de auditoría en el kardex; no deben influir en costos.
+                if ($diferencia < 0) {
+                    $pendienteReducir = abs($diferencia);
+                    $lotesPositivos = AlmacenIngresoDetalle::join('almacen_ingresos as ai_fifo', 'ai_fifo.id', '=', 'almacen_ingreso_detalle.ingreso_id')
+                        ->where('almacen_ingreso_detalle.producto_id', $detalleOriginal->producto_id)
+                        ->where('almacen_ingreso_detalle.producto_linea_id', $detalleOriginal->producto_linea_id)
+                        ->where('ai_fifo.sucursal_id', $ingresoOriginal->sucursal_id)
+                        ->where('almacen_ingreso_detalle.cantidad', '>', 0)
+                        ->where('ai_fifo.observacion', 'NOT LIKE', '[AJUSTE]%')
+                        ->orderBy('almacen_ingreso_detalle.id', 'asc')
+                        ->select('almacen_ingreso_detalle.*')
+                        ->get();
+
+                    foreach ($lotesPositivos as $lote) {
+                        if ($pendienteReducir <= 0) break;
+                        $reducir = min($lote->cantidad, $pendienteReducir);
+                        $lote->decrement('cantidad', $reducir);
+                        $pendienteReducir -= $reducir;
+                    }
+                }
+
                 $ingresoAjuste = AlmacenIngreso::create([
                     'company_id' => $user->company_id ?? $ingresoOriginal->company_id,
                     'empresa_id' => $user->company_id ?? $ingresoOriginal->empresa_id,
