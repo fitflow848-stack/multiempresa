@@ -21,7 +21,9 @@ class ProductRepository
         if ($sucursalId) {
             $joinIngresos .= " AND ai.sucursal_id = ?";
         }
-        
+        // Excluir solo [AJUSTE] negativos: los positivos representan stock real agregado via ajuste
+        $joinIngresos .= " AND (ai.observacion NOT LIKE '[AJUSTE]%' OR ad.cantidad >= 0)";
+
         $params = [$companyId];
         if ($sucursalId) {
             $params[] = $sucursalId;
@@ -94,13 +96,14 @@ class ProductRepository
         if ($sucursalId) {
             $joinIngresos .= " AND ai.sucursal_id = ?";
         }
-        
+        $joinIngresos .= " AND (ai.observacion NOT LIKE '[AJUSTE]%' OR ad.cantidad >= 0)";
+
         $params = [$companyId];
         if ($sucursalId) {
             $params[] = $sucursalId;
         }
         $params[] = $productoId;
-        
+
         return DB::select("SELECT
                     MAX(ad.id) as id,
                     COALESCE(ad.lote, CONCAT('LOTE-', MAX(ad.id))) as lote,
@@ -127,11 +130,12 @@ class ProductRepository
     {
         $sucursalId = $sucursalId ?? session('active_branch_id');
         $companyId = session('active_company_id') ?? (auth()->check() ? auth()->user()->company_id : null);
-        
+
         $joinIngresos = "INNER JOIN almacen_ingresos ai ON ai.id = ad.ingreso_id AND ai.company_id = ?";
         if ($sucursalId) {
             $joinIngresos .= " AND ai.sucursal_id = ?";
         }
+        $joinIngresos .= " AND (ai.observacion NOT LIKE '[AJUSTE]%' OR ad.cantidad >= 0)";
         
         $params = [$companyId];
         if ($sucursalId) {
