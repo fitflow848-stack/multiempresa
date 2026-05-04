@@ -281,12 +281,14 @@ class AlmacenController extends Controller
                 // solo sirven de auditoría en el kardex; no deben influir en costos.
                 if ($diferencia < 0) {
                     $pendienteReducir = abs($diferencia);
+                    // FIFO incluye tanto lotes regulares como lotes de [AJUSTE] positivos
+                    // (p.ej. de Conversión/Rotura). Los [AJUSTE] negativos quedan excluidos
+                    // automáticamente por el filtro cantidad > 0.
                     $lotesPositivos = AlmacenIngresoDetalle::join('almacen_ingresos as ai_fifo', 'ai_fifo.id', '=', 'almacen_ingreso_detalle.ingreso_id')
                         ->where('almacen_ingreso_detalle.producto_id', $detalleOriginal->producto_id)
                         ->where('almacen_ingreso_detalle.producto_linea_id', $detalleOriginal->producto_linea_id)
                         ->where('ai_fifo.sucursal_id', $ingresoOriginal->sucursal_id)
                         ->where('almacen_ingreso_detalle.cantidad', '>', 0)
-                        ->where('ai_fifo.observacion', 'NOT LIKE', '[AJUSTE]%')
                         ->orderBy('almacen_ingreso_detalle.id', 'asc')
                         ->select('almacen_ingreso_detalle.*')
                         ->get();

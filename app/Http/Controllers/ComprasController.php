@@ -422,6 +422,10 @@ class ComprasController extends Controller
      */
     public function storeReception(Request $request, Compra $compra)
     {
+        if ($compra->recibido) {
+            return redirect()->route('compras.show', $compra->id)->with('error', 'Esta compra ya fue recibida anteriormente. No se puede procesar dos veces.');
+        }
+
         $request->validate([
             'observaciones' => ['nullable', 'string', 'max:500'],
         ]);
@@ -499,6 +503,10 @@ class ComprasController extends Controller
      */
     public function storeReceptionProducts(Request $request, Compra $compra)
     {
+        if ($compra->recibido) {
+            return redirect()->route('compras.show', $compra->id)->with('error', 'Esta compra ya fue recibida anteriormente. No se puede procesar dos veces.');
+        }
+
         $compra->load('lineas');
         $sucursalId = $compra->local_destino ?? Auth::user()->branch_id;
 
@@ -613,7 +621,7 @@ class ComprasController extends Controller
         $compraId = $ids[$index];
         $compra = Compra::with('lineas')->find($compraId);
 
-        if ($compra) {
+        if ($compra && !$compra->recibido) {
             DB::beginTransaction();
             try {
                 $sucursalId = $compra->local_destino ?? Auth::user()->branch_id;
