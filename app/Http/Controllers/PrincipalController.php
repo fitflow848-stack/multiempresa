@@ -93,34 +93,43 @@ class PrincipalController extends Controller
             ->count();
 
         // --- CAPITAL ACTUAL ---
-        $stock_valuations_query = AlmacenIngresoDetalle::whereHas('ingreso', function($q) use ($branchId) {
-                if ($branchId) {
-                    $q->where('sucursal_id', $branchId);
-                }
+        $stock_valuations_query = DB::table('almacen_ingreso_detalle as d')
+            ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
+            ->where('i.company_id', $companyId)
+            ->when($branchId, fn($q) => $q->where('i.sucursal_id', $branchId))
+            ->where(function ($q) {
+                $q->whereNull('i.observacion')
+                  ->orWhere('i.observacion', 'NOT LIKE', '[AJUSTE]%')
+                  ->orWhere('d.cantidad', '>=', 0);
             })
             ->select(
-                DB::raw('SUM(cantidad) as stock'),
-                DB::raw('SUM(cantidad * costo) as valor_costo'),
-                DB::raw('SUM(cantidad * pvp) as valor_venta')
+                'd.producto_id',
+                'd.producto_linea_id',
+                DB::raw('SUM(d.cantidad) as stock'),
+                DB::raw('SUM(d.cantidad * d.costo) as valor_costo'),
+                DB::raw('SUM(d.cantidad * d.pvp) as valor_venta')
             )
-            ->groupBy('producto_id', 'producto_linea_id')
-            ->having('stock', '>', 0)
+            ->groupBy('d.producto_id', 'd.producto_linea_id')
+            ->havingRaw('SUM(d.cantidad) > 0')
             ->get();
 
         $capital_costo = $stock_valuations_query->sum('valor_costo');
         $capital_venta = $stock_valuations_query->sum('valor_venta');
 
         // --- ALERTAS DE STOCK ---
-        // Productos donde la SUMA de existencias en el lote es <= stock_min
-        $stock_alerts = AlmacenIngresoDetalle::whereHas('ingreso', function($q) use ($branchId) {
-                if ($branchId) {
-                    $q->where('sucursal_id', $branchId);
-                }
+        // Productos donde la SUMA de existencias es <= stock_min
+        $stock_alerts = DB::table('almacen_ingreso_detalle as d')
+            ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
+            ->where('i.company_id', $companyId)
+            ->when($branchId, fn($q) => $q->where('i.sucursal_id', $branchId))
+            ->where(function ($q) {
+                $q->whereNull('i.observacion')
+                  ->orWhere('i.observacion', 'NOT LIKE', '[AJUSTE]%')
+                  ->orWhere('d.cantidad', '>=', 0);
             })
-            ->select('producto_id', DB::raw('SUM(cantidad) as total_existencias'), DB::raw('MAX(stock_min) as min_stock'))
-            ->groupBy('producto_id')
-            ->havingRaw('SUM(cantidad) <= MAX(stock_min)')
-            ->where('cantidad', '>', 0) // Que al menos algo haya (o no)
+            ->select('d.producto_id', DB::raw('SUM(d.cantidad) as total_existencias'), DB::raw('MAX(d.stock_min) as min_stock'))
+            ->groupBy('d.producto_id')
+            ->havingRaw('SUM(d.cantidad) > 0 AND SUM(d.cantidad) <= MAX(d.stock_min) AND MAX(d.stock_min) > 0')
             ->get();
 
         $productos_stock_minimo_cnt = $stock_alerts->count();

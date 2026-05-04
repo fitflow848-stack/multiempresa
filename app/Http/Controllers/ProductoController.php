@@ -422,6 +422,11 @@ class ProductoController extends Controller
         if ($activeBranchId) {
             $stockQuery->where('ai.sucursal_id', $activeBranchId);
         }
+        $stockQuery->where(function ($q) {
+            $q->whereNull('ai.observacion')
+              ->orWhere('ai.observacion', 'NOT LIKE', '[AJUSTE]%')
+              ->orWhere('ad.cantidad', '>=', 0);
+        });
         $stockPorLinea = $stockQuery
             ->select('ad.producto_linea_id', \Illuminate\Support\Facades\DB::raw('SUM(ad.cantidad) as stock_actual'))
             ->groupBy('ad.producto_linea_id')

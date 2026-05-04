@@ -239,19 +239,18 @@ class BalanceController extends Controller
             
         $caja += floatval($aportesFlotantes);
 
-        $inventario = AlmacenIngresoDetalle::withoutGlobalScopes()
-            ->whereHas('ingreso', function ($q) use ($user, $sucursalId) {
-                $q->withoutGlobalScopes()->where('empresa_id', $user->company_id);
-                if ($sucursalId) {
-                    $q->where('sucursal_id', $sucursalId);
-                }
+        $inventario = DB::table('almacen_ingreso_detalle as d')
+            ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
+            ->where('i.empresa_id', $user->company_id)
+            ->when($sucursalId, fn($q) => $q->where('i.sucursal_id', $sucursalId))
+            ->where(function ($q) {
+                $q->whereNull('i.observacion')
+                  ->orWhere('i.observacion', 'NOT LIKE', '[AJUSTE]%')
+                  ->orWhere('d.cantidad', '>=', 0);
             })
-            ->select(
-                DB::raw('SUM(cantidad) as stock'),
-                DB::raw('SUM(cantidad * costo) as valor')
-            )
-            ->groupBy('producto_id', 'producto_linea_id')
-            ->having('stock', '>', 0)
+            ->select('d.producto_id', 'd.producto_linea_id', DB::raw('SUM(d.cantidad * d.costo) as valor'))
+            ->groupBy('d.producto_id', 'd.producto_linea_id')
+            ->havingRaw('SUM(d.cantidad) > 0')
             ->get()
             ->sum('valor');
 

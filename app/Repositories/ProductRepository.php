@@ -22,7 +22,7 @@ class ProductRepository
             $joinIngresos .= " AND ai.sucursal_id = ?";
         }
         // Excluir solo [AJUSTE] negativos: los positivos representan stock real agregado via ajuste
-        $joinIngresos .= " AND (ai.observacion NOT LIKE '[AJUSTE]%' OR ad.cantidad >= 0)";
+        $joinIngresos .= " AND (ai.observacion IS NULL OR ai.observacion NOT LIKE '[AJUSTE]%' OR ad.cantidad >= 0)";
 
         $params = [$companyId];
         if ($sucursalId) {
@@ -96,7 +96,7 @@ class ProductRepository
         if ($sucursalId) {
             $joinIngresos .= " AND ai.sucursal_id = ?";
         }
-        $joinIngresos .= " AND (ai.observacion NOT LIKE '[AJUSTE]%' OR ad.cantidad >= 0)";
+        $joinIngresos .= " AND (ai.observacion IS NULL OR ai.observacion NOT LIKE '[AJUSTE]%' OR ad.cantidad >= 0)";
 
         $params = [$companyId];
         if ($sucursalId) {
@@ -135,7 +135,7 @@ class ProductRepository
         if ($sucursalId) {
             $joinIngresos .= " AND ai.sucursal_id = ?";
         }
-        $joinIngresos .= " AND (ai.observacion NOT LIKE '[AJUSTE]%' OR ad.cantidad >= 0)";
+        $joinIngresos .= " AND (ai.observacion IS NULL OR ai.observacion NOT LIKE '[AJUSTE]%' OR ad.cantidad >= 0)";
         
         $params = [$companyId];
         if ($sucursalId) {

@@ -36,9 +36,9 @@ class AlmacenController extends Controller
             ->join('producto_lineas as pl', 'pl.id', '=', 'd.producto_linea_id')
             ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
             ->leftJoin('sucursales as s', 's.id', '=', 'i.sucursal_id')
-            // Excluir solo los [AJUSTE] negativos: los positivos representan stock real agregado via ajuste
             ->where(function ($q) {
-                $q->where('i.observacion', 'NOT LIKE', '[AJUSTE]%')
+                $q->whereNull('i.observacion')
+                  ->orWhere('i.observacion', 'NOT LIKE', '[AJUSTE]%')
                   ->orWhere('d.cantidad', '>=', 0);
             })
             ->select(
@@ -141,7 +141,8 @@ class AlmacenController extends Controller
             ->where('d.producto_linea_id', $detalles->producto_linea_id)
             ->where('i.sucursal_id', $ingreso->sucursal_id)
             ->where(function ($q) {
-                $q->where('i.observacion', 'NOT LIKE', '[AJUSTE]%')
+                $q->whereNull('i.observacion')
+                  ->orWhere('i.observacion', 'NOT LIKE', '[AJUSTE]%')
                   ->orWhere('d.cantidad', '>=', 0);
             })
             ->sum('d.cantidad') ?? 0;
@@ -184,7 +185,11 @@ class AlmacenController extends Controller
             ->join('producto_lineas as pl', 'pl.id', '=', 'd.producto_linea_id')
             ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
             ->leftJoin('sucursales as s', 's.id', '=', 'i.sucursal_id')
-            ->where('i.observacion', 'NOT LIKE', '[AJUSTE]%')
+            ->where(function ($q) {
+                $q->whereNull('i.observacion')
+                  ->orWhere('i.observacion', 'NOT LIKE', '[AJUSTE]%')
+                  ->orWhere('d.cantidad', '>=', 0);
+            })
             ->select(
                 DB::raw('MAX(d.id) as id'),
                 'd.producto_id',
@@ -254,7 +259,8 @@ class AlmacenController extends Controller
                 ->where('d.producto_linea_id', $detalleOriginal->producto_linea_id)
                 ->where('i.sucursal_id', $ingresoOriginal->sucursal_id)
                 ->where(function ($q) {
-                    $q->where('i.observacion', 'NOT LIKE', '[AJUSTE]%')
+                    $q->whereNull('i.observacion')
+                      ->orWhere('i.observacion', 'NOT LIKE', '[AJUSTE]%')
                       ->orWhere('d.cantidad', '>=', 0);
                 })
                 ->sum('d.cantidad') ?? 0;

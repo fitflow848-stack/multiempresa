@@ -184,16 +184,22 @@ class PosController extends Controller
         $productoId = $request->get('producto_id');
         $sucursalId = $user->branch_id;
 
-        $joinIngresos = $sucursalId ? "INNER JOIN almacen_ingresos ai ON ai.id = ad.ingreso_id AND ai.sucursal_id = ?" : "";
-        $params = $sucursalId ? [$sucursalId, $productoId] : [$productoId];
+        $joinIngresos = "INNER JOIN almacen_ingresos ai ON ai.id = ad.ingreso_id";
+        $params = [];
+        if ($sucursalId) {
+            $joinIngresos .= " AND ai.sucursal_id = ?";
+            $params[] = $sucursalId;
+        }
+        $joinIngresos .= " AND (ai.observacion IS NULL OR ai.observacion NOT LIKE '[AJUSTE]%' OR ad.cantidad >= 0)";
+        $params[] = $productoId;
 
         // Obtener información del producto
         $producto = DB::selectOne("SELECT
                 p.id,
                 ad.producto_linea_id AS product_linea_id,
-                CONCAT_WS(' / ', 
-                    p.nombre, 
-                    NULLIF(CONCAT_WS(' ', 
+                CONCAT_WS(' / ',
+                    p.nombre,
+                    NULLIF(CONCAT_WS(' ',
                         NULLIF(NULLIF(TRIM(pl.presentacion), ''), '-- Ver --'),
                         NULLIF(NULLIF(TRIM(pl.concentracion), ''), '-- Ver --')
                     ), '')
@@ -211,10 +217,11 @@ class PosController extends Controller
             FROM almacen_ingreso_detalle ad
             $joinIngresos
             INNER JOIN productos p ON p.id = ad.producto_id
-            INNER JOIN producto_lineas pl ON pl.id = ad.producto_linea_id 
+            INNER JOIN producto_lineas pl ON pl.id = ad.producto_linea_id
             LEFT JOIN marcas m ON m.id = p.marca_id
-            WHERE p.id = ? AND ad.cantidad > 0
+            WHERE p.id = ?
             GROUP BY p.id, ad.producto_linea_id, p.nombre, p.marca_id, m.nombre, pl.presentacion, pl.concentracion, ad.lote, ad.fecha_vencimiento
+            HAVING SUM(ad.cantidad) > 0
             ORDER BY p.nombre ASC", $params);
 
         if (!$producto) {
@@ -672,14 +679,17 @@ class PosController extends Controller
             }
 
             // Validar stock total disponible del producto
-            $stockTotal = AlmacenIngresoDetalle::whereHas('ingreso', function($q) use ($user) {
-                    $q->where('company_id', $user->company_id);
-                    if ($user->branch_id) {
-                        $q->where('sucursal_id', $user->branch_id);
-                    }
+            $stockTotal = DB::table('almacen_ingreso_detalle as d')
+                ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
+                ->where('i.company_id', $user->company_id)
+                ->when($user->branch_id, fn($q) => $q->where('i.sucursal_id', $user->branch_id))
+                ->where('d.producto_id', $request->origen_producto_id)
+                ->where(function ($q) {
+                    $q->whereNull('i.observacion')
+                      ->orWhere('i.observacion', 'NOT LIKE', '[AJUSTE]%')
+                      ->orWhere('d.cantidad', '>=', 0);
                 })
-                ->where('producto_id', $request->origen_producto_id)
-                ->sum('cantidad');
+                ->sum('d.cantidad');
 
             if ($stockTotal < $request->cantidad_origen) {
                 throw new \Exception("Stock insuficiente. Disponible: {$stockTotal}, requerido: {$request->cantidad_origen}.");
