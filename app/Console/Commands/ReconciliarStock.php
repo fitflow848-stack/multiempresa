@@ -11,7 +11,8 @@ class ReconciliarStock extends Command
 {
     protected $signature = 'stock:reconciliar
         {--ejecutar : Aplica los cambios (sin esta opción solo muestra el diagnóstico)}
-        {--forzar  : Confirma aunque haya productos que no se puedan corregir al 100%}';
+        {--forzar  : Confirma aunque haya productos que no se puedan corregir al 100%}
+        {--producto= : Filtrar por nombre de producto (ej: Cacao)}';
 
     protected $description = 'Reconcilia el stock y limpia registros negativos para corregir costos y balance';
 
@@ -19,11 +20,18 @@ class ReconciliarStock extends Command
     {
         $ejecutar = $this->option('ejecutar');
         $forzar   = $this->option('forzar');
+        $filtro   = $this->option('producto');
 
         $this->info($ejecutar
             ? '=== RECONCILIACIÓN DE STOCK Y COSTOS (MODO EJECUCIÓN) ==='
             : '=== DIAGNÓSTICO DE STOCK Y COSTOS (solo lectura) ===');
+        
+        if ($filtro) {
+            $this->info("Filtrando por producto: $filtro");
+        }
         $this->newLine();
+
+        $whereProducto = $filtro ? "AND p.nombre LIKE '%$filtro%'" : "";
 
         // Buscamos productos con exceso de stock O con registros negativos internos
         $discrepancias = DB::select("
@@ -40,6 +48,7 @@ class ReconciliarStock extends Command
             FROM almacen_ingreso_detalle d
             INNER JOIN almacen_ingresos i ON i.id = d.ingreso_id
             INNER JOIN productos p ON p.id = d.producto_id
+            WHERE 1=1 $whereProducto
             GROUP BY i.company_id, d.producto_id, d.producto_linea_id, i.sucursal_id
             HAVING SUM(CASE WHEN (i.observacion IS NULL OR i.observacion NOT LIKE '[AJUSTE]%' OR d.cantidad >= 0)
                             THEN d.cantidad ELSE 0 END)
@@ -74,7 +83,11 @@ class ReconciliarStock extends Command
         if (!$ejecutar) {
             $this->newLine();
             $this->warn('Para aplicar la corrección ejecuta:');
-            $this->line('  php artisan stock:reconciliar --ejecutar');
+            $comando = 'php artisan stock:reconciliar --ejecutar';
+            if ($filtro) {
+                $comando .= ' --producto="' . $filtro . '"';
+            }
+            $this->line("  $comando");
             $this->newLine();
             $this->line('Usa --forzar para aplicar cambios en productos que se puedan corregir parcialmente.');
             return 0;
