@@ -69,7 +69,7 @@ class PasivoController extends Controller
             $esEfectivo = (strtolower($metodoPago) === 'efectivo' || $metodoPago === '1' || $metodoPago === 1) ? 1 : 0;
 
             // Adelantos de Clientes y Aportes pueden entrar a la caja si son en efectivo y hay una caja seleccionada
-            if (in_array($tipo, ['adelanto clientes', 'adelanto de clientes', 'aporte', 'aportes'])) {
+            if (in_array($tipo, ['adelanto de clientes', 'aporte', 'aportes'])) {
                 
                 // Obtenemos la caja seleccionada si existe
                 $cajaAbierta = getSelectedCaja();
@@ -221,9 +221,9 @@ class PasivoController extends Controller
                     $tipoOp = 'ingreso';
                     $partida = 'Liquidación Adelanto';
                 } elseif (in_array(strtolower($pasivo->tipo->nombre), ['adelanto clientes', 'adelanto de clientes'])) {
-                    if ($esEfectivo) $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $monto;
-                    $tipoOp = 'ingreso';
-                    $partida = 'Pago Adelanto Cliente';
+                    if ($esEfectivo) $cajaAbierta->sustracciones = ($cajaAbierta->sustracciones ?? 0) + $monto;
+                    $tipoOp = 'sustraccion';
+                    $partida = 'Entrega Producto (Adelanto)';
                 } elseif (in_array(strtolower($pasivo->tipo->nombre), ['compras a crédito', 'compras a credito'])) {
                     if ($esEfectivo) $cajaAbierta->sustracciones = ($cajaAbierta->sustracciones ?? 0) + $monto;
                     $tipoOp = 'sustraccion';
