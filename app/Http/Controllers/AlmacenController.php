@@ -534,6 +534,7 @@ class AlmacenController extends Controller
                         WHERE vd.servicio_id = :prod_id2 
                         AND v.sucursal = :suc2
                         AND v.id_tido != 5
+                        AND vd.almacen_ingreso_detalle_id IS NOT NULL
                         AND (:line2_check = 0 OR aid_lote_v.producto_linea_id = :line2_id)
                         {$dateFilterVPrev}
 
@@ -546,6 +547,7 @@ class AlmacenController extends Controller
                         LEFT JOIN almacen_ingreso_detalle aid_lote_t ON aid_lote_t.id = t.origen_lote_id
                         WHERE t.producto_id = :prod_id3
                         AND t.sucursal_origen_id = :suc3
+                        AND t.origen_lote_id IS NOT NULL
                         AND (:line3_check = 0 OR aid_lote_t.producto_linea_id = :line3_id)
                         {$dateFilterTPrev}
                     ) as historial_prev
@@ -640,6 +642,7 @@ class AlmacenController extends Controller
                         WHERE vd.servicio_id = :prod_id2 
                         AND v.sucursal = :suc2
                         AND v.id_tido != 5
+                        AND vd.almacen_ingreso_detalle_id IS NOT NULL
                         AND (:line2_check = 0 OR aid_lote_v.producto_linea_id = :line2_id)
                         {$dateFilterV}
 
@@ -664,6 +667,7 @@ class AlmacenController extends Controller
                         LEFT JOIN producto_lineas pl ON pl.id = aid_lote_t.producto_linea_id
                         WHERE t.producto_id = :prod_id3
                         AND t.sucursal_origen_id = :suc3
+                        AND t.origen_lote_id IS NOT NULL
                         AND (:line3_check = 0 OR aid_lote_t.producto_linea_id = :line3_id)
                         {$dateFilterT}
                     ) as historial
@@ -755,6 +759,7 @@ class AlmacenController extends Controller
                     LEFT JOIN sucursales s ON s.id = v.sucursal
                     LEFT JOIN users u ON u.id = v.id_usuario
                     WHERE v.sucursal = :suc2 AND v.id_tido != 5
+                    AND vd.almacen_ingreso_detalle_id IS NOT NULL
                     {$dateFilterV}
                 ) as historial
                 ORDER BY fecha ASC
