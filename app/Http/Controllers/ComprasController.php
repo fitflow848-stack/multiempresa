@@ -454,13 +454,15 @@ class ComprasController extends Controller
                         $producto->save();
                     }
 
+                    $costoRecibido = $line->costo ?? 0;
+
                     AlmacenIngresoDetalle::create([
                         'ingreso_id' => $ingreso->id,
                         'producto_id' => $line->product_id,
                         'producto_linea_id' => $line->product_linea_id ?? null,
                         'cantidad' => $line->cantidad,
-                        'costo' => $line->costo ?? 0,
-                        'cop' => $line->costo ?? 0,
+                        'costo' => $costoRecibido,
+                        'cop' => $costoRecibido,
                         'mu' => 0,
                         'mud' => 0,
                         'mup' => 0,
@@ -473,6 +475,16 @@ class ComprasController extends Controller
                         'lote' => $line->lote ?? null,
                         'fecha_vencimiento' => $line->fecha_vencimiento ?? null,
                     ]);
+
+                    // Sincronizar precio_compra con el costo real recibido
+                    if ($line->product_linea_id && $costoRecibido > 0) {
+                        ProductoLinea::where('id', $line->product_linea_id)
+                            ->update(['precio_compra' => $costoRecibido]);
+                    }
+                    if ($costoRecibido > 0) {
+                        Producto::where('id', $line->product_id)
+                            ->update(['precio_compra' => $costoRecibido]);
+                    }
                 }
             }
 
@@ -531,14 +543,15 @@ class ComprasController extends Controller
                         $producto->save();
                     }
 
-                    // Crear detalle de ingreso
+                    $costoRecibido = $line->costo ?? 0;
+
                     AlmacenIngresoDetalle::create([
                         'ingreso_id' => $ingreso->id,
                         'producto_id' => $line->product_id,
                         'producto_linea_id' => $line->product_linea_id ?? null,
                         'cantidad' => $line->cantidad,
-                        'costo' => $line->costo ?? 0,
-                        'cop' => $line->costo ?? 0,
+                        'costo' => $costoRecibido,
+                        'cop' => $costoRecibido,
                         'mu' => 0,
                         'mud' => 0,
                         'mup' => 0,
@@ -551,6 +564,16 @@ class ComprasController extends Controller
                         'lote' => $line->lote ?? null,
                         'fecha_vencimiento' => $line->fecha_vencimiento ?? null,
                     ]);
+
+                    // Sincronizar precio_compra con el costo real recibido
+                    if ($line->product_linea_id && $costoRecibido > 0) {
+                        ProductoLinea::where('id', $line->product_linea_id)
+                            ->update(['precio_compra' => $costoRecibido]);
+                    }
+                    if ($costoRecibido > 0) {
+                        Producto::where('id', $line->product_id)
+                            ->update(['precio_compra' => $costoRecibido]);
+                    }
                 }
             }
 
@@ -645,13 +668,15 @@ class ComprasController extends Controller
                             $producto->save();
                         }
 
+                        $costoRecibido = $line->costo ?? 0;
+
                         AlmacenIngresoDetalle::create([
                             'ingreso_id' => $ingreso->id,
                             'producto_id' => $line->product_id,
                             'producto_linea_id' => $line->product_linea_id ?? null,
                             'cantidad' => $line->cantidad,
-                            'costo' => $line->costo ?? 0,
-                            'cop' => $line->costo ?? 0,
+                            'costo' => $costoRecibido,
+                            'cop' => $costoRecibido,
                             'mu' => 0,
                             'mud' => 0,
                             'mup' => 0,
@@ -664,6 +689,16 @@ class ComprasController extends Controller
                             'lote' => $line->lote ?? null,
                             'fecha_vencimiento' => $line->fecha_vencimiento ?? null,
                         ]);
+
+                        // Sincronizar precio_compra con el costo real recibido
+                        if ($line->product_linea_id && $costoRecibido > 0) {
+                            ProductoLinea::where('id', $line->product_linea_id)
+                                ->update(['precio_compra' => $costoRecibido]);
+                        }
+                        if ($costoRecibido > 0) {
+                            Producto::where('id', $line->product_id)
+                                ->update(['precio_compra' => $costoRecibido]);
+                        }
                     }
                 }
 

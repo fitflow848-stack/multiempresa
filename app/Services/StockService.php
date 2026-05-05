@@ -17,12 +17,19 @@ class StockService
             return false;
         }
 
-        // 1. Decrementar en el lote específico
-        $detalle->decrement('cantidad', $cantidad);
+        // Nunca dejar el lote en negativo — el llamador debe distribuir entre lotes si necesita más
+        $disponible = max(0.0, (float) $detalle->cantidad);
+        $toDecrement = min((float) $cantidad, $disponible);
 
-        // 2. Decrementar el total en la tabla productos (Sync) 
+        if ($toDecrement <= 0) {
+            Log::warning("Lote $almacenDetalleId sin stock disponible para descontar $cantidad unidades.");
+            return false;
+        }
+
+        $detalle->decrement('cantidad', $toDecrement);
+
         if ($detalle->producto) {
-            $detalle->producto->decrement('cantidad', $cantidad);
+            $detalle->producto->decrement('cantidad', $toDecrement);
         }
 
         return true;

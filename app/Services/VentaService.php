@@ -254,36 +254,49 @@ class VentaService
                 // Resolver el lote para descontar stock
                 $almacenDetalleId = $item['almacen_detalle_id'] ?? null;
 
-                // Si no viene el lote, buscamos el más antiguo con stock (FIFO) de la sucursal actual
-                if (empty($almacenDetalleId)) {
-                    $lineaId = $item['product_linea_id'] ?? null;
-                    $loteQuery = AlmacenIngresoDetalle::where('producto_id', $item['producto_id'])
-                        ->whereHas('ingreso', function($q) use ($user) {
-                            if ($user->branch_id) {
-                                $q->where('sucursal_id', $user->branch_id);
-                            }
-                        })
-                        ->where('cantidad', '>', 0)
-                        ->orderBy('id', 'asc');
-                    if ($lineaId) {
-                        $loteQuery->where('producto_linea_id', $lineaId);
-                    }
-                    $lote = $loteQuery->first();
-
-                    if ($lote) {
-                        $almacenDetalleId = $lote->id;
-                    }
-                }
-
-                // Actualizar detalle con el lote usado (si se encontró)
                 if ($almacenDetalleId) {
+                    // Lote específico seleccionado por el usuario en POS
                     $detalle->almacen_ingreso_detalle_id = $almacenDetalleId;
                     $detalle->save();
-
-                    // Descontar stock usando el servicio
-                    $this->stockService->decrementarStock($almacenDetalleId, $cantidad);
+                    $this->stockService->decrementarStock((int) $almacenDetalleId, $cantidad);
                 } else {
-                    Log::warning("No se encontró stock/lote para el producto ID {$item['producto_id']} en la venta {$venta->id_venta}");
+                    // FIFO automático: distribuir entre lotes del más antiguo al más nuevo
+                    $lineaId  = $item['product_linea_id'] ?? null;
+                    $restante = $cantidad;
+                    $primerLoteId = null;
+
+                    while ($restante > 0) {
+                        $loteQuery = AlmacenIngresoDetalle::where('producto_id', $item['producto_id'])
+                            ->whereHas('ingreso', function ($q) use ($user) {
+                                if ($user->branch_id) {
+                                    $q->where('sucursal_id', $user->branch_id);
+                                }
+                            })
+                            ->where('cantidad', '>', 0)
+                            ->orderBy('id', 'asc');
+
+                        if ($lineaId) {
+                            $loteQuery->where('producto_linea_id', $lineaId);
+                        }
+
+                        $lote = $loteQuery->first();
+                        if (!$lote) break;
+
+                        if (!$primerLoteId) {
+                            $primerLoteId = $lote->id;
+                        }
+
+                        $aDescontar = min($restante, (float) $lote->cantidad);
+                        $this->stockService->decrementarStock($lote->id, $aDescontar);
+                        $restante -= $aDescontar;
+                    }
+
+                    if ($primerLoteId) {
+                        $detalle->almacen_ingreso_detalle_id = $primerLoteId;
+                        $detalle->save();
+                    } else {
+                        Log::warning("No se encontró stock/lote para el producto ID {$item['producto_id']} en la venta {$venta->id_venta}");
+                    }
                 }
             }
 
