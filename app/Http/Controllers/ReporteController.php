@@ -1027,17 +1027,21 @@ class ReporteController extends Controller
     private function reporteCapitalActualCompra(Request $request)
     {
         $user = Auth::user();
-        
-        // Base query with scoping
+
+        // Join directo para poder filtrar observacion + cantidad en una sola cláusula WHERE
         $baseQuery = AlmacenIngresoDetalle::withoutGlobalScopes()
-            ->whereHas('ingreso', function ($q) use ($user, $request) {
-                $q->withoutGlobalScopes()
-                  ->where('empresa_id', $user->company_id)
-                  ->where('observacion', 'NOT LIKE', '[AJUSTE]%');
-                if ($request->input('local_id')) {
-                    $q->where('sucursal_id', $request->input('local_id'));
-                }
+            ->join('almacen_ingresos as ai_cap', 'ai_cap.id', '=', 'almacen_ingreso_detalle.ingreso_id')
+            ->where('ai_cap.empresa_id', $user->company_id)
+            // Excluir solo [AJUSTE] negativos; los positivos son stock real ingresado via ajuste
+            ->where(function ($q) {
+                $q->whereNull('ai_cap.observacion')
+                  ->orWhere('ai_cap.observacion', 'NOT LIKE', '[AJUSTE]%')
+                  ->orWhere('almacen_ingreso_detalle.cantidad', '>=', 0);
             });
+
+        if ($request->input('local_id')) {
+            $baseQuery->where('ai_cap.sucursal_id', $request->input('local_id'));
+        }
 
         // Apply product filters
         if ($request->input('familia_id')) {
@@ -1086,16 +1090,19 @@ class ReporteController extends Controller
     private function reporteCapitalActualPromedio(Request $request)
     {
         $user = Auth::user();
-        
+
         $baseQuery = AlmacenIngresoDetalle::withoutGlobalScopes()
-            ->whereHas('ingreso', function ($q) use ($user, $request) {
-                $q->withoutGlobalScopes()
-                  ->where('empresa_id', $user->company_id)
-                  ->where('observacion', 'NOT LIKE', '[AJUSTE]%');
-                if ($request->input('local_id')) {
-                    $q->where('sucursal_id', $request->input('local_id'));
-                }
+            ->join('almacen_ingresos as ai_cap', 'ai_cap.id', '=', 'almacen_ingreso_detalle.ingreso_id')
+            ->where('ai_cap.empresa_id', $user->company_id)
+            ->where(function ($q) {
+                $q->whereNull('ai_cap.observacion')
+                  ->orWhere('ai_cap.observacion', 'NOT LIKE', '[AJUSTE]%')
+                  ->orWhere('almacen_ingreso_detalle.cantidad', '>=', 0);
             });
+
+        if ($request->input('local_id')) {
+            $baseQuery->where('ai_cap.sucursal_id', $request->input('local_id'));
+        }
 
         if ($request->input('familia_id')) {
             $baseQuery->whereHas('producto', function ($q) use ($request) {
