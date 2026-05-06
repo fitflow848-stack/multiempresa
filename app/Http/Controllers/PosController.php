@@ -729,6 +729,9 @@ class PosController extends Controller
                 'updated_at' => now()
             ]);
 
+            // Descontar del stock real del lote origen y sincronizar productos.cantidad
+            (new \App\Services\StockService())->decrementarStock($loteOrigen->id, $request->cantidad_origen);
+
             // 3. Crear Ajuste de ENTRADA para el Destino (Kardex)
             $ingresoEntradaId = DB::table('almacen_ingresos')->insertGetId([
                 'company_id' => $user->company_id,
@@ -774,6 +777,12 @@ class PosController extends Controller
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
+
+            // Incrementar productos.cantidad del destino
+            $productoDestino = \App\Models\Producto::find($request->destino_producto_id);
+            if ($productoDestino) {
+                $productoDestino->increment('cantidad', $cantidadAumentar);
+            }
 
             DB::commit();
             return response()->json([
