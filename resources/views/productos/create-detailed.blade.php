@@ -510,6 +510,40 @@
             // Detectar cambios manuales y de tamaño
             $('#cb, #bc-width, #bc-height').on('input change', updateBarcode);
 
+            // ── Validación de unicidad de código de barras en tiempo real ──────
+            let _cbCheckTimer = null;
+            let _cbIsValid = true; // true = disponible o vacío
+
+            function checkCbUnique(cb) {
+                if (!cb) {
+                    $('#cb-feedback').remove();
+                    _cbIsValid = true;
+                    return;
+                }
+                $.getJSON('{{ route('productos.check-cb') }}', { cb: cb }, function(res) {
+                    $('#cb-feedback').remove();
+                    const $input = $('#cb');
+                    if (res.available) {
+                        _cbIsValid = true;
+                        $input.removeClass('is-invalid').addClass('is-valid');
+                        $('<div id="cb-feedback" class="valid-feedback d-block" style="font-size:0.78rem;">✔ Código disponible</div>').insertAfter($input.closest('.input-group'));
+                    } else {
+                        _cbIsValid = false;
+                        $input.removeClass('is-valid').addClass('is-invalid');
+                        $('<div id="cb-feedback" class="invalid-feedback d-block" style="font-size:0.78rem;">⚠ Ya registrado en: <strong>' + res.producto + '</strong></div>').insertAfter($input.closest('.input-group'));
+                    }
+                    setTimeout(() => { $input.removeClass('is-valid is-invalid'); $('#cb-feedback').remove(); _cbIsValid = true; }, 6000);
+                });
+            }
+
+            $('#cb').on('input', function() {
+                clearTimeout(_cbCheckTimer);
+                const val = $(this).val().trim();
+                if (val.length < 3) { $('#cb-feedback').remove(); _cbIsValid = true; return; }
+                _cbCheckTimer = setTimeout(() => checkCbUnique(val), 500);
+            });
+
+
             // Handler para generar código de barras automáticamente
             $('#btn-generar-cb').on('click', function() {
                 const nuevoCodigo = generarCodigoBarras();
@@ -534,6 +568,17 @@
 
             // Añadir línea cuando se presiona el botón
             $('#btn-add-line').on('click', function() {
+                // Bloquear si el código de barras ya está en uso
+                if (!_cbIsValid) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Código de barras duplicado',
+                        text: 'El código de barras ingresado ya está registrado para otro producto. Corrija el código antes de continuar.',
+                        confirmButtonText: 'Entendido'
+                    });
+                    return;
+                }
+
                 const ln = {
                     cb: $('#cb').val().trim(),
                     codigo_ref: `PROD-${Date.now()}`, // auto-generar código

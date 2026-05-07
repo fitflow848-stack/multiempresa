@@ -217,6 +217,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::post('/store/producto', [ProductoController::class, 'store'])->name('store');
         Route::get('/api/productos', [ProductoController::class, 'search'])->name('search');
         Route::get('/clone/{id}', [ProductoController::class, 'clone'])->name('clone');
+        Route::get('/api/check-cb', [ProductoController::class, 'checkCb'])->name('check-cb');
     });
 
     // API para productos y clientes

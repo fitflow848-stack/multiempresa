@@ -526,10 +526,56 @@
         };
     }
 
+    // ── Helper: intentar auto-agregar al ticket si hay resultado único ────────
+    function intentarAutoAgregarProducto(productos, limpiarInput) {
+        if (productos.length === 1) {
+            const p = productos[0];
+            const prodAdd = {
+                producto_id: p.producto_id,
+                id: p.id,
+                nombre: p.nombre,
+                marca: p.marca || '',
+                precio: parseFloat(p.pvp || 0),
+                pvp: parseFloat(p.pvp || 0),
+                pvc: parseFloat(p.pvc || 0),
+                pv_docena: parseFloat(p.pv_docena || 0),
+                cantidad: 1,
+                descuento: 0,
+                importe: parseFloat(p.pvp || 0),
+                cantidad_disponible: parseFloat(p.cantidad_total || 0),
+                tipo_impuesto: p.tipo_impuesto,
+                imagen_principal: p.imagen_principal || '',
+                almacen_detalle_id: p.id
+            };
+            agregarProductoAlTicket(prodAdd);
+
+            // Feedback visual rápido
+            const grid = document.getElementById('product-results-grid');
+            grid.innerHTML = `
+                <div style="text-align:center; color:#22c55e; margin-top:40px;">
+                    <i class='bx bx-check-circle' style="font-size:48px;"></i>
+                    <p style="font-weight:600; margin-top:8px;">✔ ${p.nombre} agregado al ticket</p>
+                </div>`;
+
+            if (limpiarInput) {
+                const inp = document.getElementById('main-search-input');
+                inp.value = '';
+                inp.focus();
+                // Limpiar el grid después de un momento
+                setTimeout(() => {
+                    grid.innerHTML = `
+                        <div style="text-align: center; color: #888; margin-top: 50px;">
+                            <i class='bx bx-package' style="font-size: 40px; opacity: 0.3;"></i>
+                            <p>Busque un producto para comenzar</p>
+                        </div>`;
+                }, 1200);
+            }
+            return true; // se agregó
+        }
+        return false; // no se agregó
+    }
+
     const buscarProductosDebounced = debounce(function (q) {
-        // El clearing ahora se hace fuera del debounce para que sea instantáneo
-        
-        // Mostrar indicador de carga
         const grid = document.getElementById('product-results-grid');
         grid.innerHTML = `
             <div style="text-align: center; margin-top: 50px;">
@@ -539,10 +585,18 @@
                 <p class="mt-2 text-muted">Buscando...</p>
             </div>`;
 
-        fetch(`{{ route('pos.buscar') }}?q=${q}`)
+        fetch(`{{ route('pos.buscar') }}?q=${encodeURIComponent(q)}`)
             .then(r => r.json())
-            .then(renderProductosNuevos)
-            .catch(err => {
+            .then(productos => {
+                // Si la búsqueda parece un código de barras (≥8 chars) y hay 1 único resultado
+                // → auto-agregar sin mostrar tarjetas (flujo scanner sin Enter)
+                const esCodigoBarras = q.length >= 8 && /^[\w\-]+$/.test(q);
+                if (esCodigoBarras && intentarAutoAgregarProducto(productos, true)) {
+                    return; // ya se agregó, no renderizar grid
+                }
+                renderProductosNuevos(productos);
+            })
+            .catch(() => {
                 grid.innerHTML = '<div style="text-align: center; padding: 20px; color: #d9534f;">Error en la búsqueda</div>';
             });
     }, 350);
@@ -551,7 +605,6 @@
     // Detectamos escritura extremadamente rápida (< 50 ms entre teclas) como
     // señal de que viene de una pistola de barras y no de un humano.
     let _lastKeyTime = 0;
-    let _scanBuffer  = '';
     let _scanTimer   = null;
 
     document.getElementById('main-search-input').addEventListener('keydown', function (e) {
@@ -559,19 +612,17 @@
         const gap = now - _lastKeyTime;
         _lastKeyTime = now;
 
-        // Si la diferencia entre pulsaciones es < 50 ms lo consideramos scanner
         if (gap < 50) {
             if (_scanTimer) clearTimeout(_scanTimer);
-            _scanTimer = setTimeout(() => { _scanBuffer = ''; }, 200);
+            _scanTimer = setTimeout(() => {}, 200);
         }
 
-        // Cuando la pistola envía Enter, realizamos la búsqueda inmediata
+        // Cuando la pistola (o usuario) presiona Enter → búsqueda inmediata + auto-agregar
         if (e.key === 'Enter') {
             e.preventDefault();
             const q = this.value.trim();
             if (q.length < 2) return;
 
-            // Cancelar debounce normal
             const grid = document.getElementById('product-results-grid');
             grid.innerHTML = `
                 <div style="text-align: center; margin-top: 50px;">
@@ -584,38 +635,12 @@
             fetch(`{{ route('pos.buscar') }}?q=${encodeURIComponent(q)}`)
                 .then(r => r.json())
                 .then(productos => {
+                    // Siempre intentar auto-agregar al presionar Enter
+                    if (intentarAutoAgregarProducto(productos, true)) return;
+                    // Si hay múltiples resultados, mostrarlos para que el usuario elija
                     renderProductosNuevos(productos);
-                    // Si hay un único resultado, agregarlo automáticamente al ticket
-                    if (productos.length === 1) {
-                        const p = productos[0];
-                        const prodAdd = {
-                            producto_id: p.producto_id,
-                            id: p.id,
-                            nombre: p.nombre,
-                            marca: p.marca || '',
-                            precio: parseFloat(p.pvp || 0),
-                            pvp: parseFloat(p.pvp || 0),
-                            pvc: parseFloat(p.pvc || 0),
-                            pv_docena: parseFloat(p.pv_docena || 0),
-                            cantidad: 1,
-                            descuento: 0,
-                            importe: parseFloat(p.pvp || 0),
-                            cantidad_disponible: parseFloat(p.cantidad_total || 0),
-                            tipo_impuesto: p.tipo_impuesto,
-                            imagen_principal: p.imagen_principal || '',
-                            almacen_detalle_id: p.id
-                        };
-                        agregarProductoAlTicket(prodAdd);
-                        // Limpiar el campo tras agregar
-                        document.getElementById('main-search-input').value = '';
-                        document.getElementById('product-results-grid').innerHTML = `
-                            <div style="text-align: center; color: #888; margin-top: 50px;">
-                                <i class='bx bx-package' style="font-size: 40px; opacity: 0.3;"></i>
-                                <p>Busque un producto para comenzar</p>
-                            </div>`;
-                    }
                 })
-                .catch(err => {
+                .catch(() => {
                     grid.innerHTML = '<div style="text-align: center; padding: 20px; color: #d9534f;">Error en la búsqueda</div>';
                 });
             return;
@@ -625,7 +650,6 @@
     document.getElementById('main-search-input').addEventListener('input', function () {
         let q = this.value;
         if (q.length < 2) {
-            // Borrar instantáneamente si la búsqueda es corta o está vacía
             document.getElementById('product-results-grid').innerHTML = `
                 <div style="text-align: center; color: #888; margin-top: 50px;">
                     <i class='bx bx-package' style="font-size: 40px; opacity: 0.3;"></i>

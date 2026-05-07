@@ -512,4 +512,39 @@ class ProductoController extends Controller
             return response()->json(['error' => 'Error interno del servidor'], 500);
         }
     }
+    /**
+     * Verificar si un código de barras (cb) ya existe en producto_lineas.
+     * Retorna { available: bool, producto: string|null }
+     */
+    public function checkCb(Request $request)
+    {
+        $cb = trim($request->get('cb', ''));
+        $excludeProductoId = $request->get('exclude_producto_id'); // para edición futura
+
+        if (empty($cb)) {
+            return response()->json(['available' => true, 'producto' => null]);
+        }
+
+        $companyId = Auth::user()->company_id;
+
+        $query = ProductoLinea::where('cb', $cb)
+            ->whereHas('producto', function ($q) use ($companyId) {
+                $q->where('id_empresa', $companyId);
+            });
+
+        if ($excludeProductoId) {
+            $query->where('producto_id', '!=', $excludeProductoId);
+        }
+
+        $existing = $query->with('producto')->first();
+
+        if ($existing) {
+            return response()->json([
+                'available' => false,
+                'producto'  => $existing->producto->nombre ?? 'Producto desconocido',
+            ]);
+        }
+
+        return response()->json(['available' => true, 'producto' => null]);
+    }
 }
