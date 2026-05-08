@@ -341,7 +341,17 @@ class CierreCajaController extends Controller
 
         $isTesoreria = $cierre->caja ? $cierre->caja->is_boveda : false;
 
-        return view('cierres.show', ['cierre' => $cierre, 'movimientos' => $movimientos, 'ingresosPorMetodo' => $ingresosPorMetodo, 'isTesoreria' => $isTesoreria]);
+        $porCobrar = \App\Models\ActivoCorriente::where('cierre_caja_id', $cierre->id)
+            ->where('tipo_adelanto', 'pos_credito')
+            ->sum('monto');
+
+        return view('cierres.show', [
+            'cierre' => $cierre, 
+            'movimientos' => $movimientos, 
+            'ingresosPorMetodo' => $ingresosPorMetodo, 
+            'isTesoreria' => $isTesoreria,
+            'porCobrar' => $porCobrar
+        ]);
     }
 
     public function close(Request $request, CierreCaja $cierre)

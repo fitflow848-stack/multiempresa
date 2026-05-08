@@ -100,6 +100,11 @@ class Venta extends Model
         return $this->belongsTo(Company::class, 'id_empresa');
     }
 
+    public function pagos()
+    {
+        return $this->hasMany(VentaPago::class, 'venta_id', 'id_venta');
+    }
+
     /**
      * Relación con el tipo de pago
      */

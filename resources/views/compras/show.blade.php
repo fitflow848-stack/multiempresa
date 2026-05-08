@@ -14,6 +14,9 @@
             <a href="{{ route('compras.pdf', $compra->id) }}" class="btn btn-info" target="_blank">
                 <i class="fas fa-print me-1"></i>Imprimir
             </a>
+            <button type="button" class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalBarcodesPdf">
+                <i class="bx bx-barcode me-1"></i>Etiquetas PDF
+            </button>
             @if(!$compra->received_at)
                 <a href="{{ route('recibir-productos.index', ['id' => $compra->id]) }}" class="btn btn-primary">Recibir Ticket</a>
             @endif
@@ -135,4 +138,72 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Etiquetas Barcodes -->
+<div class="modal fade" id="modalBarcodesPdf" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header" style="background:#1e293b; color:#fff;">
+                <h5 class="modal-title"><i class="bx bx-barcode me-2"></i>Configurar Etiquetas a Imprimir</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted small mb-3">Ajusta la cantidad de etiquetas por producto. Desmarca los que no quieras imprimir.</p>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:30px;"></th>
+                                <th>Producto</th>
+                                <th style="width:130px;">Cantidad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($almacenDetalles as $det)
+                                <tr>
+                                    <td><input type="checkbox" class="form-check-input chk-bcp" checked data-id="{{ $det->id }}"></td>
+                                    <td class="small fw-semibold">{{ $det->producto->nombre ?? '-' }}</td>
+                                    <td><input type="number" class="form-control form-control-sm qty-bcp" value="{{ (int)$det->cantidad ?: 1 }}" min="1" step="1"></td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-dark" id="btn-generar-barcodes-compra">
+                    <i class="fas fa-file-pdf me-1"></i>Generar PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form id="form-barcodes-compra" action="{{ route('almacen.barcodes-pdf') }}" method="POST" target="_blank" style="display:none;">
+    @csrf
+    <div id="form-barcodes-inputs"></div>
+</form>
+
+@push('scripts')
+<script>
+    document.getElementById('btn-generar-barcodes-compra').addEventListener('click', function() {
+        const filas = document.querySelectorAll('#modalBarcodesPdf tbody tr');
+        const container = document.getElementById('form-barcodes-inputs');
+        container.innerHTML = '';
+        let idx = 0;
+        filas.forEach(tr => {
+            const chk = tr.querySelector('.chk-bcp');
+            const qty = parseInt(tr.querySelector('.qty-bcp').value) || 0;
+            if (!chk.checked || qty < 1) return;
+            container.innerHTML += `<input type="hidden" name="productos[${idx}][id]" value="${chk.getAttribute('data-id')}">`;
+            container.innerHTML += `<input type="hidden" name="productos[${idx}][qty]" value="${qty}">`;
+            idx++;
+        });
+        if (idx === 0) { alert('No hay productos seleccionados con cantidad válida.'); return; }
+        bootstrap.Modal.getInstance(document.getElementById('modalBarcodesPdf')).hide();
+        document.getElementById('form-barcodes-compra').submit();
+    });
+</script>
+@endpush
 @endsection

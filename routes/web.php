@@ -35,6 +35,7 @@ use App\Http\Controllers\OperacionCajaController;
 use App\Http\Controllers\PartidaController;
 use App\Http\Controllers\PdfController;
 use App\Http\Controllers\ProvinciaController;
+use App\Http\Controllers\CuentaBancariaController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/prueba', function () {
@@ -287,6 +288,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
     // Rutas del módulo de almacén
     Route::prefix('almacen')->name('almacen.')->middleware('can:inventario.ver')->group(function () {
         Route::get('/', [AlmacenController::class, 'index'])->name('index');
+        Route::post('/barcodes-pdf', [AlmacenController::class, 'generateBarcodesPdf'])->name('barcodes-pdf');
         Route::get('/ajustar-existencias/{id}', [AlmacenController::class, 'ajustarExistencias'])->name('ajustar-existencias')->middleware('can:inventario.ajustar');
         Route::post('/ajustar-existencias/{id}', [AlmacenController::class, 'guardarAjuste'])->name('guardar-ajuste')->middleware('can:inventario.ajustar');
         Route::get('/alta-rapida', [AlmacenController::class, 'altaRapida'])->name('alta-rapida')->middleware('can:productos.crear');
@@ -386,6 +388,11 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
     Route::post('/finanzas-vendedor/{id}/update', [App\Http\Controllers\FinanzasVendedorController::class, 'update'])->name('finanzas_vendedor.update')->middleware('can:finanzas.editar');
     Route::delete('/finanzas-vendedor/{id}', [App\Http\Controllers\FinanzasVendedorController::class, 'destroy'])->name('finanzas_vendedor.destroy')->middleware('can:finanzas.eliminar');
     Route::post('/finanzas-vendedor/pagar-acumulado', [App\Http\Controllers\FinanzasVendedorController::class, 'registrarPagoAcumulado'])->name('finanzas_vendedor.pagar_acumulado')->middleware('can:finanzas.crear');
+
+    // Bancos y Transacciones Digitales
+    Route::resource('bancos', CuentaBancariaController::class);
+    Route::post('bancos/{banco}/movimiento', [CuentaBancariaController::class, 'storeMovimiento'])->name('bancos.movimiento.store');
+    Route::post('bancos/pase-caja-banco', [CuentaBancariaController::class, 'paseCajaBanco'])->name('bancos.pase-caja-banco');
 
 
     // Balance Route

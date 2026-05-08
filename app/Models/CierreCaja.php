@@ -76,12 +76,14 @@ class CierreCaja extends Model
                 'ingreso' AS tipo_movimiento,
                 COALESCE(c.nombre, 'Cliente Contable') AS cliente_nombre,
                 CONCAT( v.serie, ' ', v.numero ) AS concepto,
-                tp.nombre AS metodo_pago,
-                tp.es_efectivo,
-                CASE 
-                    WHEN d.id IS NULL THEN v.total
-                    ELSE (v.total - (d.monto_deuda + COALESCE((SELECT SUM(monto) FROM deuda_pagos WHERE deuda_id = d.id), 0)))
-                END AS importe,
+                COALESCE(tp_pago.nombre, tp_main.nombre) AS metodo_pago,
+                COALESCE(tp_pago.es_efectivo, tp_main.es_efectivo) AS es_efectivo,
+                COALESCE(vp.monto, 
+                    CASE 
+                        WHEN d.id IS NULL THEN v.total
+                        ELSE (v.total - (d.monto_deuda + COALESCE((SELECT SUM(monto) FROM deuda_pagos WHERE deuda_id = d.id), 0)))
+                    END
+                ) AS importe,
                 u.name AS usuario,
                 v.id_venta AS id_movimiento,
                 'venta' AS origen_movimiento
@@ -89,8 +91,10 @@ class CierreCaja extends Model
                     ventas v
                     LEFT JOIN clientes c ON c.id = v.id_cliente
                     INNER JOIN users u ON u.id = v.id_usuario 
-                    LEFT JOIN tipos_pagos tp ON tp.id = v.id_tipo_pago
+                    LEFT JOIN tipos_pagos tp_main ON tp_main.id = v.id_tipo_pago
                     LEFT JOIN deudas d ON d.venta_id = v.id_venta
+                    LEFT JOIN venta_pagos vp ON vp.venta_id = v.id_venta
+                    LEFT JOIN tipos_pagos tp_pago ON tp_pago.id = vp.tipo_pago_id
                 WHERE
                     v.cierre_caja_id = :cierre_id AND v.id_tido != 5
                     AND (v.estado != 0 OR (:is_closed = 1 AND v.updated_at > :fecha_cierre))

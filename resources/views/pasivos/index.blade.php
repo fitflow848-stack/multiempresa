@@ -133,6 +133,13 @@
                                                     <i class="bx bx-printer"></i>
                                                 </a>
 
+                                                @if($pasivo->compra_id)
+                                                    <a href="{{ route('compras.show', $pasivo->compra_id) }}"
+                                                       class="btn btn-secondary btn-circle btn-sm" title="Ver Compra Original">
+                                                        <i class="bx bx-receipt"></i>
+                                                    </a>
+                                                @endif
+
                                                 @if($pasivo->saldo > 0 && !str_contains(strtolower($pasivo->tipo->nombre), 'compra'))
                                                     <button type="button" class="btn btn-primary btn-circle btn-sm"
                                                         onclick="abrirModalPagoPasivo({{ $pasivo->id }}, '{{ $pasivo->nombre }}', {{ $pasivo->saldo }})"

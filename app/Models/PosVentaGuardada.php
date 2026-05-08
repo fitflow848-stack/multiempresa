@@ -13,6 +13,7 @@ class PosVentaGuardada extends Model
     protected $table = 'pos_ventas_guardadas';
 
     protected $fillable = [
+        'codigo',
         'user_id',
         'company_id',
         'branch_id',

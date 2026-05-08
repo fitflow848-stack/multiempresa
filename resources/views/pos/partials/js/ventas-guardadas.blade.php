@@ -74,8 +74,8 @@
                         Swal.fire({
                             icon: 'success',
                             title: '¡Guardado!',
-                            text: 'La venta ha sido puesta en espera correctamente.',
-                            timer: 2000,
+                            html: `Venta en espera.<br><span class="font-monospace fw-bold">${data.codigo || ''}</span>`,
+                            timer: 3000,
                             showConfirmButton: false
                         });
 
@@ -111,7 +111,7 @@
                 if (ventas.length === 0) {
                     container.innerHTML = `
                         <tr>
-                            <td colspan="4" class="text-center py-5 text-muted small">
+                            <td colspan="5" class="text-center py-5 text-muted small">
                                 <i class='bx bx-info-circle d-block fs-3 mb-2 opacity-50'></i>
                                 No hay ventas guardadas en espera.
                             </td>
@@ -127,20 +127,22 @@
                         day: '2-digit', month: '2-digit', year: 'numeric',
                         hour: '2-digit', minute: '2-digit'
                     });
+                    const codigo = v.codigo ? `<span class="badge bg-dark font-monospace">${v.codigo}</span>` : '<span class="text-muted">-</span>';
 
                     row.innerHTML = `
-                        <td class="ps-4 fw-medium text-dark">${fecha}</td>
+                        <td class="ps-4">${codigo}</td>
+                        <td class="fw-medium text-dark">${fecha}</td>
                         <td class="text-muted">${v.cliente_nombre || 'Desconocido'}</td>
                         <td class="text-end fw-bold text-primary">S/ ${parseFloat(v.total).toFixed(2)}</td>
                         <td class="pe-4 text-center">
                             <div class="d-flex gap-2 justify-content-center">
-                                <button type="button" class="btn btn-sm btn-soft-primary px-3 rounded-pill border-0" 
-                                        onclick="cargarVentaGuardada(${v.id})" 
+                                <button type="button" class="btn btn-sm btn-soft-primary px-3 rounded-pill border-0"
+                                        onclick="cargarVentaGuardada(${v.id})"
                                         style="background-color: #e0e7ff; color: #4338ca;">
                                     <i class='bx bx-redo me-1'></i> Retomar
                                 </button>
-                                <button type="button" class="btn btn-sm btn-soft-danger px-3 rounded-pill border-0" 
-                                        onclick="eliminarVentaGuardada(${v.id})" 
+                                <button type="button" class="btn btn-sm btn-soft-danger px-3 rounded-pill border-0"
+                                        onclick="eliminarVentaGuardada(${v.id})"
                                         style="background-color: #fee2e2; color: #b91c1c;">
                                     <i class='bx bx-trash'></i>
                                 </button>

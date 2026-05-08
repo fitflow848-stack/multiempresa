@@ -85,6 +85,9 @@ class PosController extends Controller
         $isAdmin = $user->isAdmin();
         $metodos = TipoPago::where('activo', true)->orderBy('orden')->get();
 
+        // ID del tipo de pago Mixto (busca por nombre para no depender de un ID fijo)
+        $tipoPagoMixtoId = $metodos->first(fn($m) => stripos($m->nombre, 'mixto') !== false)?->id ?? null;
+
         // Obtener documentos autorizados para la empresa y sucursal (Solo Boleta, Factura, Nota Venta, Ticket)
         $documentos = DB::table('company_documents')
             ->join('documentos_sunat', 'company_documents.sunat_document_id', '=', 'documentos_sunat.id_tido')
@@ -94,7 +97,12 @@ class PosController extends Controller
             ->select('documentos_sunat.id_tido', 'documentos_sunat.nombre', 'company_documents.series', 'company_documents.number')
             ->get();
 
-        return view('pos.index', compact('user', 'company', 'sucursales', 'cotizacionData', 'logo', 'isAdmin', 'metodos', 'documentos'));
+        $vendedores = \App\Models\User::where('company_id', $company->id)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        return view('pos.index', compact('user', 'company', 'sucursales', 'cotizacionData', 'logo', 'isAdmin', 'metodos', 'documentos', 'vendedores', 'tipoPagoMixtoId'));
     }
 
     public function buscar(Request $request)
@@ -115,7 +123,10 @@ class PosController extends Controller
         $total = $request->input('total', 0);
         $clienteNombre = $request->input('cliente_nombre', 'Cliente General');
 
+        $codigo = 'G-' . date('ymd') . '-' . strtoupper(substr(uniqid(), -4));
+
         $guardada = \App\Models\PosVentaGuardada::create([
+            'codigo' => $codigo,
             'user_id' => $user->id,
             'company_id' => $user->company_id,
             'branch_id' => $user->branch_id,
@@ -124,7 +135,7 @@ class PosController extends Controller
             'data' => $data,
         ]);
 
-        return response()->json(['success' => true, 'id' => $guardada->id]);
+        return response()->json(['success' => true, 'id' => $guardada->id, 'codigo' => $guardada->codigo]);
     }
 
     public function listarVentasGuardadas()
@@ -293,6 +304,8 @@ class PosController extends Controller
                 'proforma' => $request->proforma ?? 0,
                 'id_coti' => $request->id_coti ?? null,
                 'plazo_dias' => $request->plazo_dias ?? 0,
+                'vendedor_id' => $request->vendedor_id ?? null,
+                'pago_mixto' => $request->pago_mixto ?? null,
             ];
             // $request->ticket y $request->cliente se pasan tal cual (el service decodifica si es string)
             $venta = $this->ventaService->crearVentaDesdeTicket($request->ticket, $request->cliente, $meta);
