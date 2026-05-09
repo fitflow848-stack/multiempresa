@@ -10,8 +10,11 @@ use App\Models\AlmacenIngreso;
 use App\Models\AlmacenIngresoDetalle;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use App\Models\BancoMovimiento;
+use App\Models\CuentaBancaria;
 use App\Models\Producto;
 use App\Models\ProductoLinea;
+use App\Models\Proveedor;
 use App\Models\Sucursal;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -148,6 +151,7 @@ class ComprasController extends Controller
             'fecha_pago' => ['nullable', 'date'],
             'moneda' => ['nullable', 'string'],
             'credito' => ['nullable'],
+            'metodo_pago_contado' => ['nullable', 'in:caja,banco,anticipo'],
             'percepcion' => ['nullable'],
             'inc_impuesto' => ['nullable'],
             'tipo' => ['nullable', 'string'],
@@ -337,6 +341,70 @@ class ComprasController extends Controller
 
             DB::commit();
 
+            // Si es compra a crédito, registrar automáticamente en pasivos (cuentas por pagar)
+            if ($compra->credito) {
+                try {
+                    $tipoPasivo = \App\Models\TipoPasivo::firstOrCreate(
+                        ['nombre' => 'Cuentas por Pagar (Compras)', 'company_id' => $compra->company_id],
+                        ['descripcion' => 'Compras a crédito registradas automáticamente']
+                    );
+
+                    $proveedor = Proveedor::find($compra->proveedor_id);
+                    \App\Models\Pasivo::create([
+                        'company_id' => $compra->company_id,
+                        'sucursal_id' => $compra->local_destino ?? Auth::user()->branch_id,
+                        'compra_id' => $compra->id,
+                        'tipo_pasivo_id' => $tipoPasivo->id,
+                        'nombre' => $proveedor->nombre_comercial ?? 'Proveedor',
+                        'empresa_persona' => $proveedor->nombre_comercial ?? null,
+                        'monto' => $compra->total_pagar,
+                        'monto_pagado' => 0,
+                        'estado' => 'pendiente',
+                        'fecha_registro' => $compra->fecha_emision ?? now(),
+                        'documento' => trim(($compra->serie_comprobante ?? '') . ' ' . ($compra->numero_comprobante ?? '')),
+                        'observaciones' => 'Compra a crédito #' . $compra->id . ' registrada automáticamente.',
+                        'user_id' => Auth::id(),
+                        'is_compra_credito' => true,
+                    ]);
+                } catch (\Throwable $pe) {
+                    Log::error('Error registrando pasivo de compra a crédito: ' . $pe->getMessage());
+                }
+            } else {
+                // Compra al CONTADO: registrar movimiento según método de pago elegido
+                $metodoPago = $data['metodo_pago_contado'] ?? 'caja';
+                try {
+                    if ($metodoPago === 'banco') {
+                        $banco = \App\Models\CuentaBancaria::where('company_id', $compra->company_id)
+                            ->where('is_active', true)->orderBy('id')->first();
+                        if ($banco) {
+                            \App\Models\BancoMovimiento::create([
+                                'cuenta_bancaria_id' => $banco->id,
+                                'user_id' => Auth::id(),
+                                'tipo' => 'egreso',
+                                'monto' => $compra->total_pagar,
+                                'concepto' => 'Pago compra #' . $compra->id . ' a proveedor',
+                                'referencia' => trim(($compra->serie_comprobante ?? '') . ' ' . ($compra->numero_comprobante ?? '')),
+                                'fecha' => now()->toDateString(),
+                            ]);
+                            $banco->decrement('saldo_actual', $compra->total_pagar);
+                        }
+                    } elseif ($metodoPago === 'caja') {
+                        // Registrar egreso en la caja activa
+                        $cajaAbierta = \App\Models\CierreCaja::where('company_id', $compra->company_id)
+                            ->where('sucursal_id', Auth::user()->branch_id)
+                            ->whereNull('fecha_cierre')
+                            ->latest()->first();
+                        if ($cajaAbierta) {
+                            $cajaAbierta->egresos = floatval($cajaAbierta->egresos ?? 0) + $compra->total_pagar;
+                            $cajaAbierta->save();
+                        }
+                    }
+                    // 'anticipo' no afecta caja ni banco
+                } catch (\Throwable $pe) {
+                    Log::error('Error registrando pago contado de compra: ' . $pe->getMessage());
+                }
+            }
+
             // redirect to success page
             return redirect()->route('compras.success', $compra->id);
         } catch (\Throwable $e) {
@@ -377,7 +445,16 @@ class ComprasController extends Controller
     public function show(Compra $compra)
     {
         $compra->load('lineas');
-        return view('compras.show', compact('compra'));
+
+        // Cargar detalles de almacén para generar etiquetas (solo si la compra fue recibida)
+        $almacenDetalles = collect();
+        if ($compra->received_at) {
+            $almacenDetalles = \App\Models\AlmacenIngresoDetalle::with(['producto', 'productoLinea'])
+                ->whereHas('ingreso', fn($q) => $q->where('compra_id', $compra->id))
+                ->get();
+        }
+
+        return view('compras.show', compact('compra', 'almacenDetalles'));
     }
 
     /**

@@ -13,7 +13,8 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="bg-soft-light text-muted small text-uppercase">
                             <tr>
-                                <th class="ps-4 py-3">Fecha y Hora</th>
+                                <th class="ps-4 py-3">Código</th>
+                                <th class="py-3">Fecha y Hora</th>
                                 <th class="py-3">Cliente</th>
                                 <th class="py-3 text-end">Total</th>
                                 <th class="pe-4 py-3 text-center">Acciones</th>
@@ -22,7 +23,7 @@
                         <tbody id="lista-ventas-guardadas">
                             <!-- Se cargará por JS -->
                             <tr>
-                                <td colspan="4" class="text-center py-5 text-muted">
+                                <td colspan="5" class="text-center py-5 text-muted">
                                     <div class="spinner-border spinner-border-sm me-2" role="status"></div>
                                     Cargando ventas guardadas...
                                 </td>

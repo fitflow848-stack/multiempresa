@@ -15,7 +15,7 @@ class OperacionCajaController extends Controller
     {
         $data = $request->validate([
             'cierre_caja_id' => 'nullable|exists:cierre_cajas,id',
-            'tipo' => 'required|in:aportacion,sustraccion,ingreso,gasto,transferencia_boveda',
+            'tipo' => 'required|in:aportacion,sustraccion,ingreso,gasto,transferencia_boveda,pase_banco',
             'partida' => 'nullable|string|max:255',
             'concepto' => 'nullable|string',
             'metodo_pago' => 'nullable|string|max:50',

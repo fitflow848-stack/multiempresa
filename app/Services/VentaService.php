@@ -180,11 +180,84 @@ class VentaService
             $venta->sucursal = $user->branch_id; // Sincronizado con la sesión activa
             $venta->direccion = $clienteData['direccion'] ?? '-';
             $venta->cierre_caja_id = $openCaja->id;
-            $venta->id_usuario = $user->id;
+            $venta->id_usuario = $meta['vendedor_id'] ?? $user->id;
             $venta->id_coti = $meta['id_coti'] ?? null;
             $venta->descuento_monto = $total_descuento > 0 ? $total_descuento : 0;
             $venta->descuento_porcentaje = ($total_descuento > 0 && ($total + $total_descuento) > 0) ? round(($total_descuento / ($total + $total_descuento)) * 100, 2) : 0;
             $venta->save();
+
+            // PERSISTENCIA DE PAGOS (Módulo de Bancos / Pagos Mixtos)
+            $cuentaBancaria = \App\Models\CuentaBancaria::where('company_id', $company->id)
+                ->where('is_active', true)
+                ->orderBy('id')
+                ->first();
+
+            if (isset($meta['pago_mixto']) && !empty($meta['pago_mixto'])) {
+                $pagoMixto = $meta['pago_mixto'];
+
+                // Pago en Efectivo
+                if (floatval($pagoMixto['efectivo']) > 0) {
+                    \App\Models\VentaPago::create([
+                        'venta_id' => $venta->id_venta,
+                        'tipo_pago_id' => 1,
+                        'monto' => $pagoMixto['efectivo'],
+                    ]);
+                }
+
+                // Pago Digital → registrar en banco
+                $montoDigital = floatval($pagoMixto['digital']);
+                if ($montoDigital > 0) {
+                    \App\Models\VentaPago::create([
+                        'venta_id' => $venta->id_venta,
+                        'tipo_pago_id' => $pagoMixto['tipo_pago_digital_id'],
+                        'monto' => $montoDigital,
+                        'cuenta_bancaria_id' => $cuentaBancaria?->id,
+                    ]);
+
+                    if ($cuentaBancaria) {
+                        \App\Models\BancoMovimiento::create([
+                            'cuenta_bancaria_id' => $cuentaBancaria->id,
+                            'user_id' => $user->id,
+                            'tipo' => 'ingreso',
+                            'monto' => $montoDigital,
+                            'concepto' => 'Venta POS (pago mixto digital)',
+                            'referencia' => $venta->serie . '-' . str_pad($venta->numero, 8, '0', STR_PAD_LEFT),
+                            'fecha' => now()->toDateString(),
+                            'cierre_caja_id' => $openCaja->id,
+                            'id_venta' => $venta->id_venta,
+                        ]);
+                        $cuentaBancaria->increment('saldo_actual', $montoDigital);
+                    }
+                }
+            } else {
+                // Pago simple
+                $tipoPago = \App\Models\TipoPago::find($tipoPagoId);
+                $esDigital = $tipoPago && $tipoPago->es_digital;
+                $montoVenta = min($entrega, $total); // solo lo que cubre la venta
+
+                \App\Models\VentaPago::create([
+                    'venta_id' => $venta->id_venta,
+                    'tipo_pago_id' => $tipoPagoId,
+                    'monto' => $entrega,
+                    'cuenta_bancaria_id' => ($esDigital && $cuentaBancaria) ? $cuentaBancaria->id : null,
+                ]);
+
+                // Si es digital, registrar movimiento bancario
+                if ($esDigital && $cuentaBancaria && $montoVenta > 0) {
+                    \App\Models\BancoMovimiento::create([
+                        'cuenta_bancaria_id' => $cuentaBancaria->id,
+                        'user_id' => $user->id,
+                        'tipo' => 'ingreso',
+                        'monto' => $montoVenta,
+                        'concepto' => 'Venta POS - ' . ($tipoPago->nombre ?? 'Pago digital'),
+                        'referencia' => $venta->serie . '-' . str_pad($venta->numero, 8, '0', STR_PAD_LEFT),
+                        'fecha' => now()->toDateString(),
+                        'cierre_caja_id' => $openCaja->id,
+                        'id_venta' => $venta->id_venta,
+                    ]);
+                    $cuentaBancaria->increment('saldo_actual', $montoVenta);
+                }
+            }
 
             // Si hay un saldo pendiente (crédito o pago parcial), REQUERIR UN CLIENTE REAL
             if ($entrega < $total) {
@@ -211,6 +284,31 @@ class VentaService
                 $deuda->user_id = $user->id;
                 $deuda->sucursal_id = $user->branch_id; // Sincronizado con la sesión activa
                 $deuda->save();
+
+                // REPORTE AUTOMÁTICO A FINANZAS ESPECIALES (Requerimiento)
+                try {
+                    $tipoActivo = \App\Models\TipoActivoCorriente::firstOrCreate(
+                        ['nombre' => 'Cuentas por Cobrar (POS)', 'company_id' => $company->id],
+                        ['descripcion' => 'Deudas generadas automáticamente desde el POS']
+                    );
+
+                    \App\Models\ActivoCorriente::create([
+                        'company_id' => $company->id,
+                        'sucursal_id' => $user->branch_id,
+                        'tipo_activo_corriente_id' => $tipoActivo->id,
+                        'nombre' => $clienteData['nombre'] ?? 'Cliente Deuda',
+                        'monto' => $montoDeuda,
+                        'fecha_registro' => now(),
+                        'documento' => $venta->serie . '-' . str_pad($venta->numero, 8, '0', STR_PAD_LEFT),
+                        'observaciones' => "Venta a Crédito: " . $venta->serie . '-' . str_pad($venta->numero, 8, '0', STR_PAD_LEFT),
+                        'user_id' => $user->id,
+                        'cierre_caja_id' => $openCaja->id,
+                        'tipo_adelanto' => 'pos_credito' // Identificador interno
+                    ]);
+                } catch (\Exception $fe) {
+                    Log::error("Error al reportar a Finanzas Especiales: " . $fe->getMessage());
+                    // No bloqueamos la venta si falla este reporte secundario
+                }
 
                 Log::info("Deuda creada para cliente {$clienteData['id']} por monto S/ {$montoDeuda}", [
                     'venta_id' => $venta->id_venta,

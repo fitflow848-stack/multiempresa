@@ -134,14 +134,19 @@ class UserForm
                                 if ($authUser->isSuperAdmin()) {
                                     $companyId = $get('company_id');
                                     if ($companyId) {
-                                        $query->where('roles.company_id', $companyId);
-                                    } else {
-                                        $query->whereNull('roles.company_id');
+                                        // Mostrar roles de la empresa seleccionada Y roles globales (sin empresa)
+                                        $query->where(function ($q) use ($companyId) {
+                                            $q->where('roles.company_id', $companyId)
+                                              ->orWhereNull('roles.company_id');
+                                        });
                                     }
+                                    // Si no hay empresa seleccionada, no filtrar por company_id (mostrar todos)
                                 } else {
                                     $rawCompanyId = $authUser->getRawOriginal('company_id') ?? $authUser->company_id;
-                                    $query->where('roles.company_id', $rawCompanyId)
-                                          ->whereNotIn('roles.name', ['super_admin']);
+                                    $query->where(function ($q) use ($rawCompanyId) {
+                                        $q->where('roles.company_id', $rawCompanyId)
+                                          ->orWhereNull('roles.company_id');
+                                    })->whereNotIn('roles.name', ['super_admin']);
                                 }
 
                                 return $query->orderBy('roles.name');
@@ -149,6 +154,7 @@ class UserForm
                         )
                         ->multiple()
                         ->preload()
+                        ->searchable()
                         ->native(false)
                         ->reactive()
                         ->default(fn () => []),

@@ -151,6 +151,31 @@
             </div>
         </div>
 
+        <!-- SECCIÓN PAGO MIXTO (Oculta por defecto) -->
+        <div id="seccion-pago-mixto" style="display:none; background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px dashed #6b2e51;">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="fw-bold text-primary mb-0"><i class="bx bx-list-check me-1"></i> Desglose Mixto</label>
+                <span class="badge bg-label-primary" id="mixto-total-indicador">S/ 0.00</span>
+            </div>
+            <div class="row g-2">
+                <div class="col-6">
+                    <label class="small fw-bold">Efectivo</label>
+                    <input type="number" id="mixto-efectivo" class="form-control-new" value="0.00" onkeyup="actualizarTotalesMixtos()">
+                </div>
+                <div class="col-6">
+                    <label class="small fw-bold">Digital</label>
+                    <input type="number" id="mixto-digital" class="form-control-new" value="0.00" onkeyup="actualizarTotalesMixtos()">
+                </div>
+                <div class="col-12 mt-2">
+                    <select id="mixto-metodo-digital" class="form-select form-select-sm">
+                        @foreach($metodos->where('es_digital', 1) as $m)
+                            <option value="{{ $m->id }}">{{ $m->nombre }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+        </div>
+
         <div class="form-group">
             <label>Observaciones</label>
             <textarea id="input-observaciones" class="form-control-new" style="height: 60px; resize: none;"
@@ -167,6 +192,17 @@
                 </div>
                 <i class='bx bx-pencil client-edit-btn' style="font-size: 1.1rem; opacity: 0.5;"></i>
             </div>
+        </div>
+
+        <div class="form-group">
+            <label>Vendedor</label>
+            <select id="vendedor-select" class="form-control-new">
+                @foreach($vendedores as $vend)
+                    <option value="{{ $vend->id }}" {{ $vend->id == auth()->id() ? 'selected' : '' }}>
+                        {{ $vend->name }}
+                    </option>
+                @endforeach
+            </select>
         </div>
 
         <!-- Campos Ocultos para Compatibilidad con el Script de Venta -->
@@ -295,6 +331,7 @@
 
 <script>
     // ESTADO GLOBAL DEL POS - Declarado una sola vez al inicio
+    window.TIPO_PAGO_MIXTO_ID = {{ $tipoPagoMixtoId ?? 'null' }};
     window.ticket = [];
     window.clienteActual = {
         id: null,
@@ -308,6 +345,7 @@
     window.currentProduct = null;
     window.cotizacionId = null;
     window.selectedIndex = -1;
+    window.selectedTicketIndex = -1;
 
     // Funciones para previsualización de imágenes
     function showImagePreview(event, imgSrc) {
@@ -621,6 +659,16 @@
         if (e.key === 'Enter') {
             e.preventDefault();
             const q = this.value.trim();
+            
+            // Si hay un producto seleccionado con flechas, agregarlo
+            if (window.selectedIndex !== -1) {
+                const cards = document.querySelectorAll('.pos-product-card');
+                if (cards[window.selectedIndex]) {
+                    cards[window.selectedIndex].dispatchEvent(new MouseEvent('dblclick'));
+                    return;
+                }
+            }
+
             if (q.length < 2) return;
 
             const grid = document.getElementById('product-results-grid');
@@ -635,20 +683,97 @@
             fetch(`{{ route('pos.buscar') }}?q=${encodeURIComponent(q)}`)
                 .then(r => r.json())
                 .then(productos => {
-                    // Siempre intentar auto-agregar al presionar Enter
+                    // Siempre intentar auto-agregar al presionar Enter si hay un solo resultado
                     if (intentarAutoAgregarProducto(productos, true)) return;
                     // Si hay múltiples resultados, mostrarlos para que el usuario elija
                     renderProductosNuevos(productos);
+                    
+                    // Seleccionar el primero por defecto para navegar con flechas
+                    if (productos.length > 0) {
+                        window.selectedIndex = 0;
+                        actualizarSeleccionVisual();
+                    }
                 })
                 .catch(() => {
                     grid.innerHTML = '<div style="text-align: center; padding: 20px; color: #d9534f;">Error en la búsqueda</div>';
                 });
             return;
         }
+
+        // Navegación con flechas
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            const cards = document.querySelectorAll('.pos-product-card');
+            if (cards.length === 0) return;
+            e.preventDefault();
+
+            if (e.key === 'ArrowDown') {
+                window.selectedIndex = (window.selectedIndex + 1) % cards.length;
+            } else {
+                window.selectedIndex = (window.selectedIndex - 1 + cards.length) % cards.length;
+            }
+            actualizarSeleccionVisual();
+            return;
+        }
+
+        // TAB para navegar (similar a flecha abajo)
+        if (e.key === 'Tab') {
+            const cards = document.querySelectorAll('.pos-product-card');
+            if (cards.length > 0) {
+                e.preventDefault();
+                window.selectedIndex = (window.selectedIndex + 1) % cards.length;
+                actualizarSeleccionVisual();
+            }
+        }
     });
+
+    function actualizarSeleccionVisual() {
+        const cards = document.querySelectorAll('.pos-product-card');
+        cards.forEach((card, index) => {
+            if (index === window.selectedIndex) {
+                card.classList.add('selected');
+                card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                card.classList.remove('selected');
+            }
+        });
+    }
+
+    // Atajos para cantidad (+ / -) y otros
+    document.addEventListener('keydown', function(e) {
+        // Evitar si estamos escribiendo en cualquier input o si hay un modal abierto
+        const activeTag = document.activeElement.tagName;
+        const isInput = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT';
+
+        // Si hay modales abiertos, no procesar atajos globales
+        const openModal = document.querySelector('.modal.show');
+        if (openModal) return;
+
+        // Atajos de cantidad + y - para el item seleccionado del ticket (o el último)
+        if (!isInput) {
+            if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') {
+                e.preventDefault();
+                modificarCantidadSeleccionada(1);
+            } else if (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract') {
+                e.preventDefault();
+                modificarCantidadSeleccionada(-1);
+            }
+        }
+    });
+
+    function modificarCantidadSeleccionada(delta) {
+        if (window.ticket.length === 0) return;
+        // Usar fila seleccionada del ticket; si no hay, usar la última
+        const index = (window.selectedTicketIndex >= 0 && window.selectedTicketIndex < window.ticket.length)
+            ? window.selectedTicketIndex
+            : window.ticket.length - 1;
+        const item = window.ticket[index];
+        const nuevaCantidad = Math.max(0, item.cantidad + delta);
+        actualizarCantidad(index, nuevaCantidad);
+    }
 
     document.getElementById('main-search-input').addEventListener('input', function () {
         let q = this.value;
+        window.selectedIndex = -1; // Resetear selección al escribir
         if (q.length < 2) {
             document.getElementById('product-results-grid').innerHTML = `
                 <div style="text-align: center; color: #888; margin-top: 50px;">
@@ -817,6 +942,31 @@
         calcularCambioPOS();
     }
 
+    // MÓDULO PAGOS MIXTOS
+    document.getElementById('medio-pago-select').addEventListener('change', function() {
+        const isMixto = window.TIPO_PAGO_MIXTO_ID && this.value == window.TIPO_PAGO_MIXTO_ID;
+        document.getElementById('seccion-pago-mixto').style.display = isMixto ? 'block' : 'none';
+        
+        if (isMixto) {
+            const total = ticket.reduce((sum, item) => sum + (item.importe || 0), 0);
+            document.getElementById('mixto-efectivo').value = total.toFixed(2);
+            document.getElementById('mixto-digital').value = "0.00";
+            actualizarTotalesMixtos();
+        }
+    });
+
+    function actualizarTotalesMixtos() {
+        const efectivo = parseFloat(document.getElementById('mixto-efectivo').value) || 0;
+        const digital = parseFloat(document.getElementById('mixto-digital').value) || 0;
+        const totalMixto = efectivo + digital;
+        
+        document.getElementById('mixto-total-indicador').innerText = 'S/ ' + totalMixto.toFixed(2);
+        
+        // Sincronizar con el input de entrega principal
+        document.getElementById('input-entrega').value = totalMixto.toFixed(2);
+        calcularCambioPOS();
+    }
+
     function calcularCambioPOS() {
         const total = ticket.reduce((sum, item) => sum + (item.importe || 0), 0);
         const amountPaid = parseFloat(document.getElementById('input-entrega').value) || 0;
@@ -975,6 +1125,12 @@
                 observaciones: observaciones,
                 proforma: tipoPagoString === 'proforma' ? 1 : 0,
                 plazo_dias: tipoPagoString === 'credito' ? (document.getElementById('input-plazo-dias').value || 30) : null,
+                vendedor_id: document.getElementById('vendedor-select').value,
+                pago_mixto: (window.TIPO_PAGO_MIXTO_ID && tipoPagoId == window.TIPO_PAGO_MIXTO_ID) ? {
+                    efectivo: document.getElementById('mixto-efectivo').value,
+                    digital: document.getElementById('mixto-digital').value,
+                    tipo_pago_digital_id: document.getElementById('mixto-metodo-digital').value
+                } : null,
                 _token: '{{ csrf_token() }}'
             };
 
@@ -1716,6 +1872,7 @@
         if (confirm('¿Está seguro que desea cancelar la venta? Se perderán todos los productos del ticket.')) {
             // Resetear ticket
             ticket = [];
+            window.selectedTicketIndex = -1;
 
             // Limpiar storage y venta persistente
             sessionStorage.removeItem('ticketGuardadoPOS');
@@ -1786,6 +1943,7 @@
         )) {
             // Solo limpiar ticket, mantener cliente
             ticket = [];
+            window.selectedTicketIndex = -1;
 
             // Limpiar storage del ticket
             sessionStorage.removeItem('ticketGuardadoPOS');
@@ -2129,7 +2287,7 @@
             }
 
             // Resaltar si está seleccionada
-            let borderStyle = (idx === window.selectedIndex) ?
+            let borderStyle = (idx === window.selectedTicketIndex) ?
                 'border: 2px solid #6b2e51; box-shadow: inset 0 0 8px rgba(107, 46, 81, 0.2);' : '';
 
             const tr = document.createElement('tr');
@@ -2221,6 +2379,7 @@
                 if (result.isConfirmed) {
                     ticket.splice(index, 1);
                     window.selectedIndex = -1;
+                    window.selectedTicketIndex = -1;
                     renderTicket();
                     guardarVentaPersistente();
                     if (typeof mostrarNotificacion === 'function') {
@@ -2232,6 +2391,7 @@
             if (confirm(`¿Quitar "${producto.nombre}" del ticket?`)) {
                 ticket.splice(index, 1);
                 window.selectedIndex = -1;
+                window.selectedTicketIndex = -1;
                 renderTicket();
                 guardarVentaPersistente();
             }
@@ -2284,6 +2444,7 @@
     // Función para editar línea (ahora también maneja la selección)
     function editarLinea(index) {
         window.selectedIndex = index;
+        window.selectedTicketIndex = index;
         // Guardar el producto seleccionado para el menú contextual si se quiere
         window.currentProduct = ticket[index];
         renderTicket();
@@ -2366,8 +2527,8 @@
 
         // Supr (Delete): Eliminar Línea
         if (e.key === 'Delete') {
-            if (window.selectedIndex !== -1 && !isInput) {
-                eliminarLinea(window.selectedIndex);
+            if (window.selectedTicketIndex !== -1 && !isInput) {
+                eliminarLinea(window.selectedTicketIndex);
             }
         }
 

@@ -81,6 +81,15 @@
                                     <input class="form-check-input" type="checkbox" id="credito" name="credito">
                                     <label class="form-check-label small fw-bold" for="credito">CRÉDITO</label>
                                 </div>
+                                {{-- Método de pago para CONTADO --}}
+                                <div id="seccion-metodo-pago-contado" class="mt-2">
+                                    <label class="small fw-bold text-muted d-block mb-1">Método de pago (Contado)</label>
+                                    <select name="metodo_pago_contado" id="metodo_pago_contado" class="form-select form-select-sm">
+                                        <option value="caja">Caja</option>
+                                        <option value="banco">Banco / Transferencia</option>
+                                        <option value="anticipo">Anticipo a Proveedor</option>
+                                    </select>
+                                </div>
                                 <div class="form-check form-switch pt-1">
                                     <input class="form-check-input" type="checkbox" id="inc_impuesto" name="inc_impuesto" checked>
                                     <label class="form-check-label small fw-bold" for="inc_impuesto">INC. IGV</label>
@@ -1026,6 +1035,15 @@
                         console.log('Datos temporales limpiados después de enviar compra');
                     }, 1000);
                 });
+
+                // Toggle de método de pago CONTADO según checkbox crédito
+                function toggleMetodoPagoContado() {
+                    const esCredito = $('#credito').is(':checked');
+                    $('#seccion-metodo-pago-contado').toggle(!esCredito);
+                }
+
+                $('#credito').on('change', toggleMetodoPagoContado);
+                toggleMetodoPagoContado(); // estado inicial
 
                 // Función para obtener y agregar producto recién creado
                 function fetchAndAddNewProduct(productId) {

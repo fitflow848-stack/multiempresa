@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php -l app/Http/Controllers/ComprasController.php)",
+      "Bash(php -l app/Http/Controllers/CuentaBancariaController.php)",
+      "Bash(php -l app/Services/VentaService.php)",
+      "Bash(php -l app/Http/Controllers/PosController.php)",
+      "Bash(php -l app/Http/Controllers/AlmacenController.php)"
+    ]
+  }
+}

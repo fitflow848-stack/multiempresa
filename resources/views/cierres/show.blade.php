@@ -146,6 +146,11 @@
                                     class="form-control form-control-sm border-warning bg-light"
                                     value="{{ $cierre->sustracciones }}" readonly>
                             </div>
+                            <div class="col-12 mt-2">
+                                <label class="label-custom text-dark" style="color: #6b2e51 !important;">RECAUDADO POR COBRAR (CRÉDITO)</label>
+                                <input type="text" class="form-control form-control-sm border-dark bg-light fw-bold"
+                                    value="S/ {{ number_format($porCobrar ?? 0, 2) }}" readonly style="border-color: #6b2e51 !important; color: #6b2e51 !important;">
+                            </div>
                         </div>
 
                         <div class="bg-summary p-3 mb-4 shadow-sm border border-light">
@@ -444,6 +449,7 @@
                                 <option value="aportacion">Aportación (+)</option>
                                 <option value="sustraccion">Sustracción (-)</option>
                                 <option value="transferencia_boveda">🏦 Transferir a Tesorería (-)</option>
+                                <option value="pase_banco">🏦 Pase a Banco (-)</option>
                             </select>
                         </div>
                         <div class="col-md-6">
@@ -723,6 +729,10 @@
                 partidaEl.value = '';
                 partidaEl.disabled = true;
                 if (!conceptoEl.value) conceptoEl.value = 'Exceso de caja transferido';
+            } else if (e.target.value === 'pase_banco') {
+                partidaEl.value = '';
+                partidaEl.disabled = true;
+                if (!conceptoEl.value) conceptoEl.value = 'Dinero digital transferido a banco';
             } else {
                 partidaEl.disabled = false;
             }
@@ -837,6 +847,20 @@
                 });
 
                 if (res.ok) {
+                    // Si es pase a banco, registrar también en módulo de bancos
+                    if (payload.tipo === 'pase_banco') {
+                        try {
+                            await fetch('{{ route('bancos.pase-caja-banco') }}', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+                                body: JSON.stringify({
+                                    monto: payload.importe,
+                                    concepto: payload.concepto,
+                                    cierre_caja_id: cierreId
+                                })
+                            });
+                        } catch (e) { console.error('Error registrando en banco:', e); }
+                    }
                     location.reload();
                 } else {
                     const errorData = await res.json().catch(() => ({}));

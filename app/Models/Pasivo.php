@@ -16,6 +16,7 @@ class Pasivo extends Model
     protected $fillable = [
         'company_id',
         'sucursal_id',
+        'compra_id',
         'tipo_pasivo_id',
         'nombre',
         'empresa_persona',
@@ -73,6 +74,11 @@ class Pasivo extends Model
     public function pagos()
     {
         return $this->hasMany(PasivoPago::class);
+    }
+
+    public function compra()
+    {
+        return $this->belongsTo(\App\Models\Compra::class, 'compra_id');
     }
 
     public function getSaldoAttribute()

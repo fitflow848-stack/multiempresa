@@ -1349,4 +1349,48 @@ class AlmacenController extends Controller
             return back()->withErrors('Error al importar productos: ' . $e->getMessage());
         }
     }
+    public function generateBarcodesPdf(Request $request)
+    {
+        $request->validate([
+            'productos' => 'required|array',
+            'productos.*.id' => 'required|exists:almacen_ingreso_detalle,id',
+            'productos.*.qty' => 'required|integer|min:1'
+        ]);
+
+        $generator = new \Picqer\Barcode\BarcodeGeneratorPNG();
+        $items = [];
+
+        foreach ($request->productos as $p) {
+            $detalle = AlmacenIngresoDetalle::with(['producto', 'productoLinea'])->find($p['id']);
+            if (!$detalle) continue;
+
+            $code = ($detalle->productoLinea->cb ?? '') ?: str_pad((string)$detalle->producto_id, 8, '0', STR_PAD_LEFT);
+            // Validar formato para EAN13 o usar CODE128 por defecto
+            $type = (strlen($code) == 13 && is_numeric($code))
+                ? $generator::TYPE_EAN_13
+                : $generator::TYPE_CODE_128;
+
+            try {
+                $barcodeBase64 = base64_encode($generator->getBarcode($code, $type));
+            } catch (\Exception $e) {
+                try {
+                    $barcodeBase64 = base64_encode($generator->getBarcode($code, $generator::TYPE_CODE_128));
+                } catch (\Exception $e2) {
+                    $barcodeBase64 = null;
+                }
+            }
+
+            $items[] = [
+                'name' => $detalle->producto->nombre,
+                'concentracion' => $detalle->productoLinea->concentracion ?? '',
+                'code' => $code,
+                'price' => $detalle->pvp,
+                'qty' => $p['qty'],
+                'barcode_base64' => $barcodeBase64
+            ];
+        }
+
+        $pdf = Pdf::loadView('pdf.barcodes', compact('items'));
+        return $pdf->stream('etiquetas_barcodes.pdf');
+    }
 }

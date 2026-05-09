@@ -9,6 +9,15 @@
         const modal = document.getElementById('modal-buscar-clientes');
         modal.style.display = 'flex';
         cargarListaClientes();
+        
+        // Focar el input de búsqueda automáticamente (Requerimiento 4.2)
+        setTimeout(() => {
+            const input = document.getElementById('buscar-cliente-input');
+            if (input) {
+                input.focus();
+                window.selectedClientIndex = -1;
+            }
+        }, 100);
     }
 
     function cerrarBuscadorClientes() {
@@ -45,6 +54,12 @@
                 }
                 currentFilteredList = data; // Set initial filtered list
                 renderizarListaClientes(currentFilteredList);
+                
+                // Seleccionar el primero por defecto para navegar con flechas
+                if (data.length > 0) {
+                    window.selectedClientIndex = 0;
+                    actualizarSeleccionVisualCliente();
+                }
             })
             .catch(error => {
                 if (!termino) {
@@ -54,6 +69,51 @@
                 console.error('Error:', error);
             });
     }
+
+    function actualizarSeleccionVisualCliente() {
+        const rows = document.querySelectorAll('#lista-clientes-tbody tr');
+        rows.forEach((row, index) => {
+            if (index === window.selectedClientIndex) {
+                row.style.backgroundColor = '#e3f2fd';
+                row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                // Actualizar clienteSeleccionado para que Enter sepa qué cliente es
+                if (currentFilteredList[index]) {
+                    clienteSeleccionado = currentFilteredList[index];
+                }
+            } else {
+                row.style.backgroundColor = 'white';
+            }
+        });
+    }
+
+    // Manejar eventos de teclado en el input de búsqueda de clientes
+    document.addEventListener('DOMContentLoaded', () => {
+        const inputCliente = document.getElementById('buscar-cliente-input');
+        if (inputCliente) {
+            inputCliente.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    const rows = document.querySelectorAll('#lista-clientes-tbody tr');
+                    if (rows.length > 0) {
+                        window.selectedClientIndex = (window.selectedClientIndex + 1) % rows.length;
+                        actualizarSeleccionVisualCliente();
+                    }
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    const rows = document.querySelectorAll('#lista-clientes-tbody tr');
+                    if (rows.length > 0) {
+                        window.selectedClientIndex = (window.selectedClientIndex - 1 + rows.length) % rows.length;
+                        actualizarSeleccionVisualCliente();
+                    }
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (window.selectedClientIndex !== -1 && clienteSeleccionado) {
+                        confirmarSeleccionCliente();
+                    }
+                }
+            });
+        }
+    });
 
     // ... (renderizarListaClientes stays similar but I'll update it later if needed)
     
