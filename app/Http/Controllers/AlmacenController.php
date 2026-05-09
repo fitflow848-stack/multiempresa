@@ -470,6 +470,7 @@ class AlmacenController extends Controller
 
         $movimientos = [];
         $producto = null;
+        $stockActual = 0;
         $linea_id = $request->get('linea_id');
         
         // Por defecto mostramos movimientos de hoy si no se especifica
@@ -486,91 +487,39 @@ class AlmacenController extends Controller
                 $dateFilterV = " AND v.created_at >= '{$fecha_desde} 00:00:00' AND v.created_at <= '{$fecha_hasta} 23:59:59'";
                 $dateFilterT = " AND t.created_at >= '{$fecha_desde} 00:00:00' AND t.created_at <= '{$fecha_hasta} 23:59:59'";
 
-                // 1. Calcular Saldo Inicial (Movimientos antes de fecha_desde)
-                $dateFilterPrev = " AND ai.created_at < '{$fecha_desde} 00:00:00'";
-                $dateFilterVPrev = " AND v.created_at < '{$fecha_desde} 00:00:00'";
-                $dateFilterTPrev = " AND t.created_at < '{$fecha_desde} 00:00:00'";
-
-                $prevResult = DB::selectOne("
-                    SELECT SUM(entrada) - SUM(salida) as balance FROM (
-                        SELECT 
-                            CASE 
-                                WHEN (aid.cantidad + 
-                                    COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
-                                    COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
-                                ) >= 0 THEN 
-                                    (aid.cantidad + 
-                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
-                                        COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
-                                    ) 
-                                ELSE 0 
-                            END as entrada,
-                            CASE 
-                                WHEN (aid.cantidad + 
-                                    COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
-                                    COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
-                                ) < 0 THEN 
-                                    ABS(aid.cantidad + 
-                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
-                                        COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
-                                    )
-                                ELSE 0 
-                            END as salida
-                        FROM almacen_ingreso_detalle aid
-                        JOIN almacen_ingresos ai ON ai.id = aid.ingreso_id
-                        WHERE aid.producto_id = :prod_id1
-                        AND ai.sucursal_id = :suc1
-                        AND (:line1_check = 0 OR aid.producto_linea_id = :line1_id)
-                        {$dateFilterPrev}
-
-                        UNION ALL
-
-                        SELECT
-                            0 as entrada,
-                            vd.cantidad as salida
-                        FROM venta_detalles vd
-                        JOIN ventas v ON v.id_venta = vd.id_venta
-                        LEFT JOIN almacen_ingreso_detalle aid_lote_v ON aid_lote_v.id = vd.almacen_ingreso_detalle_id
-                        WHERE vd.servicio_id = :prod_id2 
-                        AND v.sucursal = :suc2
-                        AND v.id_tido != 5
-                        AND vd.almacen_ingreso_detalle_id IS NOT NULL
-                        AND (:line2_check = 0 OR aid_lote_v.producto_linea_id = :line2_id)
-                        {$dateFilterVPrev}
-
-                        UNION ALL
-
-                        SELECT
-                            0 as entrada,
-                            t.cantidad as salida
-                        FROM almacen_transferencias t
-                        LEFT JOIN almacen_ingreso_detalle aid_lote_t ON aid_lote_t.id = t.origen_lote_id
-                        WHERE t.producto_id = :prod_id3
-                        AND t.sucursal_origen_id = :suc3
-                        AND t.origen_lote_id IS NOT NULL
-                        AND (:line3_check = 0 OR aid_lote_t.producto_linea_id = :line3_id)
-                        {$dateFilterTPrev}
-                    ) as historial_prev
+                // Obtener el stock REAL actual directamente de la BD (fuente de verdad)
+                // Usa el mismo filtro que el almacén: excluye [AJUSTE] negativos
+                $stockActualResult = DB::selectOne("
+                    SELECT COALESCE(SUM(aid.cantidad), 0) as stock_actual
+                    FROM almacen_ingreso_detalle aid
+                    JOIN almacen_ingresos ai ON ai.id = aid.ingreso_id
+                    WHERE aid.producto_id = :prod_id
+                    AND ai.company_id = :company_id
+                    AND ai.sucursal_id = :suc_id
+                    AND (ai.observacion IS NULL OR ai.observacion NOT LIKE '[AJUSTE]%' OR aid.cantidad >= 0)
+                    AND (:linea_check = 0 OR aid.producto_linea_id = :linea_id)
                 ", [
-                    'prod_id1' => $productoId, 'suc1' => $sucursal_id, 'line1_check' => $linea_id ? 1 : 0, 'line1_id' => $linea_id,
-                    'prod_id2' => $productoId, 'suc2' => $sucursal_id, 'line2_check' => $linea_id ? 1 : 0, 'line2_id' => $linea_id,
-                    'prod_id3' => $productoId, 'suc3' => $sucursal_id, 'line3_check' => $linea_id ? 1 : 0, 'line3_id' => $linea_id
+                    'prod_id' => $productoId,
+                    'company_id' => $user->company_id,
+                    'suc_id' => $sucursal_id,
+                    'linea_check' => $linea_id ? 1 : 0,
+                    'linea_id' => $linea_id
                 ]);
+                $stockActual = floatval($stockActualResult->stock_actual ?? 0);
 
-                $saldoInicial = floatval($prevResult->balance ?? 0);
-
-                // Consulta UNION para Entradas, Salidas (Ventas) y Transferencias
+                // Consulta UNION: Entradas, Salidas (Ventas) y Transferencias en el rango
                 $movimientos = DB::select("
                     SELECT * FROM (
                         -- INGRESOS (Compras / Inventario / Ajustes)
+                        -- Reconstruimos la cantidad original: actual + ventas_del_lote + transferencias_del_lote
                         SELECT 
                             ai.created_at as fecha,
                             CASE 
-                                WHEN ai.observacion LIKE '[AJUSTE]%' THEN 
-                                    (CASE WHEN (aid.cantidad + 
-                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
-                                        COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
-                                    ) < 0 THEN 'SALIDA (AJUSTE)' ELSE 'ENTRADA (AJUSTE)' END)
+                                WHEN ai.observacion LIKE '[AJUSTE]%' AND aid.cantidad < 0 
+                                    AND COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) = 0
+                                    AND COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0) = 0
+                                    THEN 'SALIDA (AJUSTE)'
+                                WHEN ai.observacion LIKE '[AJUSTE]%' THEN 'ENTRADA (AJUSTE)'
                                 WHEN ai.observacion LIKE '[ANULACION]%' THEN 'ENTRADA (ANULACION)'
                                 WHEN ai.observacion LIKE '[DEVOLUCION]%' THEN 'ENTRADA (DEVOLUCION)'
                                 ELSE 'ENTRADA' 
@@ -620,7 +569,7 @@ class AlmacenController extends Controller
 
                         UNION ALL
 
-                        -- SALIDAS (Ventas) - incluye anuladas, excluye Notas de Crédito
+                        -- SALIDAS (Ventas) - excluye Notas de Crédito (id_tido=5)
                         SELECT
                             v.created_at as fecha,
                             CASE WHEN v.estado = 0 THEN 'SALIDA (ANULADA)' ELSE 'SALIDA' END as tipo,
@@ -678,7 +627,19 @@ class AlmacenController extends Controller
                     'prod_id3' => $productoId, 'suc3' => $sucursal_id, 'line3_check' => $linea_id ? 1 : 0, 'line3_id' => $linea_id
                 ]);
 
-                // Calcular saldos acumulados desde el inicio (saldo inicial + movimientos en rango)
+                // Calcular saldos anclados al stock real actual
+                // El saldo del último movimiento DEBE ser igual al stock actual real
+                // Calculamos el neto de movimientos en el rango
+                $netoMovimientos = 0;
+                foreach ($movimientos as $mov) {
+                    $netoMovimientos += (floatval($mov->entrada) - floatval($mov->salida));
+                }
+
+                // Saldo inicial = stock actual real - neto de movimientos del rango
+                // Esto garantiza que el saldo final siempre coincida con el stock real
+                $saldoInicial = $stockActual - $netoMovimientos;
+
+                // Calcular saldo acumulado línea por línea
                 $saldoAcumulado = $saldoInicial;
                 foreach ($movimientos as &$mov) {
                     $saldoAcumulado += (floatval($mov->entrada) - floatval($mov->salida));
@@ -802,7 +763,7 @@ class AlmacenController extends Controller
             }
         }
 
-        return view('almacen.kardex', compact('movimientos', 'producto', 'user', 'company', 'sucursales', 'sucursal_id', 'fecha_desde', 'fecha_hasta', 'linea_id'));
+        return view('almacen.kardex', compact('movimientos', 'producto', 'user', 'company', 'sucursales', 'sucursal_id', 'fecha_desde', 'fecha_hasta', 'linea_id', 'stockActual'));
     }
     // --- TRANSFERENCIAS ENTRE SUCURSALES ---
 

@@ -361,7 +361,7 @@ class VentaService
                     // FIFO automático: distribuir entre lotes del más antiguo al más nuevo
                     $lineaId  = $item['product_linea_id'] ?? null;
                     $restante = $cantidad;
-                    $primerLoteId = null;
+                    $lotesUsados = []; // [{id, cantidad_descontada}]
 
                     while ($restante > 0) {
                         $loteQuery = AlmacenIngresoDetalle::where('producto_id', $item['producto_id'])
@@ -380,18 +380,32 @@ class VentaService
                         $lote = $loteQuery->first();
                         if (!$lote) break;
 
-                        if (!$primerLoteId) {
-                            $primerLoteId = $lote->id;
-                        }
-
                         $aDescontar = min($restante, (float) $lote->cantidad);
                         $this->stockService->decrementarStock($lote->id, $aDescontar);
+                        $lotesUsados[] = ['id' => $lote->id, 'cantidad' => $aDescontar];
                         $restante -= $aDescontar;
                     }
 
-                    if ($primerLoteId) {
-                        $detalle->almacen_ingreso_detalle_id = $primerLoteId;
+                    if (!empty($lotesUsados)) {
+                        // Primer lote: asignar al detalle principal
+                        $detalle->almacen_ingreso_detalle_id = $lotesUsados[0]['id'];
+                        $detalle->cantidad = $lotesUsados[0]['cantidad'];
+                        $detalle->importe = $precio_original * $lotesUsados[0]['cantidad'];
                         $detalle->save();
+
+                        // Lotes adicionales: crear registros split para trazabilidad en kardex
+                        for ($li = 1; $li < count($lotesUsados); $li++) {
+                            $splitDetalle = new VentaDetalle();
+                            $splitDetalle->id_venta = $venta->id_venta;
+                            $splitDetalle->servicio_id = $prodId;
+                            $splitDetalle->nombre_servicio = $detalle->nombre_servicio;
+                            $splitDetalle->cantidad = $lotesUsados[$li]['cantidad'];
+                            $splitDetalle->precio_unitario = $precio_original;
+                            $splitDetalle->importe = $precio_original * $lotesUsados[$li]['cantidad'];
+                            $splitDetalle->orden = $detalle->orden;
+                            $splitDetalle->almacen_ingreso_detalle_id = $lotesUsados[$li]['id'];
+                            $splitDetalle->save();
+                        }
                     } else {
                         Log::warning("No se encontró stock/lote para el producto ID {$item['producto_id']} en la venta {$venta->id_venta}");
                     }

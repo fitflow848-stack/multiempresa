@@ -125,7 +125,7 @@
                             <tfoot class="bg-light font-weight-bold">
                                 <tr>
                                     <td colspan="7" class="text-right">SALDO FINAL:</td>
-                                    <td class="text-right">{{ number_format(count($movimientos) > 0 ? $movimientos[0]->saldo_linea : 0, 2) }}</td>
+                                    <td class="text-right">{{ number_format($stockActual ?? (count($movimientos) > 0 ? $movimientos[0]->saldo_linea : 0), 2) }}</td>
                                 </tr>
                             </tfoot>
                             @endif

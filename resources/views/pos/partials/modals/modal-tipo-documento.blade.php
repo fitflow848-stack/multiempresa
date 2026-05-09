@@ -119,12 +119,16 @@
             return;
         }
 
+        // Guardar valores ANTES de cerrar la modal (cerrar resetea documentSelectedVal)
+        const tipoSeleccionado = documentSelectedVal;
+        const nombreSeleccionado = documentSelectedName;
+
         // Cerrar el modal de tipo documento inmediatamente
         cerrarModalTipoDocumento();
 
         const { isConfirmed } = await Swal.fire({
             title: '¿Confirmar Emisión?',
-            text: `¿Estás seguro que desea emitir una ${documentSelectedName.toUpperCase()}?`,
+            text: `¿Estás seguro que desea emitir una ${nombreSeleccionado.toUpperCase()}?`,
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#22c55e',
@@ -135,7 +139,7 @@
 
         if (isConfirmed) {
             if (typeof seleccionarTipoDocumento === 'function') {
-                seleccionarTipoDocumento(documentSelectedVal);
+                seleccionarTipoDocumento(tipoSeleccionado);
             }
         }
     }
