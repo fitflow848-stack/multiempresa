@@ -194,6 +194,13 @@
                                     value="{{ date('Y-m-d') }}" required>
                             </div>
                         </div>
+                        <div class="form-group mb-3">
+                            <label>Método de Pago <span class="text-danger">*</span></label>
+                            <select name="metodo_pago" class="form-control" required>
+                                <option value="Efectivo">Efectivo (Caja)</option>
+                                <option value="Transferencia">Transferencia (Banco)</option>
+                            </select>
+                        </div>
                         <div class="form-group">
                             <label>Documento Referencia</label>
                             <input type="text" name="documento" class="form-control" placeholder="Ej. Voucher 123">

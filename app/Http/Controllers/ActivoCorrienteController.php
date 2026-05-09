@@ -43,7 +43,8 @@ class ActivoCorrienteController extends Controller
             'fecha_registro' => 'required|date',
             'documento' => 'nullable|string|max:255',
             'observaciones' => 'nullable|string',
-            'proveedor_id' => 'nullable|exists:proveedores,id'
+            'proveedor_id' => 'nullable|exists:proveedores,id',
+            'metodo_pago' => 'required|string'
         ]);
 
         $data = $request->all();
@@ -57,7 +58,60 @@ class ActivoCorrienteController extends Controller
             }
         }
 
-        ActivoCorriente::create($data);
+        $activo = ActivoCorriente::create($data);
+
+        // Registrar egreso según método de pago
+        $monto = (float) $data['monto'];
+        $metodoPago = $data['metodo_pago'] ?? 'Efectivo';
+        $esEfectivo = strtolower($metodoPago) === 'efectivo';
+
+        try {
+            if ($esEfectivo) {
+                // Egreso de caja
+                $cajaAbierta = getSelectedCaja();
+                if (!$cajaAbierta) {
+                    $cajaAbierta = \App\Models\CierreCaja::where('company_id', auth()->user()->company_id)
+                        ->where('sucursal_id', auth()->user()->branch_id)
+                        ->whereNull('fecha_cierre')
+                        ->latest()->first();
+                }
+                if ($cajaAbierta) {
+                    $cajaAbierta->egresos = floatval($cajaAbierta->egresos ?? 0) + $monto;
+                    $cajaAbierta->save();
+
+                    \App\Models\OperacionCaja::create([
+                        'cierre_caja_id' => $cajaAbierta->id,
+                        'user_id' => auth()->id(),
+                        'tipo' => 'egreso',
+                        'partida' => 'Anticipo a Proveedor',
+                        'concepto' => $activo->nombre,
+                        'importe' => $monto,
+                        'metodo_pago' => $metodoPago,
+                        'es_efectivo' => 1,
+                    ]);
+
+                    $activo->update(['cierre_caja_id' => $cajaAbierta->id]);
+                }
+            } else {
+                // Egreso de banco (transferencia)
+                $banco = \App\Models\CuentaBancaria::where('company_id', auth()->user()->company_id)
+                    ->where('is_active', true)->orderBy('id')->first();
+                if ($banco) {
+                    \App\Models\BancoMovimiento::create([
+                        'cuenta_bancaria_id' => $banco->id,
+                        'user_id' => auth()->id(),
+                        'tipo' => 'egreso',
+                        'monto' => $monto,
+                        'concepto' => 'Anticipo a proveedor: ' . $activo->nombre,
+                        'referencia' => $data['documento'] ?? null,
+                        'fecha' => $data['fecha_registro'],
+                    ]);
+                    $banco->decrement('saldo_actual', $monto);
+                }
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Error registrando pago de activo corriente: ' . $e->getMessage());
+        }
 
         return redirect()->route('activos_corrientes.index')->with('success', 'Activo corriente registrado correctamente');
     }
