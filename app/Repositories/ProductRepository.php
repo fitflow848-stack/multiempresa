@@ -88,6 +88,125 @@ class ProductRepository
         ", $params);
     }
 
+    /**
+     * Búsqueda fuzzy: si la búsqueda exacta (LIKE) no da resultados,
+     * busca todos los productos y filtra por similitud de texto.
+     */
+    public function buscarFuzzy(string $q, ?int $sucursalId = null, bool $includeEmpty = false, int $umbral = 55): array
+    {
+        // Primero intentar búsqueda exacta
+        $resultados = $this->buscar($q, $sucursalId, $includeEmpty);
+
+        if (count($resultados) > 0) {
+            return $resultados;
+        }
+
+        // Si no hay resultados, buscar con fuzzy
+        $sucursalId = $sucursalId ?? session('active_branch_id');
+        $companyId = session('active_company_id') ?? (auth()->check() ? auth()->user()->company_id : null);
+
+        $joinIngresos = "INNER JOIN almacen_ingresos ai ON ai.id = ad.ingreso_id AND ai.company_id = ?";
+        if ($sucursalId) {
+            $joinIngresos .= " AND ai.sucursal_id = ?";
+        }
+        $joinIngresos .= " AND (ai.observacion IS NULL OR ai.observacion NOT LIKE '[AJUSTE]%' OR ad.cantidad >= 0)";
+
+        $params = [$companyId];
+        if ($sucursalId) {
+            $params[] = $sucursalId;
+        }
+
+        $having = $includeEmpty ? "" : "HAVING SUM(ad.cantidad) > 0";
+
+        $todos = DB::select("
+            SELECT
+                p.id AS producto_id,
+                MAX(p.tipo_impuesto) as tipo_impuesto,
+                ad.producto_linea_id AS product_linea_id,
+                MIN(CASE WHEN ad.cantidad > 0 THEN ad.id ELSE NULL END) AS id,
+                CONCAT_WS(' / ', 
+                    MAX(p.nombre), 
+                    NULLIF(CONCAT_WS(' ', 
+                        NULLIF(NULLIF(TRIM(MAX(pl.presentacion)), ''), '-- Ver --'),
+                        NULLIF(NULLIF(TRIM(MAX(pl.concentracion)), ''), '-- Ver --')
+                    ), '')
+                ) AS nombre,
+                CONCAT(
+                    'lt. ', MAX(ad.lote), ' Fv. ', LPAD(DAY(MAX(ad.fecha_vencimiento)), 2, '0'),
+                    ' ', LOWER(LEFT(MONTHNAME(MAX(ad.fecha_vencimiento)), 3)), ' ', RIGHT(YEAR(MAX(ad.fecha_vencimiento)), 2)
+                ) AS detalle,
+                MAX(m.nombre) AS marca,
+                MAX(f.nombre) AS familia,
+                MAX(um.nombre) AS unidad_medida,
+                MAX(p.ficha_tecnica) AS ficha_tecnica,
+                MAX(p.almacenamiento) AS almacenamiento,
+                MAX(p.codigo_barras) AS codigo_barras,
+                MAX(p.imagen_principal) AS imagen_principal,
+                SUM(ad.cantidad) AS cantidad_total,
+                MAX(pl.precio_compra) AS costo,
+                (SELECT sub.pvp FROM almacen_ingreso_detalle sub WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id AND sub.pvp > 0 ORDER BY sub.id DESC LIMIT 1) AS pvp,
+                (SELECT sub.pvpd FROM almacen_ingreso_detalle sub WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id AND sub.pvpd > 0 ORDER BY sub.id DESC LIMIT 1) AS pvpd,
+                (SELECT sub.pvc FROM almacen_ingreso_detalle sub WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id AND sub.pvc > 0 ORDER BY sub.id DESC LIMIT 1) AS pvc,
+                (SELECT sub.pvcd FROM almacen_ingreso_detalle sub WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id AND sub.pvcd > 0 ORDER BY sub.id DESC LIMIT 1) AS pvcd,
+                MAX(p.pv_docena) AS pv_docena,
+                COUNT(ad.id) AS total_lotes,
+                MAX(ad.fecha_vencimiento) as fecha_vencimiento,
+                MAX(ad.stock_min) AS stock_min,
+                MAX(ad.lote) AS lote,
+                CASE 
+                    WHEN SUM(ad.cantidad) <= MAX(COALESCE(ad.stock_min, 0)) AND MAX(COALESCE(ad.stock_min, 0)) > 0 
+                    THEN 1 
+                    ELSE 0 
+                END AS stock_bajo
+            FROM almacen_ingreso_detalle ad
+            $joinIngresos
+            INNER JOIN productos p ON p.id = ad.producto_id
+            INNER JOIN producto_lineas pl ON pl.id = ad.producto_linea_id 
+            LEFT JOIN marcas m ON m.id = p.marca_id
+            LEFT JOIN familias f ON f.id = p.familia_id
+            LEFT JOIN unidades_medida um ON um.id = p.unidad_medida_id
+            GROUP BY p.id, ad.producto_linea_id
+            $having
+            ORDER BY MAX(p.nombre) ASC
+        ", $params);
+
+        // Filtrar por similitud
+        $qLower = mb_strtolower($q);
+        $resultados = [];
+
+        foreach ($todos as $producto) {
+            $nombre = mb_strtolower($producto->nombre ?? '');
+            similar_text($qLower, $nombre, $percent);
+
+            // También verificar si cada palabra del query está parcialmente en el nombre
+            $palabras = explode(' ', $qLower);
+            $coincidencias = 0;
+            foreach ($palabras as $palabra) {
+                if (mb_strlen($palabra) < 2) continue;
+                // Buscar coincidencia parcial por cada palabra
+                foreach (explode(' ', $nombre) as $palabraNombre) {
+                    similar_text($palabra, $palabraNombre, $pPalabra);
+                    if ($pPalabra >= 70) {
+                        $coincidencias++;
+                        break;
+                    }
+                }
+            }
+
+            $porcentajePalabras = count($palabras) > 0 ? ($coincidencias / count($palabras)) * 100 : 0;
+
+            if ($percent >= $umbral || $porcentajePalabras >= 60) {
+                $producto->similitud = max($percent, $porcentajePalabras);
+                $resultados[] = $producto;
+            }
+        }
+
+        // Ordenar por similitud descendente
+        usort($resultados, fn($a, $b) => $b->similitud <=> $a->similitud);
+
+        return array_slice($resultados, 0, 20);
+    }
+
     public function obtenerLotes(int $productoId, ?int $sucursalId = null): array
     {
         $sucursalId = $sucursalId ?? session('active_branch_id');

@@ -109,9 +109,13 @@ class PosController extends Controller
     {
         $q = $request->get('q', '');
         $includeEmpty = $request->boolean('include_empty', false);
+        $fuzzy = $request->boolean('fuzzy', true);
 
-        // El repositorio ya toma el active_branch_id de la sesión por defecto
-        $productos = $this->productRepo->buscar($q, null, $includeEmpty);
+        if ($fuzzy) {
+            $productos = $this->productRepo->buscarFuzzy($q, null, $includeEmpty);
+        } else {
+            $productos = $this->productRepo->buscar($q, null, $includeEmpty);
+        }
 
         return response()->json($productos);
     }
