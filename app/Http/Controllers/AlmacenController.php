@@ -1380,11 +1380,14 @@ class AlmacenController extends Controller
                 }
             }
 
+            $priceType = $request->get('price_type', 'pvp');
+            
             $items[] = [
                 'name' => $detalle->producto->nombre,
+                'presentacion' => $detalle->productoLinea->presentacion ?? '',
                 'concentracion' => $detalle->productoLinea->concentracion ?? '',
                 'code' => $code,
-                'price' => $detalle->pvp,
+                'price' => $detalle->$priceType ?? $detalle->pvp,
                 'qty' => $p['qty'],
                 'barcode_base64' => $barcodeBase64
             ];

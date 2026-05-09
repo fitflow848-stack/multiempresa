@@ -43,8 +43,14 @@
         }
         .barcode-text {
             font-size: 7pt;
-            margin-top: 2px;
+            margin-top: 1px;
             letter-spacing: 1px;
+        }
+        .product-price {
+            font-size: 9pt;
+            font-weight: bold;
+            margin-top: 2px;
+            color: #000;
         }
     </style>
 </head>
@@ -53,13 +59,23 @@
         @foreach($items as $item)
             @for($i = 0; $i < $item['qty']; $i++)
                 <div class="label-box">
-                    <div class="product-name">{{ $item['name'] }}</div>
+                    <div class="product-name">
+                        {{ $item['name'] }} 
+                        @if(!empty($item['presentacion'])) {{ $item['presentacion'] }} @endif
+                        @if(!empty($item['concentracion'])) {{ $item['concentracion'] }} @endif
+                    </div>
+                    
                     @if($item['barcode_base64'])
                         <img class="barcode-img" src="data:image/png;base64,{{ $item['barcode_base64'] }}" alt="barcode">
                     @else
                         <div style="border:1px dashed #ccc;padding:6px;font-size:7pt;color:#999;">Sin código</div>
                     @endif
+                    
                     <div class="barcode-text">{{ $item['code'] }}</div>
+                    
+                    @if(isset($item['price']))
+                        <div class="product-price">S/ {{ number_format($item['price'], 2) }}</div>
+                    @endif
                 </div>
             @endfor
         @endforeach

@@ -148,7 +148,18 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <p class="text-muted small mb-3">Ajusta la cantidad de etiquetas por producto. Desmarca los que no quieras imprimir.</p>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <p class="text-muted small mb-0">Ajusta la cantidad de etiquetas por producto. Desmarca los que no quieras imprimir.</p>
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label mb-0 fw-semibold small">Precio:</label>
+                        <select id="compra-price-selector" class="form-select form-select-sm" style="width:120px;">
+                            <option value="pvp">PVP</option>
+                            <option value="pvpd">PVP Dto.</option>
+                            <option value="pvc">PVC</option>
+                            <option value="pvcd">PVC Dto.</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle">
                         <thead class="table-light">
@@ -182,6 +193,7 @@
 
 <form id="form-barcodes-compra" action="{{ route('almacen.barcodes-pdf') }}" method="POST" target="_blank" style="display:none;">
     @csrf
+    <input type="hidden" name="price_type" id="compra-price-type-input" value="pvp">
     <div id="form-barcodes-inputs"></div>
 </form>
 
@@ -201,6 +213,7 @@
             idx++;
         });
         if (idx === 0) { alert('No hay productos seleccionados con cantidad válida.'); return; }
+        document.getElementById('compra-price-type-input').value = document.getElementById('compra-price-selector').value;
         bootstrap.Modal.getInstance(document.getElementById('modalBarcodesPdf')).hide();
         document.getElementById('form-barcodes-compra').submit();
     });
