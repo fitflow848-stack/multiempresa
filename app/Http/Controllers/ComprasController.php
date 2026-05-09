@@ -419,7 +419,8 @@ class ComprasController extends Controller
                                 // Marcar anticipo como saldado
                                 $anticipo->update([
                                     'is_settled' => true,
-                                    'observaciones' => ($anticipo->observaciones ? $anticipo->observaciones . ' | ' : '') . 'Saldado con compra #' . $compra->id
+                                    'monto' => 0,
+                                    'observaciones' => ($anticipo->observaciones ? $anticipo->observaciones . ' | ' : '') . 'Saldado con compra #' . $compra->id . ' (Monto original: S/' . number_format($montoAnticipo, 2) . ')'
                                 ]);
 
                                 // Si la compra cuesta más que el anticipo, la diferencia sale de caja

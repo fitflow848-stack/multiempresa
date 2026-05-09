@@ -67,7 +67,7 @@ class ActivoCorrienteController extends Controller
 
         try {
             if ($esEfectivo) {
-                // Egreso de caja
+                // Egreso de caja (sustracción - salida de dinero por anticipo)
                 $cajaAbierta = getSelectedCaja();
                 if (!$cajaAbierta) {
                     $cajaAbierta = \App\Models\CierreCaja::where('company_id', auth()->user()->company_id)
@@ -76,13 +76,13 @@ class ActivoCorrienteController extends Controller
                         ->latest()->first();
                 }
                 if ($cajaAbierta) {
-                    $cajaAbierta->egresos = floatval($cajaAbierta->egresos ?? 0) + $monto;
+                    $cajaAbierta->sustracciones = floatval($cajaAbierta->sustracciones ?? 0) + $monto;
                     $cajaAbierta->save();
 
                     \App\Models\OperacionCaja::create([
                         'cierre_caja_id' => $cajaAbierta->id,
                         'user_id' => auth()->id(),
-                        'tipo' => 'egreso',
+                        'tipo' => 'sustraccion',
                         'partida' => 'Anticipo a Proveedor',
                         'concepto' => $activo->nombre,
                         'importe' => $monto,
