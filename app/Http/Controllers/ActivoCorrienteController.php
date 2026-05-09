@@ -42,10 +42,22 @@ class ActivoCorrienteController extends Controller
             'monto' => 'required|numeric|min:0',
             'fecha_registro' => 'required|date',
             'documento' => 'nullable|string|max:255',
-            'observaciones' => 'nullable|string'
+            'observaciones' => 'nullable|string',
+            'proveedor_id' => 'nullable|exists:proveedores,id'
         ]);
 
-        ActivoCorriente::create($request->all());
+        $data = $request->all();
+        $data['user_id'] = auth()->id();
+
+        // Si se seleccionó proveedor, auto-completar el nombre si está vacío
+        if (!empty($data['proveedor_id']) && empty($data['nombre'])) {
+            $proveedor = \App\Models\Proveedor::find($data['proveedor_id']);
+            if ($proveedor) {
+                $data['nombre'] = 'Anticipo - ' . ($proveedor->nombre_comercial ?? $proveedor->nombre_legal);
+            }
+        }
+
+        ActivoCorriente::create($data);
 
         return redirect()->route('activos_corrientes.index')->with('success', 'Activo corriente registrado correctamente');
     }
@@ -126,17 +138,24 @@ class ActivoCorrienteController extends Controller
             ->where('tipo_activo_corriente_id', $tipoAnticipo->id)
             ->where('is_settled', false);
 
-        // Filtrar por proveedor si se proporcionó (buscar en nombre u observaciones)
+        // Filtrar por proveedor_id directamente si existe
         if ($proveedorId) {
-            $proveedor = \App\Models\Proveedor::find($proveedorId);
-            if ($proveedor) {
-                $nombreProv = $proveedor->nombre_comercial ?? $proveedor->nombre_legal;
-                $query->where(function ($q) use ($nombreProv, $proveedorId) {
-                    $q->where('nombre', 'like', "%{$nombreProv}%")
-                      ->orWhere('observaciones', 'like', "%{$nombreProv}%")
-                      ->orWhere('observaciones', 'like', "%proveedor_id:{$proveedorId}%");
-                });
-            }
+            $query->where(function ($q) use ($proveedorId) {
+                $q->where('proveedor_id', $proveedorId);
+                
+                // Fallback: buscar también por nombre para registros antiguos sin proveedor_id
+                $proveedor = \App\Models\Proveedor::find($proveedorId);
+                if ($proveedor) {
+                    $nombreProv = $proveedor->nombre_comercial ?? $proveedor->nombre_legal;
+                    $q->orWhere(function ($sub) use ($nombreProv) {
+                        $sub->whereNull('proveedor_id')
+                            ->where(function ($s) use ($nombreProv) {
+                                $s->where('nombre', 'like', "%{$nombreProv}%")
+                                  ->orWhere('observaciones', 'like', "%{$nombreProv}%");
+                            });
+                    });
+                }
+            });
         }
 
         $anticipos = $query->orderBy('fecha_registro', 'desc')->get(['id', 'nombre', 'monto', 'fecha_registro', 'documento']);

@@ -162,8 +162,14 @@
                             <label>Tipo <span class="text-danger">*</span></label>
                             <select name="tipo_activo_corriente_id" id="selectTipo" class="form-control" required>
                                 @foreach ($tipos as $tipo)
-                                    <option value="{{ $tipo->id }}">{{ $tipo->nombre }}</option>
+                                    <option value="{{ $tipo->id }}" data-nombre="{{ strtolower($tipo->nombre) }}">{{ $tipo->nombre }}</option>
                                 @endforeach
+                            </select>
+                        </div>
+                        <div class="form-group d-none" id="seccion-proveedor">
+                            <label>Proveedor <span class="text-danger">*</span></label>
+                            <select name="proveedor_id" id="selectProveedor" class="form-control">
+                                <option value="">-- Seleccionar proveedor --</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -242,6 +248,43 @@
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Mostrar/ocultar select de proveedor según tipo seleccionado
+            const selectTipo = document.getElementById('selectTipo');
+            const seccionProveedor = document.getElementById('seccion-proveedor');
+            const selectProveedor = document.getElementById('selectProveedor');
+            let proveedoresCargados = false;
+
+            function toggleProveedorSelect() {
+                const selected = selectTipo.options[selectTipo.selectedIndex];
+                const nombre = (selected.getAttribute('data-nombre') || '').toLowerCase();
+                const esAnticipo = nombre.includes('anticipo') && nombre.includes('proveedor');
+                
+                seccionProveedor.classList.toggle('d-none', !esAnticipo);
+                
+                if (esAnticipo && !proveedoresCargados) {
+                    cargarProveedores();
+                }
+            }
+
+            function cargarProveedores() {
+                fetch("{{ route('proveedores.select') }}")
+                    .then(r => r.json())
+                    .then(data => {
+                        let html = '<option value="">-- Seleccionar proveedor --</option>';
+                        data.forEach(p => {
+                            html += `<option value="${p.id}">${p.nombre_comercial || p.nombre_legal || p.ruc}</option>`;
+                        });
+                        selectProveedor.innerHTML = html;
+                        proveedoresCargados = true;
+                    })
+                    .catch(() => {
+                        selectProveedor.innerHTML = '<option value="">-- Error al cargar --</option>';
+                    });
+            }
+
+            selectTipo.addEventListener('change', toggleProveedorSelect);
+            toggleProveedorSelect();
+
             // Script para guardar tipo via AJAX y actualizar el select
             const formTipo = document.getElementById('formNuevoTipo');
             if (formTipo) {

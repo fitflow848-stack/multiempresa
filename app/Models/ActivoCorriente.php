@@ -21,6 +21,7 @@ class ActivoCorriente extends Model
         'documento',
         'observaciones',
         'user_id',
+        'proveedor_id',
         'cierre_caja_id',
         'id_operacion_caja',
         'is_settled',
@@ -56,5 +57,10 @@ class ActivoCorriente extends Model
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function proveedor()
+    {
+        return $this->belongsTo(\App\Models\Proveedor::class);
     }
 }
