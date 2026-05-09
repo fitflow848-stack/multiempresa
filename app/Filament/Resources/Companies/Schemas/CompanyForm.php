@@ -222,6 +222,7 @@ class CompanyForm
                             ->schema([
                                 FileUpload::make('cert_file')
                                     ->label('Subir Firma Electrónica')
+                                    ->disk('local')
                                     ->directory('sunat/certificados')
                                     ->visibility('private')
                                     ->columnSpanFull()
