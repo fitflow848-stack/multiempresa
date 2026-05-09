@@ -57,7 +57,8 @@ class ComprasController extends Controller
                 'proveedores.nombre_comercial as proveedor',
                 'compras.total_neto',
                 'compras.received_at',
-                'compras.credito'
+                'compras.credito',
+                DB::raw("(SELECT p.estado FROM pasivos p WHERE p.compra_id = compras.id LIMIT 1) as pasivo_estado")
             )
             ->where('compras.company_id', Auth::user()->company_id)
             ->where('compras.local_destino', Auth::user()->branch_id);
@@ -106,7 +107,14 @@ class ComprasController extends Controller
 
         $data = $rows->map(function ($r) {
             $estado = $r->received_at ? 'Recibida' : 'Pendiente';
-            $condicion = $r->credito ? 'Crédito' : 'Contado';
+            
+            // Determinar condición de pago
+            if ($r->credito) {
+                $condicion = ($r->pasivo_estado === 'pagado') ? 'Pagado' : 'Crédito';
+            } else {
+                $condicion = 'Contado';
+            }
+            
             $acciones = '';
             $acciones .= '<a href="' . route('compras.show', $r->id) . '" class="btn btn-sm btn-primary me-1">Ver</a>';
             if (! $r->received_at) {

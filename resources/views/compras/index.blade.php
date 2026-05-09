@@ -202,7 +202,9 @@
                             name: 'condicion',
                             className: 'text-center',
                             render: function(data) {
-                                let badgeClass = data === 'Crédito' ? 'bg-info text-white' : 'bg-secondary text-white';
+                                let badgeClass = 'bg-secondary text-white';
+                                if (data === 'Crédito') badgeClass = 'bg-info text-white';
+                                else if (data === 'Pagado') badgeClass = 'bg-success text-white';
                                 return '<span class="badge ' + badgeClass + '" style="font-size: 0.75rem;">' + data + '</span>';
                             }
                         },

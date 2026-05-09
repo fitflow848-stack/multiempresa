@@ -70,7 +70,7 @@
                     <table class="table table-hover align-middle">
                         <thead>
                             <tr>
-                                <th>Fecha</th>
+                                <th>Fecha / Hora</th>
                                 <th>Concepto</th>
                                 <th>Referencia</th>
                                 <th class="text-end">Monto</th>
@@ -79,7 +79,10 @@
                         <tbody>
                             @forelse($movimientos as $mov)
                             <tr>
-                                <td class="small">{{ \Carbon\Carbon::parse($mov->fecha)->format('d/m/Y') }}</td>
+                                <td class="small">
+                                    {{ \Carbon\Carbon::parse($mov->fecha)->format('d/m/Y') }}
+                                    <br><span class="text-muted">{{ $mov->created_at ? $mov->created_at->format('H:i') : '' }}</span>
+                                </td>
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <div class="badge rounded-pill bg-label-{{ $mov->tipo === 'ingreso' ? 'success' : 'danger' }} me-2 p-1">
