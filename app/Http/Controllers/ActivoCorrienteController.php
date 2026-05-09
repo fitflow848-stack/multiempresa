@@ -192,15 +192,17 @@ class ActivoCorrienteController extends Controller
             ->where('tipo_activo_corriente_id', $tipoAnticipo->id)
             ->where('is_settled', false);
 
-        // Filtrar por proveedor_id directamente si existe
+        // Si hay proveedor, filtrar por proveedor_id O mostrar los que no tienen proveedor asignado
         if ($proveedorId) {
-            $query->where(function ($q) use ($proveedorId) {
+            $proveedor = \App\Models\Proveedor::find($proveedorId);
+            $nombreProv = $proveedor ? ($proveedor->nombre_comercial ?? $proveedor->nombre_legal) : '';
+            
+            $query->where(function ($q) use ($proveedorId, $nombreProv) {
+                // Registros vinculados directamente al proveedor
                 $q->where('proveedor_id', $proveedorId);
                 
-                // Fallback: buscar también por nombre para registros antiguos sin proveedor_id
-                $proveedor = \App\Models\Proveedor::find($proveedorId);
-                if ($proveedor) {
-                    $nombreProv = $proveedor->nombre_comercial ?? $proveedor->nombre_legal;
+                // Registros sin proveedor_id que coincidan por nombre (registros antiguos)
+                if ($nombreProv) {
                     $q->orWhere(function ($sub) use ($nombreProv) {
                         $sub->whereNull('proveedor_id')
                             ->where(function ($s) use ($nombreProv) {
@@ -209,10 +211,14 @@ class ActivoCorrienteController extends Controller
                             });
                     });
                 }
+                
+                // También mostrar los que no tienen proveedor asignado (para que el usuario pueda usarlos)
+                $q->orWhereNull('proveedor_id');
             });
         }
 
-        $anticipos = $query->orderBy('fecha_registro', 'desc')->get(['id', 'nombre', 'monto', 'fecha_registro', 'documento']);
+        $anticipos = $query->orderBy('fecha_registro', 'desc')
+            ->get(['id', 'nombre', 'monto', 'fecha_registro', 'documento', 'proveedor_id']);
 
         return response()->json($anticipos);
     }

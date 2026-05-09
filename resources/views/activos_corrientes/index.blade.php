@@ -292,6 +292,17 @@
             selectTipo.addEventListener('change', toggleProveedorSelect);
             toggleProveedorSelect();
 
+            // Auto-llenar nombre cuando se selecciona un proveedor
+            selectProveedor.addEventListener('change', function() {
+                const selected = this.options[this.selectedIndex];
+                if (selected && selected.value) {
+                    const nombreInput = document.querySelector('#modalNuevoActivo input[name="nombre"]');
+                    if (nombreInput && (!nombreInput.value || nombreInput.value.trim() === '')) {
+                        nombreInput.value = 'Anticipo - ' + selected.text;
+                    }
+                }
+            });
+
             // Script para guardar tipo via AJAX y actualizar el select
             const formTipo = document.getElementById('formNuevoTipo');
             if (formTipo) {

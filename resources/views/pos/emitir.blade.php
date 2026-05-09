@@ -241,34 +241,40 @@
                 <div class="modal-body text-center py-4">
                     <input type="hidden" id="imprimirVentaId">
                     <p class="mb-4" id="texto-venta-success"></p>
+                    <p class="text-muted small mb-3">Presione el número o Enter para imprimir (por defecto: 8cm)</p>
                     <div class="d-flex flex-wrap justify-content-center gap-3">
                         <button type="button"
                             class="btn btn-primary d-flex flex-column align-items-center p-3 btn-print-format shadow-sm"
-                            data-format="default" style="width: 120px; transition: transform 0.2s;">
+                            data-format="default" data-key="1" style="width: 120px; transition: transform 0.2s;">
+                            <span class="badge bg-dark position-absolute top-0 start-0 m-1">1</span>
                             <i class="bx bxs-file-pdf fs-1 mb-2"></i>
                             <span class="small fw-bold">Hoja A4</span>
                         </button>
                         <button type="button"
                             class="btn btn-secondary d-flex flex-column align-items-center p-3 btn-print-format shadow-sm"
-                            data-format="media-a4" style="width: 120px; transition: transform 0.2s;">
+                            data-format="media-a4" data-key="2" style="width: 120px; transition: transform 0.2s;">
+                            <span class="badge bg-dark position-absolute top-0 start-0 m-1">2</span>
                             <i class="bx bxs-file-pdf fs-1 mb-2"></i>
-                            <span class="small fw-bold">Media Hoja A4</span>
+                            <span class="small fw-bold">Media A4</span>
+                        </button>
+                        <button type="button"
+                            class="btn btn-info text-white d-flex flex-column align-items-center p-3 btn-print-format shadow-sm border border-2 border-info"
+                            data-format="8cm" data-key="3" id="btn-format-default" style="width: 120px; transition: transform 0.2s;">
+                            <span class="badge bg-dark position-absolute top-0 start-0 m-1">3</span>
+                            <i class="bx bx-receipt fs-1 mb-2"></i>
+                            <span class="small fw-bold">8cm ⏎</span>
                         </button>
                         <button type="button"
                             class="btn btn-info text-white d-flex flex-column align-items-center p-3 btn-print-format shadow-sm"
-                            data-format="8cm" style="width: 120px; transition: transform 0.2s;">
+                            data-format="5.8cm" data-key="4" style="width: 120px; filter: brightness(0.9); transition: transform 0.2s;">
+                            <span class="badge bg-dark position-absolute top-0 start-0 m-1">4</span>
                             <i class="bx bx-receipt fs-1 mb-2"></i>
-                            <span class="small fw-bold">Voucher 8cm</span>
-                        </button>
-                        <button type="button"
-                            class="btn btn-info text-white d-flex flex-column align-items-center p-3 btn-print-format shadow-sm"
-                            data-format="5.8cm" style="width: 120px; filter: brightness(0.9); transition: transform 0.2s;">
-                            <i class="bx bx-receipt fs-1 mb-2"></i>
-                            <span class="small fw-bold">Voucher 5.8cm</span>
+                            <span class="small fw-bold">5.8cm</span>
                         </button>
                         <button type="button"
                             class="btn btn-success d-flex flex-column align-items-center p-3 btn-send-whatsapp shadow-sm"
-                            style="width: 120px; transition: transform 0.2s;">
+                            data-key="5" style="width: 120px; transition: transform 0.2s;">
+                            <span class="badge bg-dark position-absolute top-0 start-0 m-1">5</span>
                             <i class="bx bxl-whatsapp fs-1 mb-2"></i>
                             <span class="small fw-bold">WhatsApp</span>
                         </button>
@@ -543,6 +549,34 @@
 
         document.getElementById('btn-cerrar-finalizar').addEventListener('click', function () {
             limpiarYRedirigir();
+        });
+
+        // Atajos de teclado para el modal de impresión
+        document.getElementById('modalFormatosImpresion').addEventListener('shown.bs.modal', function () {
+            document.getElementById('btn-format-default').focus();
+        });
+
+        document.addEventListener('keydown', function (e) {
+            const modal = document.getElementById('modalFormatosImpresion');
+            if (!modal.classList.contains('show')) return;
+
+            const keyMap = { '1': 'default', '2': 'media-a4', '3': '8cm', '4': '5.8cm', '5': 'whatsapp' };
+
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('btn-format-default').click();
+                return;
+            }
+
+            if (keyMap[e.key]) {
+                e.preventDefault();
+                if (e.key === '5') {
+                    modal.querySelector('.btn-send-whatsapp').click();
+                } else {
+                    const btn = modal.querySelector(`[data-format="${keyMap[e.key]}"]`);
+                    if (btn) btn.click();
+                }
+            }
         });
 
         // También cerrar al darle a la X del modal (si se usa data-bs-dismiss)
