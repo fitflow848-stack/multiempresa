@@ -32,13 +32,17 @@ class FinanzasVendedorController extends Controller
         $search = $request->get('search');
         $agrupar = $request->get('agrupar', 0);
 
-        $nombresTipos = ['Compras a crédito', 'Adelanto clientes', 'Adelantos personal'];
+        $nombresTipos = ['Compras a crédito', 'Adelanto clientes', 'Adelantos personal', 'Cuentas por Pagar (Compras)'];
 
         // ─── Pasivos (Compras crédito + Adelanto clientes + Adelantos personal desde finanzas) ───
         $query = Pasivo::where('sucursal_id', Auth::user()->branch_id)
             ->whereHas('tipo', function ($q) use ($nombresTipos, $tipoFiltro, $tipoMap) {
                 if ($tipoFiltro && isset($tipoMap[$tipoFiltro])) {
-                    $q->where('nombre', $tipoMap[$tipoFiltro]);
+                    if ($tipoFiltro === 'compras_credito') {
+                        $q->whereIn('nombre', ['Compras a crédito', 'Cuentas por Pagar (Compras)']);
+                    } else {
+                        $q->where('nombre', $tipoMap[$tipoFiltro]);
+                    }
                 } else {
                     $q->whereIn('nombre', $nombresTipos);
                 }
@@ -205,13 +209,17 @@ class FinanzasVendedorController extends Controller
         $fechaHasta = $request->get('fecha_hasta');
         $search = $request->get('search');
 
-        $nombresTipos = ['Compras a crédito', 'Adelanto clientes', 'Adelantos personal'];
+        $nombresTipos = ['Compras a crédito', 'Adelanto clientes', 'Adelantos personal', 'Cuentas por Pagar (Compras)'];
 
         // ─── Pasivos ───
         $query = Pasivo::where('sucursal_id', Auth::user()->branch_id)
             ->whereHas('tipo', function ($q) use ($nombresTipos, $tipoFiltro, $tipoMap) {
                 if ($tipoFiltro && isset($tipoMap[$tipoFiltro])) {
-                    $q->where('nombre', $tipoMap[$tipoFiltro]);
+                    if ($tipoFiltro === 'compras_credito') {
+                        $q->whereIn('nombre', ['Compras a crédito', 'Cuentas por Pagar (Compras)']);
+                    } else {
+                        $q->where('nombre', $tipoMap[$tipoFiltro]);
+                    }
                 } else {
                     $q->whereIn('nombre', $nombresTipos);
                 }

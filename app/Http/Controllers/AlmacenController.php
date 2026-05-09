@@ -52,10 +52,10 @@ class AlmacenController extends Controller
                 's.nombre as almacen_nombre',
                 DB::raw('SUM(d.cantidad) as existencias'),
                 DB::raw('COALESCE(SUM(d.cantidad * d.costo) / NULLIF(SUM(d.cantidad), 0), MAX(pl.precio_compra)) as costo'),
-                DB::raw('MAX(d.pvp) as pvp'),
-                DB::raw('MAX(d.pvpd) as pvpd'),
-                DB::raw('MAX(d.pvc) as pvc'),
-                DB::raw('MAX(d.pvcd) as pvcd')
+                DB::raw('(SELECT sub.pvp FROM almacen_ingreso_detalle sub WHERE sub.producto_id = d.producto_id AND sub.producto_linea_id = d.producto_linea_id AND sub.pvp > 0 ORDER BY sub.id DESC LIMIT 1) as pvp'),
+                DB::raw('(SELECT sub.pvpd FROM almacen_ingreso_detalle sub WHERE sub.producto_id = d.producto_id AND sub.producto_linea_id = d.producto_linea_id AND sub.pvpd > 0 ORDER BY sub.id DESC LIMIT 1) as pvpd'),
+                DB::raw('(SELECT sub.pvc FROM almacen_ingreso_detalle sub WHERE sub.producto_id = d.producto_id AND sub.producto_linea_id = d.producto_linea_id AND sub.pvc > 0 ORDER BY sub.id DESC LIMIT 1) as pvc'),
+                DB::raw('(SELECT sub.pvcd FROM almacen_ingreso_detalle sub WHERE sub.producto_id = d.producto_id AND sub.producto_linea_id = d.producto_linea_id AND sub.pvcd > 0 ORDER BY sub.id DESC LIMIT 1) as pvcd')
             );
 
         // Seguridad: Filtro por Empresa
@@ -1382,12 +1382,19 @@ class AlmacenController extends Controller
 
             $priceType = $request->get('price_type', 'pvp');
             
+            // Obtener el precio más reciente del producto/línea (último lote con precio > 0)
+            $precioReciente = AlmacenIngresoDetalle::where('producto_id', $detalle->producto_id)
+                ->where('producto_linea_id', $detalle->producto_linea_id)
+                ->where($priceType, '>', 0)
+                ->orderByDesc('id')
+                ->value($priceType);
+
             $items[] = [
                 'name' => $detalle->producto->nombre,
                 'presentacion' => $detalle->productoLinea->presentacion ?? '',
                 'concentracion' => $detalle->productoLinea->concentracion ?? '',
                 'code' => $code,
-                'price' => $detalle->$priceType ?? $detalle->pvp,
+                'price' => $precioReciente ?? $detalle->$priceType ?? $detalle->pvp,
                 'qty' => $p['qty'],
                 'barcode_base64' => $barcodeBase64
             ];

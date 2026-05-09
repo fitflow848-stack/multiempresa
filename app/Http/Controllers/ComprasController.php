@@ -345,7 +345,7 @@ class ComprasController extends Controller
             if ($compra->credito) {
                 try {
                     $tipoPasivo = \App\Models\TipoPasivo::firstOrCreate(
-                        ['nombre' => 'Cuentas por Pagar (Compras)', 'company_id' => $compra->company_id],
+                        ['nombre' => 'Compras a crédito', 'company_id' => $compra->company_id],
                         ['descripcion' => 'Compras a crédito registradas automáticamente']
                     );
 
