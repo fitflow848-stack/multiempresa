@@ -85,8 +85,8 @@ class PosController extends Controller
         $isAdmin = $user->isAdmin();
         $metodos = TipoPago::where('activo', true)->orderBy('orden')->get();
 
-        // ID del tipo de pago Mixto (busca por nombre para no depender de un ID fijo)
-        $tipoPagoMixtoId = $metodos->first(fn($m) => stripos($m->nombre, 'mixto') !== false)?->id ?? null;
+        // ID del tipo de pago Mixto (busca por código MULTI o por nombre que contenga 'mixto' o 'multipago')
+        $tipoPagoMixtoId = $metodos->first(fn($m) => $m->codigo === 'MULTI' || stripos($m->nombre, 'mixto') !== false || stripos($m->nombre, 'multipago') !== false)?->id ?? null;
 
         // Obtener documentos autorizados para la empresa y sucursal (Solo Boleta, Factura, Nota Venta, Ticket)
         $documentos = DB::table('company_documents')

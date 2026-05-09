@@ -292,9 +292,9 @@ class TiposPagosSeeder extends Seeder
                 'orden' => 19
             ],
             [
-                'nombre' => 'Multipagos',
+                'nombre' => 'Pago Mixto',
                 'codigo' => 'MULTI',
-                'descripcion' => 'Combinación de múltiples métodos de pago',
+                'descripcion' => 'Combinación de múltiples métodos de pago (efectivo + digital)',
                 'icono' => '🔄',
                 'color' => '#fd7e14',
                 'activo' => true,
@@ -308,7 +308,7 @@ class TiposPagosSeeder extends Seeder
         ];
 
         foreach ($tiposPago as $tipo) {
-            TipoPago::firstOrCreate(
+            TipoPago::updateOrCreate(
                 ['codigo' => $tipo['codigo']],
                 $tipo
             );

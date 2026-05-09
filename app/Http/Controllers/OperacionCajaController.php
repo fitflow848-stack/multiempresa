@@ -27,6 +27,7 @@ class OperacionCajaController extends Controller
         $data['es_efectivo'] = ($data['metodo_pago'] === 'Efectivo') ? 1 : 0;
 
         $isTransferenciaBoveda = $data['tipo'] === 'transferencia_boveda';
+        $isPaseBanco = $data['tipo'] === 'pase_banco';
 
         if ($isTransferenciaBoveda) {
             $user = Auth::user();
@@ -46,9 +47,14 @@ class OperacionCajaController extends Controller
             $data['concepto'] = 'Envío de fondos: ' . ($data['concepto'] ?? '');
         }
 
+        if ($isPaseBanco) {
+            $data['tipo'] = 'sustraccion';
+            $data['partida'] = 'Pase a Banco';
+        }
+
         $operacion = OperacionCaja::create($data);
 
-        if (!empty($data['cierre_caja_id']) && $data['es_efectivo']) {
+        if (!empty($data['cierre_caja_id']) && ($data['es_efectivo'] || $isPaseBanco)) {
             $cierre = CierreCaja::find($data['cierre_caja_id']);
             if ($cierre) {
                 switch ($data['tipo']) {
