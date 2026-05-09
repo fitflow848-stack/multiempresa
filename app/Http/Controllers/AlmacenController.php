@@ -745,6 +745,7 @@ class AlmacenController extends Controller
                         JOIN productos p ON p.id = aid.producto_id
                         LEFT JOIN producto_lineas pl ON pl.id = aid.producto_linea_id
                         WHERE ai.sucursal_id = ?
+                        AND (ai.observacion IS NULL OR ai.observacion NOT LIKE '[AJUSTE]%%' OR aid.cantidad >= 0)
                         AND CONCAT_WS(' / ', p.nombre, 
                             NULLIF(NULLIF(TRIM(COALESCE(pl.presentacion,'')), ''), '-- Ver --'), 
                             NULLIF(NULLIF(TRIM(COALESCE(pl.concentracion,'')), ''), '-- Ver --')) = ?
