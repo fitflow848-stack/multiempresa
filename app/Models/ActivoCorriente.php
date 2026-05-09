@@ -31,7 +31,8 @@ class ActivoCorriente extends Model
 
     protected $casts = [
         'fecha_registro' => 'date',
-        'monto' => 'decimal:2'
+        'monto' => 'decimal:2',
+        'is_settled' => 'boolean'
     ];
 
     public function tipo()

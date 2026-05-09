@@ -80,6 +80,7 @@
                                         <th>Fecha Registro</th>
                                         <th>Tipo</th>
                                         <th>Nombre</th>
+                                        <th>Método Pago</th>
                                         <th>Documento</th>
                                         <th class="text-right">Monto (S/)</th>
                                         <th class="text-center">Acciones</th>
@@ -87,10 +88,22 @@
                                 </thead>
                                 <tbody>
                                     @forelse($activos as $activo)
-                                        <tr>
+                                        <tr class="{{ $activo->is_settled ? 'table-success' : '' }}">
                                             <td>{{ $activo->fecha_registro->format('d/m/Y') }}</td>
-                                            <td><span class="badge bg-primary">{{ $activo->tipo->nombre }}</span> @if(str_contains(strtolower($activo->tipo->nombre), 'adelanto') && $activo->is_settled)<span class="badge bg-success ml-1">SALDADO</span>@endif</td>
+                                            <td>
+                                                <span class="badge bg-primary">{{ $activo->tipo->nombre }}</span>
+                                                @if($activo->is_settled)<br><span class="badge bg-success mt-1">SALDADO</span>@endif
+                                            </td>
                                             <td>{{ $activo->nombre }}</td>
+                                            <td>
+                                                @if($activo->metodo_pago)
+                                                    <span class="badge {{ strtolower($activo->metodo_pago) === 'efectivo' ? 'bg-warning text-dark' : 'bg-info text-white' }}">
+                                                        {{ strtoupper($activo->metodo_pago) }}
+                                                    </span>
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
                                             <td>{{ $activo->documento ?? '-' }}</td>
                                             <td class="text-right font-weight-bold">S/
                                                 {{ number_format($activo->monto, 2) }}</td>

@@ -160,6 +160,7 @@ class ComprasController extends Controller
             'moneda' => ['nullable', 'string'],
             'credito' => ['nullable'],
             'metodo_pago_contado' => ['nullable', 'in:caja,banco,anticipo'],
+            'anticipo_id' => ['nullable', 'integer'],
             'percepcion' => ['nullable'],
             'inc_impuesto' => ['nullable'],
             'tipo' => ['nullable', 'string'],
@@ -412,10 +413,38 @@ class ComprasController extends Controller
                         if ($anticipoId) {
                             $anticipo = \App\Models\ActivoCorriente::find($anticipoId);
                             if ($anticipo) {
+                                $montoAnticipo = (float) $anticipo->monto;
+                                $totalCompra = (float) $compra->total_pagar;
+
+                                // Marcar anticipo como saldado
                                 $anticipo->update([
                                     'is_settled' => true,
                                     'observaciones' => ($anticipo->observaciones ? $anticipo->observaciones . ' | ' : '') . 'Saldado con compra #' . $compra->id
                                 ]);
+
+                                // Si la compra cuesta más que el anticipo, la diferencia sale de caja
+                                $diferencia = $totalCompra - $montoAnticipo;
+                                if ($diferencia > 0.01) {
+                                    $cajaAbierta = \App\Models\CierreCaja::where('company_id', $compra->company_id)
+                                        ->where('sucursal_id', Auth::user()->branch_id)
+                                        ->whereNull('fecha_cierre')
+                                        ->latest()->first();
+                                    if ($cajaAbierta) {
+                                        $cajaAbierta->egresos = floatval($cajaAbierta->egresos ?? 0) + $diferencia;
+                                        $cajaAbierta->save();
+
+                                        \App\Models\OperacionCaja::create([
+                                            'cierre_caja_id' => $cajaAbierta->id,
+                                            'user_id' => Auth::id(),
+                                            'tipo' => 'egreso',
+                                            'partida' => 'Diferencia Compra (Anticipo)',
+                                            'concepto' => 'Diferencia compra #' . $compra->id . ' (Total: S/' . number_format($totalCompra, 2) . ' - Anticipo: S/' . number_format($montoAnticipo, 2) . ')',
+                                            'importe' => $diferencia,
+                                            'metodo_pago' => 'Efectivo',
+                                            'es_efectivo' => 1,
+                                        ]);
+                                    }
+                                }
                             }
                         }
                     }

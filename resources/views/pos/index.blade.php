@@ -626,9 +626,9 @@
         fetch(`{{ route('pos.buscar') }}?q=${encodeURIComponent(q)}`)
             .then(r => r.json())
             .then(productos => {
-                // Si la búsqueda parece un código de barras (≥8 chars) y hay 1 único resultado
+                // Si la búsqueda parece un código de barras (≥6 chars numéricos) y hay 1 único resultado
                 // → auto-agregar sin mostrar tarjetas (flujo scanner sin Enter)
-                const esCodigoBarras = q.length >= 8 && /^[\w\-]+$/.test(q);
+                const esCodigoBarras = q.length >= 6 && /^[\d\w\-]+$/.test(q);
                 if (esCodigoBarras && intentarAutoAgregarProducto(productos, true)) {
                     return; // ya se agregó, no renderizar grid
                 }
