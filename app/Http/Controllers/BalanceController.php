@@ -156,8 +156,7 @@ class BalanceController extends Controller
     {
         $user = Auth::user();
 
-        // 1. ACTIVO CORRIENTE
-        // CAJA: Dinero efectivo en todas las cajas de la empresa (abiertas y último cierre de las cerradas)
+        // CAJA: Usar el mismo cálculo que el cierre de caja (teórico) para consistencia
         $cajasQuery = Caja::withoutGlobalScopes()->where('company_id', $user->company_id);
         if ($sucursalId) {
             $cajasQuery->where('sucursal_id', $sucursalId);
@@ -176,46 +175,18 @@ class BalanceController extends Controller
             if (!$box) continue;
 
             // Si la caja estaba cerrada a la fecha consultada, usamos el monto_cierre.
-            // Si estaba abierta (o se cerró después), calculamos el teórico a esa fecha.
             $estaCerradaAFecha = $box->fecha_cierre && $box->fecha_cierre->format('Y-m-d') <= $fecha;
 
             if ($estaCerradaAFecha) {
                 $caja += floatval($box->monto_cierre);
             } else {
-                // Cálculo dinámico para sesión que estaba activa a la fecha
-                $subtotal = floatval($box->monto_apertura);
-
-                // Ventas en efectivo asociadas a esta caja hasta la fecha
-                $ventasEfectivo = Venta::withoutGlobalScopes()
-                    ->where('cierre_caja_id', $box->id)
-                    ->whereDate('created_at', '<=', $fecha)
-                    ->whereHas('tipoPago', function ($q) {
-                        $q->where('es_efectivo', true);
-                    })
-                    ->where('estado', '!=', '0')
-                    ->sum(DB::raw('monto_recibido - vuelto'));
-
-                $subtotal += floatval($ventasEfectivo);
-
-                // Operaciones de caja (Ingresos/Aportes) hasta la fecha
-                $ingresosExtra = OperacionCaja::withoutGlobalScopes()
-                    ->where('cierre_caja_id', $box->id)
-                    ->whereDate('created_at', '<=', $fecha)
-                    ->whereIn('tipo', ['ingreso', 'aportacion', 'aporte'])
-                    ->where('es_efectivo', 1)
-                    ->sum('importe');
-
-                $subtotal += floatval($ingresosExtra);
-
-                // Operaciones de caja (Egresos/Gastos/Sustracciones) hasta la fecha
-                $egresosExtra = OperacionCaja::withoutGlobalScopes()
-                    ->where('cierre_caja_id', $box->id)
-                    ->whereIn('tipo', ['egreso', 'gasto', 'sustraccion', 'retiro'])
-                    ->whereDate('created_at', '<=', $fecha)
-                    ->where('es_efectivo', 1)
-                    ->sum('importe');
-
-                $subtotal -= floatval($egresosExtra);
+                // Usar calcularTotalesDinamicos para consistencia con el cierre de caja
+                $totales = $box->calcularTotalesDinamicos();
+                $subtotal = floatval($box->monto_apertura)
+                    + floatval($totales['ingresos_efectivo'])
+                    + floatval($totales['aportaciones_efectivo'])
+                    - floatval($totales['egresos_efectivo'])
+                    - floatval($totales['sustracciones_efectivo']);
 
                 $caja += $subtotal;
             }
