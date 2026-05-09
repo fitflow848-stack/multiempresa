@@ -671,6 +671,10 @@ class AlmacenController extends Controller
             $dateFilter = " AND ai.created_at >= '{$fecha_desde} 00:00:00' AND ai.created_at <= '{$fecha_hasta} 23:59:59'";
             $dateFilterV = " AND v.created_at >= '{$fecha_desde} 00:00:00' AND v.created_at <= '{$fecha_hasta} 23:59:59'";
 
+            $perPage = 100;
+            $page = max(1, intval($request->get('page', 1)));
+            $offset = ($page - 1) * $perPage;
+
             $movimientos = DB::select("
                 SELECT * FROM (
                     -- INGRESOS (Ajustes de hoy)
@@ -723,15 +727,12 @@ class AlmacenController extends Controller
                     AND vd.almacen_ingreso_detalle_id IS NOT NULL
                     {$dateFilterV}
                 ) as historial
-                ORDER BY fecha ASC
-                LIMIT 100
+                ORDER BY fecha DESC
+                LIMIT {$perPage} OFFSET {$offset}
             ", [
                 'suc1' => $sucursal_id,
                 'suc2' => $sucursal_id
             ]);
-
-            // Invertir para mostrar movimientos más recientes primero
-            $movimientos = array_reverse($movimientos);
             
             // Obtener stock REAL actual de cada producto desde la base de datos
             $stockActualPorProducto = [];
@@ -761,6 +762,32 @@ class AlmacenController extends Controller
                 $mov->saldo_linea = $saldos[$key];
                 // Deshacer este movimiento para obtener el saldo anterior
                 $saldos[$key] -= (floatval($mov->entrada) - floatval($mov->salida));
+            }
+
+            $hasMore = count($movimientos) === $perPage;
+
+            // Si es petición AJAX, devolver JSON para scroll infinito
+            if ($request->ajax()) {
+                $html = '';
+                foreach ($movimientos as $mov) {
+                    $fecha = \Carbon\Carbon::parse($mov->fecha)->format('d/m/Y H:i');
+                    $tipoClass = (str_contains($mov->tipo, 'ENTRADA')) ? 'bg-success' : 'bg-danger';
+                    $entrada = floatval($mov->entrada) > 0 ? number_format($mov->entrada, 2) : '-';
+                    $salida = floatval($mov->salida) > 0 ? number_format($mov->salida, 2) : '-';
+                    $saldo = isset($mov->saldo_linea) ? number_format($mov->saldo_linea, 2) : '-';
+                    $html .= "<tr>
+                        <td>{$fecha}</td>
+                        <td><small>" . e($mov->producto_nombre ?? 'N/A') . "</small></td>
+                        <td class=\"text-center\"><span class=\"badge {$tipoClass}\">{$mov->tipo}</span></td>
+                        <td>" . e($mov->sucursal) . "</td>
+                        <td>" . e($mov->detalle) . "</td>
+                        <td>" . e($mov->usuario) . "</td>
+                        <td class=\"text-right font-weight-bold text-success\">{$entrada}</td>
+                        <td class=\"text-right font-weight-bold text-danger\">{$salida}</td>
+                        <td class=\"text-right font-weight-bold bg-light\">{$saldo}</td>
+                    </tr>";
+                }
+                return response()->json(['html' => $html, 'hasMore' => $hasMore, 'page' => $page]);
             }
         }
 

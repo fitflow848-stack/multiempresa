@@ -117,7 +117,32 @@ class PosController extends Controller
             $productos = $this->productRepo->buscar($q, null, $includeEmpty);
         }
 
-        return response()->json($productos);
+        // Marcar si el match fue por código de barras exacto
+        $matchPorCB = false;
+        if (count($productos) === 1 && strlen($q) >= 3) {
+            $p = $productos[0];
+            $qLower = strtolower(trim($q));
+            // Verificar si coincide con codigo_barras del producto o cb de la línea
+            $cb = strtolower(trim($p->codigo_barras ?? ''));
+            if ($cb === $qLower) {
+                $matchPorCB = true;
+            }
+        }
+
+        if (!$matchPorCB && count($productos) === 1 && strlen($q) >= 3) {
+            $qLower = strtolower(trim($q));
+            $existe = DB::selectOne("
+                SELECT 1 FROM producto_lineas WHERE LOWER(cb) = ? LIMIT 1
+            ", [$qLower]);
+            if ($existe) {
+                $matchPorCB = true;
+            }
+        }
+
+        return response()->json([
+            'productos' => $productos,
+            'match_cb' => $matchPorCB
+        ]);
     }
 
     public function guardarVenta(Request $request)

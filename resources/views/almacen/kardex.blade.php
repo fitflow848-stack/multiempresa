@@ -15,7 +15,7 @@
                         <div class="col-md-4">
                             <label for="producto_id" class="form-label">Producto / Presentación:</label>
                             <input type="hidden" name="linea_id" id="linea_id" value="{{ request('linea_id') }}">
-                            <select class="form-control select2-producto" name="producto_id" required style="width: 100%;">
+                            <select class="form-control select2-producto" name="producto_id" style="width: 100%;">
                                 @if ($producto)
                                     <option value="{{ $producto->id }}" selected>
                                         {{ $producto->nombre }} 
@@ -67,10 +67,10 @@
                         </div>
                     @endif
 
-                    <div class="table-responsive">
+                    <div class="table-responsive" id="kardex-scroll-container" style="{{ !$producto ? 'max-height: 70vh; overflow-y: auto;' : '' }}">
                         <table class="table table-bordered table-striped table-hover" id="dataTableKardex" width="100%"
                             cellspacing="0">
-                            <thead class="text-center bg-light">
+                            <thead class="text-center bg-light" style="{{ !$producto ? 'position: sticky; top: 0; z-index: 1;' : '' }}">
                                 <tr>
                                     <th rowspan="2" class="align-middle">Fecha / Hora</th>
                                     @if (!$producto)
@@ -88,7 +88,7 @@
                                     <th>Saldo</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="kardex-tbody">
                                 @forelse($movimientos as $mov)
                                     <tr>
                                         <td>{{ \Carbon\Carbon::parse($mov->fecha)->format('d/m/Y H:i') }}</td>
@@ -117,7 +117,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="{{ $producto ? 7 : 8 }}" class="text-center text-muted">No se encontraron movimientos.</td>
+                                        <td colspan="{{ $producto ? 8 : 9 }}" class="text-center text-muted">No se encontraron movimientos.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -131,6 +131,15 @@
                             @endif
                         </table>
                     </div>
+                    @if (!$producto)
+                        <div id="kardex-loading" class="text-center py-3" style="display: none;">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <span class="ms-2 text-muted">Cargando más movimientos...</span>
+                        </div>
+                        <div id="kardex-end" class="text-center py-2 text-muted" style="display: none;">
+                            <small>— No hay más movimientos —</small>
+                        </div>
+                    @endif
                 @else
                     <div class="text-center py-5 text-muted">
                         <i class="fas fa-boxes fa-3x mb-3"></i>
@@ -164,7 +173,7 @@
                     delay: 250,
                     data: function(params) {
                         return {
-                            q: params.term // search term
+                            q: params.term
                         };
                     },
                     processResults: function(data) {
@@ -197,6 +206,57 @@
                 $('#linea_nombre').val('');
                 $('#linea_codigo').val('');
             });
+
+            // Scroll infinito para modo general (sin producto seleccionado)
+            @if (!$producto && count($movimientos) > 0)
+            (function() {
+                let currentPage = 1;
+                let loading = false;
+                let hasMore = {{ count($movimientos) >= 50 ? 'true' : 'false' }};
+                const container = document.getElementById('kardex-scroll-container');
+                const tbody = document.getElementById('kardex-tbody');
+                const loadingEl = document.getElementById('kardex-loading');
+                const endEl = document.getElementById('kardex-end');
+
+                if (!hasMore && endEl) endEl.style.display = 'block';
+
+                container.addEventListener('scroll', function() {
+                    if (loading || !hasMore) return;
+                    
+                    const scrollBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+                    if (scrollBottom < 200) {
+                        loadMore();
+                    }
+                });
+
+                function loadMore() {
+                    loading = true;
+                    currentPage++;
+                    loadingEl.style.display = 'block';
+
+                    const params = new URLSearchParams(window.location.search);
+                    params.set('page', currentPage);
+
+                    fetch('{{ route('almacen.kardex') }}?' + params.toString(), {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        loadingEl.style.display = 'none';
+                        if (data.html) {
+                            tbody.insertAdjacentHTML('beforeend', data.html);
+                        }
+                        hasMore = data.hasMore;
+                        if (!hasMore && endEl) endEl.style.display = 'block';
+                        loading = false;
+                    })
+                    .catch(() => {
+                        loadingEl.style.display = 'none';
+                        loading = false;
+                    });
+                }
+            })();
+            @endif
         });
     </script>
 @endpush

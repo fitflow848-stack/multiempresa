@@ -625,11 +625,11 @@
 
         fetch(`{{ route('pos.buscar') }}?q=${encodeURIComponent(q)}`)
             .then(r => r.json())
-            .then(productos => {
-                // Si la búsqueda parece un código de barras (solo dígitos, ≥6 chars) y hay 1 único resultado
-                // → auto-agregar sin mostrar tarjetas (flujo scanner sin Enter)
-                const esCodigoBarras = q.length >= 6 && /^\d+$/.test(q);
-                if (esCodigoBarras && intentarAutoAgregarProducto(productos, true)) {
+            .then(data => {
+                const productos = data.productos || data;
+                const matchCB = data.match_cb || false;
+                // Solo auto-agregar si el backend confirma que fue match por código de barras
+                if (matchCB && intentarAutoAgregarProducto(productos, true)) {
                     return; // ya se agregó, no renderizar grid
                 }
                 renderProductosNuevos(productos);
@@ -682,9 +682,12 @@
 
             fetch(`{{ route('pos.buscar') }}?q=${encodeURIComponent(q)}`)
                 .then(r => r.json())
-                .then(productos => {
-                    // Siempre intentar auto-agregar al presionar Enter si hay un solo resultado
-                    if (intentarAutoAgregarProducto(productos, true)) return;
+                .then(data => {
+                    const productos = data.productos || data;
+                    const matchCB = data.match_cb || false;
+                    // Auto-agregar con Enter: si es match por CB, o si hay un solo resultado y el usuario presionó Enter
+                    if (matchCB && intentarAutoAgregarProducto(productos, true)) return;
+                    if (productos.length === 1 && intentarAutoAgregarProducto(productos, true)) return;
                     // Si hay múltiples resultados, mostrarlos para que el usuario elija
                     renderProductosNuevos(productos);
                     

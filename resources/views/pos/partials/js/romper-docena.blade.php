@@ -62,7 +62,8 @@
 
         try {
             const resp = await fetch(`{{ route('pos.buscar') }}?q=${encodeURIComponent(query)}&include_empty=1`);
-            const productos = await resp.json();
+            const respData = await resp.json();
+            const productos = respData.productos || respData;
 
             container.innerHTML = '';
             if (productos.length === 0) {

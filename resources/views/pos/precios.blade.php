@@ -89,7 +89,8 @@
                     // Using the existing search API
                     fetch(`{{ route('pos.buscar') }}?q=${encodeURIComponent(query)}`)
                         .then(response => response.json())
-                        .then(data => {
+                        .then(response => {
+                            const data = response.productos || response;
                             tableBody.innerHTML = '';
                             if (data.length === 0) {
                                 tableBody.innerHTML =
