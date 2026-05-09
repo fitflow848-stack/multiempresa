@@ -119,6 +119,9 @@
             return;
         }
 
+        // Cerrar el modal de tipo documento inmediatamente
+        cerrarModalTipoDocumento();
+
         const { isConfirmed } = await Swal.fire({
             title: '¿Confirmar Emisión?',
             text: `¿Estás seguro que desea emitir una ${documentSelectedName.toUpperCase()}?`,

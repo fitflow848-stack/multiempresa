@@ -1174,6 +1174,7 @@
             console.error(e);
             Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
             isProcessingEmission = false;
+            if (typeof cerrarModalTipoDocumento === 'function') cerrarModalTipoDocumento();
         }
     }
 
@@ -1255,7 +1256,6 @@
 
     let isProcessingEmission = false;
 
-    // Función para seleccionar el tipo de documento y proceder a emitir
     async function seleccionarTipoDocumento(tipo) {
         if (isProcessingEmission) return;
 
