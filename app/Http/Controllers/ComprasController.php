@@ -398,8 +398,19 @@ class ComprasController extends Controller
                             $cajaAbierta->egresos = floatval($cajaAbierta->egresos ?? 0) + $compra->total_pagar;
                             $cajaAbierta->save();
                         }
+                    } elseif ($metodoPago === 'anticipo') {
+                        // Saldar el anticipo a proveedor seleccionado
+                        $anticipoId = $data['anticipo_id'] ?? null;
+                        if ($anticipoId) {
+                            $anticipo = \App\Models\ActivoCorriente::find($anticipoId);
+                            if ($anticipo) {
+                                $anticipo->update([
+                                    'is_settled' => true,
+                                    'observaciones' => ($anticipo->observaciones ? $anticipo->observaciones . ' | ' : '') . 'Saldado con compra #' . $compra->id
+                                ]);
+                            }
+                        }
                     }
-                    // 'anticipo' no afecta caja ni banco
                 } catch (\Throwable $pe) {
                     Log::error('Error registrando pago contado de compra: ' . $pe->getMessage());
                 }

@@ -341,6 +341,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
     });
 
     // Activos Corrientes
+    Route::get('/activos-corrientes/anticipos-proveedor', [ActivoCorrienteController::class, 'anticiposProveedor'])->name('activos_corrientes.anticipos_proveedor');
     Route::prefix('activos-corrientes')->middleware('can:contabilidad.gestionar_activos')->group(function () {
         Route::get('/', [ActivoCorrienteController::class, 'index'])->name('activos_corrientes.index');
         Route::post('/', [ActivoCorrienteController::class, 'store'])->name('activos_corrientes.store');

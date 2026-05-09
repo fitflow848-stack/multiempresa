@@ -89,6 +89,14 @@
                                         <option value="banco">Banco / Transferencia</option>
                                         <option value="anticipo">Anticipo a Proveedor</option>
                                     </select>
+                                    {{-- Lista de anticipos pendientes --}}
+                                    <div id="seccion-anticipos" class="mt-2 d-none">
+                                        <label class="small fw-bold text-muted d-block mb-1">Seleccionar Anticipo a saldar</label>
+                                        <select name="anticipo_id" id="anticipo_select" class="form-select form-select-sm">
+                                            <option value="">-- Cargando anticipos... --</option>
+                                        </select>
+                                        <small class="text-muted" id="anticipo_info"></small>
+                                    </div>
                                 </div>
                                 <div class="form-check form-switch pt-1">
                                     <input class="form-check-input" type="checkbox" id="inc_impuesto" name="inc_impuesto" checked>
@@ -1044,6 +1052,57 @@
 
                 $('#credito').on('change', toggleMetodoPagoContado);
                 toggleMetodoPagoContado(); // estado inicial
+
+                // Manejo de anticipos a proveedor
+                $('#metodo_pago_contado').on('change', function() {
+                    const esAnticipo = $(this).val() === 'anticipo';
+                    $('#seccion-anticipos').toggleClass('d-none', !esAnticipo);
+                    if (esAnticipo) {
+                        cargarAnticiposProveedor();
+                    }
+                });
+
+                // Recargar anticipos cuando cambie el proveedor
+                $('#proveedor_select').on('change', function() {
+                    if ($('#metodo_pago_contado').val() === 'anticipo') {
+                        cargarAnticiposProveedor();
+                    }
+                });
+
+                function cargarAnticiposProveedor() {
+                    const proveedorId = $('#proveedor_select').val();
+                    const $select = $('#anticipo_select');
+                    const $info = $('#anticipo_info');
+
+                    $select.html('<option value="">-- Cargando... --</option>');
+                    $info.text('');
+
+                    $.get("{{ route('activos_corrientes.anticipos_proveedor') }}", { proveedor_id: proveedorId })
+                        .done(function(data) {
+                            if (data.length === 0) {
+                                $select.html('<option value="">-- No hay anticipos pendientes --</option>');
+                                $info.text('No se encontraron anticipos sin saldar' + (proveedorId ? ' para este proveedor' : '') + '.');
+                                return;
+                            }
+                            let html = '<option value="">-- Seleccionar anticipo --</option>';
+                            data.forEach(function(a) {
+                                const fecha = a.fecha_registro ? a.fecha_registro.substring(0, 10) : '';
+                                html += `<option value="${a.id}" data-monto="${a.monto}">S/ ${parseFloat(a.monto).toFixed(2)} - ${a.nombre} (${fecha})</option>`;
+                            });
+                            $select.html(html);
+                            $info.text(data.length + ' anticipo(s) pendiente(s)');
+                        })
+                        .fail(function() {
+                            $select.html('<option value="">-- Error al cargar --</option>');
+                        });
+                }
+
+                $('#anticipo_select').on('change', function() {
+                    const monto = $(this).find(':selected').data('monto');
+                    if (monto) {
+                        $('#anticipo_info').html('<span class="text-success fw-bold">Monto disponible: S/ ' + parseFloat(monto).toFixed(2) + '</span>');
+                    }
+                });
 
                 // Función para obtener y agregar producto recién creado
                 function fetchAndAddNewProduct(productId) {

@@ -103,4 +103,44 @@ class ActivoCorrienteController extends Controller
 
         return redirect()->route('activos_corrientes.index')->with('success', 'Activo actualizado correctamente');
     }
+
+    /**
+     * Obtener anticipos pendientes (no saldados) de un proveedor específico.
+     */
+    public function anticiposProveedor(Request $request)
+    {
+        $proveedorId = $request->get('proveedor_id');
+        $companyId = auth()->user()->company_id;
+
+        $tipoAnticipo = TipoActivoCorriente::where('company_id', $companyId)
+            ->where(function ($q) {
+                $q->where('nombre', 'like', '%Anticipo%Proveedor%')
+                  ->orWhere('nombre', 'like', '%Anticipo%proveedor%');
+            })->first();
+
+        if (!$tipoAnticipo) {
+            return response()->json([]);
+        }
+
+        $query = ActivoCorriente::where('company_id', $companyId)
+            ->where('tipo_activo_corriente_id', $tipoAnticipo->id)
+            ->where('is_settled', false);
+
+        // Filtrar por proveedor si se proporcionó (buscar en nombre u observaciones)
+        if ($proveedorId) {
+            $proveedor = \App\Models\Proveedor::find($proveedorId);
+            if ($proveedor) {
+                $nombreProv = $proveedor->nombre_comercial ?? $proveedor->nombre_legal;
+                $query->where(function ($q) use ($nombreProv, $proveedorId) {
+                    $q->where('nombre', 'like', "%{$nombreProv}%")
+                      ->orWhere('observaciones', 'like', "%{$nombreProv}%")
+                      ->orWhere('observaciones', 'like', "%proveedor_id:{$proveedorId}%");
+                });
+            }
+        }
+
+        $anticipos = $query->orderBy('fecha_registro', 'desc')->get(['id', 'nombre', 'monto', 'fecha_registro', 'documento']);
+
+        return response()->json($anticipos);
+    }
 }
