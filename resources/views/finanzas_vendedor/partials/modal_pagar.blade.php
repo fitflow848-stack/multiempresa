@@ -21,7 +21,14 @@
                             <label class="form-label mb-0 small fw-bold">Fecha Pago</label>
                             <input type="date" name="fecha_pago" class="form-control form-control-sm" value="{{ date('Y-m-d') }}" required>
                         </div>
-                        <input type="hidden" name="metodo_pago" value="Efectivo">
+                        <div class="col-md-6">
+                            <label class="form-label mb-0 small fw-bold">Método de Pago</label>
+                            <select name="metodo_pago" class="form-select form-select-sm" required>
+                                <option value="Efectivo">Efectivo (Caja)</option>
+                                <option value="Transferencia">Transferencia (Banco)</option>
+                                <option value="Yape/Plin">Yape/Plin</option>
+                            </select>
+                        </div>
                         <div class="col-12">
                             <label class="form-label mb-0 small fw-bold">Observaciones</label>
                             <textarea name="observaciones" class="form-control form-control-sm" rows="2" placeholder="Opcional..."></textarea>

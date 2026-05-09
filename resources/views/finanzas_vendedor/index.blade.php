@@ -215,6 +215,13 @@
     @include('finanzas_vendedor.partials.modal_pagar', ['op' => $op, 'esAdelanto' => $esAdelanto])
                                                     @endif
 
+                                                    @if($op->compra_id)
+                                                        <a href="{{ route('compras.show', $op->compra_id) }}"
+                                                           class="btn btn-xs btn-icon text-info" title="Ver Compra">
+                                                            <i class="bx bx-receipt fs-5"></i>
+                                                        </a>
+                                                    @endif
+
                                                     @can('finanzas.editar')
                                                         <button type="button"
                                                             class="btn btn-xs btn-icon btn-edit-operacion text-warning"
@@ -375,7 +382,14 @@
                                                                             value="{{ $group->saldo }}"
                                                                             max="{{ $group->saldo }}" required>
                                                                     </div>
-                                                                    <input type="hidden" name="metodo_pago" value="Efectivo">
+                                                                    <div class="mb-3">
+                                                                        <label class="form-label">Método de Pago</label>
+                                                                        <select name="metodo_pago" class="form-select" required>
+                                                                            <option value="Efectivo">Efectivo (Caja)</option>
+                                                                            <option value="Transferencia">Transferencia (Banco)</option>
+                                                                            <option value="Yape/Plin">Yape/Plin</option>
+                                                                        </select>
+                                                                    </div>
                                                                     <div class="mb-3">
                                                                         <label class="form-label">Fecha Pago</label>
                                                                         <input type="date" name="fecha_pago"

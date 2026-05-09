@@ -86,6 +86,13 @@
                                     </tr>
                                     <tr>
                                         <td class="ps-4">
+                                            <div class="fw-semibold text-dark">Bancos</div>
+                                            <small class="text-muted">Saldo en cuentas bancarias</small>
+                                        </td>
+                                        <td class="pe-4 text-end">S/ {{ number_format($bancos ?? 0, 2) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="ps-4">
                                             <div class="fw-semibold text-dark">Inventario</div>
                                             <small class="text-muted">Mercadería valorizada al costo</small>
                                         </td>

@@ -399,27 +399,14 @@
                 $('#btn-add-line').html('<i class="fas fa-plus-circle me-2"></i> Añadir a la Lista').removeClass('btn-warning').addClass('btn-primary');
             }
 
-            // Función para generar código de barras EAN-13
-            function generarCodigoBarras() {
-                // Prefijo para productos internos (200-299 son para uso interno según estándar EAN)
-                const prefijo = '200';
-
-                // Generar 9 dígitos basados en timestamp y random
-                const timestamp = Date.now().toString().slice(-6); // últimos 6 dígitos del timestamp
-                const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0'); // 3 dígitos random
-
-                // Formar los primeros 12 dígitos
-                const codigo12 = prefijo + timestamp + random;
-
-                // Calcular dígito verificador EAN-13
-                let suma = 0;
-                for (let i = 0; i < 12; i++) {
-                    const digito = parseInt(codigo12.charAt(i));
-                    suma += (i % 2 === 0) ? digito : digito * 3;
-                }
-                const verificador = (10 - (suma % 10)) % 10;
-
-                return codigo12 + verificador;
+            // Función para generar código de barras secuencial (6 dígitos)
+            function generarCodigoBarras(callback) {
+                $.get("{{ route('productos.next-cb') }}", function(data) {
+                    callback(data.cb);
+                }).fail(function() {
+                    // Fallback: generar localmente si falla
+                    callback(String(Math.floor(100000 + Math.random() * 900000)));
+                });
             }
 
             function updateBarcode() {
@@ -546,23 +533,27 @@
 
             // Handler para generar código de barras automáticamente
             $('#btn-generar-cb').on('click', function() {
-                const nuevoCodigo = generarCodigoBarras();
-                $('#cb').val(nuevoCodigo);
-                updateBarcode();
+                const $btn = $(this);
+                $btn.prop('disabled', true);
+                generarCodigoBarras(function(nuevoCodigo) {
+                    $('#cb').val(nuevoCodigo);
+                    updateBarcode();
+                    $btn.prop('disabled', false);
 
-                // Efecto visual de éxito
-                const $input = $('#cb');
-                $input.addClass('is-valid');
-                setTimeout(() => $input.removeClass('is-valid'), 2000);
+                    // Efecto visual de éxito
+                    const $input = $('#cb');
+                    $input.addClass('is-valid');
+                    setTimeout(() => $input.removeClass('is-valid'), 2000);
 
-                // Toast de confirmación
-                Swal.fire({
-                    toast: true,
+                    // Toast de confirmación
+                    Swal.fire({
+                        toast: true,
                     position: 'top-end',
                     icon: 'success',
                     title: 'Código generado: ' + nuevoCodigo,
                     showConfirmButton: false,
                     timer: 2000
+                });
                 });
             });
 

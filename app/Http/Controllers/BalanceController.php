@@ -12,6 +12,7 @@ use App\Models\CierreCaja;
 use App\Models\Venta;
 use App\Models\OperacionCaja;
 use App\Models\Caja;
+use App\Models\CuentaBancaria;
 use App\Models\Pasivo;
 use App\Models\Sucursal;
 use App\Models\TipoActivo;
@@ -135,7 +136,7 @@ class BalanceController extends Controller
             return ($item->activos_sum_monto ?? 0) <= 0;
         });
 
-        $data['total_activo_corriente'] = $data['caja'] + $data['inventario'] + $data['tiposActivosCorrientes']->sum('activos_sum_monto');
+        $data['total_activo_corriente'] = $data['caja'] + ($data['bancos'] ?? 0) + $data['inventario'] + $data['tiposActivosCorrientes']->sum('activos_sum_monto');
         $data['total_activo'] = $data['total_activo_corriente'] + $data['total_activo_no_corriente'];
 
         $data['tiposPasivosCorrientes'] = $data['tiposPasivosCorrientes']->reject(function ($item) {
@@ -239,6 +240,17 @@ class BalanceController extends Controller
             
         $caja += floatval($aportesFlotantes);
 
+        // BANCOS: Saldo de cuentas bancarias activas
+        $bancosQuery = CuentaBancaria::withoutGlobalScopes()
+            ->where('company_id', $user->company_id)
+            ->where('is_active', true);
+
+        if ($sucursalId) {
+            $bancosQuery->where('sucursal_id', $sucursalId);
+        }
+
+        $bancos = $bancosQuery->sum('saldo_actual');
+
         $inventario = DB::table('almacen_ingreso_detalle as d')
             ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
             ->where('i.empresa_id', $user->company_id)
@@ -296,7 +308,7 @@ class BalanceController extends Controller
             $tiposActivosCorrientes->push($newType);
         }
 
-        $total_activo_corriente = $caja + $inventario + $tiposActivosCorrientes->sum('activos_sum_monto');
+        $total_activo_corriente = $caja + $bancos + $inventario + $tiposActivosCorrientes->sum('activos_sum_monto');
 
         // 2. ACTIVO NO CORRIENTE
         $tiposActivosNoCorrientes = TipoActivo::withoutGlobalScopes()
@@ -381,6 +393,7 @@ class BalanceController extends Controller
 
         return [
             'caja' => $caja,
+            'bancos' => $bancos,
             'inventario' => $inventario,
             'tiposActivosCorrientes' => $tiposActivosCorrientes,
             'total_activo_corriente' => $total_activo_corriente,

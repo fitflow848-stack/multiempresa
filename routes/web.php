@@ -219,6 +219,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::get('/api/productos', [ProductoController::class, 'search'])->name('search');
         Route::get('/clone/{id}', [ProductoController::class, 'clone'])->name('clone');
         Route::get('/api/check-cb', [ProductoController::class, 'checkCb'])->name('check-cb');
+        Route::get('/api/next-cb', [ProductoController::class, 'nextCb'])->name('next-cb');
     });
 
     // API para productos y clientes

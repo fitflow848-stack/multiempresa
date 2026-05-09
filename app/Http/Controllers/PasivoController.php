@@ -253,6 +253,29 @@ class PasivoController extends Controller
                     'metodo_pago' => $metodoPago,
                     'es_efectivo' => $esEfectivo,
                 ]);
+
+                // Si es transferencia, registrar movimiento bancario
+                if (strtolower($metodoPago) === 'transferencia') {
+                    $banco = \App\Models\CuentaBancaria::where('company_id', Auth::user()->company_id)
+                        ->where('is_active', true)->orderBy('id')->first();
+                    if ($banco) {
+                        $tipoMovBanco = in_array($tipoOp, ['ingreso', 'aporte']) ? 'ingreso' : 'egreso';
+                        \App\Models\BancoMovimiento::create([
+                            'cuenta_bancaria_id' => $banco->id,
+                            'user_id' => Auth::id(),
+                            'tipo' => $tipoMovBanco,
+                            'monto' => $monto,
+                            'concepto' => $partida . ': ' . ($pasivo->empresa_persona ?? $pasivo->nombre),
+                            'referencia' => $request->documento_pago ?? $pasivo->documento,
+                            'fecha' => $request->fecha_pago,
+                        ]);
+                        if ($tipoMovBanco === 'egreso') {
+                            $banco->decrement('saldo_actual', $monto);
+                        } else {
+                            $banco->increment('saldo_actual', $monto);
+                        }
+                    }
+                }
             }
 
             DB::commit();

@@ -22,6 +22,10 @@
             <td style="text-align: right;">S/ {{ number_format($caja, 2) }}</td>
         </tr>
         <tr>
+            <td>  Bancos</td>
+            <td style="text-align: right;">S/ {{ number_format($bancos ?? 0, 2) }}</td>
+        </tr>
+        <tr>
             <td>  Inventario</td>
             <td style="text-align: right;">S/ {{ number_format($inventario, 2) }}</td>
         </tr>

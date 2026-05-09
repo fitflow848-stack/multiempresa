@@ -547,4 +547,39 @@ class ProductoController extends Controller
 
         return response()->json(['available' => true, 'producto' => null]);
     }
+
+    /**
+     * Generar el siguiente código de barras secuencial (6 dígitos mínimo).
+     */
+    public function nextCb()
+    {
+        $companyId = Auth::user()->company_id;
+
+        // Buscar el último CB numérico generado para esta empresa
+        $lastCb = ProductoLinea::whereHas('producto', function ($q) use ($companyId) {
+                $q->where('id_empresa', $companyId);
+            })
+            ->whereNotNull('cb')
+            ->where('cb', '!=', '')
+            ->whereRaw("cb REGEXP '^[0-9]+$'")
+            ->whereRaw("LENGTH(cb) <= 8")
+            ->orderByRaw('CAST(cb AS UNSIGNED) DESC')
+            ->value('cb');
+
+        // También buscar en productos.codigo_barras
+        $lastCbProducto = \App\Models\Producto::where('id_empresa', $companyId)
+            ->whereNotNull('codigo_barras')
+            ->where('codigo_barras', '!=', '')
+            ->whereRaw("codigo_barras REGEXP '^[0-9]+$'")
+            ->whereRaw("LENGTH(codigo_barras) <= 8")
+            ->orderByRaw('CAST(codigo_barras AS UNSIGNED) DESC')
+            ->value('codigo_barras');
+
+        $lastNum = max((int)($lastCb ?? 0), (int)($lastCbProducto ?? 0));
+
+        // Si no hay ninguno, empezar desde 100000 (6 dígitos)
+        $next = $lastNum < 100000 ? 100000 : $lastNum + 1;
+
+        return response()->json(['cb' => (string)$next]);
+    }
 }
