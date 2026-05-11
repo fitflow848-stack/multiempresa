@@ -88,6 +88,7 @@
                                         <option value="caja">Caja</option>
                                         <option value="banco">Banco / Transferencia</option>
                                         <option value="anticipo">Anticipo a Proveedor</option>
+                                        <option value="otros_sd">Otros SD</option>
                                     </select>
                                     {{-- Lista de anticipos pendientes --}}
                                     <div id="seccion-anticipos" class="mt-2 d-none">
@@ -236,6 +237,9 @@
     @push('scripts')
         <script>
             $(document).ready(function() {
+                // Flag: hay cuenta bancaria activa (inyectado desde backend)
+                window._hayCuentaBancariaActiva = {{ \App\Models\CuentaBancaria::where('company_id', auth()->user()->company_id)->where('is_active', true)->exists() ? 'true' : 'false' }};
+
                 // CSRF setup
                 $.ajaxSetup({
                     headers: {
@@ -485,6 +489,26 @@
                         e.preventDefault();
                         Swal.fire('Error', 'Debe agregar al menos un producto', 'warning');
                         return;
+                    }
+
+                    // Validaciones de método de pago (solo si no es crédito)
+                    if (!$('#credito').is(':checked')) {
+                        const metodo = $('#metodo_pago_contado').val();
+                        
+                        if (metodo === 'banco' && !window._hayCuentaBancariaActiva) {
+                            e.preventDefault();
+                            Swal.fire('Sin Cuenta Bancaria', 'No tiene cuentas bancarias activas. Debe habilitar una cuenta en Bancos y Cuentas antes de usar este método de pago.', 'warning');
+                            return;
+                        }
+
+                        if (metodo === 'anticipo') {
+                            const anticipoId = $('#anticipo_select').val();
+                            if (!anticipoId) {
+                                e.preventDefault();
+                                Swal.fire('Anticipo Requerido', 'Debe seleccionar un anticipo a saldar antes de continuar.', 'warning');
+                                return;
+                            }
+                        }
                     }
                 });
 

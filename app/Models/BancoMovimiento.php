@@ -19,6 +19,7 @@ class BancoMovimiento extends Model
         'fecha',
         'cierre_caja_id',
         'id_venta',
+        'sucursal_id',
     ];
 
     public function cuenta()
@@ -34,5 +35,10 @@ class BancoMovimiento extends Model
     public function venta()
     {
         return $this->belongsTo(Venta::class, 'id_venta');
+    }
+
+    public function sucursal()
+    {
+        return $this->belongsTo(\App\Models\Sucursal::class);
     }
 }

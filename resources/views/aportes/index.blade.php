@@ -99,6 +99,12 @@
                                             <td class="text-right font-weight-bold">S/
                                                 {{ number_format($aporte->monto, 2) }}</td>
                                             <td class="text-center">
+                                                @if($aporte->monto > 0)
+                                                <button type="button" class="btn btn-warning btn-circle btn-sm" title="Devolver Aporte"
+                                                    data-bs-toggle="modal" data-bs-target="#modalDevolver{{ $aporte->id }}">
+                                                    <i class="bx bx-undo"></i>
+                                                </button>
+                                                @endif
                                                 <form action="{{ route('aportes.destroy', $aporte->id) }}" method="POST"
                                                     class="d-inline delete-form">
                                                     @csrf
@@ -122,6 +128,44 @@
                                 {{ $aportes->appends(request()->query())->links() }}
                             </div>
                         </div>
+
+                        {{-- Modales de devolución --}}
+                        @foreach($aportes as $aporte)
+                        @if($aporte->monto > 0)
+                        <div class="modal fade" id="modalDevolver{{ $aporte->id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered modal-sm">
+                                <div class="modal-content">
+                                    <form action="{{ route('aportes.devolver', $aporte->id) }}" method="POST">
+                                        @csrf
+                                        <div class="modal-header bg-warning text-dark">
+                                            <h6 class="modal-title">Devolver Aporte</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p class="small text-muted mb-2">{{ $aporte->nombre }}</p>
+                                            <p class="small">Monto disponible: <strong>S/ {{ number_format($aporte->monto, 2) }}</strong></p>
+                                            <div class="mb-3">
+                                                <label class="form-label">Monto a devolver</label>
+                                                <input type="number" step="0.01" min="0.01" max="{{ $aporte->monto }}" name="monto_devolucion" class="form-control" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">Método de pago</label>
+                                                <select name="metodo_pago" class="form-select" required>
+                                                    <option value="caja">Caja (Efectivo)</option>
+                                                    <option value="banco">Banco / Transferencia</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                                            <button type="submit" class="btn btn-warning btn-sm">Devolver</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
+                        @endforeach
                     </div>
                 </div>
             </div>

@@ -63,26 +63,59 @@
         <!-- Transactions Table -->
         <div class="col-lg-8">
             <div class="card shadow-sm border-0">
-                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 fw-bold">Historial de Movimientos</h5>
+                <div class="card-header bg-white py-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h5 class="mb-0 fw-bold">Historial de Movimientos</h5>
+                    </div>
+                    <form method="GET" action="{{ route('bancos.show', $banco->id) }}" class="row g-2 align-items-end">
+                        <div class="col-auto">
+                            <label class="form-label small mb-0">Desde</label>
+                            <input type="date" name="fecha_desde" class="form-control form-control-sm" value="{{ $fecha_desde ?? '' }}">
+                        </div>
+                        <div class="col-auto">
+                            <label class="form-label small mb-0">Hasta</label>
+                            <input type="date" name="fecha_hasta" class="form-control form-control-sm" value="{{ $fecha_hasta ?? '' }}">
+                        </div>
+                        <div class="col-auto">
+                            <label class="form-label small mb-0">Sucursal</label>
+                            <select name="sucursal_id" class="form-select form-select-sm">
+                                <option value="">Todas</option>
+                                @foreach($sucursales as $suc)
+                                    <option value="{{ $suc->id }}" {{ ($sucursal_id ?? '') == $suc->id ? 'selected' : '' }}>{{ $suc->nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button type="submit" class="btn btn-sm btn-primary"><i class="bx bx-filter-alt"></i> Filtrar</button>
+                        </div>
+                        @if(($fecha_desde ?? null) || ($fecha_hasta ?? null) || ($sucursal_id ?? null))
+                        <div class="col-auto">
+                            <a href="{{ route('bancos.show', $banco->id) }}" class="btn btn-sm btn-outline-secondary">Limpiar</a>
+                        </div>
+                        @endif
+                    </form>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead>
                             <tr>
                                 <th>Fecha / Hora</th>
+                                <th>Sucursal</th>
                                 <th>Concepto</th>
                                 <th>Referencia</th>
                                 <th class="text-end">Monto</th>
+                                <th class="text-end">Saldo</th>
                             </tr>
                         </thead>
                         <tbody>
+                            @php $saldoAcumulado = $banco->saldo_actual; @endphp
                             @forelse($movimientos as $mov)
                             <tr>
                                 <td class="small">
                                     {{ \Carbon\Carbon::parse($mov->fecha)->format('d/m/Y') }}
                                     <br><span class="text-muted">{{ $mov->created_at ? $mov->created_at->format('H:i') : '' }}</span>
                                 </td>
+                                <td class="small">{{ $mov->sucursal ? $mov->sucursal->nombre : ($mov->sucursal_id ? 'ID:'.$mov->sucursal_id : '-') }}</td>
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <div class="badge rounded-pill bg-label-{{ $mov->tipo === 'ingreso' ? 'success' : 'danger' }} me-2 p-1">
@@ -95,10 +128,16 @@
                                 <td class="text-end fw-bold text-{{ $mov->tipo === 'ingreso' ? 'success' : 'danger' }}">
                                     {{ $mov->tipo === 'ingreso' ? '+' : '-' }} {{ number_format($mov->monto, 2) }}
                                 </td>
+                                <td class="text-end fw-bold">
+                                    {{ number_format($saldoAcumulado, 2) }}
+                                    @php
+                                        $saldoAcumulado -= ($mov->tipo === 'ingreso' ? $mov->monto : -$mov->monto);
+                                    @endphp
+                                </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="4" class="text-center py-5 text-muted">
+                                <td colspan="6" class="text-center py-5 text-muted">
                                     No hay movimientos registrados en esta cuenta.
                                 </td>
                             </tr>

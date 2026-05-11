@@ -26,6 +26,11 @@
                         <div class="dropdown-menu dropdown-menu-end">
                             <a class="dropdown-item" href="{{ route('bancos.show', $cuenta->id) }}"><i class="bx bx-show me-1"></i> Ver Movimientos</a>
                             <a class="dropdown-item" href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#modalEditCuenta{{ $cuenta->id }}"><i class="bx bx-edit-alt me-1"></i> Editar</a>
+                            <form action="{{ route('bancos.destroy', $cuenta->id) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Está seguro de eliminar esta cuenta bancaria?')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="dropdown-item text-danger"><i class="bx bx-trash me-1"></i> Eliminar</button>
+                            </form>
                         </div>
                     </div>
                 </div>

@@ -590,17 +590,9 @@ class PosController extends Controller
 
                 $masterField = $fieldMap[$field] ?? null;
 
-                // Sincronizar a producto_lineas
-                if ($masterField && $detalle->producto_linea_id) {
-                    \App\Models\ProductoLinea::where('id', $detalle->producto_linea_id)
-                        ->update([$masterField => $request->value]);
-                }
-
-                // Sincronizar a producto principal
-                if ($masterField && $detalle->producto_id) {
-                    \App\Models\Producto::where('id', $detalle->producto_id)
-                        ->update([$masterField => $request->value]);
-                }
+                // Sincronizar a producto_lineas - SOLO si no hay múltiples sucursales con precios diferentes
+                // No sincronizar para evitar que precios de una sucursal afecten a otra
+                // Los precios por sucursal se leen directamente de almacen_ingreso_detalle
 
                 return response()->json(['success' => true]);
             }

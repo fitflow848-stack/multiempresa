@@ -159,7 +159,7 @@ class ComprasController extends Controller
             'fecha_pago' => ['nullable', 'date'],
             'moneda' => ['nullable', 'string'],
             'credito' => ['nullable'],
-            'metodo_pago_contado' => ['nullable', 'in:caja,banco,anticipo'],
+            'metodo_pago_contado' => ['nullable', 'in:caja,banco,anticipo,otros_sd'],
             'anticipo_id' => ['nullable', 'integer'],
             'percepcion' => ['nullable'],
             'inc_impuesto' => ['nullable'],
@@ -290,32 +290,9 @@ class ComprasController extends Controller
                             ]);
                     }
 
-                    // Actualizar precios de venta en producto_lineas
-                    if ($productLine) {
-                        $productLine->update(array_filter([
-                            'pvp'           => $newPvp,
-                            'pvc'           => $newPvc,
-                            'pvp_dto'       => $newPvpDto,
-                            'pvc_dto'       => $newPvcDto,
-                            'pv_docena'     => $newPvDocena,
-                        ], fn($v) => $v !== null && $v !== 0.0));
-                    }
-
-                    // Actualizar precios de venta en producto principal
-                    if ($productId) {
-                        $productoToUpdate = Producto::find($productId);
-                        if ($productoToUpdate) {
-                            $updateData = [];
-                            if ($newPvp > 0)       $updateData['pvp'] = $newPvp;
-                            if ($newPvc > 0)        $updateData['pvc'] = $newPvc;
-                            if ($newPvpDto > 0)     $updateData['pvp_dto'] = $newPvpDto;
-                            if ($newPvcDto > 0)     $updateData['pvc_dto'] = $newPvcDto;
-                            if ($newPvDocena > 0)   $updateData['pv_docena'] = $newPvDocena;
-                            if (!empty($updateData)) {
-                                $productoToUpdate->update($updateData);
-                            }
-                        }
-                    }
+                    // Actualizar precios de venta en producto_lineas y producto principal
+                    // NO se sincronizan globalmente - los precios por sucursal se leen de almacen_ingreso_detalle
+                    // Solo se actualizan los lotes de la sucursal destino (ya hecho arriba)
                 }
 
                 // Actualizar precio de compra siempre (es dato de la compra actual)
@@ -394,6 +371,7 @@ class ComprasController extends Controller
                                 'concepto' => 'Pago compra #' . $compra->id . ' a proveedor',
                                 'referencia' => trim(($compra->serie_comprobante ?? '') . ' ' . ($compra->numero_comprobante ?? '')),
                                 'fecha' => now()->toDateString(),
+                                'sucursal_id' => Auth::user()->branch_id,
                             ]);
                             $banco->decrement('saldo_actual', $compra->total_pagar);
                         }
@@ -406,10 +384,24 @@ class ComprasController extends Controller
                         if ($cajaAbierta) {
                             $cajaAbierta->egresos = floatval($cajaAbierta->egresos ?? 0) + $compra->total_pagar;
                             $cajaAbierta->save();
+
+                            \App\Models\OperacionCaja::create([
+                                'cierre_caja_id' => $cajaAbierta->id,
+                                'user_id' => Auth::id(),
+                                'tipo' => 'egreso',
+                                'partida' => 'Compra',
+                                'concepto' => 'Pago compra #' . $compra->id . ' - ' . trim(($compra->serie_comprobante ?? '') . ' ' . ($compra->numero_comprobante ?? '')),
+                                'importe' => $compra->total_pagar,
+                                'metodo_pago' => 'Efectivo',
+                                'es_efectivo' => 1,
+                            ]);
                         }
                     } elseif ($metodoPago === 'anticipo') {
                         // Saldar el anticipo a proveedor seleccionado
                         $anticipoId = $data['anticipo_id'] ?? null;
+                        if (!$anticipoId) {
+                            throw new \Exception('Debe seleccionar un anticipo para usar este método de pago.');
+                        }
                         if ($anticipoId) {
                             $anticipo = \App\Models\ActivoCorriente::find($anticipoId);
                             if ($anticipo) {

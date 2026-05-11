@@ -359,6 +359,15 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::delete('/{id}', [ActivoFijoController::class, 'destroy'])->name('activos.destroy');
     });
 
+    // Aportes (Patrimonio)
+    Route::prefix('aportes')->group(function () {
+        Route::get('/', [\App\Http\Controllers\AporteController::class, 'index'])->name('aportes.index');
+        Route::post('/', [\App\Http\Controllers\AporteController::class, 'store'])->name('aportes.store');
+        Route::post('/tipo', [\App\Http\Controllers\AporteController::class, 'storeTipo'])->name('aportes.storeTipo');
+        Route::post('/{id}/devolver', [\App\Http\Controllers\AporteController::class, 'devolver'])->name('aportes.devolver');
+        Route::delete('/{id}', [\App\Http\Controllers\AporteController::class, 'destroy'])->name('aportes.destroy');
+    });
+
     // Tickets de pasivos y finanzas (accesibles con finanzas.ver o contabilidad)
     Route::get('/pasivos/ticket/{id}', [PasivoController::class, 'ticketPago'])->name('pasivos.ticket');
     Route::get('/pasivos/ticket-registro/{id}', [PasivoController::class, 'ticketRegistro'])->name('pasivos.ticket_registro');
@@ -392,9 +401,9 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
     Route::post('/finanzas-vendedor/pagar-acumulado', [App\Http\Controllers\FinanzasVendedorController::class, 'registrarPagoAcumulado'])->name('finanzas_vendedor.pagar_acumulado')->middleware('can:finanzas.crear');
 
     // Bancos y Transacciones Digitales
-    Route::resource('bancos', CuentaBancariaController::class);
-    Route::post('bancos/{banco}/movimiento', [CuentaBancariaController::class, 'storeMovimiento'])->name('bancos.movimiento.store');
-    Route::post('bancos/pase-caja-banco', [CuentaBancariaController::class, 'paseCajaBanco'])->name('bancos.pase-caja-banco');
+    Route::resource('bancos', CuentaBancariaController::class)->middleware('can:bancos.ver');
+    Route::post('bancos/{banco}/movimiento', [CuentaBancariaController::class, 'storeMovimiento'])->name('bancos.movimiento.store')->middleware('can:bancos.ver');
+    Route::post('bancos/pase-caja-banco', [CuentaBancariaController::class, 'paseCajaBanco'])->name('bancos.pase-caja-banco')->middleware('can:bancos.ver');
 
 
     // Balance Route

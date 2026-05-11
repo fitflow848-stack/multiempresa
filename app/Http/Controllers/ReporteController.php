@@ -1414,6 +1414,29 @@ class ReporteController extends Controller
         ];
     }
 
+    private function reporteMovimientosBanco(Request $request)
+    {
+        $query = \App\Models\BancoMovimiento::with(['cuenta', 'user', 'sucursal'])
+            ->orderByDesc('fecha');
+
+        if ($request->input('desde')) {
+            $query->where('fecha', '>=', $request->input('desde'));
+        }
+        if ($request->input('hasta')) {
+            $query->where('fecha', '<=', $request->input('hasta'));
+        }
+        if ($request->input('local_id')) {
+            $query->where('sucursal_id', $request->input('local_id'));
+        }
+
+        $resultados = $query->limit(500)->get();
+
+        return [
+            'view' => 'reportes.partials.movimientos_banco',
+            'data' => compact('resultados')
+        ];
+    }
+
     private function reporteMovimientosBoveda(Request $request)
     {
         $query = \App\Models\OperacionCaja::whereHas('cierre.caja', function ($q) {

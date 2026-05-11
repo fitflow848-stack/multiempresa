@@ -388,10 +388,12 @@
                                 </a>
                             </li>
                             <li>
+                                @can('bancos.ver')
                                 <a class="dropdown-item {{ request()->routeIs('bancos.*') ? 'active' : '' }}"
                                     href="{{ route('bancos.index') }}">
                                     <i class="bx bxs-bank me-2"></i> Bancos y Cuentas
                                 </a>
+                                @endcan
                             </li>
                             <li>
                                 <hr class="dropdown-divider">

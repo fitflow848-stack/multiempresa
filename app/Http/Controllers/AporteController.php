@@ -103,6 +103,76 @@ class AporteController extends Controller
         return redirect()->route('aportes.index')->with('success', 'Aporte eliminado correctamente');
     }
 
+    public function devolver(Request $request, $id)
+    {
+        $request->validate([
+            'monto_devolucion' => 'required|numeric|min:0.01',
+            'metodo_pago' => 'required|in:caja,banco',
+        ]);
+
+        $aporte = Aporte::findOrFail($id);
+        $montoDevolucion = (float) $request->monto_devolucion;
+
+        if ($montoDevolucion > $aporte->monto) {
+            return redirect()->back()->with('error', 'El monto a devolver no puede ser mayor al monto del aporte.');
+        }
+
+        DB::beginTransaction();
+        try {
+            if ($request->metodo_pago === 'caja') {
+                $cajaAbierta = getSelectedCaja();
+                if (!$cajaAbierta) {
+                    return redirect()->back()->with('error', 'No hay una caja abierta para registrar la devolución.');
+                }
+
+                // Restar de caja (es un egreso/sustracción)
+                $cajaAbierta->sustracciones = floatval($cajaAbierta->sustracciones ?? 0) + $montoDevolucion;
+                $cajaAbierta->save();
+
+                OperacionCaja::create([
+                    'company_id' => Auth::user()->company_id,
+                    'sucursal_id' => $cajaAbierta->sucursal_id,
+                    'cierre_caja_id' => $cajaAbierta->id,
+                    'user_id' => Auth::id(),
+                    'tipo' => 'sustraccion',
+                    'partida' => 'Devolución Aporte',
+                    'concepto' => 'Devolución de aporte: ' . $aporte->nombre . ' (S/ ' . number_format($montoDevolucion, 2) . ')',
+                    'importe' => $montoDevolucion,
+                    'es_efectivo' => true,
+                    'metodo_pago' => 'Efectivo',
+                ]);
+            } else {
+                // Restar de banco
+                $banco = \App\Models\CuentaBancaria::where('company_id', Auth::user()->company_id)
+                    ->where('is_active', true)->orderBy('id')->first();
+                if (!$banco) {
+                    return redirect()->back()->with('error', 'No hay cuenta bancaria activa para registrar la devolución.');
+                }
+
+                \App\Models\BancoMovimiento::create([
+                    'cuenta_bancaria_id' => $banco->id,
+                    'user_id' => Auth::id(),
+                    'tipo' => 'egreso',
+                    'monto' => $montoDevolucion,
+                    'concepto' => 'Devolución de aporte: ' . $aporte->nombre,
+                    'fecha' => now()->toDateString(),
+                    'sucursal_id' => Auth::user()->branch_id,
+                ]);
+                $banco->decrement('saldo_actual', $montoDevolucion);
+            }
+
+            // Reducir el monto del aporte (patrimonio)
+            $aporte->monto = $aporte->monto - $montoDevolucion;
+            $aporte->save();
+
+            DB::commit();
+            return redirect()->route('aportes.index')->with('success', 'Devolución de aporte registrada. Se devolvió S/ ' . number_format($montoDevolucion, 2));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Error al registrar devolución: ' . $e->getMessage());
+        }
+    }
+
     public function storeTipo(Request $request)
     {
         $request->validate([

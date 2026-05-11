@@ -125,6 +125,7 @@ class RoleAndPermissionSeeder extends Seeder
             'finanzas.eliminar',
             'finanzas.balance',
             'finanzas.estado_resultados',
+            'bancos.ver',
             'tesoreria.ver',
             'tesoreria.crear',
             'tesoreria.editar',

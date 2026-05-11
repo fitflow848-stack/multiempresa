@@ -46,11 +46,31 @@ class CuentaBancariaController extends Controller
         return redirect()->route('bancos.index')->with('success', 'Cuenta bancaria registrada correctamente.');
     }
 
-    public function show(CuentaBancaria $banco)
+    public function show(Request $request, CuentaBancaria $banco)
     {
         $this->authorizeOwner($banco);
-        $movimientos = $banco->movimientos()->latest()->paginate(20);
-        return view('bancos.show', compact('banco', 'movimientos'));
+        
+        $user = Auth::user();
+        $sucursales = DB::table('sucursales')->where('company_id', $user->company_id)->get();
+        
+        $query = $banco->movimientos()->with('sucursal');
+        
+        if ($request->filled('fecha_desde')) {
+            $query->where('fecha', '>=', $request->fecha_desde);
+        }
+        if ($request->filled('fecha_hasta')) {
+            $query->where('fecha', '<=', $request->fecha_hasta);
+        }
+        if ($request->filled('sucursal_id')) {
+            $query->where('sucursal_id', $request->sucursal_id);
+        }
+        
+        $movimientos = $query->latest()->paginate(30)->appends($request->query());
+        $fecha_desde = $request->fecha_desde;
+        $fecha_hasta = $request->fecha_hasta;
+        $sucursal_id = $request->sucursal_id;
+        
+        return view('bancos.show', compact('banco', 'movimientos', 'fecha_desde', 'fecha_hasta', 'sucursales', 'sucursal_id'));
     }
 
     public function update(Request $request, CuentaBancaria $banco)
@@ -133,6 +153,7 @@ class CuentaBancariaController extends Controller
                 'referencia' => 'Cierre Caja #' . $request->cierre_caja_id,
                 'fecha' => now()->toDateString(),
                 'cierre_caja_id' => $request->cierre_caja_id,
+                'sucursal_id' => $user->branch_id,
             ]);
 
             $banco->increment('saldo_actual', $request->monto);
@@ -143,6 +164,18 @@ class CuentaBancariaController extends Controller
             DB::rollBack();
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
+    }
+
+    public function destroy(CuentaBancaria $banco)
+    {
+        $this->authorizeOwner($banco);
+
+        if ($banco->movimientos()->count() > 0) {
+            return redirect()->route('bancos.index')->with('error', 'No se puede eliminar una cuenta con movimientos registrados. Desactívela en su lugar.');
+        }
+
+        $banco->delete();
+        return redirect()->route('bancos.index')->with('success', 'Cuenta bancaria eliminada correctamente.');
     }
 
     private function authorizeOwner(CuentaBancaria $banco)
