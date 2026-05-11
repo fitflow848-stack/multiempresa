@@ -34,6 +34,9 @@ class ProductRepository
 
         $having = $includeEmpty ? "" : "HAVING SUM(ad.cantidad) > 0";
 
+        // Filtro de sucursal para subqueries de precios
+        $sucursalFilter = $sucursalId ? "AND sai.sucursal_id = {$sucursalId}" : "";
+
         return DB::select("
             SELECT
                 p.id AS producto_id,
@@ -60,10 +63,10 @@ class ProductRepository
                 MAX(p.imagen_principal) AS imagen_principal,
                 SUM(ad.cantidad) AS cantidad_total,
                 MAX(pl.precio_compra) AS costo,
-                (SELECT sub.pvp FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id AND sai.sucursal_id = ai.sucursal_id AND sub.pvp > 0 ORDER BY sub.id DESC LIMIT 1) AS pvp,
-                (SELECT sub.pvpd FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id AND sai.sucursal_id = ai.sucursal_id AND sub.pvpd > 0 ORDER BY sub.id DESC LIMIT 1) AS pvpd,
-                (SELECT sub.pvc FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id AND sai.sucursal_id = ai.sucursal_id AND sub.pvc > 0 ORDER BY sub.id DESC LIMIT 1) AS pvc,
-                (SELECT sub.pvcd FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id AND sai.sucursal_id = ai.sucursal_id AND sub.pvcd > 0 ORDER BY sub.id DESC LIMIT 1) AS pvcd,
+                (SELECT sub.pvp FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id {$sucursalFilter} AND sub.pvp > 0 ORDER BY sub.id DESC LIMIT 1) AS pvp,
+                (SELECT sub.pvpd FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id {$sucursalFilter} AND sub.pvpd > 0 ORDER BY sub.id DESC LIMIT 1) AS pvpd,
+                (SELECT sub.pvc FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id {$sucursalFilter} AND sub.pvc > 0 ORDER BY sub.id DESC LIMIT 1) AS pvc,
+                (SELECT sub.pvcd FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id {$sucursalFilter} AND sub.pvcd > 0 ORDER BY sub.id DESC LIMIT 1) AS pvcd,
                 MAX(p.pv_docena) AS pv_docena,
                 COUNT(ad.id) AS total_lotes,
                 MAX(ad.fecha_vencimiento) as fecha_vencimiento,
@@ -118,6 +121,9 @@ class ProductRepository
 
         $having = $includeEmpty ? "" : "HAVING SUM(ad.cantidad) > 0";
 
+        // Filtro de sucursal para subqueries de precios
+        $sucursalFilter = $sucursalId ? "AND sai.sucursal_id = {$sucursalId}" : "";
+
         $todos = DB::select("
             SELECT
                 p.id AS producto_id,
@@ -144,10 +150,10 @@ class ProductRepository
                 MAX(p.imagen_principal) AS imagen_principal,
                 SUM(ad.cantidad) AS cantidad_total,
                 MAX(pl.precio_compra) AS costo,
-                (SELECT sub.pvp FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id AND sai.sucursal_id = ai.sucursal_id AND sub.pvp > 0 ORDER BY sub.id DESC LIMIT 1) AS pvp,
-                (SELECT sub.pvpd FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id AND sai.sucursal_id = ai.sucursal_id AND sub.pvpd > 0 ORDER BY sub.id DESC LIMIT 1) AS pvpd,
-                (SELECT sub.pvc FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id AND sai.sucursal_id = ai.sucursal_id AND sub.pvc > 0 ORDER BY sub.id DESC LIMIT 1) AS pvc,
-                (SELECT sub.pvcd FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id AND sai.sucursal_id = ai.sucursal_id AND sub.pvcd > 0 ORDER BY sub.id DESC LIMIT 1) AS pvcd,
+                (SELECT sub.pvp FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id {$sucursalFilter} AND sub.pvp > 0 ORDER BY sub.id DESC LIMIT 1) AS pvp,
+                (SELECT sub.pvpd FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id {$sucursalFilter} AND sub.pvpd > 0 ORDER BY sub.id DESC LIMIT 1) AS pvpd,
+                (SELECT sub.pvc FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id {$sucursalFilter} AND sub.pvc > 0 ORDER BY sub.id DESC LIMIT 1) AS pvc,
+                (SELECT sub.pvcd FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = p.id AND sub.producto_linea_id = ad.producto_linea_id {$sucursalFilter} AND sub.pvcd > 0 ORDER BY sub.id DESC LIMIT 1) AS pvcd,
                 MAX(p.pv_docena) AS pv_docena,
                 COUNT(ad.id) AS total_lotes,
                 MAX(ad.fecha_vencimiento) as fecha_vencimiento,
