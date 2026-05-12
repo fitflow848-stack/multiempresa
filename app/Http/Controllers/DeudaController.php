@@ -374,6 +374,23 @@ class DeudaController extends Controller
                 if ($esEfectivo) {
                     $cajaAbierta->ingresos = floatval($cajaAbierta->ingresos ?? 0) + $montoInicial;
                     $cajaAbierta->save();
+                } else {
+                    // Pago digital (Plin, Yape, Transferencia) → registrar ingreso en banco
+                    $banco = \App\Models\CuentaBancaria::where('company_id', Auth::user()->company_id)
+                        ->where('is_active', true)->orderBy('id')->first();
+                    if ($banco) {
+                        \App\Models\BancoMovimiento::create([
+                            'cuenta_bancaria_id' => $banco->id,
+                            'user_id' => Auth::id(),
+                            'tipo' => 'ingreso',
+                            'monto' => $montoInicial,
+                            'concepto' => 'Cobro deuda acumulado - Cliente: ' . $cliente->nombre . ' (' . $mP . ')',
+                            'referencia' => $request->referencia ?? null,
+                            'fecha' => now()->toDateString(),
+                            'sucursal_id' => Auth::user()->branch_id,
+                        ]);
+                        $banco->increment('saldo_actual', $montoInicial);
+                    }
                 }
 
                 \App\Models\OperacionCaja::create([

@@ -191,11 +191,25 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach ($servicios as $i => $item)
+                @php
+                    // Consolidar items del mismo producto para impresión limpia
+                    $itemsConsolidados = collect($servicios)->groupBy(function($item) {
+                        return ($item->servicio_id ?? '') . '|' . ($item->precio_unitario ?? '') . '|' . ($item->nombre_servicio ?? $item->descripcion ?? '');
+                    })->map(function($group) {
+                        $first = $group->first();
+                        $totalCantidad = $group->sum('cantidad');
+                        $totalImporte = $group->sum(function($i) { return $i->subtotal ?? $i->importe ?? 0; });
+                        $first->cantidad = $totalCantidad;
+                        $first->importe_consolidado = $totalImporte;
+                        return $first;
+                    })->values();
+                @endphp
+                @foreach ($itemsConsolidados as $i => $item)
                     @php
                         $umCodigo = $item->almacenIngresoDetalle?->producto?->unidadMedida?->codigo ?? 'NIU';
                         $nombreLimpio = str_replace(['(Precio Corp.)', '(Precio Publico)', '(Precio Pub.)'], '', $item->nombre_servicio ?? $item->descripcion ?? '');
                         $nombreLimpio = trim($nombreLimpio, ' /');
+                        $importeItem = $item->importe_consolidado ?? $item->subtotal ?? ($item->precio_unitario * $item->cantidad);
                     @endphp
                     <tr>
                         <td>{{ $i + 1 }}</td>
@@ -206,11 +220,11 @@
                         <td>{{ $umCodigo }}</td>
                         <td>{{ number_format($item->cantidad, 2) }}</td>
                         <td style="text-align: right;">
-                            {{ number_format(($item->precio_unitario * $item->cantidad) - $item->subtotal, 2) }}
+                            {{ number_format(($item->precio_unitario * $item->cantidad) - $importeItem, 2) }}
                         </td>
                         <td style="text-align: right;">{{ number_format($item->precio_unitario, 2) }}</td>
                         <td style="text-align: right;">
-                            {{ number_format($item->subtotal, 2) }}</td>
+                            {{ number_format($importeItem, 2) }}</td>
                     </tr>
                 @endforeach
             </tbody>

@@ -387,25 +387,9 @@ class VentaService
                     }
 
                     if (!empty($lotesUsados)) {
-                        // Primer lote: asignar al detalle principal
+                        // Asignar el primer lote como referencia, mantener cantidad e importe originales
                         $detalle->almacen_ingreso_detalle_id = $lotesUsados[0]['id'];
-                        $detalle->cantidad = $lotesUsados[0]['cantidad'];
-                        $detalle->importe = $precio_original * $lotesUsados[0]['cantidad'];
                         $detalle->save();
-
-                        // Lotes adicionales: crear registros split para trazabilidad en kardex
-                        for ($li = 1; $li < count($lotesUsados); $li++) {
-                            $splitDetalle = new VentaDetalle();
-                            $splitDetalle->id_venta = $venta->id_venta;
-                            $splitDetalle->servicio_id = $prodId;
-                            $splitDetalle->nombre_servicio = $detalle->nombre_servicio;
-                            $splitDetalle->cantidad = $lotesUsados[$li]['cantidad'];
-                            $splitDetalle->precio_unitario = $precio_original;
-                            $splitDetalle->importe = $precio_original * $lotesUsados[$li]['cantidad'];
-                            $splitDetalle->orden = $detalle->orden;
-                            $splitDetalle->almacen_ingreso_detalle_id = $lotesUsados[$li]['id'];
-                            $splitDetalle->save();
-                        }
                     } else {
                         Log::warning("No se encontró stock/lote para el producto ID {$item['producto_id']} en la venta {$venta->id_venta}");
                     }

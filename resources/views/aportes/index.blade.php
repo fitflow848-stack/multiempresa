@@ -216,6 +216,13 @@
                             <input type="text" name="documento" class="form-control" placeholder="Ej. Transferencia BCP">
                         </div>
                         <div class="form-group mb-3">
+                            <label class="fw-bold small">Método de Ingreso <span class="text-danger">*</span></label>
+                            <select name="metodo_pago" class="form-select" required>
+                                <option value="caja">Caja (Efectivo)</option>
+                                <option value="banco">Banco / Transferencia</option>
+                            </select>
+                        </div>
+                        <div class="form-group mb-3">
                             <label class="fw-bold small">Observaciones</label>
                             <textarea name="observaciones" class="form-control" rows="2"></textarea>
                         </div>

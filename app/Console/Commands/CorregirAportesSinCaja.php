@@ -130,7 +130,7 @@ class CorregirAportesSinCaja extends Command
         $fecha = $aporte->fecha_registro;
         
         // Primero intentar con caja abierta exactamente en esa fecha
-        $caja = CierreCaja::where('company_id', $aporte->company_id)
+        $caja = CierreCaja::where('id_empresa', $aporte->company_id)
             ->whereDate('fecha_apertura', $fecha->format('Y-m-d'))
             ->first();
             
@@ -139,7 +139,7 @@ class CorregirAportesSinCaja extends Command
         }
         
         // Si no hay caja exacta, buscar la más cercana (anterior)
-        $caja = CierreCaja::where('company_id', $aporte->company_id)
+        $caja = CierreCaja::where('id_empresa', $aporte->company_id)
             ->whereDate('fecha_apertura', '<=', $fecha->format('Y-m-d'))
             ->orderBy('fecha_apertura', 'desc')
             ->first();

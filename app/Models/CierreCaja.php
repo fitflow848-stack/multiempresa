@@ -155,6 +155,7 @@ class CierreCaja extends Model
                     if ($esEfectivo) $ingresosEfectivo += $importe;
                     break;
                 case 'gasto':
+                case 'egreso':
                     $egresosTotal += $importe;
                     if ($esEfectivo) $egresosEfectivo += $importe;
                     break;

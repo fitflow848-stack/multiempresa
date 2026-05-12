@@ -377,10 +377,13 @@ class ComprasController extends Controller
                         }
                     } elseif ($metodoPago === 'caja') {
                         // Registrar egreso en la caja activa
-                        $cajaAbierta = \App\Models\CierreCaja::where('company_id', $compra->company_id)
-                            ->where('sucursal_id', Auth::user()->branch_id)
-                            ->whereNull('fecha_cierre')
-                            ->latest()->first();
+                        $cajaAbierta = getSelectedCaja();
+                        if (!$cajaAbierta) {
+                            $cajaAbierta = \App\Models\CierreCaja::where('id_empresa', $compra->company_id)
+                                ->where('sucursal_id', Auth::user()->branch_id)
+                                ->whereNull('fecha_cierre')
+                                ->latest()->first();
+                        }
                         if ($cajaAbierta) {
                             $cajaAbierta->egresos = floatval($cajaAbierta->egresos ?? 0) + $compra->total_pagar;
                             $cajaAbierta->save();
@@ -418,10 +421,13 @@ class ComprasController extends Controller
                                 // Si la compra cuesta más que el anticipo, la diferencia sale de caja
                                 $diferencia = $totalCompra - $montoAnticipo;
                                 if ($diferencia > 0.01) {
-                                    $cajaAbierta = \App\Models\CierreCaja::where('company_id', $compra->company_id)
-                                        ->where('sucursal_id', Auth::user()->branch_id)
-                                        ->whereNull('fecha_cierre')
-                                        ->latest()->first();
+                                    $cajaAbierta = getSelectedCaja();
+                                    if (!$cajaAbierta) {
+                                        $cajaAbierta = \App\Models\CierreCaja::where('id_empresa', $compra->company_id)
+                                            ->where('sucursal_id', Auth::user()->branch_id)
+                                            ->whereNull('fecha_cierre')
+                                            ->latest()->first();
+                                    }
                                     if ($cajaAbierta) {
                                         $cajaAbierta->egresos = floatval($cajaAbierta->egresos ?? 0) + $diferencia;
                                         $cajaAbierta->save();

@@ -153,7 +153,11 @@ class PdfVentaService
                 'qr_image' => $data['qr_image'],
             ];
 
-            $cantidadItems = count($data['servicios']);
+            // Calcular items únicos (consolidados) para altura del papel
+            $itemsUnicos = $data['servicios']->groupBy(function($item) {
+                return ($item->servicio_id ?? '') . '|' . ($item->precio_unitario ?? '') . '|' . ($item->nombre_servicio ?? $item->descripcion ?? '');
+            })->count();
+            $cantidadItems = $itemsUnicos;
             $altoCalculado = 550 + ($cantidadItems * 30);
             
             // 80mm = 226.77pt, 58mm = 164.4pt

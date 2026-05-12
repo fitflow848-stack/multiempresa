@@ -42,50 +42,83 @@ class AporteController extends Controller
             'monto' => 'required|numeric|min:0',
             'fecha_registro' => 'required|date',
             'documento' => 'nullable|string|max:255',
-            'observaciones' => 'nullable|string'
+            'observaciones' => 'nullable|string',
+            'metodo_pago' => 'required|in:caja,banco',
         ]);
 
         try {
             DB::beginTransaction();
-            
-            // 1. Verificar que hay una caja abierta en sesión
-            $cajaAbierta = getSelectedCaja();
-            
-            if (!$cajaAbierta) {
-                return redirect()->back()
-                    ->with('error', 'No hay una caja abierta. Debe seleccionar y abrir una caja antes de registrar un aporte.')
-                    ->withInput();
+
+            $metodoPago = $request->metodo_pago;
+
+            if ($metodoPago === 'caja') {
+                // Verificar que hay una caja abierta en sesión
+                $cajaAbierta = getSelectedCaja();
+                
+                if (!$cajaAbierta) {
+                    return redirect()->back()
+                        ->with('error', 'No hay una caja abierta. Debe seleccionar y abrir una caja antes de registrar un aporte en efectivo.')
+                        ->withInput();
+                }
             }
 
-            // 2. Crear el registro contable del aporte
+            // Crear el registro contable del aporte
             $aporte = new Aporte($request->all());
             $aporte->user_id = Auth::id();
             $aporte->save();
 
-            // 3. Crear la operación de caja física para que el dinero entre realmente
-            $operacionCaja = new OperacionCaja([
-                'company_id' => auth()->user()->company_id,
-                'sucursal_id' => $cajaAbierta->sucursal_id,
-                'cierre_caja_id' => $cajaAbierta->id,
-                'user_id' => Auth::id(),
-                'tipo' => 'aportacion',
-                'partida' => 'Aporte - ' . $aporte->nombre,
-                'concepto' => $request->observaciones ?? 'Aporte registrado: ' . $aporte->nombre,
-                'importe' => $aporte->monto,
-                'es_efectivo' => true,
-                'metodo_pago' => 'efectivo'
-            ]);
-            $operacionCaja->save();
+            if ($metodoPago === 'caja') {
+                // Ingreso a caja física
+                $operacionCaja = new OperacionCaja([
+                    'company_id' => auth()->user()->company_id,
+                    'sucursal_id' => $cajaAbierta->sucursal_id,
+                    'cierre_caja_id' => $cajaAbierta->id,
+                    'user_id' => Auth::id(),
+                    'tipo' => 'aportacion',
+                    'partida' => 'Aporte - ' . $aporte->nombre,
+                    'concepto' => $request->observaciones ?? 'Aporte registrado: ' . $aporte->nombre,
+                    'importe' => $aporte->monto,
+                    'es_efectivo' => true,
+                    'metodo_pago' => 'Efectivo'
+                ]);
+                $operacionCaja->save();
 
-            // 4. Actualizar el saldo de aportaciones de la caja en tiempo real
-            $cajaAbierta->aportaciones = ($cajaAbierta->aportaciones ?? 0) + $aporte->monto;
-            $cajaAbierta->save();
+                // Actualizar el saldo de aportaciones de la caja
+                $cajaAbierta->aportaciones = ($cajaAbierta->aportaciones ?? 0) + $aporte->monto;
+                $cajaAbierta->save();
 
-            DB::commit();
+                DB::commit();
+                $cajaNombre = $cajaAbierta->caja->nombre ?? 'Caja';
+                return redirect()->route('aportes.index')
+                    ->with('success', "Aporte registrado correctamente. S/ " . number_format($aporte->monto, 2) . " agregado a {$cajaNombre}.");
+            } else {
+                // Ingreso a banco
+                $banco = \App\Models\CuentaBancaria::where('company_id', Auth::user()->company_id)
+                    ->where('is_active', true)->orderBy('id')->first();
 
-            $cajaNombre = $cajaAbierta->caja->nombre ?? 'Caja';
-            return redirect()->route('aportes.index')
-                ->with('success', "Aporte registrado correctamente. S/ " . number_format($aporte->monto, 2) . " agregado a {$cajaNombre}.");
+                if (!$banco) {
+                    DB::rollBack();
+                    return redirect()->back()
+                        ->with('error', 'No hay cuenta bancaria activa para registrar el aporte.')
+                        ->withInput();
+                }
+
+                \App\Models\BancoMovimiento::create([
+                    'cuenta_bancaria_id' => $banco->id,
+                    'user_id' => Auth::id(),
+                    'tipo' => 'ingreso',
+                    'monto' => $aporte->monto,
+                    'concepto' => 'Aporte: ' . $aporte->nombre,
+                    'referencia' => $request->documento ?? null,
+                    'fecha' => $request->fecha_registro,
+                    'sucursal_id' => Auth::user()->branch_id,
+                ]);
+                $banco->increment('saldo_actual', $aporte->monto);
+
+                DB::commit();
+                return redirect()->route('aportes.index')
+                    ->with('success', "Aporte registrado correctamente. S/ " . number_format($aporte->monto, 2) . " agregado a {$banco->banco_nombre}.");
+            }
                 
         } catch (\Exception $e) {
             DB::rollBack();

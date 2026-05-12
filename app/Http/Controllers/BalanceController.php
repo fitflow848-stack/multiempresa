@@ -264,13 +264,17 @@ class BalanceController extends Controller
             ], 'monto')->get();
 
         // Integrar CxC Automático al tipo correspondiente
+        // NOTA: Si ya existe un tipo "Cuentas por Cobrar (POS)" en activos corrientes,
+        // esos registros ya representan las deudas del POS, no duplicar con la tabla deudas.
         $tipoCxC = $tiposActivosCorrientes->first(function ($item) {
             $lower = strtolower($item->nombre);
             return str_contains($lower, 'cuentas por cobrar') || str_contains($lower, 'cxc');
         });
 
         if ($tipoCxC) {
-            $tipoCxC->activos_sum_monto = ($tipoCxC->activos_sum_monto ?? 0) + $cxc;
+            // Ya existe el tipo con montos de activos_corrientes, usar solo el monto de deudas
+            // (que es la fuente real) y reemplazar el monto del activo corriente
+            $tipoCxC->activos_sum_monto = $cxc;
         } else if ($cxc > 0) {
             $newType = (object)[
                 'nombre' => 'Cuentas por Cobrar (CxC)',
@@ -330,21 +334,29 @@ class BalanceController extends Controller
             $tipo->pasivos_sum_monto = ($tipo->pasivos_sum_monto ?? 0) - ($tipo->pasivos_sum_monto_pagado ?? 0);
         }
 
-        // Patrimonio: Aportes (Calculado independientemente para incluir todos, incluso los pagados)
-        $total_aportes = Pasivo::withoutGlobalScopes()
+        // Patrimonio: Aportes (desde la tabla aportes - módulo principal de aportes)
+        $total_aportes_query = \App\Models\Aporte::withoutGlobalScopes()
+            ->where('company_id', $user->company_id)
+            ->whereDate('fecha_registro', '<=', $fecha);
+
+        $total_aportes_modulo = $total_aportes_query->sum('monto');
+
+        // También incluir aportes registrados en pasivos (sistema legacy)
+        $total_aportes_pasivos = Pasivo::withoutGlobalScopes()
             ->where('company_id', $user->company_id)
             ->whereHas('tipo', function($q) {
-                // Buscamos cualquier tipo que contenga "Aporte"
                 $q->where('nombre', 'Aporte')
                   ->orWhere('nombre', 'like', 'Aportes%');
             })
             ->whereDate('fecha_registro', '<=', $fecha);
 
         if ($sucursalId) {
-            $total_aportes->where('sucursal_id', $sucursalId);
+            $total_aportes_pasivos->where('sucursal_id', $sucursalId);
         }
 
-        $total_aportes = $total_aportes->sum('monto');
+        $total_aportes_pasivos = $total_aportes_pasivos->sum(DB::raw('monto - monto_pagado'));
+
+        $total_aportes = $total_aportes_modulo + $total_aportes_pasivos;
 
         // Remover el tipo "Aporte" de los Pasivos Corrientes para que no se duplique como deuda
         $tiposPasivosCorrientes = $tiposPasivosCorrientes->reject(function ($item) {

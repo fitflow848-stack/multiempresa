@@ -65,12 +65,16 @@ class ActivoCorrienteController extends Controller
         $metodoPago = $data['metodo_pago'] ?? 'Efectivo';
         $esEfectivo = strtolower($metodoPago) === 'efectivo';
 
+        // Obtener el nombre del tipo para usarlo como partida en caja
+        $tipoActivo = TipoActivoCorriente::find($data['tipo_activo_corriente_id']);
+        $partidaCaja = $tipoActivo ? $tipoActivo->nombre : 'Activo Corriente';
+
         try {
             if ($esEfectivo) {
-                // Egreso de caja (sustracción - salida de dinero por anticipo)
+                // Egreso de caja (sustracción - salida de dinero)
                 $cajaAbierta = getSelectedCaja();
                 if (!$cajaAbierta) {
-                    $cajaAbierta = \App\Models\CierreCaja::where('company_id', auth()->user()->company_id)
+                    $cajaAbierta = \App\Models\CierreCaja::where('id_empresa', auth()->user()->company_id)
                         ->where('sucursal_id', auth()->user()->branch_id)
                         ->whereNull('fecha_cierre')
                         ->latest()->first();
@@ -83,7 +87,7 @@ class ActivoCorrienteController extends Controller
                         'cierre_caja_id' => $cajaAbierta->id,
                         'user_id' => auth()->id(),
                         'tipo' => 'sustraccion',
-                        'partida' => 'Anticipo a Proveedor',
+                        'partida' => $partidaCaja,
                         'concepto' => $activo->nombre,
                         'importe' => $monto,
                         'metodo_pago' => $metodoPago,
@@ -102,9 +106,10 @@ class ActivoCorrienteController extends Controller
                         'user_id' => auth()->id(),
                         'tipo' => 'egreso',
                         'monto' => $monto,
-                        'concepto' => 'Anticipo a proveedor: ' . $activo->nombre,
+                        'concepto' => $partidaCaja . ': ' . $activo->nombre,
                         'referencia' => $data['documento'] ?? null,
                         'fecha' => $data['fecha_registro'],
+                        'sucursal_id' => auth()->user()->branch_id,
                     ]);
                     $banco->decrement('saldo_actual', $monto);
                 }
