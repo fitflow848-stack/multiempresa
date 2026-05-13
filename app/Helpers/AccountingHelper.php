@@ -20,16 +20,16 @@ class AccountingHelper
     {
         // 1. ACTIVO CORRIENTE
         $activosCorrientes = [
-            'Bancos' => 'Cuentas bancarias de la empresa',
-            'Anticipo a Proveedores' => 'Pagos realizados por adelantado a proveedores',
-            'Adelantos a Personal' => 'Adelantos de sueldo entregados al personal',
-            'Otros' => 'Otros activos corrientes no especificados'
+            'Bancos' => ['descripcion' => 'Cuentas bancarias de la empresa', 'afecta_caja' => true],
+            'Anticipo a Proveedores' => ['descripcion' => 'Pagos realizados por adelantado a proveedores', 'afecta_caja' => true],
+            'Adelantos a Personal' => ['descripcion' => 'Adelantos de sueldo entregados al personal', 'afecta_caja' => true],
+            'Otros' => ['descripcion' => 'Otros activos corrientes no especificados', 'afecta_caja' => false]
         ];
 
-        foreach ($activosCorrientes as $nombre => $descripcion) {
+        foreach ($activosCorrientes as $nombre => $config) {
             TipoActivoCorriente::firstOrCreate(
                 ['company_id' => $companyId, 'nombre' => $nombre],
-                ['descripcion' => $descripcion]
+                ['descripcion' => $config['descripcion'], 'afecta_caja' => $config['afecta_caja']]
             );
         }
 

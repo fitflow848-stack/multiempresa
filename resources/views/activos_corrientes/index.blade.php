@@ -118,6 +118,16 @@
                                                      </form>
                                                  @endif
 
+                                                 @if(!$activo->tipo->afecta_caja && !$activo->is_settled)
+                                                     <form action="{{ route('activos_corrientes.cobrar', $activo->id) }}"
+                                                         method="POST" class="d-inline confirm-form" data-msg="¿Desea COBRAR este activo? Se registrará un ingreso en caja.">
+                                                         @csrf
+                                                         <button type="submit" class="btn btn-primary btn-circle btn-sm" title="Cobrar">
+                                                             <i class="fas fa-hand-holding-usd"></i>
+                                                         </button>
+                                                     </form>
+                                                 @endif
+
                                                  @if(str_contains(strtolower($activo->tipo->nombre), 'adelanto'))
                                                      <a href="{{ route('finanzas.ticket-personal', $activo->id) }}" target="_blank"
                                                         class="btn btn-info btn-circle btn-sm" title="Ver Ticket">
@@ -175,7 +185,7 @@
                             <label>Tipo <span class="text-danger">*</span></label>
                             <select name="tipo_activo_corriente_id" id="selectTipo" class="form-control" required>
                                 @foreach ($tipos as $tipo)
-                                    <option value="{{ $tipo->id }}" data-nombre="{{ strtolower($tipo->nombre) }}">{{ $tipo->nombre }}</option>
+                                    <option value="{{ $tipo->id }}" data-nombre="{{ strtolower($tipo->nombre) }}" data-afecta-caja="{{ $tipo->afecta_caja ? '1' : '0' }}">{{ $tipo->nombre }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -209,10 +219,14 @@
                         </div>
                         <div class="form-group mb-3">
                             <label>Método de Pago <span class="text-danger">*</span></label>
-                            <select name="metodo_pago" class="form-control" required>
+                            <select name="metodo_pago" id="selectMetodoPago" class="form-control" required>
                                 <option value="Efectivo">Efectivo (Caja)</option>
                                 <option value="Transferencia">Transferencia (Banco)</option>
+                                <option value="No aplica">No aplica (Solo Balance)</option>
                             </select>
+                            <small class="form-text text-muted d-none" id="infoNoAfectaCaja">
+                                Este tipo no afecta la caja. Solo se registra en el balance.
+                            </small>
                         </div>
                         <div class="form-group">
                             <label>Documento Referencia</label>
@@ -278,11 +292,32 @@
                 const selected = selectTipo.options[selectTipo.selectedIndex];
                 const nombre = (selected.getAttribute('data-nombre') || '').toLowerCase();
                 const esAnticipo = nombre.includes('anticipo') && nombre.includes('proveedor');
+                const afectaCaja = selected.getAttribute('data-afecta-caja') === '1';
                 
                 seccionProveedor.classList.toggle('d-none', !esAnticipo);
                 
                 if (esAnticipo && !proveedoresCargados) {
                     cargarProveedores();
+                }
+
+                // Mostrar/ocultar método de pago según si afecta caja
+                const selectMetodo = document.getElementById('selectMetodoPago');
+                const infoNoAfecta = document.getElementById('infoNoAfectaCaja');
+                
+                if (!afectaCaja) {
+                    selectMetodo.value = 'No aplica';
+                    selectMetodo.setAttribute('readonly', true);
+                    selectMetodo.style.pointerEvents = 'none';
+                    selectMetodo.style.backgroundColor = '#e9ecef';
+                    infoNoAfecta.classList.remove('d-none');
+                } else {
+                    selectMetodo.removeAttribute('readonly');
+                    selectMetodo.style.pointerEvents = '';
+                    selectMetodo.style.backgroundColor = '';
+                    if (selectMetodo.value === 'No aplica') {
+                        selectMetodo.value = 'Efectivo';
+                    }
+                    infoNoAfecta.classList.add('d-none');
                 }
             }
 
@@ -348,6 +383,8 @@
                                 if (select) {
                                     const option = new Option(data.tipo.nombre, data.tipo.id, true,
                                         true);
+                                    option.setAttribute('data-nombre', data.tipo.nombre.toLowerCase());
+                                    option.setAttribute('data-afecta-caja', data.tipo.afecta_caja ? '1' : '0');
                                     select.add(option);
                                     select.dispatchEvent(new Event('change'));
                                 }

@@ -93,8 +93,7 @@ class AporteController extends Controller
                     ->with('success', "Aporte registrado correctamente. S/ " . number_format($aporte->monto, 2) . " agregado a {$cajaNombre}.");
             } else {
                 // Ingreso a banco
-                $banco = \App\Models\CuentaBancaria::where('company_id', Auth::user()->company_id)
-                    ->where('is_active', true)->orderBy('id')->first();
+                $banco = \App\Models\CuentaBancaria::preferidaParaUsuario();
 
                 if (!$banco) {
                     DB::rollBack();
@@ -176,8 +175,7 @@ class AporteController extends Controller
                 ]);
             } else {
                 // Restar de banco
-                $banco = \App\Models\CuentaBancaria::where('company_id', Auth::user()->company_id)
-                    ->where('is_active', true)->orderBy('id')->first();
+                $banco = \App\Models\CuentaBancaria::preferidaParaUsuario();
                 if (!$banco) {
                     return redirect()->back()->with('error', 'No hay cuenta bancaria activa para registrar la devolución.');
                 }

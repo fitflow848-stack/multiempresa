@@ -12,7 +12,11 @@ class TipoActivoCorriente extends Model
     use HasFactory, BelongsToCompany;
     
     protected $fillable = [
-        'company_id','nombre', 'descripcion'];
+        'company_id', 'nombre', 'descripcion', 'afecta_caja'];
+
+    protected $casts = [
+        'afecta_caja' => 'boolean',
+    ];
 
     public function activos()
     {

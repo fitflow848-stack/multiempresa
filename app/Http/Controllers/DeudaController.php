@@ -214,8 +214,7 @@ class DeudaController extends Controller
                     $cajaAbierta->save();
                 } else {
                     // Pago digital (Plin, Yape, Transferencia) → registrar ingreso en banco
-                    $banco = \App\Models\CuentaBancaria::where('company_id', Auth::user()->company_id)
-                        ->where('is_active', true)->orderBy('id')->first();
+                    $banco = \App\Models\CuentaBancaria::preferidaParaUsuario();
                     if ($banco) {
                         \App\Models\BancoMovimiento::create([
                             'cuenta_bancaria_id' => $banco->id,
@@ -376,8 +375,7 @@ class DeudaController extends Controller
                     $cajaAbierta->save();
                 } else {
                     // Pago digital (Plin, Yape, Transferencia) → registrar ingreso en banco
-                    $banco = \App\Models\CuentaBancaria::where('company_id', Auth::user()->company_id)
-                        ->where('is_active', true)->orderBy('id')->first();
+                    $banco = \App\Models\CuentaBancaria::preferidaParaUsuario();
                     if ($banco) {
                         \App\Models\BancoMovimiento::create([
                             'cuenta_bancaria_id' => $banco->id,

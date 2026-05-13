@@ -78,4 +78,75 @@ class ActivoFijoController extends Controller
 
         return redirect()->route('activos.index')->with('success', 'Activo eliminado correctamente');
     }
+
+    /**
+     * Registrar pago de un activo no corriente - afecta caja o banco.
+     */
+    public function pagar(Request $request, $id)
+    {
+        $request->validate([
+            'metodo_pago' => 'required|string|in:Efectivo,Transferencia',
+        ]);
+
+        $activo = ActivoFijo::findOrFail($id);
+        $user = auth()->user();
+        $monto = (float) $activo->monto;
+        $metodoPago = $request->metodo_pago;
+        $esEfectivo = strtolower($metodoPago) === 'efectivo';
+
+        \Illuminate\Support\Facades\DB::beginTransaction();
+        try {
+            if ($esEfectivo) {
+                $cajaAbierta = requireSelectedCaja('registrar el pago del activo');
+
+                $cajaAbierta->sustracciones = floatval($cajaAbierta->sustracciones ?? 0) + $monto;
+                $cajaAbierta->save();
+
+                \App\Models\OperacionCaja::create([
+                    'cierre_caja_id' => $cajaAbierta->id,
+                    'user_id' => $user->id,
+                    'tipo' => 'sustraccion',
+                    'partida' => 'Pago Activo No Corriente',
+                    'concepto' => $activo->nombre,
+                    'importe' => $monto,
+                    'metodo_pago' => $metodoPago,
+                    'es_efectivo' => 1,
+                ]);
+
+                $activo->update([
+                    'is_paid' => true,
+                    'metodo_pago' => $metodoPago,
+                    'cierre_caja_id' => $cajaAbierta->id,
+                ]);
+            } else {
+                $banco = \App\Models\CuentaBancaria::preferidaParaUsuario();
+                if (!$banco) {
+                    throw new \Exception('No hay cuenta bancaria activa para registrar el pago.');
+                }
+
+                \App\Models\BancoMovimiento::create([
+                    'cuenta_bancaria_id' => $banco->id,
+                    'user_id' => $user->id,
+                    'tipo' => 'egreso',
+                    'monto' => $monto,
+                    'concepto' => 'Pago Activo No Corriente: ' . $activo->nombre,
+                    'referencia' => $activo->documento,
+                    'fecha' => now()->toDateString(),
+                    'sucursal_id' => $user->branch_id,
+                ]);
+                $banco->decrement('saldo_actual', $monto);
+
+                $activo->update([
+                    'is_paid' => true,
+                    'metodo_pago' => $metodoPago,
+                ]);
+            }
+
+            \Illuminate\Support\Facades\DB::commit();
+            return redirect()->route('activos.index')->with('success', 'Pago registrado correctamente.');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\DB::rollBack();
+            return redirect()->back()->with('error', 'Error al registrar pago: ' . $e->getMessage());
+        }
+    }
 }

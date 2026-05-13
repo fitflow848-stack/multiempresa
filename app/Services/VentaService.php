@@ -187,10 +187,7 @@ class VentaService
             $venta->save();
 
             // PERSISTENCIA DE PAGOS (Módulo de Bancos / Pagos Mixtos)
-            $cuentaBancaria = \App\Models\CuentaBancaria::where('company_id', $company->id)
-                ->where('is_active', true)
-                ->orderBy('id')
-                ->first();
+            $cuentaBancaria = \App\Models\CuentaBancaria::preferidaParaUsuario();
 
             if (isset($meta['pago_mixto']) && !empty($meta['pago_mixto'])) {
                 $pagoMixto = $meta['pago_mixto'];

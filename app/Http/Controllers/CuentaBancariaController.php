@@ -13,9 +13,7 @@ class CuentaBancariaController extends Controller
     public function index()
     {
         $user = Auth::user();
-        $cuentas = CuentaBancaria::where('company_id', $user->company_id)
-            ->when($user->branch_id, fn($q) => $q->where('sucursal_id', $user->branch_id))
-            ->get();
+        $cuentas = CuentaBancaria::where('company_id', $user->company_id)->get();
 
         return view('bancos.index', compact('cuentas'));
     }
@@ -133,10 +131,7 @@ class CuentaBancariaController extends Controller
         ]);
 
         $user = Auth::user();
-        $banco = CuentaBancaria::where('company_id', $user->company_id)
-            ->where('is_active', true)
-            ->orderBy('id')
-            ->first();
+        $banco = CuentaBancaria::preferidaParaUsuario($user);
 
         if (!$banco) {
             return response()->json(['success' => false, 'message' => 'No hay cuenta bancaria activa configurada.'], 422);

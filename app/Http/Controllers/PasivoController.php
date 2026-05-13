@@ -64,45 +64,11 @@ class PasivoController extends Controller
 
             $pasivo = Pasivo::create($data);
 
-            $tipo = strtolower($pasivo->tipo->nombre);
-            $metodoPago = $request->input('metodo_pago', 'Efectivo');
-            $esEfectivo = (strtolower($metodoPago) === 'efectivo' || $metodoPago === '1' || $metodoPago === 1) ? 1 : 0;
-
-            // Adelantos de Clientes y Aportes pueden entrar a la caja si son en efectivo y hay una caja seleccionada
-            if (in_array($tipo, ['adelanto de clientes', 'aporte', 'aportes'])) {
-                
-                // Obtenemos la caja seleccionada si existe
-                $cajaAbierta = getSelectedCaja();
-
-                if ($cajaAbierta) {
-                    // Si hay caja y es efectivo, sumamos al saldo
-                    if ($esEfectivo) {
-                        $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $pasivo->monto;
-                        $cajaAbierta->save();
-                    }
-
-                    // Registramos la operación de caja para trazabilidad
-                    $operacion = OperacionCaja::create([
-                        'cierre_caja_id' => $cajaAbierta->id,
-                        'user_id' => Auth::id(),
-                        'tipo' => str_contains($tipo, 'aporte') ? 'aporte' : 'ingreso',
-                        'partida' => $pasivo->tipo->nombre,
-                        'concepto' => 'Registro de ' . $pasivo->tipo->nombre . ': ' . $pasivo->nombre,
-                        'importe' => $pasivo->monto,
-                        'metodo_pago' => $metodoPago,
-                        'es_efectivo' => $esEfectivo,
-                    ]);
-
-                    // Vinculamos el pasivo con la operación de caja
-                    $pasivo->update([
-                        'cierre_caja_id' => $cajaAbierta->id,
-                        'id_operacion_caja' => $operacion->id
-                    ]);
-                }
-            }
+            // El registro NO afecta caja. Solo se refleja en el balance.
+            // El impacto en caja/banco se da al momento de PAGAR (botón Pagar).
 
             DB::commit();
-            return redirect()->route('pasivos.index')->with('success', 'Registro creado correctamente' . (isset($cajaAbierta) && $cajaAbierta ? ' y reflejado en caja.' : '.'));
+            return redirect()->route('pasivos.index')->with('success', 'Registro creado correctamente (solo balance, sin afectar caja).');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Error al guardar: ' . $e->getMessage());
@@ -256,8 +222,7 @@ class PasivoController extends Controller
 
                 // Si es transferencia, registrar movimiento bancario
                 if (strtolower($metodoPago) === 'transferencia') {
-                    $banco = \App\Models\CuentaBancaria::where('company_id', Auth::user()->company_id)
-                        ->where('is_active', true)->orderBy('id')->first();
+                    $banco = \App\Models\CuentaBancaria::preferidaParaUsuario();
                     if ($banco) {
                         $tipoMovBanco = in_array($tipoOp, ['ingreso', 'aporte']) ? 'ingreso' : 'egreso';
                         \App\Models\BancoMovimiento::create([

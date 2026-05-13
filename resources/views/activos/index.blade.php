@@ -81,12 +81,13 @@
                                         <th>Nombre</th>
                                         <th>Documento</th>
                                         <th class="text-right">Monto (S/)</th>
+                                        <th class="text-center">Estado</th>
                                         <th class="text-center">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @forelse($activos as $activo)
-                                        <tr>
+                                        <tr class="{{ $activo->is_paid ? 'table-success' : '' }}">
                                             <td>{{ $activo->fecha_adquisicion->format('d/m/Y') }}</td>
                                             <td><span class="badge bg-primary">{{ $activo->tipo->nombre }}</span></td>
                                             <td>{{ $activo->nombre }}</td>
@@ -94,6 +95,23 @@
                                             <td class="text-right font-weight-bold">S/
                                                 {{ number_format($activo->monto, 2) }}</td>
                                             <td class="text-center">
+                                                @if($activo->is_paid)
+                                                    <span class="badge bg-success">PAGADO</span>
+                                                    @if($activo->metodo_pago)
+                                                        <br><small class="text-muted">{{ $activo->metodo_pago }}</small>
+                                                    @endif
+                                                @else
+                                                    <span class="badge bg-warning text-dark">PENDIENTE</span>
+                                                @endif
+                                            </td>
+                                            <td class="text-center">
+                                                @if(!$activo->is_paid)
+                                                    <button type="button" class="btn btn-success btn-circle btn-sm"
+                                                        onclick="abrirModalPagoActivo({{ $activo->id }}, '{{ addslashes($activo->nombre) }}', {{ $activo->monto }})"
+                                                        title="Registrar Pago">
+                                                        <i class="bx bx-money"></i>
+                                                    </button>
+                                                @endif
                                                 <form action="{{ route('activos.destroy', $activo->id) }}" method="POST"
                                                     class="d-inline delete-form">
                                                     @csrf
@@ -107,7 +125,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="text-center text-muted">No hay activos registrados.
+                                            <td colspan="7" class="text-center text-muted">No hay activos registrados.
                                             </td>
                                         </tr>
                                     @endforelse
@@ -216,7 +234,44 @@
 @endsection
 
 @push('scripts')
+    <!-- Modal Pago Activo -->
+    <div class="modal fade" id="modalPagoActivo" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-sm" role="document">
+            <div class="modal-content">
+                <form id="formPagoActivo" method="POST">
+                    @csrf
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">Registrar Pago</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="mb-2"><strong id="pagoActivoNombre"></strong></p>
+                        <p class="mb-3">Monto: <strong>S/ <span id="pagoActivoMonto"></span></strong></p>
+                        <div class="form-group">
+                            <label>Método de Pago <span class="text-danger">*</span></label>
+                            <select name="metodo_pago" class="form-control" required>
+                                <option value="Efectivo">Efectivo (Caja)</option>
+                                <option value="Transferencia">Transferencia (Banco)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">Confirmar Pago</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
+        function abrirModalPagoActivo(id, nombre, monto) {
+            document.getElementById('formPagoActivo').action = "{{ url('activos') }}/" + id + "/pagar";
+            document.getElementById('pagoActivoNombre').textContent = nombre;
+            document.getElementById('pagoActivoMonto').textContent = parseFloat(monto).toFixed(2);
+            new bootstrap.Modal(document.getElementById('modalPagoActivo')).show();
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             // Script para guardar tipo via AJAX y actualizar el select
             const formTipo = document.getElementById('formNuevoTipo');

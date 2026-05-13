@@ -346,6 +346,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::get('/', [ActivoCorrienteController::class, 'index'])->name('activos_corrientes.index');
         Route::post('/', [ActivoCorrienteController::class, 'store'])->name('activos_corrientes.store');
         Route::post('/tipo', [ActivoCorrienteController::class, 'storeTipo'])->name('activos_corrientes.storeTipo');
+        Route::post('/{id}/cobrar', [ActivoCorrienteController::class, 'cobrar'])->name('activos_corrientes.cobrar');
         Route::get('/{id}/edit', [ActivoCorrienteController::class, 'edit'])->name('activos_corrientes.edit');
         Route::post('/{id}/update', [ActivoCorrienteController::class, 'update'])->name('activos_corrientes.update');
         Route::delete('/{id}', [ActivoCorrienteController::class, 'destroy'])->name('activos_corrientes.destroy');
@@ -356,6 +357,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::get('/', [ActivoFijoController::class, 'index'])->name('activos.index');
         Route::post('/', [ActivoFijoController::class, 'store'])->name('activos.store');
         Route::post('/tipo', [ActivoFijoController::class, 'storeTipo'])->name('activos.storeTipo');
+        Route::post('/{id}/pagar', [ActivoFijoController::class, 'pagar'])->name('activos.pagar');
         Route::delete('/{id}', [ActivoFijoController::class, 'destroy'])->name('activos.destroy');
     });
 

@@ -22,12 +22,16 @@ class ActivoFijo extends Model
         'monto',
         'fecha_adquisicion',
         'documento',
-        'observaciones'
+        'observaciones',
+        'is_paid',
+        'metodo_pago',
+        'cierre_caja_id'
     ];
 
     protected $casts = [
         'fecha_adquisicion' => 'date',
-        'monto' => 'decimal:2'
+        'monto' => 'decimal:2',
+        'is_paid' => 'boolean'
     ];
 
     public function tipo()

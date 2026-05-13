@@ -360,8 +360,7 @@ class ComprasController extends Controller
                 $metodoPago = $data['metodo_pago_contado'] ?? 'caja';
                 try {
                     if ($metodoPago === 'banco') {
-                        $banco = \App\Models\CuentaBancaria::where('company_id', $compra->company_id)
-                            ->where('is_active', true)->orderBy('id')->first();
+                        $banco = \App\Models\CuentaBancaria::preferidaParaUsuario();
                         if ($banco) {
                             \App\Models\BancoMovimiento::create([
                                 'cuenta_bancaria_id' => $banco->id,
