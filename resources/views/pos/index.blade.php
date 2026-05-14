@@ -570,6 +570,7 @@
             const p = productos[0];
             const prodAdd = {
                 producto_id: p.producto_id,
+                product_linea_id: p.product_linea_id || null,
                 id: p.id,
                 nombre: p.nombre,
                 marca: p.marca || '',
@@ -861,6 +862,7 @@
                 
                 const prodAdd = {
                     producto_id: p.producto_id,
+                    product_linea_id: p.product_linea_id || null,
                     id: p.id,
                     nombre: p.nombre,
                     marca: p.marca || '',
@@ -2193,8 +2195,10 @@
                 return String(p.almacen_detalle_id) === String(producto.almacen_detalle_id) &&
                     precioExistente === precioProducto;
             }
-            // Agrupar por producto_id y precio cuando no hay info de lote
-            return p.producto_id === producto.producto_id && precioExistente === precioProducto;
+            // Agrupar por producto_id + producto_linea_id + precio
+            const mismaLinea = (p.product_linea_id || p.producto_linea_id || null) === 
+                               (producto.product_linea_id || producto.producto_linea_id || null);
+            return p.producto_id === producto.producto_id && mismaLinea && precioExistente === precioProducto;
         });
 
         if (existente) {
