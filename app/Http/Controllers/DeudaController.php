@@ -212,8 +212,8 @@ class DeudaController extends Controller
                 if ($esEfectivo) {
                     $cajaAbierta->ingresos = floatval($cajaAbierta->ingresos ?? 0) + $montoPago;
                     $cajaAbierta->save();
-                } else {
-                    // Pago digital (Plin, Yape, Transferencia) → registrar ingreso en banco
+                } else if (strtolower($mP) === 'transferencia') {
+                    // Solo transferencia bancaria afecta saldo de banco
                     $banco = \App\Models\CuentaBancaria::preferidaParaUsuario();
                     if ($banco) {
                         \App\Models\BancoMovimiento::create([
@@ -373,8 +373,8 @@ class DeudaController extends Controller
                 if ($esEfectivo) {
                     $cajaAbierta->ingresos = floatval($cajaAbierta->ingresos ?? 0) + $montoInicial;
                     $cajaAbierta->save();
-                } else {
-                    // Pago digital (Plin, Yape, Transferencia) → registrar ingreso en banco
+                } else if (strtolower($mP) === 'transferencia') {
+                    // Solo transferencia bancaria afecta saldo de banco
                     $banco = \App\Models\CuentaBancaria::preferidaParaUsuario();
                     if ($banco) {
                         \App\Models\BancoMovimiento::create([

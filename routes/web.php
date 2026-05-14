@@ -405,6 +405,8 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
     // Bancos y Transacciones Digitales
     Route::resource('bancos', CuentaBancariaController::class)->middleware('can:bancos.ver');
     Route::post('bancos/{banco}/movimiento', [CuentaBancariaController::class, 'storeMovimiento'])->name('bancos.movimiento.store')->middleware('can:bancos.ver');
+    Route::put('bancos/{banco}/movimiento/{movimiento}', [CuentaBancariaController::class, 'updateMovimiento'])->name('bancos.movimiento.update')->middleware('can:bancos.ver');
+    Route::delete('bancos/{banco}/movimiento/{movimiento}', [CuentaBancariaController::class, 'destroyMovimiento'])->name('bancos.movimiento.destroy')->middleware('can:bancos.ver');
     Route::post('bancos/pase-caja-banco', [CuentaBancariaController::class, 'paseCajaBanco'])->name('bancos.pase-caja-banco')->middleware('can:bancos.ver');
 
 

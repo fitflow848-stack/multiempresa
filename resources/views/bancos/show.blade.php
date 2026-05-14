@@ -105,6 +105,7 @@
                                 <th>Referencia</th>
                                 <th class="text-end">Monto</th>
                                 <th class="text-end">Saldo</th>
+                                <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -134,10 +135,25 @@
                                         $saldoAcumulado -= ($mov->tipo === 'ingreso' ? $mov->monto : -$mov->monto);
                                     @endphp
                                 </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-outline-warning p-1"
+                                        onclick="editarMovimiento({{ $mov->id }}, '{{ $mov->tipo }}', {{ $mov->monto }}, '{{ addslashes($mov->concepto) }}', '{{ $mov->referencia }}', '{{ $mov->fecha }}')"
+                                        title="Editar">
+                                        <i class="bx bx-edit-alt"></i>
+                                    </button>
+                                    <form action="{{ route('bancos.movimiento.destroy', [$banco->id, $mov->id]) }}" method="POST" class="d-inline"
+                                        onsubmit="return confirm('¿Eliminar este movimiento? Se revertirá el saldo.')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-outline-danger p-1" title="Eliminar">
+                                            <i class="bx bx-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="6" class="text-center py-5 text-muted">
+                                <td colspan="7" class="text-center py-5 text-muted">
                                     No hay movimientos registrados en esta cuenta.
                                 </td>
                             </tr>
@@ -198,4 +214,63 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Editar Movimiento -->
+<div class="modal fade" id="modalEditarMovimiento" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="formEditarMovimiento" method="POST">
+                @csrf
+                @method('PUT')
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Movimiento</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Tipo de Operación</label>
+                            <select name="tipo" id="editMovTipo" class="form-select" required>
+                                <option value="ingreso">Ingreso (+)</option>
+                                <option value="egreso">Egreso (-)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Fecha</label>
+                            <input type="date" name="fecha" id="editMovFecha" class="form-control" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Monto ({{ $banco->moneda }})</label>
+                            <input type="number" step="0.01" name="monto" id="editMovMonto" class="form-control form-control-lg fw-bold" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Concepto / Motivo</label>
+                            <input type="text" name="concepto" id="editMovConcepto" class="form-control" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">Referencia (Opcional)</label>
+                            <input type="text" name="referencia" id="editMovReferencia" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">Actualizar Movimiento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function editarMovimiento(id, tipo, monto, concepto, referencia, fecha) {
+    document.getElementById('formEditarMovimiento').action = "{{ url('bancos') }}/{{ $banco->id }}/movimiento/" + id;
+    document.getElementById('editMovTipo').value = tipo;
+    document.getElementById('editMovMonto').value = monto;
+    document.getElementById('editMovConcepto').value = concepto;
+    document.getElementById('editMovReferencia').value = referencia || '';
+    document.getElementById('editMovFecha').value = fecha;
+    new bootstrap.Modal(document.getElementById('modalEditarMovimiento')).show();
+}
+</script>
 @endsection

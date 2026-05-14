@@ -173,6 +173,77 @@ class CuentaBancariaController extends Controller
         return redirect()->route('bancos.index')->with('success', 'Cuenta bancaria eliminada correctamente.');
     }
 
+    public function updateMovimiento(Request $request, CuentaBancaria $banco, $movimientoId)
+    {
+        $this->authorizeOwner($banco);
+
+        $request->validate([
+            'tipo' => 'required|in:ingreso,egreso',
+            'monto' => 'required|numeric|min:0.01',
+            'concepto' => 'required|string',
+            'fecha' => 'required|date',
+        ]);
+
+        $movimiento = BancoMovimiento::where('cuenta_bancaria_id', $banco->id)->findOrFail($movimientoId);
+
+        DB::beginTransaction();
+        try {
+            // Revertir el movimiento anterior del saldo
+            if ($movimiento->tipo === 'ingreso') {
+                $banco->decrement('saldo_actual', $movimiento->monto);
+            } else {
+                $banco->increment('saldo_actual', $movimiento->monto);
+            }
+
+            // Actualizar el movimiento
+            $movimiento->update([
+                'tipo' => $request->tipo,
+                'monto' => $request->monto,
+                'concepto' => $request->concepto,
+                'referencia' => $request->referencia,
+                'fecha' => $request->fecha,
+            ]);
+
+            // Aplicar el nuevo movimiento al saldo
+            if ($request->tipo === 'ingreso') {
+                $banco->increment('saldo_actual', $request->monto);
+            } else {
+                $banco->decrement('saldo_actual', $request->monto);
+            }
+
+            DB::commit();
+            return back()->with('success', 'Movimiento actualizado correctamente.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Error al actualizar: ' . $e->getMessage());
+        }
+    }
+
+    public function destroyMovimiento(CuentaBancaria $banco, $movimientoId)
+    {
+        $this->authorizeOwner($banco);
+
+        $movimiento = BancoMovimiento::where('cuenta_bancaria_id', $banco->id)->findOrFail($movimientoId);
+
+        DB::beginTransaction();
+        try {
+            // Revertir el saldo
+            if ($movimiento->tipo === 'ingreso') {
+                $banco->decrement('saldo_actual', $movimiento->monto);
+            } else {
+                $banco->increment('saldo_actual', $movimiento->monto);
+            }
+
+            $movimiento->delete();
+
+            DB::commit();
+            return back()->with('success', 'Movimiento eliminado y saldo revertido.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Error al eliminar: ' . $e->getMessage());
+        }
+    }
+
     private function authorizeOwner(CuentaBancaria $banco)
     {
         if ($banco->company_id !== Auth::user()->company_id) {
