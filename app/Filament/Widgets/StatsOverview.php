@@ -33,6 +33,11 @@ class StatsOverview extends StatsOverviewWidget
             $cajasQuery->where('id_empresa', $companyId);
         }
 
+        // Excluir anuladas, devueltas y notas de crédito de las ventas
+        $ventasQuery->where('estado', '!=', '0')
+            ->where('estado', '!=', '3')
+            ->where('id_tido', '!=', 5);
+
         // Ventas totales
         $totalVentas = $ventasQuery->sum('total');
 
@@ -76,7 +81,7 @@ class StatsOverview extends StatsOverviewWidget
 
         // Gráfico ventas últimos 7 días
         $chartData = collect(range(6, 0))->map(function ($daysAgo) use ($companyId, $isSuperAdmin) {
-            $q = Venta::query();
+            $q = Venta::query()->where('estado', '!=', '0')->where('estado', '!=', '3')->where('id_tido', '!=', 5);
             if (!$isSuperAdmin && $companyId) $q->where('id_empresa', $companyId);
             return (float) $q->whereDate('fecha_emision', now()->subDays($daysAgo))->sum('total');
         })->toArray();

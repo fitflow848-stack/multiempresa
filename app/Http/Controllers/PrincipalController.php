@@ -147,14 +147,16 @@ class PrincipalController extends Controller
 
         // Ventas de los últimos 6 meses
         $ventasMensualesQuery = Venta::where('id_empresa', $companyId)
-            ->where('estado', '!=', 0)
-            ->where('created_at', '>=', Carbon::now()->subMonths(6));
+            ->where('estado', '!=', '0')
+            ->where('estado', '!=', '3')
+            ->where('id_tido', '!=', 5)
+            ->where('fecha_emision', '>=', Carbon::now()->subMonths(6));
         
         if ($branchId) $ventasMensualesQuery->where('sucursal', $branchId);
 
         $ventasMensuales = $ventasMensualesQuery->select(
-                DB::raw('MONTH(created_at) as mes'),
-                DB::raw('YEAR(created_at) as anio'),
+                DB::raw('MONTH(fecha_emision) as mes'),
+                DB::raw('YEAR(fecha_emision) as anio'),
                 DB::raw('SUM(total) as total'),
                 DB::raw('COUNT(*) as cantidad')
             )
@@ -182,9 +184,14 @@ class PrincipalController extends Controller
         }
 
         // Ventas por tipo de documento
-        $ventasPorTipo = Venta::where('id_empresa', $companyId)
-            ->where('estado', '!=', 0)
-            ->where('created_at', '>=', Carbon::now()->subMonth())
+        $ventasPorTipoQuery = Venta::where('id_empresa', $companyId)
+            ->where('estado', '!=', '0')
+            ->where('estado', '!=', '3')
+            ->where('id_tido', '!=', 5)
+            ->where('fecha_emision', '>=', Carbon::now()->subMonth());
+        if ($branchId) $ventasPorTipoQuery->where('sucursal', $branchId);
+        
+        $ventasPorTipo = $ventasPorTipoQuery
             ->select('id_tido', DB::raw('SUM(total) as total'), DB::raw('COUNT(*) as cantidad'))
             ->groupBy('id_tido')
             ->get()
@@ -202,8 +209,10 @@ class PrincipalController extends Controller
             ->join('ventas', 'venta_detalles.id_venta', '=', 'ventas.id_venta')
             ->join('productos', 'venta_detalles.servicio_id', '=', 'productos.id')
             ->where('ventas.id_empresa', $companyId)
-            ->where('ventas.estado', '!=', 0)
-            ->where('ventas.created_at', '>=', Carbon::now()->subDays(30));
+            ->where('ventas.estado', '!=', '0')
+            ->where('ventas.estado', '!=', '3')
+            ->where('ventas.id_tido', '!=', 5)
+            ->where('ventas.fecha_emision', '>=', Carbon::now()->subDays(30));
         
         if ($branchId) $topProductosQuery->where('ventas.sucursal', $branchId);
 
@@ -218,11 +227,15 @@ class PrincipalController extends Controller
             ->get();
 
         // Ventas de los últimos 7 días
-        $ventasSemana = Venta::where('id_empresa', $companyId)
-            ->where('estado', '!=', 0)
-            ->where('created_at', '>=', Carbon::now()->subDays(7))
-            ->select(
-                DB::raw('DATE(created_at) as fecha'),
+        $ventasSemanaQuery = Venta::where('id_empresa', $companyId)
+            ->where('estado', '!=', '0')
+            ->where('estado', '!=', '3')
+            ->where('id_tido', '!=', 5)
+            ->where('fecha_emision', '>=', Carbon::now()->subDays(7));
+        if ($branchId) $ventasSemanaQuery->where('sucursal', $branchId);
+        
+        $ventasSemana = $ventasSemanaQuery->select(
+                DB::raw('DATE(fecha_emision) as fecha'),
                 DB::raw('SUM(total) as total')
             )
             ->groupBy('fecha')
@@ -240,31 +253,39 @@ class PrincipalController extends Controller
 
         // Venta de hoy
         $ventaHoyQuery = Venta::where('id_empresa', $companyId)
-            ->where('estado', '!=', 0)
-            ->whereDate('created_at', Carbon::today());
+            ->where('estado', '!=', '0')
+            ->where('estado', '!=', '3')
+            ->where('id_tido', '!=', 5)
+            ->whereDate('fecha_emision', Carbon::today());
         if ($branchId) $ventaHoyQuery->where('sucursal', $branchId);
         $ventaHoy = $ventaHoyQuery->sum('total');
 
         // Venta de ayer para comparación
         $ventaAyerQuery = Venta::where('id_empresa', $companyId)
-            ->where('estado', '!=', 0)
-            ->whereDate('created_at', Carbon::yesterday());
+            ->where('estado', '!=', '0')
+            ->where('estado', '!=', '3')
+            ->where('id_tido', '!=', 5)
+            ->whereDate('fecha_emision', Carbon::yesterday());
         if ($branchId) $ventaAyerQuery->where('sucursal', $branchId);
         $ventaAyer = $ventaAyerQuery->sum('total');
 
         // Venta del mes
         $ventaMesQuery = Venta::where('id_empresa', $companyId)
-            ->where('estado', '!=', 0)
-            ->whereMonth('created_at', Carbon::now()->month)
-            ->whereYear('created_at', Carbon::now()->year);
+            ->where('estado', '!=', '0')
+            ->where('estado', '!=', '3')
+            ->where('id_tido', '!=', 5)
+            ->whereMonth('fecha_emision', Carbon::now()->month)
+            ->whereYear('fecha_emision', Carbon::now()->year);
         if ($branchId) $ventaMesQuery->where('sucursal', $branchId);
         $ventaMes = $ventaMesQuery->sum('total');
 
         // Venta del mes pasado
         $ventaMesPasadoQuery = Venta::where('id_empresa', $companyId)
-            ->where('estado', '!=', 0)
-            ->whereMonth('created_at', Carbon::now()->subMonth()->month)
-            ->whereYear('created_at', Carbon::now()->subMonth()->year);
+            ->where('estado', '!=', '0')
+            ->where('estado', '!=', '3')
+            ->where('id_tido', '!=', 5)
+            ->whereMonth('fecha_emision', Carbon::now()->subMonth()->month)
+            ->whereYear('fecha_emision', Carbon::now()->subMonth()->year);
         if ($branchId) $ventaMesPasadoQuery->where('sucursal', $branchId);
         $ventaMesPasado = $ventaMesPasadoQuery->sum('total');
 
