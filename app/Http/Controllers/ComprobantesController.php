@@ -297,7 +297,22 @@ class ComprobantesController extends Controller
                 }
                 }
 
-                // 2.2 Anular Deuda asociada si existe (después de usar sus datos para caja)
+                // 2.2 Revertir movimientos bancarios asociados a la venta
+                $movimientosBanco = \App\Models\BancoMovimiento::where('id_venta', $venta->id_venta)->get();
+                foreach ($movimientosBanco as $movBanco) {
+                    // Revertir el saldo de la cuenta
+                    $cuentaBanco = \App\Models\CuentaBancaria::find($movBanco->cuenta_bancaria_id);
+                    if ($cuentaBanco) {
+                        if ($movBanco->tipo === 'ingreso') {
+                            $cuentaBanco->decrement('saldo_actual', $movBanco->monto);
+                        } else {
+                            $cuentaBanco->increment('saldo_actual', $movBanco->monto);
+                        }
+                    }
+                    $movBanco->delete();
+                }
+
+                // 2.3 Anular Deuda asociada si existe (después de usar sus datos para caja)
 
                 $deudaAsociada = \App\Models\Deuda::where('venta_id', $venta->id_venta)->first();
                 if ($deudaAsociada) {
