@@ -90,14 +90,65 @@ class CuentaBancariaController extends Controller
         $this->authorizeOwner($banco);
 
         $request->validate([
-            'tipo' => 'required|in:ingreso,egreso',
+            'tipo' => 'required|in:ingreso,egreso,pase_caja',
             'monto' => 'required|numeric|min:0.01',
             'concepto' => 'required|string',
             'fecha' => 'required|date',
+            'sucursal_destino_id' => 'nullable|integer',
         ]);
 
         DB::beginTransaction();
         try {
+            if ($request->tipo === 'pase_caja') {
+                // Pase de Banco a Caja: resta banco, suma caja de la sucursal destino
+                $sucursalId = $request->sucursal_destino_id ?? Auth::user()->branch_id;
+                
+                // Buscar caja abierta en la sucursal destino
+                $cajaDestino = \App\Models\CierreCaja::where('id_empresa', Auth::user()->company_id)
+                    ->where('sucursal_id', $sucursalId)
+                    ->whereNull('fecha_cierre')
+                    ->latest()
+                    ->first();
+
+                if (!$cajaDestino) {
+                    throw new \Exception('No hay caja abierta en la sucursal seleccionada. Abra una caja primero.');
+                }
+
+                // Registrar egreso en banco
+                BancoMovimiento::create([
+                    'cuenta_bancaria_id' => $banco->id,
+                    'user_id' => Auth::id(),
+                    'tipo' => 'egreso',
+                    'monto' => $request->monto,
+                    'concepto' => 'Pase a Caja: ' . ($request->concepto ?: 'Retiro para caja'),
+                    'referencia' => $request->referencia,
+                    'fecha' => $request->fecha,
+                    'sucursal_id' => $sucursalId,
+                ]);
+                $banco->decrement('saldo_actual', $request->monto);
+
+                // Registrar ingreso en caja
+                $cajaDestino->ingresos = floatval($cajaDestino->ingresos ?? 0) + $request->monto;
+                $cajaDestino->save();
+
+                \App\Models\OperacionCaja::create([
+                    'company_id' => Auth::user()->company_id,
+                    'sucursal_id' => $sucursalId,
+                    'cierre_caja_id' => $cajaDestino->id,
+                    'user_id' => Auth::id(),
+                    'tipo' => 'ingreso',
+                    'partida' => 'Pase de Banco',
+                    'concepto' => 'Pase de ' . $banco->banco_nombre . ': ' . ($request->concepto ?: 'Ingreso desde banco'),
+                    'importe' => $request->monto,
+                    'metodo_pago' => 'Transferencia',
+                    'es_efectivo' => 1, // Entra como efectivo a caja
+                ]);
+
+                DB::commit();
+                return back()->with('success', 'Pase a caja registrado. S/ ' . number_format($request->monto, 2) . ' transferido a caja.');
+            }
+
+            // Movimiento normal (ingreso/egreso)
             BancoMovimiento::create([
                 'cuenta_bancaria_id' => $banco->id,
                 'user_id' => Auth::id(),

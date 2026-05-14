@@ -183,14 +183,27 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Tipo de Operación</label>
-                            <select name="tipo" class="form-select" required>
+                            <select name="tipo" id="tipoMovimiento" class="form-select" required>
                                 <option value="ingreso">Ingreso (+)</option>
                                 <option value="egreso">Egreso (-)</option>
+                                <option value="pase_caja">Pase a Caja (Banco → Caja)</option>
                             </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Fecha</label>
                             <input type="date" name="fecha" class="form-control" value="{{ date('Y-m-d') }}" required>
+                        </div>
+                        <div class="col-12 d-none" id="seccionSucursalPase">
+                            <label class="form-label fw-bold">Sucursal destino (Caja)</label>
+                            <select name="sucursal_destino_id" id="sucursalDestinoSelect" class="form-select">
+                                @php
+                                    $sucursalesPase = \App\Models\Sucursal::where('company_id', auth()->user()->company_id)->activas()->get();
+                                @endphp
+                                @foreach($sucursalesPase as $suc)
+                                    <option value="{{ $suc->id }}" {{ auth()->user()->branch_id == $suc->id ? 'selected' : '' }}>{{ $suc->nombre }}</option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted">Se sumará como ingreso a la caja abierta de esta sucursal.</small>
                         </div>
                         <div class="col-12">
                             <label class="form-label fw-bold">Monto ({{ $banco->moneda }})</label>
@@ -272,5 +285,16 @@ function editarMovimiento(id, tipo, monto, concepto, referencia, fecha) {
     document.getElementById('editMovFecha').value = fecha;
     new bootstrap.Modal(document.getElementById('modalEditarMovimiento')).show();
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const tipoSelect = document.getElementById('tipoMovimiento');
+    const seccionSucursal = document.getElementById('seccionSucursalPase');
+    
+    if (tipoSelect) {
+        tipoSelect.addEventListener('change', function() {
+            seccionSucursal.classList.toggle('d-none', this.value !== 'pase_caja');
+        });
+    }
+});
 </script>
 @endsection
