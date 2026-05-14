@@ -65,7 +65,8 @@
                                 </div>
                             </div>
 
-                            <div class="d-flex gap-4 mt-4 pt-3 border-top">
+                            <div class="mt-4 pt-3 border-top" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                                <div class="d-flex gap-4" style="min-width: max-content;">
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="form-label-custom mb-0">Moneda:</span>
                                     <div class="btn-group btn-group-sm">
@@ -82,7 +83,7 @@
                                     <label class="form-check-label small fw-bold" for="credito">CRÉDITO</label>
                                 </div>
                                 {{-- Método de pago para CONTADO --}}
-                                <div id="seccion-metodo-pago-contado" class="mt-2">
+                                <div id="seccion-metodo-pago-contado">
                                     <label class="small fw-bold text-muted d-block mb-1">Método de pago (Contado)</label>
                                     <select name="metodo_pago_contado" id="metodo_pago_contado" class="form-select form-select-sm">
                                         <option value="caja">Caja</option>
@@ -102,6 +103,7 @@
                                 <div class="form-check form-switch pt-1">
                                     <input class="form-check-input" type="checkbox" id="inc_impuesto" name="inc_impuesto" checked>
                                     <label class="form-check-label small fw-bold" for="inc_impuesto">INC. IGV</label>
+                                </div>
                                 </div>
                             </div>
                         </div>
