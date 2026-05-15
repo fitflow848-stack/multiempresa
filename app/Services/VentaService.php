@@ -222,6 +222,7 @@ class VentaService
                             'fecha' => now()->toDateString(),
                             'cierre_caja_id' => $openCaja->id,
                             'id_venta' => $venta->id_venta,
+                            'sucursal_id' => $user->branch_id,
                         ]);
                         $cuentaBancaria->increment('saldo_actual', $montoDigital);
                     }
@@ -251,6 +252,7 @@ class VentaService
                         'fecha' => now()->toDateString(),
                         'cierre_caja_id' => $openCaja->id,
                         'id_venta' => $venta->id_venta,
+                        'sucursal_id' => $user->branch_id,
                     ]);
                     $cuentaBancaria->increment('saldo_actual', $montoVenta);
                 }

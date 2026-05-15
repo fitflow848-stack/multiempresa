@@ -157,6 +157,7 @@ class CuentaBancariaController extends Controller
                 'concepto' => $request->concepto,
                 'referencia' => $request->referencia,
                 'fecha' => $request->fecha,
+                'sucursal_id' => Auth::user()->branch_id,
             ]);
 
             if ($request->tipo === 'ingreso') {

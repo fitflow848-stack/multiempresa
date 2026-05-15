@@ -233,6 +233,7 @@ class PasivoController extends Controller
                             'concepto' => $partida . ': ' . ($pasivo->empresa_persona ?? $pasivo->nombre),
                             'referencia' => $request->documento_pago ?? $pasivo->documento,
                             'fecha' => $request->fecha_pago,
+                            'sucursal_id' => Auth::user()->branch_id,
                         ]);
                         if ($tipoMovBanco === 'egreso') {
                             $banco->decrement('saldo_actual', $monto);
