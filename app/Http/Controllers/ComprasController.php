@@ -193,6 +193,25 @@ class ComprasController extends Controller
             'precio_modificado' => ['nullable', 'array'],
         ]);
 
+        // Validar caja abierta si el método de pago es "caja" y no es crédito
+        $esCredito = isset($data['credito']) && $data['credito'];
+        $metodoPagoContado = $data['metodo_pago_contado'] ?? 'caja';
+        
+        if (!$esCredito && $metodoPagoContado === 'caja') {
+            $cajaCheck = getSelectedCaja();
+            if (!$cajaCheck) {
+                $cajaCheck = \App\Models\CierreCaja::where('id_empresa', Auth::user()->company_id)
+                    ->where('sucursal_id', Auth::user()->branch_id)
+                    ->whereNull('fecha_cierre')
+                    ->latest()->first();
+            }
+            if (!$cajaCheck) {
+                return redirect()->back()
+                    ->with('error', 'No hay caja abierta. Debe abrir una caja antes de registrar una compra con pago en efectivo.')
+                    ->withInput();
+            }
+        }
+
         // Guardar en transacción
         DB::beginTransaction();
         try {

@@ -103,7 +103,7 @@ class CuentaBancariaController extends Controller
                 // Pase de Banco a Caja: resta banco, suma caja de la sucursal destino
                 $sucursalId = $request->sucursal_destino_id ?? Auth::user()->branch_id;
                 
-                // Buscar caja abierta en la sucursal destino
+                // Validar caja abierta ANTES de hacer cualquier operación
                 $cajaDestino = \App\Models\CierreCaja::where('id_empresa', Auth::user()->company_id)
                     ->where('sucursal_id', $sucursalId)
                     ->whereNull('fecha_cierre')
@@ -111,7 +111,7 @@ class CuentaBancariaController extends Controller
                     ->first();
 
                 if (!$cajaDestino) {
-                    throw new \Exception('No hay caja abierta en la sucursal seleccionada. Abra una caja primero.');
+                    return back()->with('error', 'No hay caja abierta en la sucursal seleccionada. Debe abrir una caja primero antes de realizar un pase.');
                 }
 
                 // Registrar egreso en banco

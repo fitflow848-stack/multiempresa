@@ -282,30 +282,8 @@ class VentaService
                 $deuda->sucursal_id = $user->branch_id; // Sincronizado con la sesión activa
                 $deuda->save();
 
-                // REPORTE AUTOMÁTICO A FINANZAS ESPECIALES (Requerimiento)
-                try {
-                    $tipoActivo = \App\Models\TipoActivoCorriente::firstOrCreate(
-                        ['nombre' => 'Cuentas por Cobrar (POS)', 'company_id' => $company->id],
-                        ['descripcion' => 'Deudas generadas automáticamente desde el POS']
-                    );
-
-                    \App\Models\ActivoCorriente::create([
-                        'company_id' => $company->id,
-                        'sucursal_id' => $user->branch_id,
-                        'tipo_activo_corriente_id' => $tipoActivo->id,
-                        'nombre' => $clienteData['nombre'] ?? 'Cliente Deuda',
-                        'monto' => $montoDeuda,
-                        'fecha_registro' => now(),
-                        'documento' => $venta->serie . '-' . str_pad($venta->numero, 8, '0', STR_PAD_LEFT),
-                        'observaciones' => "Venta a Crédito: " . $venta->serie . '-' . str_pad($venta->numero, 8, '0', STR_PAD_LEFT),
-                        'user_id' => $user->id,
-                        'cierre_caja_id' => $openCaja->id,
-                        'tipo_adelanto' => 'pos_credito' // Identificador interno
-                    ]);
-                } catch (\Exception $fe) {
-                    Log::error("Error al reportar a Finanzas Especiales: " . $fe->getMessage());
-                    // No bloqueamos la venta si falla este reporte secundario
-                }
+                // NOTA: Las cuentas por cobrar se gestionan desde la tabla 'deudas'.
+                // No se duplican en activos corrientes para evitar inconsistencias.
 
                 Log::info("Deuda creada para cliente {$clienteData['id']} por monto S/ {$montoDeuda}", [
                     'venta_id' => $venta->id_venta,
