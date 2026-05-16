@@ -436,32 +436,8 @@ class ComprasController extends Controller
                                     'observaciones' => ($anticipo->observaciones ? $anticipo->observaciones . ' | ' : '') . 'Saldado con compra #' . $compra->id . ' (Monto original: S/' . number_format($montoAnticipo, 2) . ')'
                                 ]);
 
-                                // Si la compra cuesta más que el anticipo, la diferencia sale de caja
-                                $diferencia = $totalCompra - $montoAnticipo;
-                                if ($diferencia > 0.01) {
-                                    $cajaAbierta = getSelectedCaja();
-                                    if (!$cajaAbierta) {
-                                        $cajaAbierta = \App\Models\CierreCaja::where('id_empresa', $compra->company_id)
-                                            ->where('sucursal_id', Auth::user()->branch_id)
-                                            ->whereNull('fecha_cierre')
-                                            ->latest()->first();
-                                    }
-                                    if ($cajaAbierta) {
-                                        $cajaAbierta->egresos = floatval($cajaAbierta->egresos ?? 0) + $diferencia;
-                                        $cajaAbierta->save();
-
-                                        \App\Models\OperacionCaja::create([
-                                            'cierre_caja_id' => $cajaAbierta->id,
-                                            'user_id' => Auth::id(),
-                                            'tipo' => 'egreso',
-                                            'partida' => 'Diferencia Compra (Anticipo)',
-                                            'concepto' => 'Diferencia compra #' . $compra->id . ' (Total: S/' . number_format($totalCompra, 2) . ' - Anticipo: S/' . number_format($montoAnticipo, 2) . ')',
-                                            'importe' => $diferencia,
-                                            'metodo_pago' => 'Efectivo',
-                                            'es_efectivo' => 1,
-                                        ]);
-                                    }
-                                }
+                                // Si la compra cuesta más que el anticipo, NO se descuenta la diferencia de caja ni banco.
+                                // Solo se salda el anticipo; el saldo restante queda pendiente sin afectar otros medios de pago.
                             }
                         }
                     }
