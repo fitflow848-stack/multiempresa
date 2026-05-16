@@ -15,7 +15,7 @@ class Sunat
     public function __construct()
     {
         $this->client = new Client();
-        $this->apiUrl = "http://84.247.162.204/api-sunat-laravel/api/v1";
+        $this->apiUrl = "https://magus-qa.com/api-sunat-laravel/api/v1";
     }
 
     public function sendRequest($endpoint, $method = 'POST', $data = [])
