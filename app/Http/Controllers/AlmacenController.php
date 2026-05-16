@@ -899,6 +899,44 @@ class AlmacenController extends Controller
             ->orderBy('d.fecha_vencimiento', 'asc')
             ->get();
 
+        // Fallback: si se buscó por linea_id pero no hay resultados, buscar por producto_id.
+        // Esto ocurre cuando el ingreso fue guardado con un producto_linea_id distinto al actual
+        // (p.ej. si la línea fue recreada y tiene un nuevo ID en producto_lineas).
+        if ($lotes->isEmpty() && $lineaId && $productoId) {
+            $bestIdSubqueryFallback = "(SELECT d2.id FROM almacen_ingreso_detalle d2
+               JOIN almacen_ingresos i2 ON i2.id = d2.ingreso_id
+               WHERE i2.sucursal_id = i.sucursal_id
+               AND d2.producto_id = d.producto_id
+               AND COALESCE(d2.lote, '') = COALESCE(d.lote, '')
+               AND d2.cantidad > 0
+               AND (i2.observacion NOT LIKE '[ANULACION]%' AND i2.observacion NOT LIKE '[DEVOLUCION]%')
+               ORDER BY d2.id DESC LIMIT 1) as best_id";
+
+            $fallbackQuery = DB::table('almacen_ingreso_detalle as d')
+                ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
+                ->leftJoin('sucursales as s', 's.id', '=', 'i.sucursal_id');
+
+            if ($sucursalId && $sucursalId !== 'undefined') {
+                $fallbackQuery->where('i.sucursal_id', $sucursalId);
+            }
+            $fallbackQuery->where('d.producto_id', $productoId);
+
+            $lotes = $fallbackQuery->select(
+                    'd.lote',
+                    'd.fecha_vencimiento',
+                    'd.producto_linea_id',
+                    DB::raw('SUM(d.cantidad) as stock'),
+                    DB::raw('MAX(d.id) as id'),
+                    's.nombre as sucursal_nombre',
+                    'i.sucursal_id',
+                    DB::raw($bestIdSubqueryFallback)
+                )
+                ->groupBy('d.lote', 'd.fecha_vencimiento', 's.nombre', 'i.sucursal_id', 'd.producto_id', 'd.producto_linea_id')
+                ->having('stock', '>', 0)
+                ->orderBy('d.fecha_vencimiento', 'asc')
+                ->get();
+        }
+
         $results = $lotes->map(function ($lote) use ($sucursalId) {
             $fecha = $lote->fecha_vencimiento ? date('d/m/Y', strtotime($lote->fecha_vencimiento)) : '-';
             $texto = "Lote: " . ($lote->lote ?: 'S/L') . " | Vence: " . $fecha . " | Stock: " . number_format($lote->stock, 2);
