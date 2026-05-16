@@ -208,12 +208,13 @@ class DeudaController extends Controller
                 $mP = $request->metodo_pago ?? 'Efectivo';
                 $tipoPago = DB::table('tipos_pagos')->where('nombre', $mP)->first();
                 $esEfectivo = $tipoPago ? $tipoPago->es_efectivo : ($mP === 'Efectivo' ? 1 : 0);
+                $esDigital = $tipoPago ? (bool) $tipoPago->es_digital : false;
 
                 if ($esEfectivo) {
                     $cajaAbierta->ingresos = floatval($cajaAbierta->ingresos ?? 0) + $montoPago;
                     $cajaAbierta->save();
-                } else if (strtolower($mP) === 'transferencia') {
-                    // Solo transferencia bancaria afecta saldo de banco
+                } else if ($esDigital) {
+                    // Yape, Plin, transferencias y cualquier método digital afecta el saldo bancario
                     $banco = \App\Models\CuentaBancaria::preferidaParaUsuario();
                     if ($banco) {
                         \App\Models\BancoMovimiento::create([
@@ -369,12 +370,13 @@ class DeudaController extends Controller
                 $mP = $request->metodo_pago ?? 'Efectivo';
                 $tipoPago = DB::table('tipos_pagos')->where('nombre', $mP)->first();
                 $esEfectivo = $tipoPago ? $tipoPago->es_efectivo : ($mP === 'Efectivo' ? 1 : 0);
+                $esDigital = $tipoPago ? (bool) $tipoPago->es_digital : false;
 
                 if ($esEfectivo) {
                     $cajaAbierta->ingresos = floatval($cajaAbierta->ingresos ?? 0) + $montoInicial;
                     $cajaAbierta->save();
-                } else if (strtolower($mP) === 'transferencia') {
-                    // Solo transferencia bancaria afecta saldo de banco
+                } else if ($esDigital) {
+                    // Yape, Plin, transferencias y cualquier método digital afecta el saldo bancario
                     $banco = \App\Models\CuentaBancaria::preferidaParaUsuario();
                     if ($banco) {
                         \App\Models\BancoMovimiento::create([
