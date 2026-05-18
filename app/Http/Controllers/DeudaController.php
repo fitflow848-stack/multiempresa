@@ -206,9 +206,9 @@ class DeudaController extends Controller
 
             if ($cajaAbierta) {
                 $mP = $request->metodo_pago ?? 'Efectivo';
-                $tipoPago = DB::table('tipos_pagos')->where('nombre', $mP)->first();
+                $tipoPago = DB::table('tipos_pagos')->whereRaw('LOWER(nombre) = ?', [strtolower($mP)])->first();
                 $esEfectivo = $tipoPago ? $tipoPago->es_efectivo : ($mP === 'Efectivo' ? 1 : 0);
-                $esDigital = $tipoPago ? (bool) $tipoPago->es_digital : false;
+                $esDigital = $tipoPago ? (bool) $tipoPago->es_digital : (!$esEfectivo && $mP !== 'Efectivo');
 
                 if ($esEfectivo) {
                     $cajaAbierta->ingresos = floatval($cajaAbierta->ingresos ?? 0) + $montoPago;
@@ -368,9 +368,9 @@ class DeudaController extends Controller
 
             if ($cajaAbierta) {
                 $mP = $request->metodo_pago ?? 'Efectivo';
-                $tipoPago = DB::table('tipos_pagos')->where('nombre', $mP)->first();
+                $tipoPago = DB::table('tipos_pagos')->whereRaw('LOWER(nombre) = ?', [strtolower($mP)])->first();
                 $esEfectivo = $tipoPago ? $tipoPago->es_efectivo : ($mP === 'Efectivo' ? 1 : 0);
-                $esDigital = $tipoPago ? (bool) $tipoPago->es_digital : false;
+                $esDigital = $tipoPago ? (bool) $tipoPago->es_digital : (!$esEfectivo && $mP !== 'Efectivo');
 
                 if ($esEfectivo) {
                     $cajaAbierta->ingresos = floatval($cajaAbierta->ingresos ?? 0) + $montoInicial;
