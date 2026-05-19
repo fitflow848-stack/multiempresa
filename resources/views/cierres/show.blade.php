@@ -850,7 +850,7 @@
                     // Si es pase a banco, registrar también en módulo de bancos
                     if (payload.tipo === 'pase_banco') {
                         try {
-                            await fetch('{{ route('bancos.pase-caja-banco') }}', {
+                            const bancoRes = await fetch('{{ route('bancos.pase-caja-banco') }}', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
                                 body: JSON.stringify({
@@ -859,7 +859,14 @@
                                     cierre_caja_id: cierreId
                                 })
                             });
-                        } catch (e) { console.error('Error registrando en banco:', e); }
+                            const bancoData = await bancoRes.json();
+                            if (!bancoRes.ok || !bancoData.success) {
+                                alert('⚠️ La operación de caja se registró, pero el pase a banco falló: ' + (bancoData.message || 'Error desconocido'));
+                            }
+                        } catch (e) {
+                            console.error('Error registrando en banco:', e);
+                            alert('⚠️ La operación de caja se registró, pero hubo un error al registrar en banco.');
+                        }
                     }
                     location.reload();
                 } else {
