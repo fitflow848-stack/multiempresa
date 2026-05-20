@@ -341,9 +341,9 @@ class CierreCajaController extends Controller
 
         $isTesoreria = $cierre->caja ? $cierre->caja->is_boveda : false;
 
-        $porCobrar = \App\Models\ActivoCorriente::where('cierre_caja_id', $cierre->id)
-            ->where('tipo_adelanto', 'pos_credito')
-            ->sum('monto');
+        $porCobrar = \App\Models\Deuda::whereHas('venta', function ($q) use ($cierre) {
+            $q->where('cierre_caja_id', $cierre->id);
+        })->sum('monto_deuda');
 
         return view('cierres.show', [
             'cierre' => $cierre, 
