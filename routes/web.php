@@ -347,6 +347,8 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::post('/', [ActivoCorrienteController::class, 'store'])->name('activos_corrientes.store');
         Route::post('/tipo', [ActivoCorrienteController::class, 'storeTipo'])->name('activos_corrientes.storeTipo');
         Route::post('/{id}/cobrar', [ActivoCorrienteController::class, 'cobrar'])->name('activos_corrientes.cobrar');
+        Route::get('/{id}/historial', [ActivoCorrienteController::class, 'historial'])->name('activos_corrientes.historial');
+        Route::get('/pago/{pago_id}/comprobante', [ActivoCorrienteController::class, 'comprobante'])->name('activos_corrientes.comprobante');
         Route::get('/{id}/edit', [ActivoCorrienteController::class, 'edit'])->name('activos_corrientes.edit');
         Route::post('/{id}/update', [ActivoCorrienteController::class, 'update'])->name('activos_corrientes.update');
         Route::delete('/{id}', [ActivoCorrienteController::class, 'destroy'])->name('activos_corrientes.destroy');

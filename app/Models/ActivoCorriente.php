@@ -17,6 +17,7 @@ class ActivoCorriente extends Model
         'tipo_activo_corriente_id',
         'nombre',
         'monto',
+        'monto_cobrado',
         'fecha_registro',
         'documento',
         'observaciones',
@@ -32,6 +33,7 @@ class ActivoCorriente extends Model
     protected $casts = [
         'fecha_registro' => 'date',
         'monto' => 'decimal:2',
+        'monto_cobrado' => 'decimal:2',
         'is_settled' => 'boolean'
     ];
 
@@ -63,5 +65,15 @@ class ActivoCorriente extends Model
     public function proveedor()
     {
         return $this->belongsTo(\App\Models\Proveedor::class);
+    }
+
+    public function pagos()
+    {
+        return $this->hasMany(ActivoCorrientePago::class);
+    }
+
+    public function getMontoPendienteAttribute(): float
+    {
+        return max(0, floatval($this->monto) - floatval($this->monto_cobrado ?? 0));
     }
 }

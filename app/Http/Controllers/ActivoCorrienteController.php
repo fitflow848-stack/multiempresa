@@ -3,8 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\ActivoCorriente;
+use App\Models\ActivoCorrientePago;
 use App\Models\TipoActivoCorriente;
+use App\Models\Company;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class ActivoCorrienteController extends Controller
 {
@@ -178,49 +182,169 @@ class ActivoCorrienteController extends Controller
     }
 
     /**
-     * Cobrar un activo corriente (tipo Otros) - registra ingreso en caja.
+     * Cobrar un activo corriente con soporte de pagos parciales, método de pago y recibo.
      */
     public function cobrar(Request $request, $id)
     {
+        $request->validate([
+            'monto_pago' => 'required|numeric|min:0.01',
+            'metodo_pago' => 'required|string',
+            'referencia'  => 'nullable|string|max:255',
+            'observaciones' => 'nullable|string|max:500',
+        ]);
+
         $activo = ActivoCorriente::findOrFail($id);
         $user = auth()->user();
 
-        try {
-            $cajaAbierta = requireSelectedCaja('cobrar el activo');
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
+        if ($activo->is_settled) {
+            return response()->json(['success' => false, 'message' => 'Este activo ya está completamente cobrado.'], 400);
         }
+
+        $montoPago = floatval($request->monto_pago);
+        $montoPendiente = $activo->monto_pendiente;
+
+        if ($montoPago > $montoPendiente + 0.01) {
+            return response()->json(['success' => false, 'message' => 'El monto ingresado supera el saldo pendiente (S/ ' . number_format($montoPendiente, 2) . ').'], 400);
+        }
+        $montoPago = min($montoPago, $montoPendiente);
+
+        $metodoPago = $request->metodo_pago;
+        $esEfectivo = strtolower($metodoPago) === 'efectivo';
+        $esDigital = !$esEfectivo;
 
         \Illuminate\Support\Facades\DB::beginTransaction();
         try {
-            $activo->is_settled = true;
-            $activo->save();
+            $cajaAbierta = null;
+            if ($esEfectivo) {
+                try {
+                    $cajaAbierta = requireSelectedCaja('cobrar el activo');
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\DB::rollBack();
+                    return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+                }
+            }
 
-            // Registrar en Caja como INGRESO (dinero entra a caja)
-            $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $activo->monto;
-            $cajaAbierta->save();
+            $codigoComprobante = 'COB-' . strtoupper(Str::random(8));
 
-            \App\Models\OperacionCaja::create([
-                'company_id' => $user->company_id,
-                'sucursal_id' => $user->branch_id,
-                'cierre_caja_id' => $cajaAbierta->id,
+            $pago = ActivoCorrientePago::create([
+                'activo_corriente_id' => $activo->id,
                 'user_id' => $user->id,
-                'tipo' => 'ingreso',
-                'partida' => 'Cobro Activo Corriente',
-                'concepto' => 'Cobro: ' . $activo->nombre,
-                'importe' => $activo->monto,
-                'metodo_pago' => 'Efectivo',
-                'es_efectivo' => 1,
+                'cierre_caja_id' => $cajaAbierta ? $cajaAbierta->id : null,
+                'monto' => $montoPago,
+                'fecha_pago' => now(),
+                'metodo_pago' => $metodoPago,
+                'referencia' => $request->referencia,
+                'codigo_comprobante' => $codigoComprobante,
+                'observaciones' => $request->observaciones,
             ]);
 
+            $nuevoMontoCobrado = floatval($activo->monto_cobrado) + $montoPago;
+            $nuevoPendiente = floatval($activo->monto) - $nuevoMontoCobrado;
+            $isSettled = $nuevoPendiente <= 0.01;
+
+            $activo->update([
+                'monto_cobrado' => $nuevoMontoCobrado,
+                'is_settled' => $isSettled,
+            ]);
+
+            if ($esEfectivo && $cajaAbierta) {
+                $cajaAbierta->ingresos = floatval($cajaAbierta->ingresos ?? 0) + $montoPago;
+                $cajaAbierta->save();
+
+                \App\Models\OperacionCaja::create([
+                    'company_id'     => $user->company_id,
+                    'sucursal_id'    => $user->branch_id,
+                    'cierre_caja_id' => $cajaAbierta->id,
+                    'user_id'        => $user->id,
+                    'tipo'           => 'ingreso',
+                    'partida'        => 'Cobro Activo Corriente',
+                    'concepto'       => 'Cobro: ' . $activo->nombre,
+                    'importe'        => $montoPago,
+                    'metodo_pago'    => $metodoPago,
+                    'es_efectivo'    => 1,
+                    'fecha'          => now(),
+                ]);
+            } elseif ($esDigital) {
+                $banco = \App\Models\CuentaBancaria::preferidaParaUsuario();
+                if ($banco) {
+                    \App\Models\BancoMovimiento::create([
+                        'cuenta_bancaria_id' => $banco->id,
+                        'user_id'            => $user->id,
+                        'tipo'               => 'ingreso',
+                        'monto'              => $montoPago,
+                        'concepto'           => 'Cobro Activo Corriente: ' . $activo->nombre . ' (' . $metodoPago . ')',
+                        'referencia'         => $request->referencia,
+                        'fecha'              => now()->toDateString(),
+                        'sucursal_id'        => $user->branch_id,
+                    ]);
+                    $banco->increment('saldo_actual', $montoPago);
+                }
+            }
+
             \Illuminate\Support\Facades\DB::commit();
+
+            return response()->json([
+                'success'    => true,
+                'message'    => 'Cobro registrado correctamente.',
+                'pago_id'    => $pago->id,
+                'is_settled' => $isSettled,
+                'monto_pendiente' => max(0, $nuevoPendiente),
+            ]);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\DB::rollBack();
-            return redirect()->back()->with('error', 'Error al cobrar: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error al cobrar: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function historial($id)
+    {
+        $activo = ActivoCorriente::with(['pagos.user'])->findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'activo'  => [
+                'nombre'          => $activo->nombre,
+                'monto'           => $activo->monto,
+                'monto_cobrado'   => $activo->monto_cobrado ?? 0,
+                'monto_pendiente' => $activo->monto_pendiente,
+            ],
+            'pagos' => $activo->pagos->map(fn($p) => [
+                'id'                => $p->id,
+                'monto'             => $p->monto,
+                'fecha_pago'        => $p->fecha_pago->format('d/m/Y H:i'),
+                'metodo_pago'       => $p->metodo_pago,
+                'referencia'        => $p->referencia,
+                'codigo_comprobante'=> $p->codigo_comprobante,
+                'observaciones'     => $p->observaciones,
+                'user'              => $p->user->name ?? 'Sistema',
+            ]),
+        ]);
+    }
+
+    public function comprobante($pago_id)
+    {
+        $pago = ActivoCorrientePago::with(['activoCorriente.tipo', 'user'])->findOrFail($pago_id);
+        $activo = $pago->activoCorriente;
+        $empresa = Company::find(auth()->user()->company_id);
+
+        $logo = null;
+        $logoPath = null;
+        if ($empresa && $empresa->logo) {
+            $path = $empresa->logo_path;
+            if ($path && file_exists($path)) {
+                $logoPath = $path;
+            }
+        }
+        if ($logoPath) {
+            $logoData = base64_encode(file_get_contents($logoPath));
+            $logoType = pathinfo($logoPath, PATHINFO_EXTENSION);
+            $logo = 'data:image/' . $logoType . ';base64,' . $logoData;
         }
 
-        return redirect()->route('activos_corrientes.index')
-            ->with('success', 'Activo cobrado correctamente y registrado en caja.');
+        $pdf = Pdf::loadView('activos_corrientes.comprobante_cobro', compact('pago', 'activo', 'empresa', 'logo'))
+            ->setPaper([0, 0, 215, 600], 'portrait');
+
+        return $pdf->stream('recibo_cobro_' . $pago->codigo_comprobante . '.pdf');
     }
 
     /**
