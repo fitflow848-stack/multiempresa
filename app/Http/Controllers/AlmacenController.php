@@ -1019,6 +1019,25 @@ class AlmacenController extends Controller
                 $nuevoDetalle->id = null; // Aseguramos que sea un nuevo registro
                 $nuevoDetalle->ingreso_id = $nuevoIngreso->id;
                 $nuevoDetalle->cantidad = $item['cantidad'];
+
+                // Tomar precios del destino si existen (último registro del mismo producto/línea en esa sucursal)
+                $precioDestino = DB::table('almacen_ingreso_detalle as d')
+                    ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
+                    ->where('i.sucursal_id', $request->sucursal_destino_id)
+                    ->where('d.producto_id', $item['producto_id'])
+                    ->where('d.producto_linea_id', $loteOrigen->producto_linea_id)
+                    ->where('d.pvp', '>', 0)
+                    ->orderByDesc('d.id')
+                    ->select('d.pvp', 'd.pvpd', 'd.pvc', 'd.pvcd')
+                    ->first();
+
+                if ($precioDestino) {
+                    $nuevoDetalle->pvp = $precioDestino->pvp;
+                    $nuevoDetalle->pvpd = $precioDestino->pvpd;
+                    $nuevoDetalle->pvc = $precioDestino->pvc;
+                    $nuevoDetalle->pvcd = $precioDestino->pvcd;
+                }
+
                 $nuevoDetalle->save();
 
                 // 3. Registrar Transferencia Individual
