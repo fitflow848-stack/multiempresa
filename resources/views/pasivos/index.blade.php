@@ -28,7 +28,7 @@
                     <div class="card-body">
                         <!-- Filtros -->
                         <form action="{{ route('pasivos.index') }}" method="GET" class="row g-3 mb-4 align-items-end">
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <label class="form-label fw-bold small text-uppercase text-muted">Tipo de Pasivo</label>
                                 <select name="tipo_id" id="selectTipoPasivo" class="form-control form-select">
                                     <option value="">Todos</option>
@@ -40,21 +40,29 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
+                                <label class="form-label fw-bold small text-uppercase text-muted">Nombre</label>
+                                <input type="text" name="nombre" class="form-control" placeholder="Buscar..."
+                                    value="{{ request('nombre') }}">
+                            </div>
+                            <div class="col-md-2">
                                 <label class="form-label fw-bold small text-uppercase text-muted">Desde</label>
                                 <input type="date" name="fecha_inicio" class="form-control"
                                     value="{{ request('fecha_inicio') }}">
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <label class="form-label fw-bold small text-uppercase text-muted">Hasta</label>
                                 <input type="date" name="fecha_fin" class="form-control"
                                     value="{{ request('fecha_fin') }}">
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <div class="d-flex gap-2">
                                     <button type="submit" class="btn btn-primary flex-grow-1">
                                         <i class="bx bx-search"></i> Filtrar
                                     </button>
+                                    <a href="{{ route('pasivos.index', array_merge(request()->query(), ['export' => 1])) }}" class="btn btn-success" title="Exportar Excel">
+                                        <i class="bx bx-download"></i>
+                                    </a>
                                     <a href="{{ route('pasivos.index') }}" class="btn btn-outline-secondary"
                                         title="Limpiar filtros">
                                         <i class="bx bx-undo"></i>
@@ -83,6 +91,7 @@
                                         <th class="text-right">Monto (S/)</th>
                                         <th class="text-right">Saldo (S/)</th>
                                         <th class="text-center">Estado</th>
+                                        <th class="text-center">Último Pago</th>
                                         <th class="text-center">Acciones</th>
                                     </tr>
                                 </thead>
@@ -107,6 +116,17 @@
                                                 @endif
                                                 @if($pasivo->is_settled || $pasivo->saldo == 0)
                                                     <span class="badge bg-success">SALDADO</span>
+                                                @endif
+                                            </td>
+                                            <td class="text-center small">
+                                                @php
+                                                    $ultimoPago = $pasivo->pagos->sortByDesc('fecha_pago')->first();
+                                                @endphp
+                                                @if($ultimoPago)
+                                                    {{ $ultimoPago->fecha_pago->format('d/m/Y') }}
+                                                    <br><span class="text-muted">{{ $ultimoPago->metodo_pago ?? '' }}</span>
+                                                @else
+                                                    <span class="text-muted">-</span>
                                                 @endif
                                             </td>
                                              <td class="text-center">

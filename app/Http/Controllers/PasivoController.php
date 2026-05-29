@@ -28,6 +28,9 @@ class PasivoController extends Controller
         if ($request->filled('tipo_id')) {
             $query->where('tipo_pasivo_id', $request->tipo_id);
         }
+        if ($request->filled('nombre')) {
+            $query->where('nombre', 'like', '%' . $request->nombre . '%');
+        }
         if ($request->filled('fecha_inicio')) {
             $query->whereDate('fecha_registro', '>=', $request->fecha_inicio);
         }
@@ -35,9 +38,48 @@ class PasivoController extends Controller
             $query->whereDate('fecha_registro', '<=', $request->fecha_fin);
         }
 
+        // Exportar a Excel
+        if ($request->has('export')) {
+            return $this->exportExcel($query->get());
+        }
+
         $pasivos = $query->paginate(20);
 
         return view('pasivos.index', compact('tipos', 'pasivos'));
+    }
+
+    private function exportExcel($pasivos)
+    {
+        $filename = 'pasivos_' . date('Y-m-d') . '.csv';
+        
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
+
+        $callback = function () use ($pasivos) {
+            $file = fopen('php://output', 'w');
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF)); // BOM UTF-8
+            fputcsv($file, ['Fecha Registro', 'Tipo', 'Nombre', 'Documento', 'Monto', 'Pagado', 'Saldo', 'Estado', 'Último Pago']);
+
+            foreach ($pasivos as $pasivo) {
+                $ultimoPago = $pasivo->pagos->sortByDesc('fecha_pago')->first();
+                fputcsv($file, [
+                    $pasivo->fecha_registro->format('d/m/Y'),
+                    $pasivo->tipo->nombre ?? '-',
+                    $pasivo->nombre,
+                    $pasivo->documento ?? '-',
+                    number_format($pasivo->monto, 2),
+                    number_format($pasivo->monto_pagado, 2),
+                    number_format($pasivo->saldo, 2),
+                    $pasivo->estado ?? 'pendiente',
+                    $ultimoPago ? $ultimoPago->fecha_pago->format('d/m/Y') : '-',
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 
     public function store(Request $request)

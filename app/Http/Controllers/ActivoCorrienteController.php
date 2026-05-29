@@ -26,6 +26,9 @@ class ActivoCorrienteController extends Controller
         if ($request->filled('tipo_id')) {
             $query->where('tipo_activo_corriente_id', $request->tipo_id);
         }
+        if ($request->filled('nombre')) {
+            $query->where('nombre', 'like', '%' . $request->nombre . '%');
+        }
         if ($request->filled('fecha_inicio')) {
             $query->whereDate('fecha_registro', '>=', $request->fecha_inicio);
         }
@@ -33,9 +36,46 @@ class ActivoCorrienteController extends Controller
             $query->whereDate('fecha_registro', '<=', $request->fecha_fin);
         }
 
+        // Exportar a Excel
+        if ($request->has('export')) {
+            return $this->exportExcel($query->get());
+        }
+
         $activos = $query->paginate(20);
 
         return view('activos_corrientes.index', compact('tipos', 'activos'));
+    }
+
+    private function exportExcel($activos)
+    {
+        $filename = 'activos_corrientes_' . date('Y-m-d') . '.csv';
+        
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"$filename\"",
+        ];
+
+        $callback = function () use ($activos) {
+            $file = fopen('php://output', 'w');
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($file, ['Fecha Registro', 'Tipo', 'Nombre', 'Método Pago', 'Documento', 'Monto', 'Estado', 'Fecha Cobro/Saldo']);
+
+            foreach ($activos as $activo) {
+                fputcsv($file, [
+                    $activo->fecha_registro->format('d/m/Y'),
+                    $activo->tipo->nombre ?? '-',
+                    $activo->nombre,
+                    $activo->metodo_pago ?? '-',
+                    $activo->documento ?? '-',
+                    number_format($activo->monto, 2),
+                    $activo->is_settled ? 'SALDADO' : 'PENDIENTE',
+                    $activo->updated_at && $activo->is_settled ? $activo->updated_at->format('d/m/Y') : '-',
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 
     public function store(Request $request)

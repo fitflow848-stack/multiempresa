@@ -29,7 +29,7 @@
                         <!-- Filtros -->
                         <form action="{{ route('activos_corrientes.index') }}" method="GET"
                             class="row g-3 mb-4 align-items-end">
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <label class="form-label fw-bold small text-uppercase text-muted">Tipo</label>
                                 <select name="tipo_id" class="form-control form-select">
                                     <option value="">Todos</option>
@@ -41,21 +41,29 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
+                                <label class="form-label fw-bold small text-uppercase text-muted">Nombre</label>
+                                <input type="text" name="nombre" class="form-control" placeholder="Buscar..."
+                                    value="{{ request('nombre') }}">
+                            </div>
+                            <div class="col-md-2">
                                 <label class="form-label fw-bold small text-uppercase text-muted">Desde</label>
                                 <input type="date" name="fecha_inicio" class="form-control"
                                     value="{{ request('fecha_inicio') }}">
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <label class="form-label fw-bold small text-uppercase text-muted">Hasta</label>
                                 <input type="date" name="fecha_fin" class="form-control"
                                     value="{{ request('fecha_fin') }}">
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <div class="d-flex gap-2">
                                     <button type="submit" class="btn btn-primary flex-grow-1">
                                         <i class="bx bx-search"></i> Filtrar
                                     </button>
+                                    <a href="{{ route('activos_corrientes.index', array_merge(request()->query(), ['export' => 1])) }}" class="btn btn-success" title="Exportar Excel">
+                                        <i class="bx bx-download"></i>
+                                    </a>
                                     <a href="{{ route('activos_corrientes.index') }}" class="btn btn-outline-secondary"
                                         title="Limpiar filtros">
                                         <i class="bx bx-undo"></i>
@@ -85,6 +93,7 @@
                                         <th class="text-right">Monto (S/)</th>
                                         <th class="text-right">Cobrado (S/)</th>
                                         <th class="text-right">Pendiente (S/)</th>
+                                        <th class="text-center">Fecha Cobro</th>
                                         <th class="text-center">Acciones</th>
                                     </tr>
                                 </thead>
@@ -111,6 +120,13 @@
                                             <td class="text-right text-success">S/ {{ number_format($activo->monto_cobrado ?? 0, 2) }}</td>
                                             <td class="text-right {{ $activo->monto_pendiente > 0 ? 'text-danger font-weight-bold' : 'text-success' }}">
                                                 S/ {{ number_format($activo->monto_pendiente, 2) }}
+                                            </td>
+                                            <td class="text-center small">
+                                                @if($activo->is_settled && $activo->updated_at)
+                                                    {{ $activo->updated_at->format('d/m/Y') }}
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
                                             </td>
                                             <td class="text-center">
                                                  @if(str_contains(strtolower($activo->tipo->nombre), 'adelanto') && !$activo->is_settled)
