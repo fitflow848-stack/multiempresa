@@ -329,46 +329,65 @@ class VentaService
                 // Resolver el lote para descontar stock
                 $almacenDetalleId = $item['almacen_detalle_id'] ?? null;
 
+                // Resolver lotes a descontar — siempre termina en FIFO para cubrir cantidad completa
+                $lineaId   = $item['product_linea_id'] ?? null;
+                $lotesUsados = []; // [{id, cantidad_descontada, costo}]
+                $restante  = $cantidad;
+
+                // Si viene lote explícito del POS, consumirlo primero
                 if ($almacenDetalleId) {
-                    // Lote específico seleccionado por el usuario en POS
-                    $detalle->almacen_ingreso_detalle_id = $almacenDetalleId;
-                    $detalle->save();
-                    $this->stockService->decrementarStock((int) $almacenDetalleId, $cantidad);
-                } else {
-                    // FIFO automático: distribuir entre lotes del más antiguo al más nuevo
-                    $lineaId  = $item['product_linea_id'] ?? null;
-                    $restante = $cantidad;
-                    $lotesUsados = []; // [{id, cantidad_descontada}]
-
-                    while ($restante > 0) {
-                        $loteQuery = AlmacenIngresoDetalle::where('producto_id', $item['producto_id'])
-                            ->whereHas('ingreso', function ($q) use ($user) {
-                                if ($user->branch_id) {
-                                    $q->where('sucursal_id', $user->branch_id);
-                                }
-                            })
-                            ->where('cantidad', '>', 0)
-                            ->orderBy('id', 'asc');
-
-                        if ($lineaId) {
-                            $loteQuery->where('producto_linea_id', $lineaId);
-                        }
-
-                        $lote = $loteQuery->first();
-                        if (!$lote) break;
-
-                        $aDescontar = min($restante, (float) $lote->cantidad);
-                        $this->stockService->decrementarStock($lote->id, $aDescontar);
-                        $lotesUsados[] = ['id' => $lote->id, 'cantidad' => $aDescontar];
+                    $loteExplicito = AlmacenIngresoDetalle::find((int) $almacenDetalleId);
+                    if ($loteExplicito && $loteExplicito->cantidad > 0) {
+                        $aDescontar = min($restante, (float) $loteExplicito->cantidad);
+                        $this->stockService->decrementarStock($loteExplicito->id, $aDescontar);
+                        $lotesUsados[] = ['id' => $loteExplicito->id, 'cantidad' => $aDescontar, 'costo' => (float) $loteExplicito->costo];
                         $restante -= $aDescontar;
                     }
+                }
 
+                // FIFO automático para cubrir lo que falte (o todo, si no hubo lote explícito)
+                while ($restante > 0) {
+                    $loteQuery = AlmacenIngresoDetalle::where('producto_id', $item['producto_id'])
+                        ->whereHas('ingreso', function ($q) use ($user) {
+                            if ($user->branch_id) {
+                                $q->where('sucursal_id', $user->branch_id);
+                            }
+                        })
+                        ->where('cantidad', '>', 0)
+                        ->orderBy('id', 'asc');
+
+                    if ($lineaId) {
+                        $loteQuery->where('producto_linea_id', $lineaId);
+                    }
+
+                    // Excluir lotes ya procesados para no repetir
                     if (!empty($lotesUsados)) {
-                        // Asignar el primer lote como referencia, mantener cantidad e importe originales
-                        $detalle->almacen_ingreso_detalle_id = $lotesUsados[0]['id'];
+                        $loteQuery->whereNotIn('id', array_column($lotesUsados, 'id'));
+                    }
+
+                    $lote = $loteQuery->first();
+                    if (!$lote) break;
+
+                    $aDescontar = min($restante, (float) $lote->cantidad);
+                    $this->stockService->decrementarStock($lote->id, $aDescontar);
+                    $lotesUsados[] = ['id' => $lote->id, 'cantidad' => $aDescontar, 'costo' => (float) $lote->costo];
+                    $restante -= $aDescontar;
+                }
+
+                if (!empty($lotesUsados)) {
+                    // Costo unitario ponderado sobre las unidades realmente descontadas de stock
+                    $cantidadDescontada = array_sum(array_column($lotesUsados, 'cantidad'));
+                    $costoTotal = array_sum(array_map(fn($l) => $l['costo'] * $l['cantidad'], $lotesUsados));
+                    $detalle->almacen_ingreso_detalle_id = $lotesUsados[0]['id'];
+                    $detalle->costo_unitario = $cantidadDescontada > 0 ? $costoTotal / $cantidadDescontada : 0;
+                    $detalle->save();
+                } else {
+                    Log::warning("No se encontró stock/lote para el producto ID {$item['producto_id']} en la venta {$venta->id_venta}");
+                    if ($almacenDetalleId) {
+                        $loteExplicito = $loteExplicito ?? AlmacenIngresoDetalle::find((int) $almacenDetalleId);
+                        $detalle->almacen_ingreso_detalle_id = $almacenDetalleId;
+                        $detalle->costo_unitario = $loteExplicito ? (float) $loteExplicito->costo : 0;
                         $detalle->save();
-                    } else {
-                        Log::warning("No se encontró stock/lote para el producto ID {$item['producto_id']} en la venta {$venta->id_venta}");
                     }
                 }
             }

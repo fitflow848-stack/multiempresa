@@ -20,7 +20,8 @@ class VentaDetalle extends Model
         'importe',
         'igv',
         'orden',
-        'almacen_ingreso_detalle_id'
+        'almacen_ingreso_detalle_id',
+        'costo_unitario'
     ];
 
     protected $casts = [
@@ -28,7 +29,8 @@ class VentaDetalle extends Model
         'precio_unitario' => 'decimal:2',
         'precio_total' => 'decimal:2',
         'igv' => 'decimal:2',
-        'orden' => 'integer'
+        'orden' => 'integer',
+        'costo_unitario' => 'decimal:4'
     ];
 
     protected $appends = ['subtotal'];
