@@ -223,12 +223,15 @@ class ComprobantesController extends Controller
                                     'observacion' => '[ANULACION] ' . ($venta->tipo_documento ?? 'Comprobante') . ' ' . $venta->serie . '-' . $venta->numero,
                                 ]);
 
+                                // Usar el costo original al momento de la venta (guardado en venta_detalles)
+                                $costoOriginal = $detalle->costo_unitario > 0 ? $detalle->costo_unitario : $loteOriginal->costo;
+
                                 \App\Models\AlmacenIngresoDetalle::create([
                                     'ingreso_id'          => $ingresoDevolucion->id,
                                     'producto_id'         => $loteOriginal->producto_id,
                                     'producto_linea_id'   => $loteOriginal->producto_linea_id,
                                     'cantidad'            => $detalle->cantidad, // positivo = entrada
-                                    'costo'               => $loteOriginal->costo,
+                                    'costo'               => $costoOriginal,
                                     'cop'                 => $loteOriginal->cop,
                                     'mu'                  => $loteOriginal->mu,
                                     'mud'                 => $loteOriginal->mud,
@@ -237,7 +240,7 @@ class ComprobantesController extends Controller
                                     'pvpd'                => $loteOriginal->pvpd,
                                     'pvc'                 => $loteOriginal->pvc,
                                     'pvcd'                => $loteOriginal->pvcd,
-                                    'lote'                => $loteOriginal->lote, // Mantener lote original (puede ser null)
+                                    'lote'                => $loteOriginal->lote,
                                     'fecha_vencimiento'   => $loteOriginal->fecha_vencimiento,
                                     'stock_min'           => $loteOriginal->stock_min,
                                     'stock_max'           => $loteOriginal->stock_max,
