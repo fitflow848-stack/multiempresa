@@ -123,23 +123,6 @@
         renderizarListaClientes(currentFilteredList);
     }
     
-    function buscarClientes() {
-        const termino = document.getElementById('buscar-cliente-input').value.toLowerCase();
-
-        if (termino.length === 0) {
-            currentFilteredList = clientesDisponibles;
-            renderizarListaClientes(currentFilteredList);
-            return;
-        }
-
-        currentFilteredList = clientesDisponibles.filter(cliente =>
-            (cliente.nombre && cliente.nombre.toLowerCase().includes(termino)) ||
-            (cliente.numero_documento && cliente.numero_documento.includes(termino))
-        );
-
-        renderizarListaClientes(currentFilteredList);
-    }
-
     function renderizarListaClientes(clientes) {
         const tbody = document.getElementById('lista-clientes-tbody');
         tbody.innerHTML = '';

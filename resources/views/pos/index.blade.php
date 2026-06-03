@@ -2997,7 +2997,6 @@
 @include('pos.partials.modals.modal-formatos-venta')
 @include('pos.partials.modals.modal-buscar-clientes')
 @include('pos.partials.modals.modal-nuevo-cliente')
-@include('pos.partials.modals.modal-tipo-documento')
 @include('pos.partials.js.finalizar-venta')
 @include('pos.partials.js.sucursal-toggle')
 @include('pos.partials.js.cantidad-venta')
