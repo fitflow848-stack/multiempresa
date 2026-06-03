@@ -9,8 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('banco_movimientos', function (Blueprint $table) {
-            $table->unsignedBigInteger('sucursal_id')->nullable()->after('id_venta');
-            $table->foreign('sucursal_id')->references('id')->on('sucursales')->onDelete('set null');
+            if (!Schema::hasColumn('banco_movimientos', 'sucursal_id')) {
+                $table->unsignedBigInteger('sucursal_id')->nullable()->after('id_venta');
+                $table->foreign('sucursal_id')->references('id')->on('sucursales')->onDelete('set null');
+            }
         });
     }
 

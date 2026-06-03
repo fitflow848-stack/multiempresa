@@ -239,8 +239,11 @@ class ReporteController extends Controller
                 $lid = $item->almacenIngresoDetalle->producto_linea_id ?? null;
                 $key = $lid ? "{$pid}_{$lid}" : null;
 
-                if ($item->almacenIngresoDetalle && $item->almacenIngresoDetalle->costo > 0) {
-                    // Costo real del lote usado en esta venta
+                if ((float) $item->costo_unitario > 0) {
+                    // Costo ponderado guardado al momento de la venta (multi-lote FIFO)
+                    $costoItem = (float) $item->costo_unitario;
+                } elseif ($item->almacenIngresoDetalle && $item->almacenIngresoDetalle->costo > 0) {
+                    // Costo real del lote asignado (registros anteriores sin costo_unitario)
                     $costoItem = $item->almacenIngresoDetalle->costo;
                 } elseif ($key && isset($costoUltimoLote[$key])) {
                     // Fallback: último lote con stock para este producto+linea
