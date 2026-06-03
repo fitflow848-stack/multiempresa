@@ -984,10 +984,13 @@
                                         // Limpiar selección
                                         seleccionados = [];
                                         actualizarSeleccionados();
+                                    } else {
+                                        Swal.fire('Error', response.message || 'Error al anular comprobantes', 'error');
                                     }
                                 })
-                                .fail(function() {
-                                    Swal.fire('Error', 'Error al anular comprobantes', 'error');
+                                .fail(function(xhr) {
+                                    const resp = xhr.responseJSON || {};
+                                    Swal.fire('Error', resp.message || 'Error al anular comprobantes', 'error');
                                 });
                         }
                     });

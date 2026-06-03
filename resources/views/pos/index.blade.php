@@ -829,7 +829,7 @@
                     </div>
                     <div style="font-size: 10px; color: #666; display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px;">
                         <span class="text-truncate" style="max-width: 150px;">M: <strong>${marca}</strong></span>
-                        <span>Stk: <strong style="color: ${stock <= 5 ? '#ef4444' : '#22c55e'}">${stock}</strong></span>
+                        <span data-stock-display data-producto-id="${p.producto_id}" data-linea-id="${p.product_linea_id || ''}" data-stock-original="${parseFloat(p.cantidad_total || 0)}">Stk: <strong style="color: ${stock <= 5 ? '#ef4444' : '#22c55e'}">${stock}</strong></span>
                         <span>V: <strong>${fVenc}</strong></span>
                     </div>
                 </div>
@@ -1755,6 +1755,16 @@
                 clienteActual = { id: '', nombre: 'CLIENTE VARIOS', documento: '' };
             }
 
+            // Limpiar los resultados de búsqueda y recargar con stock fresco
+            const grid = document.getElementById('product-results-grid');
+            const searchInput = document.getElementById('main-search-input');
+            if (grid && searchInput && searchInput.value.trim().length >= 2) {
+                // Re-ejecutar la búsqueda para obtener stock actualizado
+                buscarProductosDebounced(searchInput.value.trim());
+            } else if (grid) {
+                grid.innerHTML = '';
+            }
+
             // Limpiar venta persistente
             localStorage.removeItem(AUTOSAVE_KEY);
 
@@ -1878,6 +1888,15 @@
             // Resetear ticket
             ticket = [];
             window.selectedTicketIndex = -1;
+
+            // Recargar resultados de búsqueda con stock actualizado
+            const grid = document.getElementById('product-results-grid');
+            const searchInput = document.getElementById('main-search-input');
+            if (grid && searchInput && searchInput.value.trim().length >= 2) {
+                buscarProductosDebounced(searchInput.value.trim());
+            } else if (grid) {
+                grid.innerHTML = '';
+            }
 
             // Limpiar storage y venta persistente
             sessionStorage.removeItem('ticketGuardadoPOS');
@@ -2207,7 +2226,19 @@
             // Si es suma, la cantidad final es existente.cantidad + qtyToAdd
             const cantidadFinal = producto.replaceQuantity ? qtyToAdd : (existente.cantidad + qtyToAdd);
 
-            if (cantidadFinal <= existente.cantidad_disponible) {
+            // Calcular stock real disponible considerando TODOS los items del ticket con el mismo producto/línea
+            const lineaIdActual = String(existente.product_linea_id || existente.producto_linea_id || '');
+            const totalEnTicketOtros = ticket.reduce((sum, item) => {
+                if (item === existente) return sum; // No contar el item actual
+                const itemLinea = String(item.product_linea_id || item.producto_linea_id || '');
+                if (String(item.producto_id) === String(existente.producto_id) && itemLinea === lineaIdActual) {
+                    return sum + (item.cantidad || 0);
+                }
+                return sum;
+            }, 0);
+            const stockRealDisponible = existente.cantidad_disponible - totalEnTicketOtros;
+
+            if (cantidadFinal <= stockRealDisponible) {
                 existente.cantidad = cantidadFinal;
 
                 // Aplicar lógica de Precio por Docena (>= 12 unidades)
@@ -2229,7 +2260,7 @@
                     existente.importe = subtotalSinDescuento - montoDescuento;
                 }
             } else {
-                alert(`Stock insuficiente. Disponible: ${existente.cantidad_disponible} unidades`);
+                alert(`Stock insuficiente. Disponible: ${stockRealDisponible} unidades`);
             }
         } else {
             // Agregar nuevo producto al ticket respetando la cantidad solicitada
@@ -2257,6 +2288,8 @@
         }
 
         renderTicket();
+        // Actualizar stock visual en los resultados de búsqueda
+        actualizarStockVisual();
         // Auto-guardar después de agregar producto
         guardarVentaPersistente();
 
@@ -2269,6 +2302,33 @@
             }
         }, 150);
 
+    }
+
+    /**
+     * Actualiza el stock mostrado en las cards de búsqueda restando lo que ya está en el ticket.
+     */
+    function actualizarStockVisual() {
+        const cards = document.querySelectorAll('.pos-product-card');
+        cards.forEach(card => {
+            const stockEl = card.querySelector('[data-stock-display]');
+            if (!stockEl) return;
+            
+            const productoId = stockEl.getAttribute('data-producto-id');
+            const lineaId = stockEl.getAttribute('data-linea-id');
+            const stockOriginal = parseFloat(stockEl.getAttribute('data-stock-original') || 0);
+            
+            // Sumar cantidad en ticket para este producto/línea
+            const enTicket = ticket.reduce((sum, item) => {
+                const itemLineaId = String(item.product_linea_id || item.producto_linea_id || '');
+                if (String(item.producto_id) === productoId && itemLineaId === lineaId) {
+                    return sum + (item.cantidad || 0);
+                }
+                return sum;
+            }, 0);
+            
+            const stockRestante = Math.max(0, stockOriginal - enTicket);
+            stockEl.innerHTML = `Stk: <strong style="color: ${stockRestante <= 5 ? '#ef4444' : '#22c55e'}">${stockRestante.toFixed(2)}</strong>`;
+        });
     }
 
     function renderTicket() {
@@ -2388,6 +2448,7 @@
                     window.selectedIndex = -1;
                     window.selectedTicketIndex = -1;
                     renderTicket();
+                    actualizarStockVisual();
                     guardarVentaPersistente();
                     if (typeof mostrarNotificacion === 'function') {
                         mostrarNotificacion(`🗑️ "${producto.nombre.substring(0, 20)}..." eliminado`);
@@ -2400,6 +2461,7 @@
                 window.selectedIndex = -1;
                 window.selectedTicketIndex = -1;
                 renderTicket();
+                actualizarStockVisual();
                 guardarVentaPersistente();
             }
         }
@@ -2414,12 +2476,25 @@
             if (confirm('¿Eliminar este producto del ticket?')) {
                 ticket.splice(index, 1);
                 renderTicket();
+                actualizarStockVisual();
             }
             return;
         }
 
-        if (cantidad > producto.cantidad_disponible) {
-            alert(`Stock insuficiente. Disponible: ${producto.cantidad_disponible} unidades`);
+        // Calcular stock real disponible considerando otros items del mismo producto en el ticket
+        const lineaId = String(producto.product_linea_id || producto.producto_linea_id || '');
+        const totalEnTicketOtros = ticket.reduce((sum, item, i) => {
+            if (i === index) return sum;
+            const itemLinea = String(item.product_linea_id || item.producto_linea_id || '');
+            if (String(item.producto_id) === String(producto.producto_id) && itemLinea === lineaId) {
+                return sum + (item.cantidad || 0);
+            }
+            return sum;
+        }, 0);
+        const stockRealDisponible = producto.cantidad_disponible - totalEnTicketOtros;
+
+        if (cantidad > stockRealDisponible) {
+            alert(`Stock insuficiente. Disponible: ${stockRealDisponible} unidades`);
             // Restaurar valor anterior
             renderTicket();
             return;
