@@ -2995,13 +2995,9 @@
 @include('pos.partials.modals.context-menu-ticket')
 @include('pos.partials.modals.modal-formatos-proforma')
 @include('pos.partials.modals.modal-formatos-venta')
-@include('pos.partials.modals.modal-buscar-clientes')
-@include('pos.partials.modals.modal-nuevo-cliente')
 @include('pos.partials.js.finalizar-venta')
 @include('pos.partials.js.sucursal-toggle')
 @include('pos.partials.js.cantidad-venta')
-@include('pos.partials.js.cliente-venta')
-@include('pos.partials.js.persistencia-venta')
 
 @include('pos.partials.modals.modal-ventas-guardadas')
 @include('pos.partials.js.ventas-guardadas')
