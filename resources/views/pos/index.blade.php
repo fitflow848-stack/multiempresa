@@ -1928,12 +1928,6 @@
             if (clienteNombre) clienteNombre.textContent = 'CLIENTE CONTABLE';
             if (clienteDoc) clienteDoc.textContent = '00000000';
 
-            // Limpiar búsqueda de productos
-            const searchInput = document.querySelector('input[placeholder="Buscar productos..."]');
-            if (searchInput) {
-                searchInput.value = '';
-            }
-
             // Limpiar tabla de productos
             const productosTable = document.getElementById('productos-tbody');
             if (productosTable) {
