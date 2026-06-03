@@ -349,11 +349,19 @@ class PosController extends Controller
                     'total' => $venta->total
                 ]
             ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Errores de base de datos: NO exponer el SQL crudo al usuario.
+            Log::error('Error de base de datos al guardar venta: ' . $e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo registrar la venta. Verifica que el cliente y los datos del comprobante estén completos e intenta nuevamente.'
+            ], 500);
         } catch (\Exception $e) {
+            // Errores de negocio controlados (mensajes ya legibles lanzados por el service).
             Log::error('Error al guardar venta (delegado a VentaService): ' . $e->getMessage(), ['exception' => $e]);
             return response()->json([
                 'success' => false,
-                'message' => 'Error al guardar la venta: ' . $e->getMessage()
+                'message' => $e->getMessage()
             ], 500);
         }
     }
