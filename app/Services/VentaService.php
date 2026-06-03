@@ -157,7 +157,11 @@ class VentaService
             $venta = new Venta();
             $venta->id_empresa = $company->id;
             $venta->id_tido = $documento->id_tido;
-            $venta->id_cliente = $clienteData['id'] ?? 999999;
+            // El cliente puede llegar sin ID (venta a "Cliente Varios"): tratamos
+            // null, string vacío o valores no numéricos como el cliente genérico 999999.
+            // Usar solo "?? 999999" no alcanza porque "" no es null y rompería el INSERT.
+            $clienteId = $clienteData['id'] ?? null;
+            $venta->id_cliente = (is_numeric($clienteId) && (int) $clienteId > 0) ? (int) $clienteId : 999999;
             $venta->id_tipo_pago = $tipoPagoId;
             $venta->fecha_emision = now();
             
