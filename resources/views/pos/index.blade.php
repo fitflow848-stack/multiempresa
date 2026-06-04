@@ -2577,6 +2577,11 @@
 
         // F12 or Enter: Emitir (Finalizar)
         if (e.key === 'F12' || (e.key === 'Enter' && !isInput)) {
+            // No abrir si hay un modal de Bootstrap abierto o se está procesando
+            const hayModalAbierto = document.querySelector('.modal.show') || 
+                                    (document.getElementById('modal-tipo-documento') && document.getElementById('modal-tipo-documento').style.display === 'flex') ||
+                                    isProcessingEmission;
+            if (hayModalAbierto) return;
             e.preventDefault();
             abrirModalTipoDocumento();
         }

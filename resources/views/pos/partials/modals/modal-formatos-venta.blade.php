@@ -80,6 +80,11 @@
             await limpiarVentaCompletada();
         }
         
+        // Cerrar modal de tipo documento si está abierto
+        if (typeof cerrarModalTipoDocumento === 'function') {
+            cerrarModalTipoDocumento();
+        }
+
         // En lugar de recargar toda la página (que interrumpe la impresión), 
         // simplemente reseteamos el estado del TPV vía JS
         if (typeof renderTicket === 'function') {
