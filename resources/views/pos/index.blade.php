@@ -2235,11 +2235,11 @@
             if (cantidadFinal <= stockRealDisponible) {
                 existente.cantidad = cantidadFinal;
 
-                // Aplicar lógica de Precio por Docena (>= 12 unidades)
-                if (existente.cantidad >= 12 && (existente.pv_docena || producto.pv_docena) > 0) {
+                // Aplicar lógica de Precio por Docena (>= 12 unidades) - Solo si NO es precio corporativo
+                if (!existente.es_precio_corporativo && existente.cantidad >= 12 && (existente.pv_docena || producto.pv_docena) > 0) {
                     existente.precio = existente.pv_docena || producto.pv_docena;
                     existente.es_precio_docena = true;
-                } else if (existente.es_precio_docena) {
+                } else if (existente.es_precio_docena && !existente.es_precio_corporativo) {
                     // Si ya tenía precio docena pero bajó de 12, restaurar pvp
                     existente.precio = existente.pvp || producto.pvp || existente.precio;
                     existente.es_precio_docena = false;
@@ -2270,8 +2270,8 @@
                 es_precio_publico: producto.es_precio_publico || false
             };
 
-            // Aplicar lógica de Precio por Docena al agregar nuevo
-            if (nuevoProducto.cantidad >= 12 && nuevoProducto.pv_docena > 0) {
+            // Aplicar lógica de Precio por Docena al agregar nuevo - Solo si NO es precio corporativo
+            if (!nuevoProducto.es_precio_corporativo && nuevoProducto.cantidad >= 12 && nuevoProducto.pv_docena > 0) {
                 nuevoProducto.precio = nuevoProducto.pv_docena;
                 nuevoProducto.es_precio_docena = true;
             }
@@ -2496,11 +2496,11 @@
 
         producto.cantidad = cantidad;
 
-        // Aplicar lógica de Precio por Docena (>= 12 unidades)
-        if (producto.cantidad >= 12 && producto.pv_docena > 0) {
+        // Aplicar lógica de Precio por Docena (>= 12 unidades) - Solo si NO es precio corporativo
+        if (!producto.es_precio_corporativo && producto.cantidad >= 12 && producto.pv_docena > 0) {
             producto.precio = producto.pv_docena;
             producto.es_precio_docena = true;
-        } else if (producto.es_precio_docena) {
+        } else if (producto.es_precio_docena && !producto.es_precio_corporativo) {
             // Si ya tenía precio docena pero bajó de 12, restaurar pvp
             producto.precio = producto.pvp || producto.precio;
             producto.es_precio_docena = false;
