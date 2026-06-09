@@ -2239,13 +2239,17 @@
                 if (!existente.es_precio_corporativo && existente.cantidad >= 12 && (existente.pv_docena || producto.pv_docena) > 0) {
                     existente.precio = existente.pv_docena || producto.pv_docena;
                     existente.es_precio_docena = true;
+                    // Resetear descuento: el precio docena ya es el beneficio
+                    existente.descuento = 0;
+                    existente.descuentoFijo = 0;
+                    existente.descuentoTexto = '0%';
                 } else if (existente.es_precio_docena && !existente.es_precio_corporativo) {
                     // Si ya tenía precio docena pero bajó de 12, restaurar pvp
                     existente.precio = existente.pvp || producto.pvp || existente.precio;
                     existente.es_precio_docena = false;
                 }
 
-                // Recalcular importe considerando descuento previo si existe (REVERTIDO A TOTAL)
+                // Recalcular importe
                 const subtotalSinDescuento = existente.cantidad * existente.precio;
                 if (existente.descuentoFijo > 0) {
                     existente.importe = subtotalSinDescuento - existente.descuentoFijo;
@@ -2500,13 +2504,17 @@
         if (!producto.es_precio_corporativo && producto.cantidad >= 12 && producto.pv_docena > 0) {
             producto.precio = producto.pv_docena;
             producto.es_precio_docena = true;
+            // Resetear descuento: el precio docena ya es el beneficio
+            producto.descuento = 0;
+            producto.descuentoFijo = 0;
+            producto.descuentoTexto = '0%';
         } else if (producto.es_precio_docena && !producto.es_precio_corporativo) {
             // Si ya tenía precio docena pero bajó de 12, restaurar pvp
             producto.precio = producto.pvp || producto.precio;
             producto.es_precio_docena = false;
         }
 
-        // Recalcular importe considerando descuento (REVERTIDO A TOTAL)
+        // Recalcular importe
         const subtotalSinDescuento = producto.cantidad * producto.precio;
         if (producto.descuentoFijo > 0) {
             producto.importe = subtotalSinDescuento - producto.descuentoFijo;

@@ -858,7 +858,13 @@ class AlmacenController extends Controller
         }
 
         if ($lineaId) {
-            $query->where('d.producto_linea_id', $lineaId);
+            $query->where(function($q) use ($lineaId, $productoId) {
+                $q->where('d.producto_linea_id', $lineaId)
+                  ->orWhere(function($q2) use ($productoId) {
+                      $q2->where('d.producto_id', $productoId)
+                         ->whereNull('d.producto_linea_id');
+                  });
+            });
         } else {
             $query->where('d.producto_id', $productoId);
         }
