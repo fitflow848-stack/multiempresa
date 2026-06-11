@@ -857,91 +857,34 @@ class AlmacenController extends Controller
             $query->where('i.sucursal_id', $sucursalId);
         }
 
-        if ($lineaId) {
-            $query->where(function($q) use ($lineaId, $productoId) {
-                $q->where('d.producto_linea_id', $lineaId)
-                  ->orWhere(function($q2) use ($productoId) {
-                      $q2->where('d.producto_id', $productoId)
-                         ->whereNull('d.producto_linea_id');
-                  });
-            });
-        } else {
-            $query->where('d.producto_id', $productoId);
-        }
+        // Siempre filtramos por producto_id para incluir todo el stock sin importar producto_linea_id.
+        // Stock recibido vía transferencia puede tener un linea_id distinto al del ingreso original.
+        $query->where('d.producto_id', $productoId);
 
-        // Agrupamos por lote y fecha de vencimiento para obtener el stock REAL sumando ajustes (negativos)
-        // Esto evita que registros de ajustes o salidas negativas inflen el stock disponible mostrado
-        // best_id: preferir el lote original (no [ANULACION]/[DEVOLUCION]) con cantidad decente
-        $bestIdSubquery = $lineaId
-            ? "(SELECT d2.id FROM almacen_ingreso_detalle d2
-               JOIN almacen_ingresos i2 ON i2.id = d2.ingreso_id
-               WHERE i2.sucursal_id = i.sucursal_id
-               AND d2.producto_linea_id = d.producto_linea_id
-               AND COALESCE(d2.lote, '') = COALESCE(d.lote, '')
-               AND d2.cantidad > 0
-               AND (i2.observacion NOT LIKE '[ANULACION]%' AND i2.observacion NOT LIKE '[DEVOLUCION]%')
-               ORDER BY d2.id DESC LIMIT 1) as best_id"
-            : "(SELECT d2.id FROM almacen_ingreso_detalle d2
-               JOIN almacen_ingresos i2 ON i2.id = d2.ingreso_id
-               WHERE i2.sucursal_id = i.sucursal_id
-               AND d2.producto_id = d.producto_id
-               AND COALESCE(d2.lote, '') = COALESCE(d.lote, '')
-               AND d2.cantidad > 0
-               AND (i2.observacion NOT LIKE '[ANULACION]%' AND i2.observacion NOT LIKE '[DEVOLUCION]%')
-               ORDER BY d2.id DESC LIMIT 1) as best_id";
+        // best_id: el registro con cantidad > 0 más reciente para ese lote/fecha en esa sucursal
+        $bestIdSubquery = "(SELECT d2.id FROM almacen_ingreso_detalle d2
+           JOIN almacen_ingresos i2 ON i2.id = d2.ingreso_id
+           WHERE i2.sucursal_id = i.sucursal_id
+           AND d2.producto_id = d.producto_id
+           AND COALESCE(d2.lote, '') = COALESCE(d.lote, '')
+           AND COALESCE(d2.fecha_vencimiento, '') = COALESCE(d.fecha_vencimiento, '')
+           AND d2.cantidad > 0
+           AND (i2.observacion NOT LIKE '[ANULACION]%' AND i2.observacion NOT LIKE '[DEVOLUCION]%')
+           ORDER BY d2.id DESC LIMIT 1) as best_id";
 
         $lotes = $query->select(
                 'd.lote',
                 'd.fecha_vencimiento',
-                'd.producto_linea_id',
                 DB::raw('SUM(d.cantidad) as stock'),
                 DB::raw('MAX(d.id) as id'),
                 's.nombre as sucursal_nombre',
                 'i.sucursal_id',
                 DB::raw($bestIdSubquery)
             )
-            ->groupBy('d.lote', 'd.fecha_vencimiento', 's.nombre', 'i.sucursal_id', 'd.producto_id', 'd.producto_linea_id')
+            ->groupBy('d.lote', 'd.fecha_vencimiento', 's.nombre', 'i.sucursal_id', 'd.producto_id')
             ->having('stock', '>', 0)
             ->orderBy('d.fecha_vencimiento', 'asc')
             ->get();
-
-        // Fallback: si se buscó por linea_id pero no hay resultados, buscar por producto_id.
-        // Esto ocurre cuando el ingreso fue guardado con un producto_linea_id distinto al actual
-        // (p.ej. si la línea fue recreada y tiene un nuevo ID en producto_lineas).
-        if ($lotes->isEmpty() && $lineaId && $productoId) {
-            $bestIdSubqueryFallback = "(SELECT d2.id FROM almacen_ingreso_detalle d2
-               JOIN almacen_ingresos i2 ON i2.id = d2.ingreso_id
-               WHERE i2.sucursal_id = i.sucursal_id
-               AND d2.producto_id = d.producto_id
-               AND COALESCE(d2.lote, '') = COALESCE(d.lote, '')
-               AND d2.cantidad > 0
-               AND (i2.observacion NOT LIKE '[ANULACION]%' AND i2.observacion NOT LIKE '[DEVOLUCION]%')
-               ORDER BY d2.id DESC LIMIT 1) as best_id";
-
-            $fallbackQuery = DB::table('almacen_ingreso_detalle as d')
-                ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
-                ->leftJoin('sucursales as s', 's.id', '=', 'i.sucursal_id');
-
-            if ($sucursalId && $sucursalId !== 'undefined') {
-                $fallbackQuery->where('i.sucursal_id', $sucursalId);
-            }
-            $fallbackQuery->where('d.producto_id', $productoId);
-
-            $lotes = $fallbackQuery->select(
-                    'd.lote',
-                    'd.fecha_vencimiento',
-                    'd.producto_linea_id',
-                    DB::raw('SUM(d.cantidad) as stock'),
-                    DB::raw('MAX(d.id) as id'),
-                    's.nombre as sucursal_nombre',
-                    'i.sucursal_id',
-                    DB::raw($bestIdSubqueryFallback)
-                )
-                ->groupBy('d.lote', 'd.fecha_vencimiento', 's.nombre', 'i.sucursal_id', 'd.producto_id', 'd.producto_linea_id')
-                ->having('stock', '>', 0)
-                ->orderBy('d.fecha_vencimiento', 'asc')
-                ->get();
-        }
 
         $results = $lotes->map(function ($lote) use ($sucursalId) {
             $fecha = $lote->fecha_vencimiento ? date('d/m/Y', strtotime($lote->fecha_vencimiento)) : '-';
@@ -1006,9 +949,27 @@ class AlmacenController extends Controller
 
                 $sucursalOrigenId = $loteOrigen->ingreso->sucursal_id;
 
-                // 1. Restar del origen
-                $loteOrigen->cantidad -= $item['cantidad'];
-                $loteOrigen->save();
+                // 1. Restar del origen distribuido entre todos los registros del mismo lote/fecha
+                // (el stock puede estar en varios almacen_ingreso_detalle con distintos producto_linea_id)
+                $remaining = $item['cantidad'];
+                $registrosOrigen = DB::table('almacen_ingreso_detalle as d')
+                    ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
+                    ->where('i.sucursal_id', $request->sucursal_origen_id)
+                    ->where('d.producto_id', $item['producto_id'])
+                    ->where('d.lote', $loteOrigen->lote)
+                    ->where('d.fecha_vencimiento', $loteOrigen->fecha_vencimiento)
+                    ->where('d.cantidad', '>', 0)
+                    ->orderBy('d.id', 'asc')
+                    ->select('d.id', 'd.cantidad')
+                    ->lockForUpdate()
+                    ->get();
+
+                foreach ($registrosOrigen as $reg) {
+                    if ($remaining <= 0) break;
+                    $toDeduct = min($reg->cantidad, $remaining);
+                    DB::table('almacen_ingreso_detalle')->where('id', $reg->id)->decrement('cantidad', $toDeduct);
+                    $remaining -= $toDeduct;
+                }
 
                 // 2. Crear Ingreso en Destino
                 $nuevoIngreso = \App\Models\AlmacenIngreso::create([
