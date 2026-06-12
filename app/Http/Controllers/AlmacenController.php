@@ -857,6 +857,13 @@ class AlmacenController extends Controller
             $query->where('i.sucursal_id', $sucursalId);
         }
 
+        // Excluir ajustes negativos (misma lógica que el POS para consistencia de stock)
+        $query->where(function ($q) {
+            $q->whereNull('i.observacion')
+              ->orWhere('i.observacion', 'NOT LIKE', '[AJUSTE]%')
+              ->orWhere('d.cantidad', '>=', 0);
+        });
+
         // Siempre filtramos por producto_id para incluir todo el stock sin importar producto_linea_id.
         // Stock recibido vía transferencia puede tener un linea_id distinto al del ingreso original.
         $query->where('d.producto_id', $productoId);
