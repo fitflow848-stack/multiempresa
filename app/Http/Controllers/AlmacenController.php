@@ -861,6 +861,15 @@ class AlmacenController extends Controller
         // Stock recibido vía transferencia puede tener un linea_id distinto al del ingreso original.
         $query->where('d.producto_id', $productoId);
 
+        // Usar el mismo criterio que el POS: excluir registros [AJUSTE] con cantidad negativa.
+        // Los ajustes negativos no representan salidas reales de producto (ventas, transferencias),
+        // sino correcciones contables que el POS también ignora al mostrar stock disponible.
+        $query->where(function ($q) {
+            $q->whereNull('i.observacion')
+              ->orWhere('i.observacion', 'NOT LIKE', '[AJUSTE]%')
+              ->orWhere('d.cantidad', '>=', 0);
+        });
+
         // best_id: el registro con cantidad > 0 más reciente para ese lote/fecha en esa sucursal
         $bestIdSubquery = "(SELECT d2.id FROM almacen_ingreso_detalle d2
            JOIN almacen_ingresos i2 ON i2.id = d2.ingreso_id
