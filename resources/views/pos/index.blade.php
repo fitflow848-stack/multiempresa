@@ -2278,9 +2278,13 @@
             if (!nuevoProducto.es_precio_corporativo && nuevoProducto.cantidad >= 12 && nuevoProducto.pv_docena > 0) {
                 nuevoProducto.precio = nuevoProducto.pv_docena;
                 nuevoProducto.es_precio_docena = true;
+                nuevoProducto.descuento = 0;
+                nuevoProducto.descuentoFijo = 0;
+                nuevoProducto.descuentoTexto = '0%';
             }
 
-            nuevoProducto.importe = nuevoProducto.importe || (qtyToAdd * (nuevoProducto.precio || parseFloat(nuevoProducto.pvp || 0)));
+            // Siempre recalcular importe con el precio final (puede ser docena)
+            nuevoProducto.importe = parseFloat((qtyToAdd * nuevoProducto.precio).toFixed(2));
 
             ticket.push(nuevoProducto);
         }
@@ -2391,7 +2395,7 @@
                            onclick="event.stopPropagation()">
                 </td>
                 <td>
-                    <input type="text" value="${((parseFloat(p.cantidad || 0) * parseFloat(p.precio || 0)) - parseFloat(p.importe || 0)).toFixed(2)}" 
+                    <input type="text" value="${p.es_precio_docena ? '0.00' : ((parseFloat(p.cantidad || 0) * parseFloat(p.precio || 0)) - parseFloat(p.importe || 0)).toFixed(2)}"
                            style="width: 70px; border: 1px solid #ddd; border-radius: 4px; text-align: center; padding: 2px; color: #d63384; font-weight: 600;"
                            onchange="actualizarDescuento(${idx}, this.value)"
                            onclick="event.stopPropagation()">
