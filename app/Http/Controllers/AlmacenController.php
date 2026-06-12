@@ -865,17 +865,7 @@ class AlmacenController extends Controller
         });
 
         // Siempre filtramos por producto_id para incluir todo el stock sin importar producto_linea_id.
-        // Stock recibido vía transferencia puede tener un linea_id distinto al del ingreso original.
         $query->where('d.producto_id', $productoId);
-
-        // Usar el mismo criterio que el POS: excluir registros [AJUSTE] con cantidad negativa.
-        // Los ajustes negativos no representan salidas reales de producto (ventas, transferencias),
-        // sino correcciones contables que el POS también ignora al mostrar stock disponible.
-        $query->where(function ($q) {
-            $q->whereNull('i.observacion')
-              ->orWhere('i.observacion', 'NOT LIKE', '[AJUSTE]%')
-              ->orWhere('d.cantidad', '>=', 0);
-        });
 
         // best_id: el registro con cantidad > 0 más reciente para ese lote/fecha en esa sucursal
         $bestIdSubquery = "(SELECT d2.id FROM almacen_ingreso_detalle d2
@@ -902,9 +892,23 @@ class AlmacenController extends Controller
             ->orderBy('d.fecha_vencimiento', 'asc')
             ->get();
 
-        $results = $lotes->map(function ($lote) use ($sucursalId) {
+        // Calcular stock total real del producto (como lo hace el POS) para limitar
+        $stockTotalProducto = DB::table('almacen_ingreso_detalle as d')
+            ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
+            ->where('d.producto_id', $productoId)
+            ->when($sucursalId && $sucursalId !== 'undefined', fn($q) => $q->where('i.sucursal_id', $sucursalId))
+            ->where(function ($q) {
+                $q->whereNull('i.observacion')
+                  ->orWhere('i.observacion', 'NOT LIKE', '[AJUSTE]%')
+                  ->orWhere('d.cantidad', '>=', 0);
+            })
+            ->sum('d.cantidad');
+
+        $results = $lotes->map(function ($lote) use ($sucursalId, $stockTotalProducto) {
+            // El stock del lote no puede exceder el stock total real del producto
+            $stockEfectivo = min($lote->stock, max(0, $stockTotalProducto));
             $fecha = $lote->fecha_vencimiento ? date('d/m/Y', strtotime($lote->fecha_vencimiento)) : '-';
-            $texto = "Lote: " . ($lote->lote ?: 'S/L') . " | Vence: " . $fecha . " | Stock: " . number_format($lote->stock, 2);
+            $texto = "Lote: " . ($lote->lote ?: 'S/L') . " | Vence: " . $fecha . " | Stock: " . number_format($stockEfectivo, 2);
             
             // Solo añadir ubicación si no estamos filtrando por una específica
             if (!$sucursalId || $sucursalId === 'undefined') {
@@ -912,12 +916,12 @@ class AlmacenController extends Controller
             }
 
             return [
-                'id' => $lote->best_id ?: $lote->id, // Usar best_id si existe
+                'id' => $lote->best_id ?: $lote->id,
                 'text' => $texto,
-                'stock' => $lote->stock,
+                'stock' => $stockEfectivo,
                 'sucursal_id' => $lote->sucursal_id
             ];
-        });
+        })->filter(fn($item) => $item['stock'] > 0)->values();
 
         return response()->json($results);
     }
