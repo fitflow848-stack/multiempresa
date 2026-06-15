@@ -31,12 +31,24 @@ class OperacionCajaController extends Controller
 
         if ($isTransferenciaBoveda) {
             $user = Auth::user();
+            // Buscar bóveda abierta de la MISMA sucursal primero
             $bovedaAbierta = CierreCaja::whereNull('fecha_cierre')
                 ->whereHas('caja', function ($q) {
                     $q->where('is_boveda', true);
                 })
                 ->where('id_empresa', $user->company_id)
+                ->where('sucursal_id', $user->branch_id)
                 ->first();
+
+            // Si no hay bóveda en la misma sucursal, buscar en cualquiera de la empresa
+            if (!$bovedaAbierta) {
+                $bovedaAbierta = CierreCaja::whereNull('fecha_cierre')
+                    ->whereHas('caja', function ($q) {
+                        $q->where('is_boveda', true);
+                    })
+                    ->where('id_empresa', $user->company_id)
+                    ->first();
+            }
 
             if (!$bovedaAbierta) {
                 return response()->json(['success' => false, 'message' => 'No hay ninguna Tesorería / Bóveda con sesión abierta actualmente.'], 400);
@@ -119,10 +131,22 @@ class OperacionCajaController extends Controller
             return response()->json(['success' => false, 'message' => 'La caja de origen no está activa o no es válida.'], 400);
         }
 
+        // Buscar bóveda de la misma sucursal que la caja origen
+        $sucursalOrigen = $cierreOrigen->sucursal_id;
+        
         $bovedaAbierta = CierreCaja::whereNull('fecha_cierre')
             ->whereHas('caja', fn($q) => $q->where('is_boveda', true))
             ->where('id_empresa', $user->company_id)
+            ->where('sucursal_id', $sucursalOrigen)
             ->first();
+
+        // Fallback: si no hay bóveda en la misma sucursal, buscar cualquiera de la empresa
+        if (!$bovedaAbierta) {
+            $bovedaAbierta = CierreCaja::whereNull('fecha_cierre')
+                ->whereHas('caja', fn($q) => $q->where('is_boveda', true))
+                ->where('id_empresa', $user->company_id)
+                ->first();
+        }
 
         if (!$bovedaAbierta) {
             return response()->json(['success' => false, 'message' => 'No hay ninguna Bóveda con sesión abierta. Solicite al administrador que abra la bóveda primero.'], 422);
@@ -193,11 +217,22 @@ class OperacionCajaController extends Controller
         
         $cierreOrigen = CierreCaja::with('caja')->find($data['cierre_caja_id']);
         
-        // Buscamos bóveda abierta de la empresa
+        // Buscar bóveda de la misma sucursal primero
+        $sucursalOrigen = $cierreOrigen->sucursal_id ?? $user->branch_id;
+        
         $bovedaAbierta = CierreCaja::where('id_empresa', $user->company_id)
             ->whereNull('fecha_cierre')
             ->whereHas('caja', fn($q) => $q->where('is_boveda', true))
+            ->where('sucursal_id', $sucursalOrigen)
             ->first();
+
+        // Fallback: cualquier bóveda de la empresa
+        if (!$bovedaAbierta) {
+            $bovedaAbierta = CierreCaja::where('id_empresa', $user->company_id)
+                ->whereNull('fecha_cierre')
+                ->whereHas('caja', fn($q) => $q->where('is_boveda', true))
+                ->first();
+        }
 
         if (!$bovedaAbierta) {
             return response()->json(['success' => false, 'message' => 'No hay caja en tesorería (bóveda) abierta.'], 400);

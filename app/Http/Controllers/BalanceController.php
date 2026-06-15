@@ -17,6 +17,7 @@ use App\Models\Pasivo;
 use App\Models\Sucursal;
 use App\Models\TipoActivo;
 use App\Models\TipoActivoCorriente;
+use App\Models\ActivoCorriente;
 use App\Models\TipoPasivo;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -250,18 +251,22 @@ class BalanceController extends Controller
         $cxc = $cxcQuery->sum(DB::raw('monto_deuda'));
 
         // ACTIVOS CORRIENTES (Desde el nuevo módulo)
+        // Sumar solo el monto PENDIENTE (monto - monto_cobrado) de activos no saldados
         $tiposActivosCorrientes = TipoActivoCorriente::withoutGlobalScopes()
             ->where('company_id', $user->company_id)
-            ->withSum([
-                'activos' => function ($q) use ($user, $fecha, $sucursalId) {
-                    $q->withoutGlobalScopes()->where('company_id', $user->company_id)
-                        ->where('is_settled', false) // Solo lo que no está saldado aún
-                        ->whereDate('fecha_registro', '<=', $fecha);
-                    if ($sucursalId) {
-                        $q->where('sucursal_id', $sucursalId);
-                    }
+            ->get()
+            ->map(function ($tipo) use ($user, $fecha, $sucursalId) {
+                $query = ActivoCorriente::withoutGlobalScopes()
+                    ->where('company_id', $user->company_id)
+                    ->where('tipo_activo_corriente_id', $tipo->id)
+                    ->where('is_settled', false)
+                    ->whereDate('fecha_registro', '<=', $fecha);
+                if ($sucursalId) {
+                    $query->where('sucursal_id', $sucursalId);
                 }
-            ], 'monto')->get();
+                $tipo->activos_sum_monto = $query->selectRaw('COALESCE(SUM(monto - COALESCE(monto_cobrado, 0)), 0) as total')->value('total');
+                return $tipo;
+            });
 
         // Integrar CxC Automático al tipo correspondiente
         // NOTA: Si ya existe un tipo "Cuentas por Cobrar (POS)" en activos corrientes,

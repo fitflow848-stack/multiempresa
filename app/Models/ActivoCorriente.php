@@ -74,6 +74,10 @@ class ActivoCorriente extends Model
 
     public function getMontoPendienteAttribute(): float
     {
+        // Si está saldado, pendiente es 0
+        if ($this->is_settled) {
+            return 0;
+        }
         return max(0, floatval($this->monto) - floatval($this->monto_cobrado ?? 0));
     }
 }
