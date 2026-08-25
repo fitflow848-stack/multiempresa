@@ -12,9 +12,8 @@ class PeruConsultasService
 
     public function __construct()
     {
-        // Lo ideal sería mover este token al archivo .env
-        $this->token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6InN5c3RlbWNyYWZ0LnBlQGdtYWlsLmNvbSJ9.yuNS5hRaC0hCwymX_PjXRoSZJWLNNBeOdlLRSUGlHGA";
-        $this->baseUrl = "https://dniruc.apisperu.com/api/v1";
+        $this->token = config('services.apisperu.token');
+        $this->baseUrl = config('services.apisperu.base_url');
     }
 
     public function consultarDni($dni)
