@@ -279,6 +279,10 @@ class PrincipalController extends Controller
         if ($branchId) $ventaMesQuery->where('sucursal', $branchId);
         $ventaMes = $ventaMesQuery->sum('total');
 
+        // Venta promedio por día (mes en curso)
+        $diasTranscurridosMes = Carbon::now()->day;
+        $ventaPromedioDiaria = $diasTranscurridosMes > 0 ? $ventaMes / $diasTranscurridosMes : 0;
+
         // Venta del mes pasado
         $ventaMesPasadoQuery = Venta::where('id_empresa', $companyId)
             ->where('estado', '!=', '0')
@@ -301,6 +305,7 @@ class PrincipalController extends Controller
             'ventaAyer' => round($ventaAyer, 2),
             'ventaMes' => round($ventaMes, 2),
             'ventaMesPasado' => round($ventaMesPasado, 2),
+            'ventaPromedioDiaria' => round($ventaPromedioDiaria, 2),
         ];
 
         return view('welcome', compact(

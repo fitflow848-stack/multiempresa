@@ -146,9 +146,15 @@
                         <div class="col-md-6">
                             <span class="section-label-modal"><i class="bx bx-map-pin"></i> Punto de Partida</span>
                             <div class="row g-1 mb-2">
-                                <div class="col-4"><input type="text" class="novik-control-modal" value="LIMA" readonly title="Dep"></div>
-                                <div class="col-4"><input type="text" class="novik-control-modal" value="LIMA" readonly title="Prov"></div>
-                                <div class="col-4"><input type="text" class="novik-control-modal" value="LIMA" readonly title="Dist"></div>
+                                <div class="col-4">
+                                    <select class="novik-control-modal" id="modal_dep_partida" name="departamento_partida" title="Dep">
+                                        @foreach($departamentos as $d)
+                                            <option value="{{ $d->dep_cod }}">{{ $d->dep_nombre }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-4"><select class="novik-control-modal" id="modal_prov_partida" name="provincia_partida" title="Prov"></select></div>
+                                <div class="col-4"><select class="novik-control-modal" id="modal_dist_partida" name="distrito_partida" title="Dist"></select></div>
                             </div>
                             <input type="text" class="novik-control-modal" name="direccion_partida" id="guia_dir_partida" placeholder="Dirección partida">
                         </div>

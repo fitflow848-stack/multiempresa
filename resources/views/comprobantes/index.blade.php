@@ -1190,7 +1190,8 @@
                                 $('#modalGenerarGuia').data('cliente-nombre', cli.nombre || '');
                                 
                                 $('#guia_dir_partida').val(emp.direccion_fiscal || '');
-                                
+                                $('#modal_dep_partida').val('15').trigger('change');
+
                                 $('#modal_dep_llegada').val(cli.departamento || 'LIMA');
                                 $('#modal_prov_llegada').val(cli.provincia || 'LIMA');
                                 $('#modal_dist_llegada').val(cli.distrito_nombre || 'LIMA');
@@ -1224,6 +1225,31 @@
                 };
 
                 $(document).ready(function() {
+                    // --- Ubigeo dinámico Punto de Partida (modal guía) ---
+                    const tokenGuia = $('meta[name="csrf-token"]').attr('content');
+
+                    function loadProvPartida(dep, selectedProv) {
+                        $.post("{{ route('provincia.get') }}", { _token: tokenGuia, dep: dep }).done(res => {
+                            let html = '';
+                            res.forEach(p => html += `<option value="${p.pro_id}">${p.pro_nombre}</option>`);
+                            $('#modal_prov_partida').html(html);
+                            if (selectedProv) $('#modal_prov_partida').val(selectedProv);
+                            $('#modal_prov_partida').trigger('change');
+                        });
+                    }
+
+                    function loadDistPartida(prov, selectedDist) {
+                        $.post("{{ route('distrito.get') }}", { _token: tokenGuia, prov: prov }).done(res => {
+                            let html = '';
+                            res.forEach(d => html += `<option value="${d.dis_id}">${d.dis_nombre}</option>`);
+                            $('#modal_dist_partida').html(html);
+                            if (selectedDist) $('#modal_dist_partida').val(selectedDist);
+                        });
+                    }
+
+                    $('#modal_dep_partida').change(function() { loadProvPartida($(this).val()); });
+                    $('#modal_prov_partida').change(function() { loadDistPartida($(this).val()); });
+
                     $('#modal_modalidad').change(function() {
                         if ($(this).val() === '01') {
                             $('#modal_section_publico').show();

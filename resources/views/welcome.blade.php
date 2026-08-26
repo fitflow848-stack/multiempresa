@@ -438,9 +438,12 @@
             </div>
 
             <div class="stat-card green">
-                <div class="icon"><i class="bx bx-calendar"></i></div>
-                <div class="label">Venta del Mes</div>
-                <div class="value">S/ {{ number_format($chartData['ventaMes'], 2) }}</div>
+                <div class="icon"><i class="bx bx-trending-up"></i></div>
+                <div class="label">Venta Promedio por Día</div>
+                <div class="value">S/ {{ number_format($chartData['ventaPromedioDiaria'], 2) }}</div>
+                <div class="comparison" style="color:#94a3b8; font-size:0.75rem;">
+                    Basado en el mes en curso
+                </div>
             </div>
 
             <div class="stat-card purple">
