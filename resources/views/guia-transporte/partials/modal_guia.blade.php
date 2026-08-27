@@ -161,13 +161,15 @@
                         <div class="col-md-6">
                             <span class="section-label-modal"><i class="bx bxs-map-pin"></i> Punto de Destino</span>
                             <div class="row g-1 mb-2">
-                                <div class="col-4"><input type="text" class="novik-control-modal" name="dep_llegada_text" id="modal_dep_llegada" readonly title="Dep"></div>
-                                <div class="col-4"><input type="text" class="novik-control-modal" name="prov_llegada_text" id="modal_prov_llegada" readonly title="Prov"></div>
-                                <div class="col-4"><input type="text" class="novik-control-modal" name="dist_llegada_text" id="modal_dist_llegada" readonly title="Dist"></div>
-                                {{-- Hidden fields for IDs/Codes --}}
-                                <input type="hidden" name="departamento_llegada" id="hid_dep_lle">
-                                <input type="hidden" name="provincia_llegada" id="hid_prov_lle">
-                                <input type="hidden" name="distrito_llegada" id="hid_dist_lle">
+                                <div class="col-4">
+                                    <select class="novik-control-modal" id="modal_dep_llegada" name="departamento_llegada" title="Dep">
+                                        @foreach($departamentos as $d)
+                                            <option value="{{ $d->dep_cod }}">{{ $d->dep_nombre }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-4"><select class="novik-control-modal" id="modal_prov_llegada" name="provincia_llegada" title="Prov"></select></div>
+                                <div class="col-4"><select class="novik-control-modal" id="modal_dist_llegada" name="distrito_llegada" title="Dist"></select></div>
                             </div>
                             <input type="text" class="novik-control-modal" name="direccion_llegada" id="guia_dir_llegada" placeholder="Dirección destino">
                         </div>

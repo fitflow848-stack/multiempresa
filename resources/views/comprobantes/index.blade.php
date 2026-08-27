@@ -1192,13 +1192,15 @@
                                 $('#guia_dir_partida').val(emp.direccion_fiscal || '');
                                 $('#modal_dep_partida').val('15').trigger('change');
 
-                                $('#modal_dep_llegada').val(cli.departamento || 'LIMA');
-                                $('#modal_prov_llegada').val(cli.provincia || 'LIMA');
-                                $('#modal_dist_llegada').val(cli.distrito_nombre || 'LIMA');
-                                
-                                $('#hid_dep_lle').val(cli.departamento_id || '15');
-                                $('#hid_prov_lle').val(cli.provincia_id || '1501');
-                                $('#hid_dist_lle').val(cli.distrito_id || '150101');
+                                const cliUbigeo = res.cliente_ubigeo || {};
+                                $('#modal_dep_llegada').val(cliUbigeo.dep_cod || '15');
+                                loadProvUbigeo(
+                                    cliUbigeo.dep_cod || '15',
+                                    '#modal_prov_llegada',
+                                    '#modal_dist_llegada',
+                                    cliUbigeo.pro_id,
+                                    cliUbigeo.dis_id
+                                );
 
                                 $('#guia_dir_llegada').val(cli.direccion || '-');
 
@@ -1225,30 +1227,36 @@
                 };
 
                 $(document).ready(function() {
-                    // --- Ubigeo dinámico Punto de Partida (modal guía) ---
+                    // --- Ubigeo dinámico Punto de Partida / Destino (modal guía) ---
                     const tokenGuia = $('meta[name="csrf-token"]').attr('content');
 
-                    function loadProvPartida(dep, selectedProv) {
+                    window.loadProvUbigeo = function(dep, provSelector, distSelector, selectedProv, selectedDist) {
                         $.post("{{ route('provincia.get') }}", { _token: tokenGuia, dep: dep }).done(res => {
                             let html = '';
                             res.forEach(p => html += `<option value="${p.pro_id}">${p.pro_nombre}</option>`);
-                            $('#modal_prov_partida').html(html);
-                            if (selectedProv) $('#modal_prov_partida').val(selectedProv);
-                            $('#modal_prov_partida').trigger('change');
+                            $(provSelector).html(html);
+                            if (selectedProv) {
+                                $(provSelector).val(selectedProv);
+                                loadDistUbigeo($(provSelector).val(), distSelector, selectedDist);
+                            } else {
+                                $(provSelector).trigger('change');
+                            }
                         });
-                    }
+                    };
 
-                    function loadDistPartida(prov, selectedDist) {
+                    window.loadDistUbigeo = function(prov, distSelector, selectedDist) {
                         $.post("{{ route('distrito.get') }}", { _token: tokenGuia, prov: prov }).done(res => {
                             let html = '';
                             res.forEach(d => html += `<option value="${d.dis_id}">${d.dis_nombre}</option>`);
-                            $('#modal_dist_partida').html(html);
-                            if (selectedDist) $('#modal_dist_partida').val(selectedDist);
+                            $(distSelector).html(html);
+                            if (selectedDist) $(distSelector).val(selectedDist);
                         });
-                    }
+                    };
 
-                    $('#modal_dep_partida').change(function() { loadProvPartida($(this).val()); });
-                    $('#modal_prov_partida').change(function() { loadDistPartida($(this).val()); });
+                    $('#modal_dep_partida').change(function() { loadProvUbigeo($(this).val(), '#modal_prov_partida', '#modal_dist_partida'); });
+                    $('#modal_prov_partida').change(function() { loadDistUbigeo($(this).val(), '#modal_dist_partida'); });
+                    $('#modal_dep_llegada').change(function() { loadProvUbigeo($(this).val(), '#modal_prov_llegada', '#modal_dist_llegada'); });
+                    $('#modal_prov_llegada').change(function() { loadDistUbigeo($(this).val(), '#modal_dist_llegada'); });
 
                     $('#modal_modalidad').change(function() {
                         if ($(this).val() === '01') {

@@ -18,6 +18,9 @@ use App\Services\Sunat;
 use App\Models\VentaSunat;
 use App\Models\AlmacenIngreso;
 use App\Models\AlmacenIngresoDetalle; // Asegurar importación
+use App\Models\Departamento;
+use App\Models\Provincia;
+use App\Models\Distrito;
 
 class ComprobantesController extends Controller
 {
@@ -121,15 +124,68 @@ class ComprobantesController extends Controller
             ->firstOrFail();
 
         if ($request->ajax()) {
+            $clienteUbigeo = $this->resolverUbigeoPorNombres(
+                $venta->cliente->departamento ?? null,
+                $venta->cliente->provincia ?? null,
+                $venta->cliente->distrito ?? null
+            );
+
             return response()->json([
                 'success' => true,
                 'venta' => $venta,
                 'detalles' => $venta->detalles,
-                'empresa' => $company
+                'empresa' => $company,
+                'cliente_ubigeo' => $clienteUbigeo
             ]);
         }
 
         return redirect()->route('comprobantes.index', ['venta_id' => $id]);
+    }
+
+    /**
+     * Resuelve los códigos de ubigeo (dep_cod, pro_id, dis_id) a partir de los
+     * nombres de departamento/provincia/distrito guardados en el cliente
+     * (obtenidos originalmente de la consulta RUC/SUNAT).
+     */
+    private function resolverUbigeoPorNombres($departamento, $provincia, $distrito)
+    {
+        $resultado = ['dep_cod' => null, 'pro_id' => null, 'dis_id' => null];
+
+        if (!$departamento) {
+            return $resultado;
+        }
+
+        $dep = Departamento::whereRaw('UPPER(dep_nombre) = ?', [mb_strtoupper($departamento)])->first();
+        if (!$dep) {
+            return $resultado;
+        }
+        $resultado['dep_cod'] = $dep->dep_cod;
+
+        if (!$provincia) {
+            return $resultado;
+        }
+
+        $prov = Provincia::where('dep_codigo', $dep->dep_cod)
+            ->whereRaw('UPPER(pro_nombre) = ?', [mb_strtoupper($provincia)])
+            ->first();
+        if (!$prov) {
+            return $resultado;
+        }
+        $resultado['pro_id'] = $prov->pro_id;
+
+        if (!$distrito) {
+            return $resultado;
+        }
+
+        $dist = Distrito::where('pro_codigo', $prov->pro_cod)
+            ->where('dep_codigo', $dep->dep_cod)
+            ->whereRaw('UPPER(dis_nombre) = ?', [mb_strtoupper($distrito)])
+            ->first();
+        if ($dist) {
+            $resultado['dis_id'] = $dist->dis_id;
+        }
+
+        return $resultado;
     }
 
     public function seleccionarTodo(Request $request)
