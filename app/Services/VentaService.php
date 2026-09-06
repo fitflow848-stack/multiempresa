@@ -240,7 +240,7 @@ class VentaService
                 \App\Models\VentaPago::create([
                     'venta_id' => $venta->id_venta,
                     'tipo_pago_id' => $tipoPagoId,
-                    'monto' => $entrega,
+                    'monto' => $montoVenta,
                     'cuenta_bancaria_id' => ($esDigital && $cuentaBancaria) ? $cuentaBancaria->id : null,
                 ]);
 
