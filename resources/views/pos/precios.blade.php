@@ -14,12 +14,12 @@
             </div>
             <div class="card-body">
                 <div class="row g-3">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label">Buscar Producto</label>
                         <input type="text" id="search-input" class="form-control"
                             placeholder="Nombre, código o marca...">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label">Familia</label>
                         <select id="familia-filter" class="form-select">
                             <option value="">Todas</option>
@@ -28,7 +28,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label">Marca</label>
                         <select id="marca-filter" class="form-select">
                             <option value="">Todas</option>
@@ -37,11 +37,23 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Sucursal</label>
+                        <select id="sucursal-filter" class="form-select">
+                            @foreach ($sucursales as $suc)
+                                <option value="{{ $suc->id }}" @selected($suc->id == $user->branch_id)>{{ $suc->nombre }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div class="col-md-2 d-flex align-items-end">
                         <button class="btn btn-primary w-100" id="btn-buscar">
                             <i class="bx bx-search me-1"></i> Buscar
                         </button>
                     </div>
+                </div>
+                <div class="alert alert-info small mt-3 mb-0">
+                    <i class="bx bx-info-circle me-1"></i>
+                    Los precios que edites se guardan en la sucursal seleccionada arriba, sin afectar a las demás.
                 </div>
             </div>
         </div>
@@ -79,15 +91,17 @@
                 // For now we will rely on keypress and button.
 
                 const btnBuscar = document.getElementById('btn-buscar');
+                const sucursalFilter = document.getElementById('sucursal-filter');
                 const tableBody = document.querySelector('#prices-table tbody');
 
                 function fetchProducts() {
                     const query = searchInput.value;
+                    const sucursalId = sucursalFilter.value;
                     tableBody.innerHTML =
                         '<tr><td colspan="7" class="text-center p-4"><div class="spinner-border text-primary" role="status"></div></td></tr>';
 
                     // Using the existing search API
-                    fetch(`{{ route('pos.buscar') }}?q=${encodeURIComponent(query)}`)
+                    fetch(`{{ route('pos.buscar') }}?q=${encodeURIComponent(query)}&sucursal_id=${encodeURIComponent(sucursalId)}`)
                         .then(response => response.json())
                         .then(response => {
                             const data = response.productos || response;
@@ -224,6 +238,13 @@
                 // Trigger search on enter
                 searchInput.addEventListener('keypress', function(e) {
                     if (e.key === 'Enter') {
+                        fetchProducts();
+                    }
+                });
+
+                // Re-buscar si ya había resultados y se cambia de sucursal
+                sucursalFilter.addEventListener('change', function() {
+                    if (tableBody.children.length > 0) {
                         fetchProducts();
                     }
                 });

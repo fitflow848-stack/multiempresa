@@ -110,11 +110,12 @@ class PosController extends Controller
         $q = $request->get('q', '');
         $includeEmpty = $request->boolean('include_empty', false);
         $fuzzy = $request->boolean('fuzzy', true);
+        $sucursalId = $request->filled('sucursal_id') ? (int) $request->get('sucursal_id') : null;
 
         if ($fuzzy) {
-            $productos = $this->productRepo->buscarFuzzy($q, null, $includeEmpty);
+            $productos = $this->productRepo->buscarFuzzy($q, $sucursalId, $includeEmpty);
         } else {
-            $productos = $this->productRepo->buscar($q, null, $includeEmpty);
+            $productos = $this->productRepo->buscar($q, $sucursalId, $includeEmpty);
         }
 
         // Marcar si el match fue por código de barras exacto
@@ -555,7 +556,11 @@ class PosController extends Controller
         $familias = \App\Models\Familia::all();
         $marcas = \App\Models\Marca::all();
 
-        return view('pos.precios', compact('user', 'company', 'familias', 'marcas'));
+        $sucursales = DB::table('sucursales')
+            ->where('company_id', $company->id)
+            ->get();
+
+        return view('pos.precios', compact('user', 'company', 'familias', 'marcas', 'sucursales'));
     }
 
     public function updatePrecios(Request $request)
