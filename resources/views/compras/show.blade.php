@@ -68,6 +68,7 @@
                                     <th class="text-end">Cantidad</th>
                                     <th class="text-end">Costo</th>
                                     <th class="text-end">Importe</th>
+                                    <th class="text-center">Precios</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -78,6 +79,23 @@
                                         <td class="text-end">{{ $ln->cantidad }}</td>
                                         <td class="text-end">{{ number_format($ln->costo, 2) }}</td>
                                         <td class="text-end">{{ number_format(($ln->costo ?? 0) * ($ln->cantidad ?? 0), 2) }}</td>
+                                        <td class="text-center">
+                                            @if ($ln->product_id)
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-info btn-ver-precios"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#preciosProductoModal"
+                                                        data-nombre="{{ $ln->descripcion }}"
+                                                        data-pvp="{{ number_format($ln->pvp ?? 0, 2, '.', '') }}"
+                                                        data-pvp-dto="{{ number_format($ln->pvp_dto ?? 0, 2, '.', '') }}"
+                                                        data-pvc="{{ number_format($ln->pvc ?? 0, 2, '.', '') }}"
+                                                        data-pvc-dto="{{ number_format($ln->pvc_dto ?? 0, 2, '.', '') }}"
+                                                        data-pv-docena="{{ number_format(optional($ln->producto)->pv_docena ?? 0, 2, '.', '') }}"
+                                                        title="Ver precios">
+                                                    <i class="bx bx-dollar"></i>
+                                                </button>
+                                            @endif
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -197,8 +215,61 @@
     <div id="form-barcodes-inputs"></div>
 </form>
 
+<!-- Modal: precios del producto (solo lectura) -->
+<div class="modal fade" id="preciosProductoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Precios del producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <strong id="precios-producto-nombre"></strong>
+                </div>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label text-primary fw-bold small mb-0">PVP (Soles)</label>
+                        <div class="fw-semibold" id="precios-pvp">—</div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label text-warning fw-bold small mb-0">PVP Dcto.</label>
+                        <div class="fw-semibold" id="precios-pvp-dto">—</div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label text-info fw-bold small mb-0">PVC (Corp.)</label>
+                        <div class="fw-semibold" id="precios-pvc">—</div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label text-primary fw-bold small mb-0">PVC Dcto.</label>
+                        <div class="fw-semibold" id="precios-pvc-dto">—</div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label text-success fw-bold small mb-0">PV Docena</label>
+                        <div class="fw-semibold" id="precios-pv-docena">—</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
+    document.querySelectorAll('.btn-ver-precios').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.getElementById('precios-producto-nombre').textContent = this.getAttribute('data-nombre') || '';
+            document.getElementById('precios-pvp').textContent = 'S/ ' + parseFloat(this.getAttribute('data-pvp') || 0).toFixed(2);
+            document.getElementById('precios-pvp-dto').textContent = 'S/ ' + parseFloat(this.getAttribute('data-pvp-dto') || 0).toFixed(2);
+            document.getElementById('precios-pvc').textContent = 'S/ ' + parseFloat(this.getAttribute('data-pvc') || 0).toFixed(2);
+            document.getElementById('precios-pvc-dto').textContent = 'S/ ' + parseFloat(this.getAttribute('data-pvc-dto') || 0).toFixed(2);
+            document.getElementById('precios-pv-docena').textContent = 'S/ ' + parseFloat(this.getAttribute('data-pv-docena') || 0).toFixed(2);
+        });
+    });
+
     document.getElementById('btn-generar-barcodes-compra').addEventListener('click', function() {
         const filas = document.querySelectorAll('#modalBarcodesPdf tbody tr');
         const container = document.getElementById('form-barcodes-inputs');

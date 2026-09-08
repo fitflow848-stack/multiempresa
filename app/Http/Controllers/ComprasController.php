@@ -485,7 +485,7 @@ class ComprasController extends Controller
      */
     public function show(Compra $compra)
     {
-        $compra->load('lineas');
+        $compra->load('lineas.producto');
 
         // Cargar detalles de almacén para generar etiquetas (solo si la compra fue recibida)
         $almacenDetalles = collect();
@@ -531,7 +531,36 @@ class ComprasController extends Controller
     public function receiveForm(Compra $compra)
     {
         $compra->load('lineas');
-        return view('compras.receive', compact('compra'));
+        $sucursalId = $compra->local_destino ?? Auth::user()->branch_id;
+        $sucursal = Sucursal::find($sucursalId);
+        return view('compras.receive', compact('compra', 'sucursal'));
+    }
+
+    /**
+     * Devuelve los últimos precios (PVP/PVC) registrados para un producto
+     * en la sucursal de destino de la compra, para el modal de consulta
+     * de precios en la vista de recepción.
+     */
+    public function lineaPrecios(Compra $compra, Producto $producto)
+    {
+        $sucursalId = $compra->local_destino ?? Auth::user()->branch_id;
+
+        $ultimoIngreso = AlmacenIngresoDetalle::where('producto_id', $producto->id)
+            ->whereHas('ingreso', fn($q) => $q->where('sucursal_id', $sucursalId))
+            ->latest('id')
+            ->first();
+
+        return response()->json([
+            'sucursal' => optional(Sucursal::find($sucursalId))->nombre,
+            'origen' => $ultimoIngreso ? 'almacen' : 'producto',
+            'fecha' => optional(optional($ultimoIngreso)->ingreso)->fecha,
+            'pvp' => $ultimoIngreso->pvp ?? $producto->pvp ?? 0,
+            'pvp_dto' => $ultimoIngreso->pvpd ?? $producto->pvp_dto ?? 0,
+            'pvc' => $ultimoIngreso->pvc ?? $producto->pvc ?? 0,
+            'pvc_dto' => $ultimoIngreso->pvcd ?? $producto->pvc_dto ?? 0,
+            'pv_docena' => $producto->pv_docena ?? 0,
+            'costo' => $ultimoIngreso->costo ?? $producto->precio_compra ?? 0,
+        ]);
     }
 
     /**
@@ -550,6 +579,7 @@ class ComprasController extends Controller
 
         $compra->load('lineas');
         $sucursalId = $compra->local_destino ?? Auth::user()->branch_id;
+        $preciosOverride = $request->input('precios_override', []);
 
         DB::beginTransaction();
         try {
@@ -566,13 +596,29 @@ class ComprasController extends Controller
 
             foreach ($compra->lineas as $line) {
                 if ($line->product_id) {
+                    // Los precios solo se sobrescriben con lo editado en el modal de
+                    // precios si el usuario efectivamente confirma la recepción aquí;
+                    // hasta este punto no se ha persistido nada.
+                    $override = $preciosOverride[$line->product_id] ?? [];
+                    $val = fn($key, $default) => (isset($override[$key]) && $override[$key] !== '')
+                        ? (float) $override[$key] : $default;
+
+                    $costoRecibido = $val('costo', $line->costo ?? 0);
+                    $pvp = $val('pvp', $line->pvp ?? 0);
+                    $pvpDto = $val('pvp_dto', $line->pvp_dto ?? 0);
+                    $pvc = $val('pvc', $line->pvc ?? 0);
+                    $pvcDto = $val('pvc_dto', $line->pvc_dto ?? 0);
+                    $pvDocenaOverride = (isset($override['pv_docena']) && $override['pv_docena'] !== '')
+                        ? (float) $override['pv_docena'] : null;
+
                     $producto = Producto::find($line->product_id);
                     if ($producto) {
                         $producto->cantidad = ($producto->cantidad ?? 0) + (int)$line->cantidad;
+                        if ($pvDocenaOverride !== null) {
+                            $producto->pv_docena = $pvDocenaOverride;
+                        }
                         $producto->save();
                     }
-
-                    $costoRecibido = $line->costo ?? 0;
 
                     AlmacenIngresoDetalle::create([
                         'ingreso_id' => $ingreso->id,
@@ -584,14 +630,23 @@ class ComprasController extends Controller
                         'mu' => 0,
                         'mud' => 0,
                         'mup' => 0,
-                        'pvp' => $line->pvp ?? 0,
-                        'pvpd' => $line->pvp_dto ?? 0,
-                        'pvc' => $line->pvc ?? 0,
-                        'pvcd' => $line->pvc_dto ?? 0,
+                        'pvp' => $pvp,
+                        'pvpd' => $pvpDto,
+                        'pvc' => $pvc,
+                        'pvcd' => $pvcDto,
                         'stock_min' => $line->stock_min ?? 0,
                         'stock_max' => $line->stock_max ?? 0,
                         'lote' => $line->lote ?? null,
                         'fecha_vencimiento' => $line->fecha_vencimiento ?? null,
+                    ]);
+
+                    // Sincronizar la línea con lo realmente recibido (costo/precios)
+                    $line->update([
+                        'costo' => $costoRecibido,
+                        'pvp' => $pvp,
+                        'pvp_dto' => $pvpDto,
+                        'pvc' => $pvc,
+                        'pvc_dto' => $pvcDto,
                     ]);
 
                     // Sincronizar precio_compra con el costo real recibido

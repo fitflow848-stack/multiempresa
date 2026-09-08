@@ -35,6 +35,11 @@
                     </div>
 
                     <div class="col-md-3">
+                        <label class="form-label fw-bold">Total</label>
+                        <input id="detail-total" type="text" class="form-control form-control-sm text-end fw-bold" value="0.00" readonly>
+                    </div>
+
+                    <div class="col-md-3">
                         <label class="form-label">Stock Min</label>
                         <input id="detail-stock-min" type="number" min="0" step="1" class="form-control form-control-sm text-center" value="0">
                     </div>
@@ -44,30 +49,11 @@
                         <input id="detail-stock-max" type="number" min="0" step="1" class="form-control form-control-sm text-center" value="0">
                     </div>
 
-                    <div class="col-md-3">
-                        <label class="form-label text-primary fw-bold">PVP (Soles)</label>
-                        <input id="detail-pvp" type="number" min="0" step="0.01" class="form-control form-control-sm text-end" value="0.00">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label text-warning fw-bold">PVP Dcto.</label>
-                        <input id="detail-pvp-dto" type="number" min="0" step="0.01" class="form-control form-control-sm text-end" value="0.00">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label text-info fw-bold">PVC (Corp.)</label>
-                        <input id="detail-pvc" type="number" min="0" step="0.01" class="form-control form-control-sm text-end" value="0.00">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label text-primary fw-bold">PVC Dcto.</label>
-                        <input id="detail-pvc-dto" type="number" min="0" step="0.01" class="form-control form-control-sm text-end" value="0.00">
-                    </div>
-
-                    <div class="col-md-3">
-                        <label class="form-label text-success fw-bold">PV Docena</label>
-                        <input id="detail-pv-docena" type="number" min="0" step="0.01" class="form-control form-control-sm text-end" value="0.00">
-                    </div>
+                    <input type="hidden" id="detail-pvp" value="0.00">
+                    <input type="hidden" id="detail-pvp-dto" value="0.00">
+                    <input type="hidden" id="detail-pvc" value="0.00">
+                    <input type="hidden" id="detail-pvc-dto" value="0.00">
+                    <input type="hidden" id="detail-pv-docena" value="0.00">
 
                     <div class="col-md-3">
                         <label class="form-label">Lote</label>

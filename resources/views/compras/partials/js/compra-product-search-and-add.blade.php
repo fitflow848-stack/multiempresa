@@ -181,6 +181,7 @@
                 $('#detail-descuento').val(0.00);
                 $('#detail-stock-min').val(product.stock_min || 0);
                 $('#detail-stock-max').val(product.stock_max || 0);
+                updateDetailTotal();
 
                 // Mostrar stock actual
                 const stockActual = product.stock_actual !== undefined ? Number(product.stock_actual) : 0;
@@ -233,6 +234,15 @@
                 // temporarily attach the current product data to confirm button (store raw object)
                 $('#btn-confirm-add-product').data('product', product);
             }
+
+            // Update the read-only Total field (cantidad x costo) inside the detail modal
+            function updateDetailTotal() {
+                const cantidad = Number($('#detail-cantidad').val()) || 0;
+                const costo = Number($('#detail-costo').val()) || 0;
+                $('#detail-total').val((cantidad * costo).toFixed(2));
+            }
+
+            $(document).on('input change', '#detail-cantidad, #detail-costo', updateDetailTotal);
 
             // Confirm adding product from modal (namespaced event to prevent duplicate handlers)
             $(document).off('click.productDetailConfirm', '#btn-confirm-add-product')
