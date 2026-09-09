@@ -259,9 +259,16 @@
                         $('#precios-pvc-dto').val(Number(data.pvc_dto || 0).toFixed(2));
                         $('#precios-pv-docena').val(Number(data.pv_docena || 0).toFixed(2));
                         $('#precios-costo').val(Number(data.costo || 0).toFixed(2));
-                        $('#precios-origen').text(data.origen === 'almacen'
-                            ? ('Ingreso más reciente en este almacén' + (data.fecha ? (' (' + data.fecha + ')') : ''))
-                            : 'Producto nuevo, sin ingresos previos en este almacén — se muestra el precio base configurado en el producto.');
+                        let origenTexto;
+                        if (data.origen === 'almacen') {
+                            origenTexto = 'Ingreso más reciente en este almacén' + (data.fecha ? (' (' + data.fecha + ')') : '');
+                        } else if (data.origen === 'otra_sucursal') {
+                            origenTexto = 'Sin ingresos previos en este almacén — se muestra el último precio registrado en ' +
+                                (data.origen_sucursal || 'otra sucursal') + (data.fecha ? (' (' + data.fecha + ')') : '') + '. Revísalo antes de recibir.';
+                        } else {
+                            origenTexto = 'Producto nuevo, sin ingresos previos — se muestra el precio base configurado en el producto.';
+                        }
+                        $('#precios-origen').text(origenTexto);
 
                         $('#precios-loading').hide();
                         $('#precios-contenido').show();

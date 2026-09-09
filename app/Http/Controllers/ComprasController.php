@@ -116,9 +116,11 @@ class ComprasController extends Controller
             }
             
             $acciones = '';
-            $acciones .= '<a href="' . route('compras.show', $r->id) . '" class="btn btn-sm btn-primary me-1">Ver</a>';
+            // Si aún no se recibe, "Ver" lleva directo a la recepción en vez del detalle estático.
+            $verUrl = $r->received_at ? route('compras.show', $r->id) : route('compras.receive', $r->id);
+            $acciones .= '<a href="' . $verUrl . '" class="btn btn-sm btn-primary me-1">Ver</a>';
             if (! $r->received_at) {
-                $acciones .= '<a href="' . route('recibir-productos.index', ['id' => $r->id]) . '" class="btn btn-sm btn-warning me-1">Recibir</a>';
+                $acciones .= '<a href="' . route('compras.receive', $r->id) . '" class="btn btn-sm btn-warning me-1">Recibir</a>';
             }
             if (Auth::user()->can('compras.eliminar')) {
                 $acciones .= '<button class="btn btn-sm btn-danger btn-delete-compra" data-id="' . $r->id . '" title="Eliminar compra"><i class="bx bxs-trash"></i></button>';
@@ -537,15 +539,54 @@ class ComprasController extends Controller
     }
 
     /**
-     * Último AlmacenIngresoDetalle registrado para un producto en una sucursal
-     * (la fuente de "precios actualmente fijados" para esa sucursal).
+     * Resuelve los precios "vigentes" de un producto (PVP/PVC/etc.) con esta
+     * prioridad:
+     *   1. Último AlmacenIngresoDetalle de ESTA sucursal (lo más confiable).
+     *   2. Si nunca se recibió en esta sucursal: último AlmacenIngresoDetalle
+     *      de CUALQUIER otra sucursal de la empresa (mucho más reciente que
+     *      el precio estático del producto, que casi nunca se actualiza).
+     *   3. Como último recurso: los campos globales de Producto.
+     * Filtra también por producto_linea_id cuando se conoce, para no mezclar
+     * precios de otra presentación/variante del mismo producto.
      */
-    private function ultimoIngresoProducto(int $productoId, int $sucursalId): ?AlmacenIngresoDetalle
+    private function resolverPreciosVigentes(int $productoId, ?int $productoLineaId, int $sucursalId, ?int $companyId): array
     {
-        return AlmacenIngresoDetalle::where('producto_id', $productoId)
+        $base = fn() => AlmacenIngresoDetalle::where('producto_id', $productoId)
+            ->when($productoLineaId, fn($q) => $q->where('producto_linea_id', $productoLineaId));
+
+        $enEstaSucursal = $base()
             ->whereHas('ingreso', fn($q) => $q->where('sucursal_id', $sucursalId))
             ->latest('id')
             ->first();
+
+        $enOtraSucursal = null;
+        if (!$enEstaSucursal) {
+            $enOtraSucursal = $base()
+                ->whereHas('ingreso', function ($q) use ($companyId, $sucursalId) {
+                    $q->where('sucursal_id', '!=', $sucursalId);
+                    if ($companyId) {
+                        $q->where('company_id', $companyId);
+                    }
+                })
+                ->latest('id')
+                ->first();
+        }
+
+        $ultimo = $enEstaSucursal ?? $enOtraSucursal;
+        $producto = Producto::find($productoId);
+
+        $origen = $enEstaSucursal ? 'almacen' : ($enOtraSucursal ? 'otra_sucursal' : 'producto');
+
+        return [
+            'origen' => $origen,
+            'origen_sucursal' => $enOtraSucursal ? optional(optional($enOtraSucursal->ingreso)->sucursal)->nombre : null,
+            'fecha' => optional(optional($ultimo)->ingreso)->created_at?->format('d/m/Y H:i'),
+            'pvp' => $ultimo->pvp ?? optional($producto)->pvp ?? 0,
+            'pvp_dto' => $ultimo->pvpd ?? optional($producto)->pvp_dto ?? 0,
+            'pvc' => $ultimo->pvc ?? optional($producto)->pvc ?? 0,
+            'pvc_dto' => $ultimo->pvcd ?? optional($producto)->pvc_dto ?? 0,
+            'costo' => $ultimo->costo ?? optional($producto)->precio_compra ?? 0,
+        ];
     }
 
     /**
@@ -556,22 +597,28 @@ class ComprasController extends Controller
     public function lineaPrecios(Compra $compra, Producto $producto)
     {
         $sucursalId = $compra->local_destino ?? Auth::user()->branch_id;
-
-        $ultimoIngreso = $this->ultimoIngresoProducto($producto->id, $sucursalId);
         $linea = $compra->lineas()->where('product_id', $producto->id)->first();
+
+        $precios = $this->resolverPreciosVigentes(
+            $producto->id,
+            optional($linea)->product_linea_id,
+            $sucursalId,
+            $compra->company_id
+        );
 
         return response()->json([
             'sucursal' => optional(Sucursal::find($sucursalId))->nombre,
-            'origen' => $ultimoIngreso ? 'almacen' : 'producto',
-            'fecha' => optional(optional($ultimoIngreso)->ingreso)->created_at?->format('d/m/Y H:i'),
-            'pvp' => $ultimoIngreso->pvp ?? $producto->pvp ?? 0,
-            'pvp_dto' => $ultimoIngreso->pvpd ?? $producto->pvp_dto ?? 0,
-            'pvc' => $ultimoIngreso->pvc ?? $producto->pvc ?? 0,
-            'pvc_dto' => $ultimoIngreso->pvcd ?? $producto->pvc_dto ?? 0,
+            'origen' => $precios['origen'],
+            'origen_sucursal' => $precios['origen_sucursal'],
+            'fecha' => $precios['fecha'],
+            'pvp' => $precios['pvp'],
+            'pvp_dto' => $precios['pvp_dto'],
+            'pvc' => $precios['pvc'],
+            'pvc_dto' => $precios['pvc_dto'],
             'pv_docena' => $producto->pv_docena ?? 0,
             // El costo por defecto es lo que se está pagando en ESTA compra
             // (lo que el usuario acaba de ingresar), no un costo histórico.
-            'costo' => optional($linea)->costo ?? $ultimoIngreso->costo ?? $producto->precio_compra ?? 0,
+            'costo' => optional($linea)->costo ?? $precios['costo'],
         ]);
     }
 
@@ -618,11 +665,16 @@ class ComprasController extends Controller
                     // este producto en esta sucursal (no lo que quedó guardado
                     // en la línea al crear la compra, que puede estar desactualizado
                     // si el precio cambió después, p. ej. desde /pos/precios).
-                    $ultimoIngresoLinea = $this->ultimoIngresoProducto($line->product_id, $sucursalId);
-                    $pvpDefault = $ultimoIngresoLinea->pvp ?? optional($producto)->pvp ?? $line->pvp ?? 0;
-                    $pvpDtoDefault = $ultimoIngresoLinea->pvpd ?? optional($producto)->pvp_dto ?? $line->pvp_dto ?? 0;
-                    $pvcDefault = $ultimoIngresoLinea->pvc ?? optional($producto)->pvc ?? $line->pvc ?? 0;
-                    $pvcDtoDefault = $ultimoIngresoLinea->pvcd ?? optional($producto)->pvc_dto ?? $line->pvc_dto ?? 0;
+                    $preciosVigentes = $this->resolverPreciosVigentes(
+                        $line->product_id,
+                        $line->product_linea_id,
+                        $sucursalId,
+                        $compra->company_id
+                    );
+                    $pvpDefault = $preciosVigentes['pvp'] ?: ($line->pvp ?? 0);
+                    $pvpDtoDefault = $preciosVigentes['pvp_dto'] ?: ($line->pvp_dto ?? 0);
+                    $pvcDefault = $preciosVigentes['pvc'] ?: ($line->pvc ?? 0);
+                    $pvcDtoDefault = $preciosVigentes['pvc_dto'] ?: ($line->pvc_dto ?? 0);
 
                     $override = $preciosOverride[$line->product_id] ?? [];
                     $val = fn($key, $default) => (isset($override[$key]) && $override[$key] !== '')

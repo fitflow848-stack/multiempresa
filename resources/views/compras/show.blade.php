@@ -18,7 +18,7 @@
                 <i class="bx bx-barcode me-1"></i>Etiquetas PDF
             </button>
             @if(!$compra->received_at)
-                <a href="{{ route('recibir-productos.index', ['id' => $compra->id]) }}" class="btn btn-primary">Recibir Ticket</a>
+                <a href="{{ route('compras.receive', $compra->id) }}" class="btn btn-primary">Recibir Ticket</a>
             @endif
         </div>
     </div>
