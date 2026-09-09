@@ -81,19 +81,35 @@
                                         <td class="text-end">{{ number_format(($ln->costo ?? 0) * ($ln->cantidad ?? 0), 2) }}</td>
                                         <td class="text-center">
                                             @if ($ln->product_id)
-                                                <button type="button"
-                                                        class="btn btn-sm btn-outline-info btn-ver-precios"
-                                                        data-bs-toggle="modal"
-                                                        data-bs-target="#preciosProductoModal"
-                                                        data-nombre="{{ $ln->descripcion }}"
-                                                        data-pvp="{{ number_format($ln->pvp ?? 0, 2, '.', '') }}"
-                                                        data-pvp-dto="{{ number_format($ln->pvp_dto ?? 0, 2, '.', '') }}"
-                                                        data-pvc="{{ number_format($ln->pvc ?? 0, 2, '.', '') }}"
-                                                        data-pvc-dto="{{ number_format($ln->pvc_dto ?? 0, 2, '.', '') }}"
-                                                        data-pv-docena="{{ number_format(optional($ln->producto)->pv_docena ?? 0, 2, '.', '') }}"
-                                                        title="Ver precios">
-                                                    <i class="bx bx-dollar"></i>
-                                                </button>
+                                                @if ($compra->recibido)
+                                                    {{-- Ya recibido: estos son los precios realmente aplicados en la recepción --}}
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-info btn-ver-precios"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#preciosProductoModal"
+                                                            data-nombre="{{ $ln->descripcion }}"
+                                                            data-pvp="{{ number_format($ln->pvp ?? 0, 2, '.', '') }}"
+                                                            data-pvp-dto="{{ number_format($ln->pvp_dto ?? 0, 2, '.', '') }}"
+                                                            data-pvc="{{ number_format($ln->pvc ?? 0, 2, '.', '') }}"
+                                                            data-pvc-dto="{{ number_format($ln->pvc_dto ?? 0, 2, '.', '') }}"
+                                                            data-pv-docena="{{ number_format(optional($ln->producto)->pv_docena ?? 0, 2, '.', '') }}"
+                                                            title="Ver precios">
+                                                        <i class="bx bx-dollar"></i>
+                                                    </button>
+                                                @else
+                                                    {{-- Pendiente de recibir: mostrar los precios ACTUALES vigentes
+                                                         (no los fijados cuando se creó el ticket), que son los que
+                                                         se aplicarán por defecto al recibir. --}}
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-info btn-ver-precios-actuales"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#preciosProductoModal"
+                                                            data-nombre="{{ $ln->descripcion }}"
+                                                            data-producto-id="{{ $ln->product_id }}"
+                                                            title="Ver precios actuales">
+                                                        <i class="bx bx-dollar"></i>
+                                                    </button>
+                                                @endif
                                             @endif
                                         </td>
                                     </tr>
@@ -248,6 +264,12 @@
                         <label class="form-label text-success fw-bold small mb-0">PV Docena</label>
                         <div class="fw-semibold" id="precios-pv-docena">—</div>
                     </div>
+                    <div class="col-12" id="precios-nota-actual" style="display:none;">
+                        <small class="text-warning">
+                            <i class="bx bx-info-circle"></i>
+                            Precios vigentes ahora mismo (no lo fijado al crear el ticket). Son los que se aplicarán por defecto al recibir, salvo que los edites en la recepción.
+                        </small>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -261,12 +283,39 @@
 <script>
     document.querySelectorAll('.btn-ver-precios').forEach(function(btn) {
         btn.addEventListener('click', function() {
+            document.getElementById('precios-nota-actual').style.display = 'none';
             document.getElementById('precios-producto-nombre').textContent = this.getAttribute('data-nombre') || '';
             document.getElementById('precios-pvp').textContent = 'S/ ' + parseFloat(this.getAttribute('data-pvp') || 0).toFixed(2);
             document.getElementById('precios-pvp-dto').textContent = 'S/ ' + parseFloat(this.getAttribute('data-pvp-dto') || 0).toFixed(2);
             document.getElementById('precios-pvc').textContent = 'S/ ' + parseFloat(this.getAttribute('data-pvc') || 0).toFixed(2);
             document.getElementById('precios-pvc-dto').textContent = 'S/ ' + parseFloat(this.getAttribute('data-pvc-dto') || 0).toFixed(2);
             document.getElementById('precios-pv-docena').textContent = 'S/ ' + parseFloat(this.getAttribute('data-pv-docena') || 0).toFixed(2);
+        });
+    });
+
+    // Ticket aún no recibido: mostrar los precios vigentes ahora mismo
+    // (los que realmente se aplicarán al recibir), no los fijados al crear el ticket.
+    document.querySelectorAll('.btn-ver-precios-actuales').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const productoId = this.getAttribute('data-producto-id');
+            document.getElementById('precios-nota-actual').style.display = '';
+            document.getElementById('precios-producto-nombre').textContent = this.getAttribute('data-nombre') || '';
+            ['precios-pvp', 'precios-pvp-dto', 'precios-pvc', 'precios-pvc-dto', 'precios-pv-docena']
+                .forEach(id => document.getElementById(id).textContent = 'Cargando...');
+
+            fetch(`{{ url('compras/' . $compra->id . '/recibir/precios') }}/${productoId}`)
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('precios-pvp').textContent = 'S/ ' + parseFloat(data.pvp || 0).toFixed(2);
+                    document.getElementById('precios-pvp-dto').textContent = 'S/ ' + parseFloat(data.pvp_dto || 0).toFixed(2);
+                    document.getElementById('precios-pvc').textContent = 'S/ ' + parseFloat(data.pvc || 0).toFixed(2);
+                    document.getElementById('precios-pvc-dto').textContent = 'S/ ' + parseFloat(data.pvc_dto || 0).toFixed(2);
+                    document.getElementById('precios-pv-docena').textContent = 'S/ ' + parseFloat(data.pv_docena || 0).toFixed(2);
+                })
+                .catch(() => {
+                    ['precios-pvp', 'precios-pvp-dto', 'precios-pvc', 'precios-pvc-dto', 'precios-pv-docena']
+                        .forEach(id => document.getElementById(id).textContent = '—');
+                });
         });
     });
 
