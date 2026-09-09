@@ -52,10 +52,10 @@ class AlmacenController extends Controller
                 's.nombre as almacen_nombre',
                 DB::raw('SUM(d.cantidad) as existencias'),
                 DB::raw('COALESCE(SUM(d.cantidad * d.costo) / NULLIF(SUM(d.cantidad), 0), MAX(pl.precio_compra)) as costo'),
-                DB::raw('(SELECT sub.pvp FROM almacen_ingreso_detalle sub WHERE sub.producto_id = d.producto_id AND sub.producto_linea_id = d.producto_linea_id AND sub.pvp > 0 ORDER BY sub.id DESC LIMIT 1) as pvp'),
-                DB::raw('(SELECT sub.pvpd FROM almacen_ingreso_detalle sub WHERE sub.producto_id = d.producto_id AND sub.producto_linea_id = d.producto_linea_id AND sub.pvpd > 0 ORDER BY sub.id DESC LIMIT 1) as pvpd'),
-                DB::raw('(SELECT sub.pvc FROM almacen_ingreso_detalle sub WHERE sub.producto_id = d.producto_id AND sub.producto_linea_id = d.producto_linea_id AND sub.pvc > 0 ORDER BY sub.id DESC LIMIT 1) as pvc'),
-                DB::raw('(SELECT sub.pvcd FROM almacen_ingreso_detalle sub WHERE sub.producto_id = d.producto_id AND sub.producto_linea_id = d.producto_linea_id AND sub.pvcd > 0 ORDER BY sub.id DESC LIMIT 1) as pvcd')
+                DB::raw('(SELECT sub.pvp FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = d.producto_id AND sub.producto_linea_id = d.producto_linea_id AND sai.sucursal_id = i.sucursal_id AND sub.pvp > 0 ORDER BY sub.id DESC LIMIT 1) as pvp'),
+                DB::raw('(SELECT sub.pvpd FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = d.producto_id AND sub.producto_linea_id = d.producto_linea_id AND sai.sucursal_id = i.sucursal_id AND sub.pvpd > 0 ORDER BY sub.id DESC LIMIT 1) as pvpd'),
+                DB::raw('(SELECT sub.pvc FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = d.producto_id AND sub.producto_linea_id = d.producto_linea_id AND sai.sucursal_id = i.sucursal_id AND sub.pvc > 0 ORDER BY sub.id DESC LIMIT 1) as pvc'),
+                DB::raw('(SELECT sub.pvcd FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = d.producto_id AND sub.producto_linea_id = d.producto_linea_id AND sai.sucursal_id = i.sucursal_id AND sub.pvcd > 0 ORDER BY sub.id DESC LIMIT 1) as pvcd')
             );
 
         // Seguridad: Filtro por Empresa
@@ -102,7 +102,9 @@ class AlmacenController extends Controller
         }
 
         // Aplicar la agrupación obligatoria para las funciones agregadas y evitar error 1055
-        $query->groupBy('d.producto_id', 'd.producto_linea_id', 'p.nombre', 'pl.cb', 'pl.presentacion', 'pl.concentracion', 's.nombre');
+        // (i.sucursal_id se agrega porque los subqueries de precios ahora la referencian
+        // para no traer precios de otra sucursal)
+        $query->groupBy('d.producto_id', 'd.producto_linea_id', 'p.nombre', 'pl.cb', 'pl.presentacion', 'pl.concentracion', 's.nombre', 'i.sucursal_id');
 
         $stocks = $query->paginate(20);
 
