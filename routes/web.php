@@ -386,6 +386,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
             Route::post('/convertir-aporte/{id}', [PasivoController::class, 'convertirAporte'])->name('pasivos.convertir-aporte');
             Route::get('/{id}/edit', [PasivoController::class, 'edit'])->name('pasivos.edit');
             Route::post('/{id}/update', [PasivoController::class, 'update'])->name('pasivos.update');
+            Route::get('/{id}/historial', [PasivoController::class, 'historial'])->name('pasivos.historial');
             Route::delete('/{id}', [PasivoController::class, 'destroy'])->name('pasivos.destroy');
         });
 

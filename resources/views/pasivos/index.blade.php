@@ -153,6 +153,15 @@
                                                     <i class="bx bx-printer"></i>
                                                 </a>
 
+                                                @if($pasivo->pagos->count() > 0)
+                                                    <button type="button"
+                                                        class="btn btn-secondary btn-circle btn-sm btn-historial-pasivo"
+                                                        title="Historial de pagos"
+                                                        data-id="{{ $pasivo->id }}">
+                                                        <i class="bx bx-history"></i>
+                                                    </button>
+                                                @endif
+
                                                 @if($pasivo->compra_id)
                                                     <a href="{{ route('compras.show', $pasivo->compra_id) }}"
                                                        class="btn btn-secondary btn-circle btn-sm" title="Ver Compra Original">
@@ -431,6 +440,58 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal Historial de Pagos (Pasivo) -->
+    <div class="modal fade" id="modalHistorialPasivo" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-secondary text-white">
+                    <h5 class="modal-title"><i class="bx bx-history me-1"></i> Historial de Pagos</h5>
+                    <button type="button" class="close text-white" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="historial-pasivo-loading" class="text-center py-3"><div class="spinner-border text-primary" role="status"></div></div>
+                    <div id="historial-pasivo-content" class="d-none">
+                        <div class="row mb-3">
+                            <div class="col-4 text-center">
+                                <div class="small text-muted">Monto Total</div>
+                                <div class="font-weight-bold" id="hist-pasivo-monto-total"></div>
+                            </div>
+                            <div class="col-4 text-center">
+                                <div class="small text-muted">Pagado</div>
+                                <div class="font-weight-bold text-success" id="hist-pasivo-monto-pagado"></div>
+                            </div>
+                            <div class="col-4 text-center">
+                                <div class="small text-muted">Saldo</div>
+                                <div class="font-weight-bold text-danger" id="hist-pasivo-saldo"></div>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th class="text-right">Monto</th>
+                                        <th>Método</th>
+                                        <th>Recibo N°</th>
+                                        <th>Referencia</th>
+                                        <th>Atendió</th>
+                                        <th class="text-center">PDF</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historial-pasivo-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
@@ -534,6 +595,59 @@
                             modalEditarPasivo.show();
                         })
                         .catch(error => alert('Error al cargar datos'));
+                });
+            });
+
+            // ---- HISTORIAL DE PAGOS ----
+            document.querySelectorAll('.btn-historial-pasivo').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const id = this.dataset.id;
+                    document.getElementById('historial-pasivo-loading').classList.remove('d-none');
+                    document.getElementById('historial-pasivo-content').classList.add('d-none');
+                    new bootstrap.Modal(document.getElementById('modalHistorialPasivo')).show();
+
+                    fetch(`{{ url('pasivos') }}/${id}/historial`, {
+                        headers: { 'Accept': 'application/json' }
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            const p = data.pasivo;
+                            document.getElementById('hist-pasivo-monto-total').textContent = 'S/ ' + parseFloat(p.monto).toFixed(2);
+                            document.getElementById('hist-pasivo-monto-pagado').textContent = 'S/ ' + parseFloat(p.monto_pagado).toFixed(2);
+                            document.getElementById('hist-pasivo-saldo').textContent = 'S/ ' + parseFloat(p.saldo).toFixed(2);
+
+                            const tbody = document.getElementById('historial-pasivo-tbody');
+                            tbody.innerHTML = '';
+                            if (data.pagos.length === 0) {
+                                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Sin pagos registrados.</td></tr>';
+                            } else {
+                                data.pagos.forEach(pago => {
+                                    tbody.innerHTML += `<tr>
+                                        <td>${pago.fecha_pago}</td>
+                                        <td class="text-right font-weight-bold">S/ ${parseFloat(pago.monto).toFixed(2)}</td>
+                                        <td><span class="badge bg-info">${pago.metodo_pago}</span></td>
+                                        <td><small>${pago.recibo}</small></td>
+                                        <td>${pago.referencia ?? '-'}</td>
+                                        <td>${pago.user}</td>
+                                        <td class="text-center">
+                                            <a href="{{ url('pasivos/ticket') }}/${pago.id}" target="_blank"
+                                               class="btn btn-sm btn-outline-danger" title="Ver recibo PDF">
+                                                <i class="bx bx-printer"></i>
+                                            </a>
+                                        </td>
+                                    </tr>`;
+                                });
+                            }
+
+                            document.getElementById('historial-pasivo-loading').classList.add('d-none');
+                            document.getElementById('historial-pasivo-content').classList.remove('d-none');
+                        }
+                    })
+                    .catch(() => {
+                        alert('Error al cargar historial.');
+                        bootstrap.Modal.getInstance(document.getElementById('modalHistorialPasivo')).hide();
+                    });
                 });
             });
 

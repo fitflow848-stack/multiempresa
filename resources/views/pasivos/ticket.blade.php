@@ -78,15 +78,32 @@
 
     <div class="divider"></div>
 
+    <div class="item-row">
+        <span>Total Pasivo:</span>
+        <span>S/ {{ number_format($pago->pasivo->monto, 2) }}</span>
+    </div>
+    <div class="item-row">
+        <span>Pagado hoy:</span>
+        <span>S/ {{ number_format($pago->monto, 2) }}</span>
+    </div>
+    <div class="item-row">
+        <span>Total pagado:</span>
+        <span>S/ {{ number_format($pago->pasivo->monto_pagado, 2) }}</span>
+    </div>
+
     <div class="total">
-        MONTO PAGADO: S/ {{ number_format($pago->monto, 2) }}
+        SALDO PENDIENTE: S/ {{ number_format($pago->pasivo->saldo, 2) }}
     </div>
 
-    <div class="divider"></div>
+    @if($pago->pasivo->saldo <= 0)
+        <div class="divider"></div>
+        <div class="center"><strong>*** PAGADO ***</strong></div>
+    @endif
 
-    <div>
-        <strong>Saldo Pendiente:</strong> S/ {{ number_format($pago->pasivo->saldo, 2) }}
-    </div>
+    @if($pago->observaciones)
+        <div class="divider"></div>
+        <div><em>{{ $pago->observaciones }}</em></div>
+    @endif
 
     @if($company->account_number || $company->bank)
     <div class="divider"></div>

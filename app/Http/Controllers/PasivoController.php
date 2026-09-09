@@ -323,6 +323,35 @@ class PasivoController extends Controller
         return response()->json($pasivo);
     }
 
+    /**
+     * Historial de pagos de un pasivo (para el modal "Historial de Pagos",
+     * análogo a ActivoCorrienteController::historial()).
+     */
+    public function historial($id)
+    {
+        $pasivo = Pasivo::with(['pagos.user'])->findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'pasivo' => [
+                'nombre'        => $pasivo->nombre,
+                'monto'         => $pasivo->monto,
+                'monto_pagado'  => $pasivo->monto_pagado ?? 0,
+                'saldo'         => $pasivo->saldo,
+            ],
+            'pagos' => $pasivo->pagos->sortBy('created_at')->values()->map(fn($p) => [
+                'id'          => $p->id,
+                'monto'       => $p->monto,
+                'fecha_pago'  => optional($p->created_at)->format('d/m/Y H:i') ?? $p->fecha_pago->format('d/m/Y'),
+                'metodo_pago' => $p->metodo_pago,
+                'referencia'  => $p->documento_pago,
+                'recibo'      => 'PAG-' . str_pad($p->id, 6, '0', STR_PAD_LEFT),
+                'observaciones' => $p->observaciones,
+                'user'        => $p->user->name ?? 'Sistema',
+            ]),
+        ]);
+    }
+
     public function update(Request $request, $id)
     {
         $request->validate([
