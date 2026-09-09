@@ -58,7 +58,7 @@
                                             @if ($ln->product_id)
                                                 <button type="button"
                                                         class="btn btn-sm btn-outline-info btn-ver-precios"
-                                                        data-producto-id="{{ $ln->product_id }}"
+                                                        data-linea-id="{{ $ln->id }}"
                                                         data-producto-nombre="{{ $ln->descripcion }}"
                                                         title="Ver precios">
                                                     <i class="bx bx-dollar"></i>
@@ -94,12 +94,12 @@
                              Solo se aplican en el servidor si este formulario se envía. --}}
                         @foreach ($compra->lineas as $ln)
                             @if ($ln->product_id)
-                                <input type="hidden" class="ov-pvp" data-producto-id="{{ $ln->product_id }}" name="precios_override[{{ $ln->product_id }}][pvp]" value="">
-                                <input type="hidden" class="ov-pvp-dto" data-producto-id="{{ $ln->product_id }}" name="precios_override[{{ $ln->product_id }}][pvp_dto]" value="">
-                                <input type="hidden" class="ov-pvc" data-producto-id="{{ $ln->product_id }}" name="precios_override[{{ $ln->product_id }}][pvc]" value="">
-                                <input type="hidden" class="ov-pvc-dto" data-producto-id="{{ $ln->product_id }}" name="precios_override[{{ $ln->product_id }}][pvc_dto]" value="">
-                                <input type="hidden" class="ov-pv-docena" data-producto-id="{{ $ln->product_id }}" name="precios_override[{{ $ln->product_id }}][pv_docena]" value="">
-                                <input type="hidden" class="ov-costo" data-producto-id="{{ $ln->product_id }}" name="precios_override[{{ $ln->product_id }}][costo]" value="">
+                                <input type="hidden" class="ov-pvp" data-linea-id="{{ $ln->id }}" name="precios_override[{{ $ln->id }}][pvp]" value="">
+                                <input type="hidden" class="ov-pvp-dto" data-linea-id="{{ $ln->id }}" name="precios_override[{{ $ln->id }}][pvp_dto]" value="">
+                                <input type="hidden" class="ov-pvc" data-linea-id="{{ $ln->id }}" name="precios_override[{{ $ln->id }}][pvc]" value="">
+                                <input type="hidden" class="ov-pvc-dto" data-linea-id="{{ $ln->id }}" name="precios_override[{{ $ln->id }}][pvc_dto]" value="">
+                                <input type="hidden" class="ov-pv-docena" data-linea-id="{{ $ln->id }}" name="precios_override[{{ $ln->id }}][pv_docena]" value="">
+                                <input type="hidden" class="ov-costo" data-linea-id="{{ $ln->id }}" name="precios_override[{{ $ln->id }}][costo]" value="">
                             @endif
                         @endforeach
 
@@ -193,7 +193,7 @@
     (function($) {
         'use strict';
         $(function() {
-            const preciosUrlBase = '{{ url('compras/' . $compra->id . '/recibir/precios') }}';
+            const preciosUrlBase = '{{ url('compras/' . $compra->id . '/recibir/precios/linea') }}';
             const $modal = $('#preciosProductoModal');
 
             function recalcularTotalLineas() {
@@ -204,23 +204,23 @@
                 $('#lineas-total-importe').text(total.toFixed(2));
             }
 
-            function ovInputs(productoId) {
+            function ovInputs(lineaId) {
                 return {
-                    pvp: $(`.ov-pvp[data-producto-id="${productoId}"]`),
-                    pvpDto: $(`.ov-pvp-dto[data-producto-id="${productoId}"]`),
-                    pvc: $(`.ov-pvc[data-producto-id="${productoId}"]`),
-                    pvcDto: $(`.ov-pvc-dto[data-producto-id="${productoId}"]`),
-                    pvDocena: $(`.ov-pv-docena[data-producto-id="${productoId}"]`),
-                    costo: $(`.ov-costo[data-producto-id="${productoId}"]`),
+                    pvp: $(`.ov-pvp[data-linea-id="${lineaId}"]`),
+                    pvpDto: $(`.ov-pvp-dto[data-linea-id="${lineaId}"]`),
+                    pvc: $(`.ov-pvc[data-linea-id="${lineaId}"]`),
+                    pvcDto: $(`.ov-pvc-dto[data-linea-id="${lineaId}"]`),
+                    pvDocena: $(`.ov-pv-docena[data-linea-id="${lineaId}"]`),
+                    costo: $(`.ov-costo[data-linea-id="${lineaId}"]`),
                 };
             }
 
             $(document).on('click', '.btn-ver-precios', function() {
                 const $btn = $(this);
-                const productoId = $btn.data('producto-id');
+                const lineaId = $btn.data('linea-id');
                 const productoNombre = $btn.data('producto-nombre') || '';
 
-                $modal.data('producto-id', productoId);
+                $modal.data('linea-id', lineaId);
                 $modal.data('btn', $btn);
 
                 $('#precios-producto-nombre').text(productoNombre);
@@ -232,10 +232,10 @@
                 const modalInstance = bootstrap.Modal.getOrCreateInstance($modal[0]);
                 modalInstance.show();
 
-                // Si ya se editó este producto en esta sesión (aún no enviado el
+                // Si ya se editó esta línea en esta sesión (aún no enviado el
                 // formulario), reabrir el modal con lo editado, sin volver a
                 // consultar el servidor.
-                const ov = ovInputs(productoId);
+                const ov = ovInputs(lineaId);
                 if (ov.pvp.val() !== '') {
                     $('#precios-sucursal-nombre').text('{{ $sucursal->nombre ?? "—" }}');
                     $('#precios-pvp').val(ov.pvp.val());
@@ -250,7 +250,7 @@
                     return;
                 }
 
-                $.get(`${preciosUrlBase}/${productoId}`)
+                $.get(`${preciosUrlBase}/${lineaId}`)
                     .done(function(data) {
                         $('#precios-sucursal-nombre').text(data.sucursal || '—');
                         $('#precios-pvp').val(Number(data.pvp || 0).toFixed(2));
@@ -282,9 +282,9 @@
             // "Guardar" solo deja el valor listo en el formulario de recepción;
             // no persiste nada hasta que se confirme "Recibir e Ingresar a...".
             $('#btn-guardar-precios').on('click', function() {
-                const productoId = $modal.data('producto-id');
+                const lineaId = $modal.data('linea-id');
                 const $btn = $modal.data('btn');
-                if (!productoId) return;
+                if (!lineaId) return;
 
                 const pvp = Number($('#precios-pvp').val()) || 0;
                 const pvpDto = Number($('#precios-pvp-dto').val()) || 0;
@@ -293,7 +293,7 @@
                 const pvDocena = Number($('#precios-pv-docena').val()) || 0;
                 const costo = Number($('#precios-costo').val()) || 0;
 
-                const ov = ovInputs(productoId);
+                const ov = ovInputs(lineaId);
                 ov.pvp.val(pvp.toFixed(2));
                 ov.pvpDto.val(pvpDto.toFixed(2));
                 ov.pvc.val(pvc.toFixed(2));

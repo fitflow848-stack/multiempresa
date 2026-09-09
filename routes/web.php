@@ -202,7 +202,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::get('/{compra}/pdf', [ComprasController::class, 'pdf'])->name('pdf');
         Route::post('/{compra}/update-local', [ComprasController::class, 'updateLocalDestino'])->name('update-local')->middleware('can:compras.editar');
         Route::get('/{compra}/recibir', [ComprasController::class, 'receiveForm'])->name('receive')->middleware('can:compras.recibir');
-        Route::get('/{compra}/recibir/precios/{producto}', [ComprasController::class, 'lineaPrecios'])->name('receive.precios')->middleware('can:compras.recibir');
+        Route::get('/{compra}/recibir/precios/linea/{linea}', [ComprasController::class, 'lineaPrecios'])->name('receive.precios')->middleware('can:compras.recibir');
         Route::post('/{compra}/recibir', [ComprasController::class, 'storeReception'])->name('receive.store')->middleware('can:compras.recibir');
         Route::get('/{compra}/recibir/procesar', [ComprasController::class, 'processReception'])->name('receive.process')->middleware('can:compras.recibir');
         Route::post('/{compra}/recibir/productos', [ComprasController::class, 'storeReceptionProducts'])->name('receive.products.store')->middleware('can:compras.recibir');

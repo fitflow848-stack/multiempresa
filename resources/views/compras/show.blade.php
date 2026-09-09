@@ -105,7 +105,7 @@
                                                             data-bs-toggle="modal"
                                                             data-bs-target="#preciosProductoModal"
                                                             data-nombre="{{ $ln->descripcion }}"
-                                                            data-producto-id="{{ $ln->product_id }}"
+                                                            data-linea-id="{{ $ln->id }}"
                                                             title="Ver precios actuales">
                                                         <i class="bx bx-dollar"></i>
                                                     </button>
@@ -297,13 +297,13 @@
     // (los que realmente se aplicarán al recibir), no los fijados al crear el ticket.
     document.querySelectorAll('.btn-ver-precios-actuales').forEach(function(btn) {
         btn.addEventListener('click', function() {
-            const productoId = this.getAttribute('data-producto-id');
+            const lineaId = this.getAttribute('data-linea-id');
             document.getElementById('precios-nota-actual').style.display = '';
             document.getElementById('precios-producto-nombre').textContent = this.getAttribute('data-nombre') || '';
             ['precios-pvp', 'precios-pvp-dto', 'precios-pvc', 'precios-pvc-dto', 'precios-pv-docena']
                 .forEach(id => document.getElementById(id).textContent = 'Cargando...');
 
-            fetch(`{{ url('compras/' . $compra->id . '/recibir/precios') }}/${productoId}`)
+            fetch(`{{ url('compras/' . $compra->id . '/recibir/precios/linea') }}/${lineaId}`)
                 .then(r => r.json())
                 .then(data => {
                     document.getElementById('precios-pvp').textContent = 'S/ ' + parseFloat(data.pvp || 0).toFixed(2);

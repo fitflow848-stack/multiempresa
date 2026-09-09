@@ -574,34 +574,48 @@ class ComprasController extends Controller
 
         $ultimo = $enEstaSucursal ?? $enOtraSucursal;
         $producto = Producto::find($productoId);
+        // Los precios configurados al crear el producto se guardan en la línea
+        // específica (ProductoLinea), no en el producto padre — hay que revisar
+        // ahí antes de caer al producto, o un producto recién creado (sin
+        // ningún ingreso todavía) mostraría todo en cero.
+        $productoLinea = $productoLineaId ? ProductoLinea::find($productoLineaId) : null;
 
-        $origen = $enEstaSucursal ? 'almacen' : ($enOtraSucursal ? 'otra_sucursal' : 'producto');
+        $origen = $enEstaSucursal ? 'almacen' : ($enOtraSucursal ? 'otra_sucursal' : ($productoLinea ? 'producto_linea' : 'producto'));
 
         return [
             'origen' => $origen,
             'origen_sucursal' => $enOtraSucursal ? optional(optional($enOtraSucursal->ingreso)->sucursal)->nombre : null,
             'fecha' => optional(optional($ultimo)->ingreso)->created_at?->format('d/m/Y H:i'),
-            'pvp' => $ultimo->pvp ?? optional($producto)->pvp ?? 0,
-            'pvp_dto' => $ultimo->pvpd ?? optional($producto)->pvp_dto ?? 0,
-            'pvc' => $ultimo->pvc ?? optional($producto)->pvc ?? 0,
-            'pvc_dto' => $ultimo->pvcd ?? optional($producto)->pvc_dto ?? 0,
-            'costo' => $ultimo->costo ?? optional($producto)->precio_compra ?? 0,
+            'pvp' => $ultimo->pvp ?? optional($productoLinea)->pvp ?? optional($producto)->pvp ?? 0,
+            'pvp_dto' => $ultimo->pvpd ?? optional($productoLinea)->pvp_dto ?? optional($producto)->pvp_dto ?? 0,
+            'pvc' => $ultimo->pvc ?? optional($productoLinea)->pvc ?? optional($producto)->pvc ?? 0,
+            'pvc_dto' => $ultimo->pvcd ?? optional($productoLinea)->pvc_dto ?? optional($producto)->pvc_dto ?? 0,
+            'pv_docena' => optional($productoLinea)->pv_docena ?? optional($producto)->pv_docena ?? 0,
+            'costo' => $ultimo->costo ?? optional($productoLinea)->precio_compra ?? optional($producto)->precio_compra ?? 0,
         ];
     }
 
     /**
-     * Devuelve los últimos precios (PVP/PVC) registrados para un producto
-     * en la sucursal de destino de la compra, para el modal de consulta
-     * de precios en la vista de recepción.
+     * Devuelve los últimos precios (PVP/PVC) registrados para el producto de
+     * una línea específica de la compra, en la sucursal de destino, para el
+     * modal de consulta de precios en la vista de recepción.
+     *
+     * Se resuelve por línea (no por producto) porque una misma compra puede
+     * tener dos líneas del mismo producto en presentaciones distintas
+     * (ProductoLinea distintas) — resolver solo por producto_id mezclaba los
+     * precios/overrides de una línea con los de otra.
      */
-    public function lineaPrecios(Compra $compra, Producto $producto)
+    public function lineaPrecios(Compra $compra, CompraLinea $linea)
     {
+        if ($linea->compra_id !== $compra->id || !$linea->product_id) {
+            abort(404);
+        }
+
         $sucursalId = $compra->local_destino ?? Auth::user()->branch_id;
-        $linea = $compra->lineas()->where('product_id', $producto->id)->first();
 
         $precios = $this->resolverPreciosVigentes(
-            $producto->id,
-            optional($linea)->product_linea_id,
+            $linea->product_id,
+            $linea->product_linea_id,
             $sucursalId,
             $compra->company_id
         );
@@ -615,10 +629,10 @@ class ComprasController extends Controller
             'pvp_dto' => $precios['pvp_dto'],
             'pvc' => $precios['pvc'],
             'pvc_dto' => $precios['pvc_dto'],
-            'pv_docena' => $producto->pv_docena ?? 0,
+            'pv_docena' => $precios['pv_docena'],
             // El costo por defecto es lo que se está pagando en ESTA compra
             // (lo que el usuario acaba de ingresar), no un costo histórico.
-            'costo' => optional($linea)->costo ?? $precios['costo'],
+            'costo' => $linea->costo ?: $precios['costo'],
         ]);
     }
 
@@ -676,7 +690,10 @@ class ComprasController extends Controller
                     $pvcDefault = $preciosVigentes['pvc'] ?: ($line->pvc ?? 0);
                     $pvcDtoDefault = $preciosVigentes['pvc_dto'] ?: ($line->pvc_dto ?? 0);
 
-                    $override = $preciosOverride[$line->product_id] ?? [];
+                    // Las ediciones del modal de precios se envían por ID de línea
+                    // (no de producto), porque una compra puede tener varias líneas
+                    // del mismo producto en presentaciones distintas.
+                    $override = $preciosOverride[$line->id] ?? [];
                     $val = fn($key, $default) => (isset($override[$key]) && $override[$key] !== '')
                         ? (float) $override[$key] : $default;
 
