@@ -433,8 +433,26 @@ class ProductoController extends Controller
             ->get()
             ->keyBy('producto_linea_id');
 
-        $result = $lineas->map(function ($linea) use ($stockPorLinea) {
+        // Último lote y fecha de vencimiento realmente recibidos por línea (para
+        // precargar el modal de "Detalle del Producto" con lo último ingresado,
+        // en vez de un valor estático configurado en el producto).
+        $ultimosIngresosQuery = \Illuminate\Support\Facades\DB::table('almacen_ingreso_detalle as ad')
+            ->join('almacen_ingresos as ai', 'ai.id', '=', 'ad.ingreso_id')
+            ->where('ai.company_id', $user->company_id)
+            ->whereIn('ad.producto_linea_id', $lineaIds)
+            ->orderBy('ad.id', 'desc');
+        if ($activeBranchId) {
+            $ultimosIngresosQuery->where('ai.sucursal_id', $activeBranchId);
+        }
+        $ultimosPorLinea = $ultimosIngresosQuery
+            ->select('ad.producto_linea_id', 'ad.lote', 'ad.fecha_vencimiento')
+            ->get()
+            ->unique('producto_linea_id')
+            ->keyBy('producto_linea_id');
+
+        $result = $lineas->map(function ($linea) use ($stockPorLinea, $ultimosPorLinea) {
             $producto = $linea->producto;
+            $ultimoIngreso = $ultimosPorLinea[$linea->id] ?? null;
             return [
                 'id' => $producto->id,
                 'linea_id' => $linea->id,
@@ -451,8 +469,10 @@ class ProductoController extends Controller
                 'stock_actual' => (float) ($stockPorLinea[$linea->id]->stock_actual ?? 0),
                 'stock_min' => $linea->stock_minimo ?? $producto->stock_min ?? 0,
                 'stock_max' => $linea->stock_maximo ?? $producto->stock_max ?? 0,
-                'lote' => $linea->lote ?? '',
-                'fecha_vencimiento' => $linea->fecha_venc ? \Carbon\Carbon::parse($linea->fecha_venc)->format('Y-m-d') : null,
+                'lote' => $ultimoIngreso->lote ?? $linea->lote ?? '',
+                'fecha_vencimiento' => $ultimoIngreso && $ultimoIngreso->fecha_vencimiento
+                    ? \Carbon\Carbon::parse($ultimoIngreso->fecha_vencimiento)->format('Y-m-d')
+                    : ($linea->fecha_venc ? \Carbon\Carbon::parse($linea->fecha_venc)->format('Y-m-d') : null),
                 // Información completa de la línea
                 'precio_linea' => [
                     'id' => $linea->id,

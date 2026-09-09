@@ -176,8 +176,10 @@
                             className: 'text-center',
                             render: function(data) {
                                 if (data) {
-                                    const fecha = new Date(data);
-                                    return '<small>' + fecha.toLocaleDateString('es-ES') + '</small>';
+                                    // Evitar el corrimiento de un día: "YYYY-MM-DD" no debe
+                                    // interpretarse como medianoche UTC.
+                                    const [y, m, d] = data.split('-');
+                                    return '<small>' + `${d}/${m}/${y}` + '</small>';
                                 }
                                 return '-';
                             }

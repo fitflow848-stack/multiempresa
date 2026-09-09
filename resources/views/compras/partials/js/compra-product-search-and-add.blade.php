@@ -176,7 +176,7 @@
                 const costo = (product.precio_compra !== null && product.precio_compra !== undefined) ?
                     Number(product.precio_compra) : (product.precio_linea && product.precio_linea.precio_compra ? Number(product.precio_linea.precio_compra) : 0);
 
-                $('#detail-cantidad').val(product.precio_linea.cantidad);
+                $('#detail-cantidad').val(0);
                 $('#detail-costo').val(Number(costo).toFixed(2));
                 $('#detail-descuento').val(0.00);
                 $('#detail-stock-min').val(product.stock_min || 0);
