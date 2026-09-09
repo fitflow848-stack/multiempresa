@@ -89,6 +89,7 @@
                                         <th>Nombre</th>
                                         <th>Documento</th>
                                         <th class="text-right">Monto (S/)</th>
+                                        <th class="text-right">Pagado (S/)</th>
                                         <th class="text-right">Saldo (S/)</th>
                                         <th class="text-center">Estado</th>
                                         <th class="text-center">Último Pago</th>
@@ -104,6 +105,8 @@
                                             <td>{{ $pasivo->documento ?? '-' }}</td>
                                             <td class="text-right font-weight-bold">S/
                                                 {{ number_format($pasivo->monto, 2) }}</td>
+                                            <td class="text-right text-success font-weight-bold">S/
+                                                {{ number_format($pasivo->monto_pagado, 2) }}</td>
                                             <td class="text-right text-danger font-weight-bold">S/
                                                 {{ number_format($pasivo->saldo, 2) }}</td>
                                             <td class="text-center">

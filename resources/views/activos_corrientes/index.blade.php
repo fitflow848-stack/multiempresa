@@ -129,17 +129,9 @@
                                                 @endif
                                             </td>
                                             <td class="text-center">
-                                                 @if(str_contains(strtolower($activo->tipo->nombre), 'adelanto') && !$activo->is_settled)
-                                                     <form action="{{ route('finanzas.saldar-adelanto-personal', $activo->id) }}"
-                                                         method="POST" class="d-inline confirm-form" data-msg="¿Desea marcar este adelanto como SALDADO?">
-                                                         @csrf
-                                                         <button type="submit" class="btn btn-success btn-circle btn-sm" title="Saldar">
-                                                             <i class="fas fa-check"></i>
-                                                         </button>
-                                                     </form>
-                                                 @endif
-
-                                                 @if(!$activo->tipo->afecta_caja && !$activo->is_settled)
+                                                 {{-- El "saldado todo o nada" se reemplazó por "Cobrar" (abajo), que
+                                                      permite pagos parciales y respeta lo ya cobrado. --}}
+                                                 @if(!$activo->is_settled)
                                                      <button type="button"
                                                          class="btn btn-primary btn-circle btn-sm btn-cobrar"
                                                          title="Cobrar"

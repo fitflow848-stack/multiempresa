@@ -93,8 +93,18 @@ class FinanzasVendedorController extends Controller
 
             // Convertir a formato compatible con la vista (similar a Pasivo)
             $activosPersonalItems = $activosQuery->with('tipo')->get()->map(function ($activo) {
-                $monto_pagado = $activo->is_settled ? $activo->monto : 0;
-                $saldo = $activo->is_settled ? 0 : $activo->monto;
+                // Reflejar los cobros PARCIALES ya registrados (monto_cobrado), en vez
+                // de tratar el adelanto como todo-o-nada. Los registros antiguos que ya
+                // estaban "is_settled" (saldados de una sola vez, sin monto_cobrado)
+                // se muestran igual como totalmente pagados.
+                if ($activo->is_settled) {
+                    $monto_pagado = (float) $activo->monto;
+                    $saldo = 0.0;
+                } else {
+                    $monto_pagado = (float) ($activo->monto_cobrado ?? 0);
+                    $saldo = max(0, (float) $activo->monto - $monto_pagado);
+                }
+                $estado = $activo->is_settled ? 'pagado' : ($monto_pagado > 0 ? 'parcial' : 'aprobado');
                 return (object) [
                     'id'              => 'activo_' . $activo->id,
                     '_activo_id'      => $activo->id,
@@ -107,7 +117,7 @@ class FinanzasVendedorController extends Controller
                     'monto'           => $activo->monto,
                     'monto_pagado'    => $monto_pagado,
                     'saldo'           => $saldo,
-                    'estado'          => $activo->is_settled ? 'pagado' : 'aprobado',
+                    'estado'          => $estado,
                     'pagos'           => collect(),
                     'created_at'      => $activo->created_at,
                 ];

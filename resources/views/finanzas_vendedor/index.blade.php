@@ -271,15 +271,21 @@
                                                     @endif
                                                 @else
                                                     @if ($op->saldo > 0)
-                                                        <form
-                                                            action="{{ route('finanzas.saldar-adelanto-personal', $op->_activo_id) }}"
-                                                            method="POST" class="d-inline">
-                                                            @csrf
-                                                            <button type="submit" class="btn btn-xs btn-warning p-1"
-                                                                onclick="return confirm('¿Saldar?')">
-                                                                <i class="bx bx-check-circle"></i>
-                                                            </button>
-                                                        </form>
+                                                        <button type="button" class="btn btn-xs btn-primary p-1 btn-cobrar-activo"
+                                                            title="Registrar Cobro"
+                                                            data-id="{{ $op->_activo_id }}"
+                                                            data-nombre="{{ $op->empresa_persona }}"
+                                                            data-pendiente="{{ $op->saldo }}">
+                                                            <i class="bx bx-dollar-circle"></i>
+                                                        </button>
+                                                    @endif
+
+                                                    @if ($op->monto_pagado > 0)
+                                                        <button type="button" class="btn btn-xs btn-secondary p-1 btn-historial-activo"
+                                                            title="Historial de cobros"
+                                                            data-id="{{ $op->_activo_id }}">
+                                                            <i class="bx bx-history"></i>
+                                                        </button>
                                                     @endif
 
                                                     @can('finanzas.editar')
@@ -629,6 +635,101 @@
         </div>
     </div>
 
+    {{-- Modal Cobrar Adelanto Personal (pago parcial) --}}
+    <div class="modal fade" id="modalCobrarActivo" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Registrar Cobro</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2 text-muted small" id="cobrar-activo-nombre-label"></p>
+                    <div class="form-group mb-3">
+                        <label class="fw-bold">Monto a cobrar <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">S/</span>
+                            <input type="number" step="0.01" min="0.01" id="cobrar-activo-monto" class="form-control" placeholder="0.00">
+                        </div>
+                        <small class="text-muted">Pendiente: <span id="cobrar-activo-pendiente-label" class="fw-bold text-danger"></span></small>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="fw-bold">Método de Pago <span class="text-danger">*</span></label>
+                        <select id="cobrar-activo-metodo" class="form-control">
+                            <option value="Efectivo">Efectivo (Caja)</option>
+                            <option value="Transferencia">Transferencia Bancaria</option>
+                            <option value="Yape/Plin">Yape/Plin</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label>Referencia / Código</label>
+                        <input type="text" id="cobrar-activo-referencia" class="form-control" placeholder="Opcional">
+                    </div>
+                    <div class="form-group mb-2">
+                        <label>Observaciones</label>
+                        <textarea id="cobrar-activo-observaciones" class="form-control" rows="2" placeholder="Opcional"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" id="btn-confirmar-cobro-activo" class="btn btn-primary">
+                        <i class="bx bx-dollar-circle me-1"></i> Cobrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Modal Historial de Cobros (Adelanto Personal) --}}
+    <div class="modal fade" id="modalHistorialActivo" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-secondary text-white">
+                    <h5 class="modal-title"><i class="bx bx-history me-1"></i> Historial de Cobros</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="historial-activo-loading" class="text-center py-3"><div class="spinner-border text-primary" role="status"></div></div>
+                    <div id="historial-activo-content" class="d-none">
+                        <div class="row mb-3">
+                            <div class="col-4 text-center">
+                                <div class="small text-muted">Monto Total</div>
+                                <div class="fw-bold" id="hist-activo-monto-total"></div>
+                            </div>
+                            <div class="col-4 text-center">
+                                <div class="small text-muted">Cobrado</div>
+                                <div class="fw-bold text-success" id="hist-activo-monto-cobrado"></div>
+                            </div>
+                            <div class="col-4 text-center">
+                                <div class="small text-muted">Pendiente</div>
+                                <div class="fw-bold text-danger" id="hist-activo-monto-pendiente"></div>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th class="text-end">Monto</th>
+                                        <th>Método</th>
+                                        <th>Recibo N°</th>
+                                        <th>Referencia</th>
+                                        <th>Atendió</th>
+                                        <th class="text-center">PDF</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historial-activo-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     @push('scripts')
         <script>
             document.addEventListener('DOMContentLoaded', function() {
@@ -675,6 +776,120 @@
                             .catch(error => {
                                 console.error('Error:', error);
                                 alert('Error al cargar datos de la operación');
+                            });
+                    });
+                });
+
+                // ---- COBRAR ADELANTO PERSONAL (pago parcial) ----
+                let cobrarActivoId = null;
+                const modalCobrarActivo = new bootstrap.Modal(document.getElementById('modalCobrarActivo'));
+
+                document.querySelectorAll('.btn-cobrar-activo').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        cobrarActivoId = this.dataset.id;
+                        const pendiente = parseFloat(this.dataset.pendiente);
+                        document.getElementById('cobrar-activo-nombre-label').textContent = this.dataset.nombre;
+                        document.getElementById('cobrar-activo-monto').value = pendiente.toFixed(2);
+                        document.getElementById('cobrar-activo-monto').max = pendiente;
+                        document.getElementById('cobrar-activo-pendiente-label').textContent = 'S/ ' + pendiente.toFixed(2);
+                        document.getElementById('cobrar-activo-referencia').value = '';
+                        document.getElementById('cobrar-activo-observaciones').value = '';
+                        modalCobrarActivo.show();
+                    });
+                });
+
+                document.getElementById('btn-confirmar-cobro-activo').addEventListener('click', function() {
+                    const monto = document.getElementById('cobrar-activo-monto').value;
+                    const metodo = document.getElementById('cobrar-activo-metodo').value;
+                    const referencia = document.getElementById('cobrar-activo-referencia').value;
+                    const observaciones = document.getElementById('cobrar-activo-observaciones').value;
+
+                    if (!monto || parseFloat(monto) <= 0) {
+                        alert('Ingrese un monto válido.');
+                        return;
+                    }
+
+                    const btn = this;
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Procesando...';
+
+                    fetch(`{{ url('activos-corrientes') }}/${cobrarActivoId}/cobrar`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                'Accept': 'application/json',
+                            },
+                            body: JSON.stringify({ monto_pago: monto, metodo_pago: metodo, referencia, observaciones })
+                        })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                if (data.pago_id) {
+                                    window.open(`{{ url('activos-corrientes/pago') }}/${data.pago_id}/comprobante`, '_blank');
+                                }
+                                modalCobrarActivo.hide();
+                                location.reload();
+                            } else {
+                                alert('Error: ' + data.message);
+                            }
+                        })
+                        .catch(() => alert('Error de conexión al procesar el cobro.'))
+                        .finally(() => {
+                            btn.disabled = false;
+                            btn.innerHTML = '<i class="bx bx-dollar-circle me-1"></i> Cobrar';
+                        });
+                });
+
+                // ---- HISTORIAL DE COBROS (Adelanto Personal) ----
+                document.querySelectorAll('.btn-historial-activo').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const id = this.dataset.id;
+                        document.getElementById('historial-activo-loading').classList.remove('d-none');
+                        document.getElementById('historial-activo-content').classList.add('d-none');
+                        new bootstrap.Modal(document.getElementById('modalHistorialActivo')).show();
+
+                        fetch(`{{ url('activos-corrientes') }}/${id}/historial`, {
+                                headers: { 'Accept': 'application/json' }
+                            })
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.success) {
+                                    const a = data.activo;
+                                    document.getElementById('hist-activo-monto-total').textContent = 'S/ ' + parseFloat(a.monto).toFixed(2);
+                                    document.getElementById('hist-activo-monto-cobrado').textContent = 'S/ ' + parseFloat(a.monto_cobrado).toFixed(2);
+                                    document.getElementById('hist-activo-monto-pendiente').textContent = 'S/ ' + parseFloat(a.monto_pendiente).toFixed(2);
+
+                                    const tbody = document.getElementById('historial-activo-tbody');
+                                    tbody.innerHTML = '';
+                                    if (data.pagos.length === 0) {
+                                        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Sin cobros registrados.</td></tr>';
+                                    } else {
+                                        data.pagos.forEach(p => {
+                                            tbody.innerHTML += `<tr>
+                                                <td>${p.fecha_pago}</td>
+                                                <td class="text-end fw-bold">S/ ${parseFloat(p.monto).toFixed(2)}</td>
+                                                <td><span class="badge bg-info">${p.metodo_pago}</span></td>
+                                                <td><small>${p.codigo_comprobante}</small></td>
+                                                <td>${p.referencia ?? '-'}</td>
+                                                <td>${p.user}</td>
+                                                <td class="text-center">
+                                                    <a href="{{ url('activos-corrientes/pago') }}/${p.id}/comprobante" target="_blank"
+                                                       class="btn btn-sm btn-outline-danger" title="Ver recibo PDF">
+                                                        <i class="bx bx-printer"></i>
+                                                    </a>
+                                                </td>
+                                            </tr>`;
+                                        });
+                                    }
+
+                                    document.getElementById('historial-activo-loading').classList.add('d-none');
+                                    document.getElementById('historial-activo-content').classList.remove('d-none');
+                                }
+                            })
+                            .catch(() => {
+                                alert('Error al cargar historial.');
+                                bootstrap.Modal.getInstance(document.getElementById('modalHistorialActivo')).hide();
                             });
                     });
                 });
