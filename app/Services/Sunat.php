@@ -52,6 +52,31 @@ class Sunat
         return $this->sendRequest('/enviar/documento/electronico', 'POST', $data);
     }
 
+    /**
+     * Convierte el contenido de un certificado .p12/.pfx a formato PEM
+     * (certificado + llave privada sin cifrar), equivalente a:
+     *   openssl pkcs12 -in archivo.p12 -out archivo.pem -nodes
+     *
+     * Devuelve null si la contraseña es incorrecta o el archivo no es un
+     * PKCS#12 válido.
+     */
+    public function convertirP12APem(string $p12Content, string $password): ?string
+    {
+        $certs = [];
+        if (!openssl_pkcs12_read($p12Content, $certs, $password)) {
+            Log::error('No se pudo leer el certificado PKCS#12: ' . openssl_error_string());
+            return null;
+        }
+
+        $pem = ($certs['cert'] ?? '') . ($certs['pkey'] ?? '');
+
+        foreach ($certs['extracerts'] ?? [] as $extraCert) {
+            $pem .= $extraCert;
+        }
+
+        return $pem !== '' ? $pem : null;
+    }
+
     public function guardarCertificado($ruc, $certContentBase64)
     {
         $data = json_encode([

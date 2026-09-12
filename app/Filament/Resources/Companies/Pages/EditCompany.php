@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Companies\Pages;
 
 use App\Filament\Resources\Companies\CompanyResource;
+use App\Filament\Resources\Companies\Concerns\HandlesSunatCertificado;
 use App\Models\Caja;
 use App\Models\CompanyDocument;
 use App\Models\Sucursal;
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\Storage;
 
 class EditCompany extends EditRecord
 {
+    use HandlesSunatCertificado;
+
     protected static string $resource = CompanyResource::class;
 
     protected function getHeaderActions(): array
@@ -267,16 +270,7 @@ class EditCompany extends EditRecord
         $record = $this->record;
 
         if ($record->cert_file && Storage::exists($record->cert_file)) {
-
-            $sunatService = app(Sunat::class);
-
-            $certContent = base64_encode(Storage::get($record->cert_file));
-            $sunatService->guardarCertificado($record->ruc, $certContent);
-
-            Notification::make()
-                ->title('Certificado enviado correctamente al API')
-                ->success()
-                ->send();
+            $this->enviarCertificadoASunat($record);
         }
 
         $this->fillForm();

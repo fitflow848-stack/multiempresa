@@ -3,10 +3,13 @@
 namespace App\Filament\Resources\Companies\Pages;
 
 use App\Filament\Resources\Companies\CompanyResource;
+use App\Filament\Resources\Companies\Concerns\HandlesSunatCertificado;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateCompany extends CreateRecord
 {
+    use HandlesSunatCertificado;
+
     protected static string $resource = CompanyResource::class;
 
     protected function getRedirectUrl(): string
@@ -20,19 +23,8 @@ class CreateCompany extends CreateRecord
         $record = $this->record;
 
         // 1. Configuración de SUNAT (Existente)
-        if ($record->cert_file && $record->cert_password) {
-            $sunatService = app(\App\Services\Sunat::class);
-
-            if (\Illuminate\Support\Facades\Storage::exists($record->cert_file)) {
-                $certContent = base64_encode(\Illuminate\Support\Facades\Storage::get($record->cert_file));
-
-                $sunatService->guardarCertificado($record->ruc, $certContent);
-
-                \Filament\Notifications\Notification::make()
-                    ->title('Certificado enviado correctamente al API')
-                    ->success()
-                    ->send();
-            }
+        if ($record->cert_file && \Illuminate\Support\Facades\Storage::exists($record->cert_file)) {
+            $this->enviarCertificadoASunat($record);
         }
 
         // 2. Sembrar ROLES por defecto para la nueva empresa

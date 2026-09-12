@@ -221,12 +221,19 @@ class CompanyForm
                         Section::make('Facturación y Certificado')
                             ->schema([
                                 FileUpload::make('cert_file')
-                                    ->label('Subir Firma Electrónica')
+                                    ->label('Subir Firma Electrónica (.p12/.pfx o .pem)')
                                     ->disk('local')
                                     ->directory('sunat/certificados')
                                     ->visibility('private')
                                     ->columnSpanFull()
-                                    ->helperText('Puede arrastrar la firma aquí o dar click para subirlo'),
+                                    ->helperText('Puede subir el certificado .p12/.pfx directamente — el sistema lo convierte a .pem automáticamente (necesita la contraseña de abajo). También puede subir un .pem ya convertido.'),
+                                TextInput::make('cert_password')
+                                    ->label('Contraseña del certificado (.p12)')
+                                    ->password()
+                                    ->revealable()
+                                    ->prefixIcon('heroicon-m-key')
+                                    ->columnSpanFull()
+                                    ->helperText('Solo necesaria si sube un archivo .p12/.pfx; se usa para extraer el .pem.'),
                                 TextInput::make('sol_user')
                                     ->label('Usuario Sunat')
                                     ->placeholder('Usuario Sunat')
