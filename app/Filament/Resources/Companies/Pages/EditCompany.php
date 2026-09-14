@@ -91,17 +91,59 @@ class EditCompany extends EditRecord
         return DB::transaction(function () use ($record, $data, $sucursalesData) {
             $record->fill($data)->save();
 
-            $processedSucursalesIds = [];
-            $nombresUsadosEnEsteEnvio = [];
-
-            foreach ($sucursalesData as $sucursalData) {
-
+            $resolveSucursalId = function (array $sucursalData) use ($sucursalesData, $record) {
                 $sucursalId = $sucursalData['id'] ?? null;
 
                 // 🔴 FIX CLAVE: si no viene ID pero solo hay una sucursal, reutilizarla
                 if (!$sucursalId && count($sucursalesData) === 1) {
                     $sucursalId = Sucursal::where('company_id', $record->id)->value('id');
                 }
+
+                return $sucursalId;
+            };
+
+            // 1) Borrar PRIMERO las sucursales que ya no están en el formulario.
+            //    Tiene que pasar antes de crear/actualizar: si no, la validación
+            //    de "nombre duplicado" de más abajo choca contra la copia vieja
+            //    que está a punto de eliminarse (por ejemplo, al borrar un
+            //    "Almacén" duplicado y guardar, bloqueaba el guardado porque
+            //    todavía veía la copia vieja en la base de datos).
+            $keptIds = [];
+            foreach ($sucursalesData as $sucursalData) {
+                if ($id = $resolveSucursalId($sucursalData)) {
+                    $keptIds[] = (int) $id;
+                }
+            }
+
+            // Si el envío no trae ninguna sucursal reconocida (probablemente un
+            // error, no una intención real de vaciar la empresa), no borramos nada.
+            $toDelete = empty($keptIds)
+                ? collect()
+                : Sucursal::where('company_id', $record->id)
+                    ->whereNotIn('id', $keptIds)
+                    ->get();
+
+            foreach ($toDelete as $s) {
+                try {
+                    // Sucursal::deleting() se encarga de limpiar en cascada su
+                    // información (ventas, compras, ingresos de almacén, etc.).
+                    $s->delete();
+                } catch (\Throwable $e) {
+                    Notification::make()
+                        ->title('No se pudo eliminar la sucursal "' . $s->nombre . '"')
+                        ->body($e->getMessage())
+                        ->danger()
+                        ->persistent()
+                        ->send();
+                }
+            }
+
+            // 2) Crear/actualizar, ya sin las copias viejas de por medio.
+            $nombresUsadosEnEsteEnvio = [];
+
+            foreach ($sucursalesData as $sucursalData) {
+
+                $sucursalId = $resolveSucursalId($sucursalData);
 
                 $nombreNuevo = trim($sucursalData['nombre'] ?? '');
                 $nombreNormalizado = mb_strtolower($nombreNuevo);
@@ -137,8 +179,6 @@ class EditCompany extends EditRecord
                                 ? (bool)$sucursalData['is_active']
                                 : $sucursal->is_active,
                         ]);
-
-                        $processedSucursalesIds[] = $sucursal->id;
                     }
 
                 } else {
@@ -153,36 +193,11 @@ class EditCompany extends EditRecord
                     ]);
 
                     $sucursalId = $sucursal->id;
-                    $processedSucursalesIds[] = $sucursalId;
                 }
 
                 if ($sucursalId) {
                     $this->syncCajas($sucursalId, $sucursalData['cajas_list'] ?? [], $record->id);
                     $this->syncDocuments($sucursalId, $sucursalData['documents_list'] ?? [], $record->id);
-                }
-            }
-
-            // Eliminar sucursales que ya no están en el formulario. Si el envío
-            // llegó sin ninguna sucursal procesada (probablemente un error, no
-            // una intención real de vaciar la empresa), no borramos nada.
-            $toDelete = empty($processedSucursalesIds)
-                ? collect()
-                : Sucursal::where('company_id', $record->id)
-                    ->whereNotIn('id', $processedSucursalesIds)
-                    ->get();
-
-            foreach ($toDelete as $s) {
-                try {
-                    // Sucursal::deleting() se encarga de limpiar en cascada su
-                    // información (ventas, compras, ingresos de almacén, etc.).
-                    $s->delete();
-                } catch (\Throwable $e) {
-                    Notification::make()
-                        ->title('No se pudo eliminar la sucursal "' . $s->nombre . '"')
-                        ->body($e->getMessage())
-                        ->danger()
-                        ->persistent()
-                        ->send();
                 }
             }
 
