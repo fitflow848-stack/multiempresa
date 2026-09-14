@@ -316,7 +316,14 @@ class ProductRepository
                 $joinIngresos
                 WHERE ad.producto_id = ?
                 GROUP BY ad.producto_linea_id, ad.lote, ad.fecha_vencimiento, ad.pvp, ad.pvc
-                HAVING SUM(ad.cantidad) > 0
+                -- Antes se ocultaban también los lotes con neto <= 0 (ej. una
+                -- anulación/ajuste que dejó un lote en negativo). Eso hacía que
+                -- la suma de los lotes VISIBLES no coincidiera con el total real
+                -- del producto (se \"perdía\" ese negativo sin que se viera en
+                -- ningún lado). Ahora se muestran también esos lotes (no
+                -- vendibles, cantidad_input queda deshabilitado en la vista)
+                -- para que la suma siempre cuadre con el total.
+                HAVING SUM(ad.cantidad) <> 0
                 ORDER BY MAX(ad.id) ASC", $params);
     }
 }
