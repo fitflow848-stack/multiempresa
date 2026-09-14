@@ -301,7 +301,7 @@ class CompanyForm
                                         Tab::make('Datos Básicos')
                                             ->icon('heroicon-o-building-office')
                                             ->schema([
-                                                TextInput::make('id')->hidden(),
+                                                TextInput::make('id')->hidden()->dehydratedWhenHidden(),
                                                 TextInput::make('nombre')
                                                     ->required()
                                                     ->label('Nombre de Sucursal'),
@@ -334,7 +334,7 @@ class CompanyForm
                                                 Repeater::make('cajas_list')
                                                     ->label('')
                                                     ->schema([
-                                                        TextInput::make('id')->hidden(),
+                                                        TextInput::make('id')->hidden()->dehydratedWhenHidden(),
                                                         TextInput::make('nombre')
                                                             ->label('Nombre de la Caja')
                                                             ->required()
@@ -363,7 +363,7 @@ class CompanyForm
                                                 Repeater::make('documents_list')
                                                     ->label('')
                                                     ->schema([
-                                                        TextInput::make('id')->hidden(),
+                                                        TextInput::make('id')->hidden()->dehydratedWhenHidden(),
                                                         Select::make('sunat_document_id')
                                                             ->label('Tipo de Documento')
                                                             ->options(fn() => DB::table('documentos_sunat')->pluck('nombre', 'id_tido'))

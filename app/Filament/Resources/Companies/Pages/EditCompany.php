@@ -96,7 +96,7 @@ class EditCompany extends EditRecord
 
                 // 🔴 FIX CLAVE: si no viene ID pero solo hay una sucursal, reutilizarla
                 if (!$sucursalId && count($sucursalesData) === 1) {
-                    $sucursalId = Sucursal::where('company_id', $record->id)->value('id');
+                    $sucursalId = Sucursal::withoutGlobalScopes()->where('company_id', $record->id)->value('id');
                 }
 
                 return $sucursalId;
@@ -119,7 +119,7 @@ class EditCompany extends EditRecord
             // error, no una intención real de vaciar la empresa), no borramos nada.
             $toDelete = empty($keptIds)
                 ? collect()
-                : Sucursal::where('company_id', $record->id)
+                : Sucursal::withoutGlobalScopes()->where('company_id', $record->id)
                     ->whereNotIn('id', $keptIds)
                     ->get();
 
@@ -156,10 +156,13 @@ class EditCompany extends EditRecord
                     $nombresUsadosEnEsteEnvio[$nombreNormalizado] = true;
 
                     // La sucursal coincide (por nombre) con OTRA ya existente en la empresa.
-                    $colisionConExistente = Sucursal::where('company_id', $record->id)
+                    // withoutGlobalScopes(): el scope de BelongsToCompany podía filtrar
+                    // también por la empresa del usuario autenticado y pisar el
+                    // where('company_id', ...) explícito de esta consulta.
+                    $colisionQuery = Sucursal::withoutGlobalScopes()->where('company_id', $record->id)
                         ->when($sucursalId, fn ($q) => $q->where('id', '!=', $sucursalId))
-                        ->whereRaw('LOWER(TRIM(nombre)) = ?', [$nombreNormalizado])
-                        ->exists();
+                        ->whereRaw('LOWER(TRIM(nombre)) = ?', [$nombreNormalizado]);
+                    $colisionConExistente = $colisionQuery->exists();
 
                     if ($colisionConExistente) {
                         $this->abortPorNombreDuplicado($nombreNuevo);
@@ -167,9 +170,9 @@ class EditCompany extends EditRecord
                 }
 
                 if ($sucursalId) {
-                    $sucursal = Sucursal::find($sucursalId);
+                    $sucursal = Sucursal::withoutGlobalScopes()->find($sucursalId);
 
-                    if ($sucursal && $sucursal->company_id === $record->id) {
+                    if ($sucursal && (int) $sucursal->company_id === (int) $record->id) {
                         $sucursal->update([
                             'nombre'    => $sucursalData['nombre'] ?? $sucursal->nombre,
                             'direccion' => $sucursalData['direccion'] ?? $sucursal->direccion,
