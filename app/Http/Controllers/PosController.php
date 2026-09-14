@@ -272,7 +272,12 @@ class PosController extends Controller
         // Obtener lotes disponibles del producto
         $lotes = $this->productRepo->elegirStock((int) $productoId);
 
-        return view('pos.elegir-stock', compact('user', 'company', 'producto', 'lotes'));
+        // Stock TOTAL real del producto (igual al del buscador). Sumar solo
+        // los lotes visibles puede dar un número distinto si algún lote neto
+        // quedó en 0/negativo por una anulación y se ocultó de la lista.
+        $stockTotalReal = $this->productRepo->stockTotalProducto((int) $productoId, $sucursalId);
+
+        return view('pos.elegir-stock', compact('user', 'company', 'producto', 'lotes', 'stockTotalReal'));
     }
 
     public function emitir(Request $request)

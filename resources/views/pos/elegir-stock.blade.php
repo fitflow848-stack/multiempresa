@@ -363,12 +363,10 @@
         function calcularTotales() {
             let totalCantidad = 0;
             let totalImporte = 0;
-            let stockTotal = 0;
-
-            // Calcular stock total
-            @foreach ($lotes as $lote)
-                stockTotal += {{ $lote->unidades }};
-            @endforeach
+            // Stock TOTAL real del producto (igual al del buscador), no la
+            // suma de los lotes visibles: un lote con neto <= 0 (por una
+            // anulación) se oculta de la lista pero sigue restando del total.
+            const stockTotal = {{ (float) $stockTotalReal }};
 
             // Calcular cantidades seleccionadas
             document.querySelectorAll('.cantidad-input').forEach(input => {
