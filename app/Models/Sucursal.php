@@ -7,11 +7,61 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class Sucursal extends Model
 {
     use HasFactory, BelongsToCompany;
-    
+
+    /**
+     * Al eliminar una sucursal, se borra también toda su información
+     * operativa (ventas, compras, ingresos de almacén, activos/adelantos
+     * y ventas guardadas del POS asignados a ella).
+     *
+     * `cajas`, `company_documents` y `branch_user` ya cascadean solos por
+     * FK (cascadeOnDelete), y `users.branch_id` / `banco_movimientos.sucursal_id`
+     * quedan en NULL por FK (nullOnDelete) — no hace falta tocarlos aquí.
+     *
+     * Nota: `cierre_cajas`, `operaciones_caja`, `pasivos`, `clientes`,
+     * `proveedores` y `cotizaciones` tienen una columna `sucursal_id` sin
+     * FK que en una migración antigua se rellenó con el valor 1 para TODOS
+     * los registros existentes (sin distinguir empresa/sucursal real), por
+     * lo que no es un dato confiable para cascadear un borrado — se dejan
+     * intactos a propósito para no arriesgar borrar datos de otra sucursal.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function (Sucursal $sucursal) {
+            DB::transaction(function () use ($sucursal) {
+                $sucursalId = $sucursal->id;
+
+                $ventaIds = DB::table('ventas')->where('sucursal', $sucursalId)->pluck('id_venta');
+                $compraIds = DB::table('compras')->where('local_destino', $sucursalId)->pluck('id');
+                $ingresoIds = DB::table('almacen_ingresos')->where('sucursal_id', $sucursalId)->pluck('id');
+
+                if ($ventaIds->isNotEmpty()) {
+                    DB::table('venta_detalles')->whereIn('id_venta', $ventaIds)->delete();
+                    DB::table('ventas_sunat')->whereIn('id_venta', $ventaIds)->delete();
+                }
+                if ($compraIds->isNotEmpty()) {
+                    DB::table('compra_lineas')->whereIn('compra_id', $compraIds)->delete();
+                }
+                if ($ingresoIds->isNotEmpty()) {
+                    DB::table('almacen_ingreso_detalle')->whereIn('ingreso_id', $ingresoIds)->delete();
+                }
+
+                DB::table('ventas')->where('sucursal', $sucursalId)->delete();
+                DB::table('compras')->where('local_destino', $sucursalId)->delete();
+                DB::table('almacen_ingresos')->where('sucursal_id', $sucursalId)->delete();
+                DB::table('pos_ventas_guardadas')->where('branch_id', $sucursalId)->delete();
+                // RESTRICT por FK: hay que borrarlos antes de poder eliminar la sucursal.
+                DB::table('activo_corrientes')->where('sucursal_id', $sucursalId)->delete();
+                DB::table('activos_fijos')->where('sucursal_id', $sucursalId)->delete();
+            });
+        });
+    }
 
     protected $table = 'sucursales';
 

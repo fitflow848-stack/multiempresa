@@ -11,7 +11,9 @@ use App\Services\Sunat;
 use Filament\Actions\ViewAction;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Support\Exceptions\Halt;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class EditCompany extends EditRecord
@@ -86,75 +88,118 @@ class EditCompany extends EditRecord
         $sucursalesData = $data['sucursales_list'] ?? [];
         unset($data['sucursales_list']);
 
-        $record->fill($data)->save();
+        return DB::transaction(function () use ($record, $data, $sucursalesData) {
+            $record->fill($data)->save();
 
-        $processedSucursalesIds = [];
+            $processedSucursalesIds = [];
+            $nombresUsadosEnEsteEnvio = [];
 
-        foreach ($sucursalesData as $sucursalData) {
+            foreach ($sucursalesData as $sucursalData) {
 
-            $sucursalId = $sucursalData['id'] ?? null;
+                $sucursalId = $sucursalData['id'] ?? null;
 
-            // 🔴 FIX CLAVE: si no viene ID pero solo hay una sucursal, reutilizarla
-            if (!$sucursalId && count($sucursalesData) === 1) {
-                $sucursalId = Sucursal::where('company_id', $record->id)->value('id');
-            }
-
-            if ($sucursalId) {
-                $sucursal = Sucursal::find($sucursalId);
-
-                if ($sucursal && $sucursal->company_id === $record->id) {
-                    $sucursal->update([
-                        'nombre'    => $sucursalData['nombre'] ?? $sucursal->nombre,
-                        'direccion' => $sucursalData['direccion'] ?? $sucursal->direccion,
-                        'telefono'  => $sucursalData['telefono'] ?? $sucursal->telefono,
-                        'logo'      => $sucursalData['logo'] ?? $sucursal->logo,
-                        'is_active' => array_key_exists('is_active', $sucursalData)
-                            ? (bool)$sucursalData['is_active']
-                            : $sucursal->is_active,
-                    ]);
-
-                    $processedSucursalesIds[] = $sucursal->id;
+                // 🔴 FIX CLAVE: si no viene ID pero solo hay una sucursal, reutilizarla
+                if (!$sucursalId && count($sucursalesData) === 1) {
+                    $sucursalId = Sucursal::where('company_id', $record->id)->value('id');
                 }
 
-            } else {
-                // Solo crea si realmente no existe ninguna
-                $sucursal = Sucursal::create([
-                    'company_id' => $record->id,
-                    'nombre'     => $sucursalData['nombre'],
-                    'direccion'  => $sucursalData['direccion'] ?? null,
-                    'telefono'   => $sucursalData['telefono'] ?? null,
-                    'logo'       => $sucursalData['logo'] ?? null,
-                    'is_active'  => $sucursalData['is_active'] ?? true,
-                ]);
+                $nombreNuevo = trim($sucursalData['nombre'] ?? '');
+                $nombreNormalizado = mb_strtolower($nombreNuevo);
 
-                $sucursalId = $sucursal->id;
-                $processedSucursalesIds[] = $sucursalId;
+                if ($nombreNormalizado !== '') {
+                    // Dos sucursales con el mismo nombre en el mismo envío del formulario.
+                    if (isset($nombresUsadosEnEsteEnvio[$nombreNormalizado])) {
+                        $this->abortPorNombreDuplicado($nombreNuevo);
+                    }
+                    $nombresUsadosEnEsteEnvio[$nombreNormalizado] = true;
+
+                    // La sucursal coincide (por nombre) con OTRA ya existente en la empresa.
+                    $colisionConExistente = Sucursal::where('company_id', $record->id)
+                        ->when($sucursalId, fn ($q) => $q->where('id', '!=', $sucursalId))
+                        ->whereRaw('LOWER(TRIM(nombre)) = ?', [$nombreNormalizado])
+                        ->exists();
+
+                    if ($colisionConExistente) {
+                        $this->abortPorNombreDuplicado($nombreNuevo);
+                    }
+                }
+
+                if ($sucursalId) {
+                    $sucursal = Sucursal::find($sucursalId);
+
+                    if ($sucursal && $sucursal->company_id === $record->id) {
+                        $sucursal->update([
+                            'nombre'    => $sucursalData['nombre'] ?? $sucursal->nombre,
+                            'direccion' => $sucursalData['direccion'] ?? $sucursal->direccion,
+                            'telefono'  => $sucursalData['telefono'] ?? $sucursal->telefono,
+                            'logo'      => $sucursalData['logo'] ?? $sucursal->logo,
+                            'is_active' => array_key_exists('is_active', $sucursalData)
+                                ? (bool)$sucursalData['is_active']
+                                : $sucursal->is_active,
+                        ]);
+
+                        $processedSucursalesIds[] = $sucursal->id;
+                    }
+
+                } else {
+                    // Solo crea si realmente no existe ninguna
+                    $sucursal = Sucursal::create([
+                        'company_id' => $record->id,
+                        'nombre'     => $sucursalData['nombre'],
+                        'direccion'  => $sucursalData['direccion'] ?? null,
+                        'telefono'   => $sucursalData['telefono'] ?? null,
+                        'logo'       => $sucursalData['logo'] ?? null,
+                        'is_active'  => $sucursalData['is_active'] ?? true,
+                    ]);
+
+                    $sucursalId = $sucursal->id;
+                    $processedSucursalesIds[] = $sucursalId;
+                }
+
+                if ($sucursalId) {
+                    $this->syncCajas($sucursalId, $sucursalData['cajas_list'] ?? [], $record->id);
+                    $this->syncDocuments($sucursalId, $sucursalData['documents_list'] ?? [], $record->id);
+                }
             }
 
-            if ($sucursalId) {
-                $this->syncCajas($sucursalId, $sucursalData['cajas_list'] ?? [], $record->id);
-                $this->syncDocuments($sucursalId, $sucursalData['documents_list'] ?? [], $record->id);
+            // Eliminar sucursales que ya no están en el formulario. Si el envío
+            // llegó sin ninguna sucursal procesada (probablemente un error, no
+            // una intención real de vaciar la empresa), no borramos nada.
+            $toDelete = empty($processedSucursalesIds)
+                ? collect()
+                : Sucursal::where('company_id', $record->id)
+                    ->whereNotIn('id', $processedSucursalesIds)
+                    ->get();
+
+            foreach ($toDelete as $s) {
+                try {
+                    // Sucursal::deleting() se encarga de limpiar en cascada su
+                    // información (ventas, compras, ingresos de almacén, etc.).
+                    $s->delete();
+                } catch (\Throwable $e) {
+                    Notification::make()
+                        ->title('No se pudo eliminar la sucursal "' . $s->nombre . '"')
+                        ->body($e->getMessage())
+                        ->danger()
+                        ->persistent()
+                        ->send();
+                }
             }
-        }
 
-        // eliminar sucursales no usadas
-        $toDelete = Sucursal::where('company_id', $record->id)
-            ->when(!empty($processedSucursalesIds), function ($q) use ($processedSucursalesIds) {
-                return $q->whereNotIn('id', array_filter($processedSucursalesIds));
-            })
-            ->get();
+            return $record;
+        });
+    }
 
-        foreach ($toDelete as $s) {
-            try {
-                Caja::where('sucursal_id', $s->id)->whereDoesntHave('cierres')->delete();
-                CompanyDocument::where('branch_id', $s->id)->delete();
-                $s->delete();
-            } catch (\Exception $e) {
-                $s->update(['is_active' => false]);
-            }
-        }
+    private function abortPorNombreDuplicado(string $nombre): never
+    {
+        Notification::make()
+            ->title('Nombre de sucursal duplicado')
+            ->body('Ya existe (o se repite) una sucursal llamada "' . $nombre . '" en esta empresa. Los nombres de sucursal deben ser únicos.')
+            ->danger()
+            ->persistent()
+            ->send();
 
-        return $record;
+        throw new Halt();
     }
 
     private function syncCajas(int $sucursalId, array $cajasData, int $companyId): void

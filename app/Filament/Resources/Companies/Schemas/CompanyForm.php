@@ -402,7 +402,18 @@ class CompanyForm
                             ])
                             ->collapsible()
                             ->addActionLabel('Agregar Sucursal')
-                            ->itemLabel(fn(array $state): ?string => $state['nombre'] ?? 'Nueva Sucursal'),
+                            ->itemLabel(fn(array $state): ?string => $state['nombre'] ?? 'Nueva Sucursal')
+                            ->deleteAction(
+                                fn (Action $action) => $action
+                                    ->requiresConfirmation()
+                                    ->modalHeading('Eliminar sucursal')
+                                    ->modalDescription(function (array $arguments, Repeater $component): string {
+                                        $nombre = $component->getItemState($arguments['item'])['nombre'] ?? 'esta sucursal';
+
+                                        return "Se eliminará la sucursal \"{$nombre}\" y TODA su información existente (ventas, compras, cajas, ingresos de almacén, etc.) al guardar. Esta acción no se puede deshacer.";
+                                    })
+                                    ->modalSubmitActionLabel('Sí, eliminar todo')
+                            ),
                     ]),
             ])
                 ->columnSpanFull()
