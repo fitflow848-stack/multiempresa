@@ -251,39 +251,6 @@ class ProductRepository
         return DB::selectOne("SELECT p.* FROM productos p WHERE p.id = ?", [$productoId]);
     }
 
-    /**
-     * Stock TOTAL real de un producto (misma sumatoria "gruesa" que usa
-     * buscar()/buscarFuzzy() para el badge del buscador), sin agrupar por
-     * lote/fecha/precio. Se usa para que el total mostrado en "Elegir Stock"
-     * coincida con el badge del buscador — agrupar por lote ahí puede ocultar
-     * lotes cuyo neto es <= 0 (p. ej. por una anulación), lo que hacía que la
-     * suma de los lotes VISIBLES no cuadrara con el stock real del producto.
-     */
-    public function stockTotalProducto(int $productoId, ?int $sucursalId = null): float
-    {
-        $sucursalId = $sucursalId ?? session('active_branch_id');
-        $companyId = session('active_company_id') ?? (auth()->check() ? auth()->user()->company_id : null);
-
-        $joinIngresos = "INNER JOIN almacen_ingresos ai ON ai.id = ad.ingreso_id AND ai.company_id = ?";
-        if ($sucursalId) {
-            $joinIngresos .= " AND ai.sucursal_id = ?";
-        }
-        $joinIngresos .= " AND (ai.observacion IS NULL OR ai.observacion NOT LIKE '[AJUSTE]%' OR ad.cantidad >= 0)";
-
-        $params = [$companyId];
-        if ($sucursalId) {
-            $params[] = $sucursalId;
-        }
-        $params[] = $productoId;
-
-        $row = DB::selectOne("SELECT COALESCE(SUM(ad.cantidad), 0) as total
-                FROM almacen_ingreso_detalle ad
-                $joinIngresos
-                WHERE ad.producto_id = ?", $params);
-
-        return (float) ($row->total ?? 0);
-    }
-
 
     public function elegirStock(int $productoId, ?int $sucursalId = null): array
     {
@@ -316,13 +283,11 @@ class ProductRepository
                 $joinIngresos
                 WHERE ad.producto_id = ?
                 GROUP BY ad.producto_linea_id, ad.lote, ad.fecha_vencimiento, ad.pvp, ad.pvc
-                -- Antes se ocultaban también los lotes con neto <= 0 (ej. una
-                -- anulación/ajuste que dejó un lote en negativo). Eso hacía que
-                -- la suma de los lotes VISIBLES no coincidiera con el total real
-                -- del producto (se \"perdía\" ese negativo sin que se viera en
-                -- ningún lado). Ahora se muestran también esos lotes (no
-                -- vendibles, cantidad_input queda deshabilitado en la vista)
-                -- para que la suma siempre cuadre con el total.
+                -- Se incluyen también los lotes con neto <= 0 (ej. una
+                -- anulación/ajuste antiguo). PosController::elegirStock() los
+                -- descuenta en memoria de los lotes positivos más pequeños y
+                -- los oculta de la vista — nunca se muestra un negativo, pero
+                -- el total sigue cuadrando exactamente con lo que se lista.
                 HAVING SUM(ad.cantidad) <> 0
                 ORDER BY MAX(ad.id) ASC", $params);
     }

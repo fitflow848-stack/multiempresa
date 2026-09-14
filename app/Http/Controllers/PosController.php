@@ -270,33 +270,41 @@ class PosController extends Controller
         }
 
         // Obtener lotes disponibles del producto
-        $lotes = $this->productRepo->elegirStock((int) $productoId);
+        $lotes = collect($this->productRepo->elegirStock((int) $productoId));
 
-        // Ocultar SOLO DE ESTA VISTA (no se toca la base de datos) los pares
-        // lote negativo / lote positivo que se cancelan exactamente entre sí
-        // (ej. una anulación vieja que dejó un lote en -1 y otra anulación
-        // distinta que dejó otro lote en +1): no aportan stock vendible real
-        // y solo generan ruido en la tabla. El total sigue siendo correcto
-        // porque ese par ya sumaba 0 entre ambos.
-        $lotes = collect($lotes);
-        $ocultarIds = [];
-        foreach ($lotes->filter(fn($l) => $l->unidades < 0) as $negativo) {
-            $pareja = $lotes->first(function ($l) use ($negativo, $ocultarIds) {
-                return $l->unidades > 0
-                    && !in_array($l->id, $ocultarIds)
-                    && abs(abs((float) $l->unidades) - abs((float) $negativo->unidades)) < 0.001;
-            });
-            if ($pareja) {
-                $ocultarIds[] = $negativo->id;
-                $ocultarIds[] = $pareja->id;
+        // Los lotes con neto negativo (ej. una anulación/ajuste antiguo) NUNCA
+        // se muestran. En vez de eso, esa deuda se descuenta EN MEMORIA
+        // (no se toca la base de datos) de los lotes positivos más chicos,
+        // empezando por el de menor cantidad, ocultándolos por completo hasta
+        // saldarla. Así nunca aparece un número negativo y el total siempre
+        // cuadra exactamente con la suma de lo que se ve en la tabla.
+        $negativos = $lotes->filter(fn($l) => $l->unidades < 0);
+        $deficit = (float) $negativos->sum(fn($l) => abs((float) $l->unidades));
+        $idsOcultos = $negativos->pluck('id')->all();
+
+        $positivosPorTamano = $lotes->filter(fn($l) => $l->unidades > 0)
+            ->sortBy(fn($l) => (float) $l->unidades)
+            ->values();
+
+        foreach ($positivosPorTamano as $positivo) {
+            if ($deficit <= 0) {
+                break;
+            }
+            $cantidad = (float) $positivo->unidades;
+            if ($cantidad <= $deficit) {
+                $idsOcultos[] = $positivo->id;
+                $deficit = round($deficit - $cantidad, 2);
+            } else {
+                $positivo->unidades = round($cantidad - $deficit, 2);
+                $deficit = 0;
             }
         }
-        $lotes = $lotes->reject(fn($l) => in_array($l->id, $ocultarIds))->values()->all();
 
-        // Stock TOTAL real del producto (igual al del buscador). Sumar solo
-        // los lotes visibles puede dar un número distinto si algún lote neto
-        // quedó en 0/negativo por una anulación y se ocultó de la lista.
-        $stockTotalReal = $this->productRepo->stockTotalProducto((int) $productoId, $sucursalId);
+        $lotes = $lotes->reject(fn($l) => in_array($l->id, $idsOcultos))->values()->all();
+
+        // El total mostrado es la suma de estos lotes ya "netos" (no el stock
+        // "real" del buscador), para que siempre coincida con la tabla.
+        $stockTotalReal = collect($lotes)->sum(fn($l) => (float) $l->unidades);
 
         return view('pos.elegir-stock', compact('user', 'company', 'producto', 'lotes', 'stockTotalReal'));
     }
