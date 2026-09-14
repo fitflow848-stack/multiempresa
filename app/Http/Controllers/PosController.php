@@ -272,6 +272,27 @@ class PosController extends Controller
         // Obtener lotes disponibles del producto
         $lotes = $this->productRepo->elegirStock((int) $productoId);
 
+        // Ocultar SOLO DE ESTA VISTA (no se toca la base de datos) los pares
+        // lote negativo / lote positivo que se cancelan exactamente entre sí
+        // (ej. una anulación vieja que dejó un lote en -1 y otra anulación
+        // distinta que dejó otro lote en +1): no aportan stock vendible real
+        // y solo generan ruido en la tabla. El total sigue siendo correcto
+        // porque ese par ya sumaba 0 entre ambos.
+        $lotes = collect($lotes);
+        $ocultarIds = [];
+        foreach ($lotes->filter(fn($l) => $l->unidades < 0) as $negativo) {
+            $pareja = $lotes->first(function ($l) use ($negativo, $ocultarIds) {
+                return $l->unidades > 0
+                    && !in_array($l->id, $ocultarIds)
+                    && abs(abs((float) $l->unidades) - abs((float) $negativo->unidades)) < 0.001;
+            });
+            if ($pareja) {
+                $ocultarIds[] = $negativo->id;
+                $ocultarIds[] = $pareja->id;
+            }
+        }
+        $lotes = $lotes->reject(fn($l) => in_array($l->id, $ocultarIds))->values()->all();
+
         // Stock TOTAL real del producto (igual al del buscador). Sumar solo
         // los lotes visibles puede dar un número distinto si algún lote neto
         // quedó en 0/negativo por una anulación y se ocultó de la lista.
