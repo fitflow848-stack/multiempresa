@@ -6,6 +6,7 @@ use App\Models\Cotizacion;
 use App\Models\CotizacionDetalle;
 use App\Models\Cliente;
 use App\Models\Company;
+use App\Models\Producto;
 use App\Models\TipoPago;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -74,6 +75,58 @@ class CotizacionController extends Controller
         return view('cotizaciones.emitir', compact('user', 'company', 'ticketData', 'total', 'clienteData', 'tipoDocumento', 'serieDocumento', 'metodos'));
     }
 
+    /**
+     * Calcula subtotal/IGV/total respetando el tipo de impuesto de cada
+     * producto (gravado/exonerado/inafecto) — igual que VentaService lo hace
+     * para las ventas del POS. Sin esto, los productos exonerados terminaban
+     * pagando IGV en las cotizaciones porque el cálculo era un 18% plano
+     * sobre el total, sin mirar el producto de cada línea.
+     *
+     * @param array<int, array{producto_id?: int|null, cantidad?: mixed, precio?: mixed, precio_unitario?: mixed, importe?: mixed}> $lineas
+     * @return array{subtotal: float, igv: float, total: float, detalle_igv: array<int, float>}
+     */
+    private function calcularTotalesPorLinea(array $lineas): array
+    {
+        $productoIds = collect($lineas)->pluck('producto_id')->filter()->unique()->values();
+        $tiposImpuesto = $productoIds->isNotEmpty()
+            ? Producto::whereIn('id', $productoIds)->pluck('tipo_impuesto', 'id')
+            : collect();
+
+        $subtotal = 0.0;
+        $igv = 0.0;
+        $total = 0.0;
+        $detalleIgv = [];
+
+        foreach ($lineas as $index => $item) {
+            $cantidad = (float) ($item['cantidad'] ?? 1);
+            $precioUnitario = (float) ($item['precio'] ?? $item['precio_unitario'] ?? 0);
+            $importe = isset($item['importe']) ? (float) $item['importe'] : $precioUnitario * $cantidad;
+
+            $tipoImpuesto = !empty($item['producto_id']) ? $tiposImpuesto->get($item['producto_id']) : null;
+            $esExoneradoOInafecto = in_array($tipoImpuesto, ['exonerado', 'inafecto', 20, 30, '20', '30'], true);
+
+            if ($esExoneradoOInafecto) {
+                $subtotal += $importe;
+                $detalleIgv[$index] = 0.0;
+            } else {
+                $base = round($importe / 1.18, 2);
+                $igvLinea = round($importe - $base, 2);
+                $subtotal += $base;
+                $igv += $igvLinea;
+                $detalleIgv[$index] = $igvLinea;
+            }
+
+            $total += $importe;
+        }
+
+        return [
+            'subtotal' => round($subtotal, 2),
+            'igv' => round($igv, 2),
+            'total' => round($total, 2),
+            'detalle_igv' => $detalleIgv,
+        ];
+    }
+
     public function saveCotizacion(Request $request)
     {
         // Log de entrada para debugging
@@ -137,22 +190,12 @@ class CotizacionController extends Controller
                 $clienteId = $clienteData['id'];
             }
 
-            // Calcular totales - Los precios PVP ya incluyen IGV
-            $total_con_igv = 0;
-            if (is_array($ticket)) {
-                foreach ($ticket as $item) {
-                    if (isset($item['importe'])) {
-                        $total_con_igv += floatval($item['importe']);
-                    } elseif (isset($item['precio']) && isset($item['cantidad'])) {
-                        $total_con_igv += floatval($item['precio']) * intval($item['cantidad']);
-                    }
-                }
-            }
-
-            // Separar IGV del total (precio ya incluye IGV del 18%)
-            $subtotal = round($total_con_igv / 1.18, 2);  // Base sin IGV
-            $igv = round($total_con_igv - $subtotal, 2);  // IGV = Total - Base
-            $total = $total_con_igv;  // Total es el precio con IGV incluido
+            // Calcular totales por línea, respetando productos exonerados/inafectos
+            // (los precios de los productos gravados ya incluyen IGV).
+            $totales = $this->calcularTotalesPorLinea(is_array($ticket) ? $ticket : []);
+            $subtotal = $totales['subtotal'];
+            $igv = $totales['igv'];
+            $total = $totales['total'];
 
             // Obtener siguiente número de serie
             $siguienteNumero = 1;
@@ -178,10 +221,6 @@ class CotizacionController extends Controller
                     $precio_unitario = floatval($item['precio'] ?? 0);
                     $cantidad = intval($item['cantidad'] ?? 1);
                     $precio_total = $precio_unitario * $cantidad;
-
-                    // Calcular IGV del detalle (precio ya incluye IGV)
-                    $precio_unitario_sin_igv = round($precio_unitario / 1.18, 4);
-                    $igv_detalle = round($precio_total - ($precio_unitario_sin_igv * $cantidad), 2);
 
                     $detalle = new CotizacionDetalle();
                     $detalle->cotizacion_id = $venta->id;
@@ -233,6 +272,10 @@ class CotizacionController extends Controller
 
         DB::beginTransaction();
         try {
+            // Recalcular subtotal/IGV en servidor (no confiar en lo que mande
+            // el cliente), respetando productos exonerados/inafectos.
+            $totales = $this->calcularTotalesPorLinea($request->productos);
+
             // Crear cotización
             $cotizacion = Cotizacion::create([
                 'company_id' => Auth::user()->company_id,
@@ -241,9 +284,12 @@ class CotizacionController extends Controller
                 'numero' => $this->generarNumero(),
                 'fecha' => now(),
                 'vigencia' => now()->addDays($request->vigencia_dias ?? 30),
-                'subtotal' => $request->subtotal ?? 0,
+                'subtotal' => $totales['subtotal'],
                 'descuento_total' => $request->descuento_total ?? 0,
-                'igv' => $request->igv ?? 0,
+                'igv' => $totales['igv'],
+                // El total final (ya con cualquier descuento aplicado) se
+                // sigue tomando del request; solo subtotal/IGV se recalculan
+                // en servidor para respetar productos exonerados/inafectos.
                 'total' => $request->total,
                 'observaciones' => $request->observaciones,
                 'estado' => 'pendiente'
@@ -360,13 +406,17 @@ class CotizacionController extends Controller
 
         DB::beginTransaction();
         try {
+            // Recalcular subtotal/IGV en servidor (no confiar en lo que mande
+            // el cliente), respetando productos exonerados/inafectos.
+            $totales = $this->calcularTotalesPorLinea($request->productos);
+
             // Actualizar cotización
             $cotizacion->update([
                 'cliente_id' => $request->cliente_id,
                 'vigencia' => now()->addDays($request->vigencia_dias ?? 30),
-                'subtotal' => $request->subtotal ?? 0,
+                'subtotal' => $totales['subtotal'],
                 'descuento_total' => $request->descuento_total ?? 0,
-                'igv' => $request->igv ?? 0,
+                'igv' => $totales['igv'],
                 'total' => $request->total,
                 'observaciones' => $request->observaciones
             ]);

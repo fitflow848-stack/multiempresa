@@ -2287,6 +2287,7 @@
                     importe: producto.precio || parseFloat(producto.pvp),
                     pvp: producto.pvp,
                     pvc: producto.pvc,
+                    tipo_impuesto: producto.tipo_impuesto || null,
                     lote: producto.lote || null,
                     fecha_vencimiento: producto.fecha_vencimiento || null,
                     es_lote_especifico: producto.es_lote_especifico || false,
@@ -2567,8 +2568,24 @@
         }
 
         function actualizarFooter(total) {
-            let gravada = total / 1.18;
-            let igv = total - gravada;
+            // Respetar productos exonerados/inafectos (no todos pagan IGV,
+            // igual que en el POS): solo se extrae el 18% de las líneas
+            // "gravadas"; el resto va directo a la base sin IGV.
+            let gravada = 0;
+            let igv = 0;
+            ticket.forEach(item => {
+                const importeItem = (item.importe !== undefined && item.importe !== null)
+                    ? parseFloat(item.importe)
+                    : parseFloat(item.precio || 0) * parseFloat(item.cantidad || 0);
+
+                if (item.tipo_impuesto === 'exonerado' || item.tipo_impuesto === 'inafecto') {
+                    gravada += importeItem;
+                } else {
+                    const baseItem = importeItem / 1.18;
+                    gravada += baseItem;
+                    igv += (importeItem - baseItem);
+                }
+            });
             let icbper = 0.00; // Si tienes cálculo real ponlo aquí
             
             // Calcular descuentos totales
