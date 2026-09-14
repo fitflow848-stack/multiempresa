@@ -49,6 +49,17 @@ class Sucursal extends Model
                     DB::table('compra_lineas')->whereIn('compra_id', $compraIds)->delete();
                 }
                 if ($ingresoIds->isNotEmpty()) {
+                    $detalleIds = DB::table('almacen_ingreso_detalle')->whereIn('ingreso_id', $ingresoIds)->pluck('id');
+                    if ($detalleIds->isNotEmpty()) {
+                        // RESTRICT por FK: una transferencia entre sucursales
+                        // referencia el lote de origen y de destino.
+                        DB::table('almacen_transferencias')
+                            ->where(function ($q) use ($detalleIds) {
+                                $q->whereIn('origen_lote_id', $detalleIds)
+                                  ->orWhereIn('destino_lote_id', $detalleIds);
+                            })
+                            ->delete();
+                    }
                     DB::table('almacen_ingreso_detalle')->whereIn('ingreso_id', $ingresoIds)->delete();
                 }
 
