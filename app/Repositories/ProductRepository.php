@@ -291,4 +291,48 @@ class ProductRepository
                 HAVING SUM(ad.cantidad) <> 0
                 ORDER BY MAX(ad.id) ASC", $params);
     }
+
+    /**
+     * Igual que elegirStock(), pero neteado: los grupos (lote/fecha/precio)
+     * con cantidad negativa (un ajuste manual o una anulación antigua) nunca
+     * se muestran — en vez de eso, su deuda se descuenta de los grupos
+     * positivos más chicos primero, hasta saldarla. Así:
+     *   - nunca aparece un número negativo,
+     *   - la suma de lo que se lista siempre coincide con el total real,
+     *   - y esta es la ÚNICA fuente de este cálculo: cualquier pantalla que
+     *     necesite "stock disponible por lote" debe llamar a este método
+     *     (no reimplementar su propio agrupamiento/neteo, como pasó antes
+     *     entre el POS y el módulo de Transferencias, cuando cada uno
+     *     agrupaba distinto y daban números distintos para el mismo lote).
+     *
+     * @return array<int, object{id:int,producto_linea_id:?int,lote:string,fecha_vencimiento:?string,empaque:string,unidades:float,pvp:float,pvc:float}>
+     */
+    public function elegirStockNeteado(int $productoId, ?int $sucursalId = null): array
+    {
+        $lotes = collect($this->elegirStock($productoId, $sucursalId));
+
+        $negativos = $lotes->filter(fn($l) => $l->unidades < 0);
+        $deficit = (float) $negativos->sum(fn($l) => abs((float) $l->unidades));
+        $idsOcultos = $negativos->pluck('id')->all();
+
+        $positivosPorTamano = $lotes->filter(fn($l) => $l->unidades > 0)
+            ->sortBy(fn($l) => (float) $l->unidades)
+            ->values();
+
+        foreach ($positivosPorTamano as $positivo) {
+            if ($deficit <= 0) {
+                break;
+            }
+            $cantidad = (float) $positivo->unidades;
+            if ($cantidad <= $deficit) {
+                $idsOcultos[] = $positivo->id;
+                $deficit = round($deficit - $cantidad, 2);
+            } else {
+                $positivo->unidades = round($cantidad - $deficit, 2);
+                $deficit = 0;
+            }
+        }
+
+        return $lotes->reject(fn($l) => in_array($l->id, $idsOcultos))->values()->all();
+    }
 }

@@ -10,6 +10,7 @@ use App\Models\Producto;
 use App\Models\ProductoLinea;
 use App\Exports\ProductosPlantillaExport;
 use App\Imports\ProductosImport;
+use App\Repositories\ProductRepository;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,13 @@ use Carbon\Carbon;
 
 class AlmacenController extends Controller
 {
+    protected $productRepo;
+
+    public function __construct(ProductRepository $productRepo)
+    {
+        $this->productRepo = $productRepo;
+    }
+
     public function index(Request $request)
     {
         /** @var \App\Models\User $user */
@@ -846,86 +854,75 @@ class AlmacenController extends Controller
 
     public function getLotesAvailable(Request $request)
     {
-        $productoId = $request->get('producto_id');
-        $lineaId = $request->get('linea_id');
+        $productoId = (int) $request->get('producto_id');
         // Usar sucursal_id del request, fallback a sesión o branch del usuario para asegurar que sea de su sucursal
-        $sucursalId = $request->get('sucursal_id') ?: (session('active_branch_id') ?: Auth::user()->branch_id);
+        $sucursalIdParam = $request->get('sucursal_id') ?: (session('active_branch_id') ?: Auth::user()->branch_id);
+        $sucursalFiltrada = $sucursalIdParam && $sucursalIdParam !== 'undefined';
 
-        $query = DB::table('almacen_ingreso_detalle as d')
-            ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
-            ->leftJoin('sucursales as s', 's.id', '=', 'i.sucursal_id');
-
-        if ($sucursalId && $sucursalId !== 'undefined') {
-            $query->where('i.sucursal_id', $sucursalId);
+        // Única fuente de "stock disponible por lote" (ver
+        // ProductRepository::elegirStockNeteado): si no se filtra por una
+        // sucursal específica, se recorre cada sucursal donde el producto
+        // tenga movimientos y se netea por separado en cada una (la deuda de
+        // una sucursal no debe restarse del stock de otra).
+        if ($sucursalFiltrada) {
+            $sucursales = collect([(int) $sucursalIdParam]);
+        } else {
+            $sucursales = DB::table('almacen_ingresos as i')
+                ->join('almacen_ingreso_detalle as d', 'd.ingreso_id', '=', 'i.id')
+                ->where('d.producto_id', $productoId)
+                ->distinct()
+                ->pluck('i.sucursal_id');
         }
 
-        // Excluir ajustes negativos (misma lógica que el POS para consistencia de stock)
-        $query->where(function ($q) {
-            $q->whereNull('i.observacion')
-              ->orWhere('i.observacion', 'NOT LIKE', '[AJUSTE]%')
-              ->orWhere('d.cantidad', '>=', 0);
-        });
+        $nombresSucursales = DB::table('sucursales')->whereIn('id', $sucursales)->pluck('nombre', 'id');
 
-        // Siempre filtramos por producto_id para incluir todo el stock sin importar producto_linea_id.
-        $query->where('d.producto_id', $productoId);
+        $results = $sucursales->flatMap(function ($sucId) use ($productoId, $nombresSucursales, $sucursalFiltrada) {
+            return collect($this->productRepo->elegirStockNeteado($productoId, (int) $sucId))
+                ->map(function ($lote) use ($sucId, $nombresSucursales, $sucursalFiltrada) {
+                    $stockEfectivo = (float) $lote->unidades;
+                    $fecha = $lote->fecha_vencimiento ? date('d/m/Y', strtotime($lote->fecha_vencimiento)) : '-';
+                    $texto = "Lote: " . ($lote->lote ?: 'S/L') . " | Vence: " . $fecha . " | Stock: " . number_format($stockEfectivo, 2);
 
-        // best_id: el registro con cantidad > 0 más reciente para ese lote/fecha en esa sucursal
-        $bestIdSubquery = "(SELECT d2.id FROM almacen_ingreso_detalle d2
-           JOIN almacen_ingresos i2 ON i2.id = d2.ingreso_id
-           WHERE i2.sucursal_id = i.sucursal_id
-           AND d2.producto_id = d.producto_id
-           AND COALESCE(d2.lote, '') = COALESCE(d.lote, '')
-           AND COALESCE(d2.fecha_vencimiento, '') = COALESCE(d.fecha_vencimiento, '')
-           AND d2.cantidad > 0
-           AND (i2.observacion NOT LIKE '[ANULACION]%' AND i2.observacion NOT LIKE '[DEVOLUCION]%')
-           ORDER BY d2.id DESC LIMIT 1) as best_id";
+                    if (!$sucursalFiltrada) {
+                        $texto .= " | Ubicación: " . ($nombresSucursales[$sucId] ?? 'General');
+                    }
 
-        $lotes = $query->select(
-                'd.lote',
-                'd.fecha_vencimiento',
-                DB::raw('SUM(d.cantidad) as stock'),
-                DB::raw('MAX(d.id) as id'),
-                's.nombre as sucursal_nombre',
-                'i.sucursal_id',
-                DB::raw($bestIdSubquery)
-            )
-            ->groupBy('d.lote', 'd.fecha_vencimiento', 's.nombre', 'i.sucursal_id', 'd.producto_id')
-            ->having('stock', '>', 0)
-            ->orderBy('d.fecha_vencimiento', 'asc')
-            ->get();
-
-        // Calcular stock total real del producto (como lo hace el POS) para limitar
-        $stockTotalProducto = DB::table('almacen_ingreso_detalle as d')
-            ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
-            ->where('d.producto_id', $productoId)
-            ->when($sucursalId && $sucursalId !== 'undefined', fn($q) => $q->where('i.sucursal_id', $sucursalId))
-            ->where(function ($q) {
-                $q->whereNull('i.observacion')
-                  ->orWhere('i.observacion', 'NOT LIKE', '[AJUSTE]%')
-                  ->orWhere('d.cantidad', '>=', 0);
-            })
-            ->sum('d.cantidad');
-
-        $results = $lotes->map(function ($lote) use ($sucursalId, $stockTotalProducto) {
-            // El stock del lote no puede exceder el stock total real del producto
-            $stockEfectivo = min($lote->stock, max(0, $stockTotalProducto));
-            $fecha = $lote->fecha_vencimiento ? date('d/m/Y', strtotime($lote->fecha_vencimiento)) : '-';
-            $texto = "Lote: " . ($lote->lote ?: 'S/L') . " | Vence: " . $fecha . " | Stock: " . number_format($stockEfectivo, 2);
-            
-            // Solo añadir ubicación si no estamos filtrando por una específica
-            if (!$sucursalId || $sucursalId === 'undefined') {
-                $texto .= " | Ubicación: " . ($lote->sucursal_nombre ?? 'General');
-            }
-
-            return [
-                'id' => $lote->best_id ?: $lote->id,
-                'text' => $texto,
-                'stock' => $stockEfectivo,
-                'sucursal_id' => $lote->sucursal_id
-            ];
+                    return [
+                        'id' => $lote->id,
+                        'text' => $texto,
+                        'stock' => $stockEfectivo,
+                        'sucursal_id' => (int) $sucId,
+                    ];
+                });
         })->filter(fn($item) => $item['stock'] > 0)->values();
 
         return response()->json($results);
+    }
+
+    /**
+     * Stock NETO de un producto en una sucursal, agrupado por lote/fecha de
+     * vencimiento: los grupos con neto negativo (ajustes manuales o
+     * anulaciones antiguos) se descuentan de los grupos positivos más
+     * chicos primero — usando exactamente el mismo cálculo/agrupamiento que
+     * ProductRepository::elegirStockNeteado() (POS y Transferencias deben
+     * usar siempre esta única fuente, nunca reimplementar su propio
+     * agrupamiento: así fue como el POS y Transferencias mostraron números
+     * distintos para el mismo lote anteriormente).
+     *
+     * @return \Illuminate\Support\Collection<string, float> clave "producto_linea_id|lote|fecha(Y-m-d)|pvp|pvc" => stock neto
+     */
+    private function stockNetoPorLoteProducto(int $productoId, int $sucursalId): \Illuminate\Support\Collection
+    {
+        return collect($this->productRepo->elegirStockNeteado($productoId, $sucursalId))
+            ->keyBy(fn($l) => $this->claveLote($l->producto_linea_id, $l->lote, $l->fecha_vencimiento, $l->pvp, $l->pvc))
+            ->map(fn($l) => (float) $l->unidades);
+    }
+
+    private function claveLote($productoLineaId, $lote, $fecha, $pvp, $pvc): string
+    {
+        $fechaFormateada = $fecha ? \Carbon\Carbon::parse($fecha)->format('Y-m-d') : '';
+
+        return implode('|', [$productoLineaId, $lote ?? '', $fechaFormateada, (float) $pvp, (float) $pvc]);
     }
 
     public function storeTransferencia(Request $request)
@@ -955,23 +952,20 @@ class AlmacenController extends Controller
                     throw new \Exception("Uno de los lotes seleccionados ya no existe.");
                 }
 
-                // Validar contra el stock TOTAL acumulado del lote en la sucursal, no solo contra el registro individual
-                // Esto previene el error cuando el ID seleccionado es un ajuste (ej. cantidad -1) pero el total es positivo.
-                // Debe excluir los ajustes manuales negativos ([AJUSTE] con cantidad < 0), igual que
-                // getLotesAvailable() (el que le muestra "Stock: 18.00" al usuario) — si no, esta suma
-                // incluye esos ajustes y el "Disponible" no coincide con lo que el usuario ya vio en pantalla.
-                $stockActualLote = DB::table('almacen_ingreso_detalle as d')
-                    ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
-                    ->where('i.sucursal_id', $request->sucursal_origen_id)
-                    ->where('d.producto_id', $item['producto_id'])
-                    ->where('d.lote', $loteOrigen->lote)
-                    ->where('d.fecha_vencimiento', $loteOrigen->fecha_vencimiento)
-                    ->where(function ($q) {
-                        $q->whereNull('i.observacion')
-                          ->orWhere('i.observacion', 'NOT LIKE', '[AJUSTE]%')
-                          ->orWhere('d.cantidad', '>=', 0);
-                    })
-                    ->sum('d.cantidad');
+                // Validar contra el stock NETO del lote en la sucursal (no solo contra el
+                // registro individual, ni contra la suma cruda): se descuentan los ajustes
+                // y anulaciones negativos de los lotes positivos más chicos primero, igual
+                // que en getLotesAvailable() y en PosController::elegirStock(), para que el
+                // "Disponible" siempre coincida con lo que el usuario ya vio en el selector.
+                $stockNeto = $this->stockNetoPorLoteProducto((int) $item['producto_id'], (int) $request->sucursal_origen_id);
+                $claveLoteOrigen = $this->claveLote(
+                    $loteOrigen->producto_linea_id,
+                    $loteOrigen->lote,
+                    $loteOrigen->fecha_vencimiento,
+                    $loteOrigen->pvp,
+                    $loteOrigen->pvc
+                );
+                $stockActualLote = $stockNeto->get($claveLoteOrigen, 0.0);
 
                 if ($stockActualLote < $item['cantidad']) {
                     throw new \Exception("Stock insuficiente para " . ($loteOrigen->producto->nombre ?? 'un producto') . ". Disponible: " . number_format($stockActualLote, 2));
@@ -979,15 +973,20 @@ class AlmacenController extends Controller
 
                 $sucursalOrigenId = $loteOrigen->ingreso->sucursal_id;
 
-                // 1. Restar del origen distribuido entre todos los registros del mismo lote/fecha
-                // (el stock puede estar en varios almacen_ingreso_detalle con distintos producto_linea_id)
+                // 1. Restar del origen distribuido entre todos los registros del mismo
+                // lote/fecha/línea/precio (puede haber varios almacen_ingreso_detalle
+                // con el mismo lote pero distinta producto_linea_id/precio — deben
+                // tratarse como grupos separados, igual que en el cálculo de arriba).
                 $remaining = $item['cantidad'];
                 $registrosOrigen = DB::table('almacen_ingreso_detalle as d')
                     ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
                     ->where('i.sucursal_id', $request->sucursal_origen_id)
                     ->where('d.producto_id', $item['producto_id'])
+                    ->where('d.producto_linea_id', $loteOrigen->producto_linea_id)
                     ->where('d.lote', $loteOrigen->lote)
                     ->where('d.fecha_vencimiento', $loteOrigen->fecha_vencimiento)
+                    ->where('d.pvp', $loteOrigen->pvp)
+                    ->where('d.pvc', $loteOrigen->pvc)
                     ->where('d.cantidad', '>', 0)
                     ->orderBy('d.id', 'asc')
                     ->select('d.id', 'd.cantidad')

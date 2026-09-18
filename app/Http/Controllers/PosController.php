@@ -269,38 +269,10 @@ class PosController extends Controller
             return redirect()->route('pos.index')->with('error', 'Producto no encontrado');
         }
 
-        // Obtener lotes disponibles del producto
-        $lotes = collect($this->productRepo->elegirStock((int) $productoId));
-
-        // Los lotes con neto negativo (ej. una anulación/ajuste antiguo) NUNCA
-        // se muestran. En vez de eso, esa deuda se descuenta EN MEMORIA
-        // (no se toca la base de datos) de los lotes positivos más chicos,
-        // empezando por el de menor cantidad, ocultándolos por completo hasta
-        // saldarla. Así nunca aparece un número negativo y el total siempre
-        // cuadra exactamente con la suma de lo que se ve en la tabla.
-        $negativos = $lotes->filter(fn($l) => $l->unidades < 0);
-        $deficit = (float) $negativos->sum(fn($l) => abs((float) $l->unidades));
-        $idsOcultos = $negativos->pluck('id')->all();
-
-        $positivosPorTamano = $lotes->filter(fn($l) => $l->unidades > 0)
-            ->sortBy(fn($l) => (float) $l->unidades)
-            ->values();
-
-        foreach ($positivosPorTamano as $positivo) {
-            if ($deficit <= 0) {
-                break;
-            }
-            $cantidad = (float) $positivo->unidades;
-            if ($cantidad <= $deficit) {
-                $idsOcultos[] = $positivo->id;
-                $deficit = round($deficit - $cantidad, 2);
-            } else {
-                $positivo->unidades = round($cantidad - $deficit, 2);
-                $deficit = 0;
-            }
-        }
-
-        $lotes = $lotes->reject(fn($l) => in_array($l->id, $idsOcultos))->values()->all();
+        // Lotes disponibles del producto, ya neteados (ver
+        // ProductRepository::elegirStockNeteado — única fuente de este
+        // cálculo, para que coincida con lo que muestra Transferencias).
+        $lotes = $this->productRepo->elegirStockNeteado((int) $productoId, $sucursalId);
 
         // El total mostrado es la suma de estos lotes ya "netos" (no el stock
         // "real" del buscador), para que siempre coincida con la tabla.
