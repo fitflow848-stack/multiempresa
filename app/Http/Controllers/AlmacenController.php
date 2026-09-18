@@ -956,13 +956,21 @@ class AlmacenController extends Controller
                 }
 
                 // Validar contra el stock TOTAL acumulado del lote en la sucursal, no solo contra el registro individual
-                // Esto previene el error cuando el ID seleccionado es un ajuste (ej. cantidad -1) pero el total es positivo
+                // Esto previene el error cuando el ID seleccionado es un ajuste (ej. cantidad -1) pero el total es positivo.
+                // Debe excluir los ajustes manuales negativos ([AJUSTE] con cantidad < 0), igual que
+                // getLotesAvailable() (el que le muestra "Stock: 18.00" al usuario) — si no, esta suma
+                // incluye esos ajustes y el "Disponible" no coincide con lo que el usuario ya vio en pantalla.
                 $stockActualLote = DB::table('almacen_ingreso_detalle as d')
                     ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
                     ->where('i.sucursal_id', $request->sucursal_origen_id)
                     ->where('d.producto_id', $item['producto_id'])
                     ->where('d.lote', $loteOrigen->lote)
                     ->where('d.fecha_vencimiento', $loteOrigen->fecha_vencimiento)
+                    ->where(function ($q) {
+                        $q->whereNull('i.observacion')
+                          ->orWhere('i.observacion', 'NOT LIKE', '[AJUSTE]%')
+                          ->orWhere('d.cantidad', '>=', 0);
+                    })
                     ->sum('d.cantidad');
 
                 if ($stockActualLote < $item['cantidad']) {
