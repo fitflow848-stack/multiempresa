@@ -227,7 +227,7 @@
                                             ->first();
                                         $isAdminRole =
                                             auth()->user()->hasRole('super_admin') ||
-                                            auth()->user()->hasRole('admin_empresa');
+                                            auth()->user()->hasRole('administrador');
                                         $enUsoPorOtro =
                                             $sesionAbiertaRaw &&
                                             $sesionAbiertaRaw->user_id !== auth()->id() &&
@@ -274,7 +274,7 @@
                                                 ->first();
                                             $isAllowedOverride =
                                                 auth()->user()->hasRole('super_admin') ||
-                                                auth()->user()->hasRole('admin_empresa');
+                                                auth()->user()->hasRole('administrador');
                                             $enUsoPorOtro =
                                                 $sesionAbierta &&
                                                 $sesionAbierta->user_id !== auth()->id() &&
@@ -336,7 +336,7 @@
                     </li>
                 @endcanany
 
-                @if(auth()->user()->hasAnyRole(['vendedor', 'admin_empresa', 'super_admin']) || auth()->user()->canAny(['deudas.ver', 'cajas.ver', 'tesoreria.ver']))
+                @if(auth()->user()->hasAnyRole(['vendedor', 'administrador', 'super_admin']) || auth()->user()->canAny(['deudas.ver', 'cajas.ver', 'tesoreria.ver']))
                     <li class="nav-item dropdown">
                         <a href="#"
                             class="nav-link dropdown-toggle {{ request()->routeIs('finanzas_vendedor.*') || request()->is('deudas*') || request()->is('cierre-caja*') ? 'active' : '' }}"
@@ -499,7 +499,7 @@
                         $roleName = Auth::user()->getRoleNames()->first() ?? 'Usuario';
                         $roleLabel = match ($roleName) {
                             'super_admin' => 'Super Admin',
-                            'admin_empresa' => 'Administrador',
+                            'administrador' => 'Administrador',
                             'supervisor' => 'Supervisor',
                             'vendedor' => 'Vendedor',
                             default => ucfirst(str_replace('_', ' ', $roleName)),

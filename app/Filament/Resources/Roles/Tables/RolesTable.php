@@ -76,13 +76,17 @@ class RolesTable
                     ->visible(fn () => auth('admin')->user()?->isSuperAdmin()),
             ])
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()
+                    ->visible(fn ($record) => auth('admin')->user()?->isSuperAdmin()
+                        || !in_array($record->name, ['super_admin', 'administrador'])),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
                 ]),
             ])
+            ->checkIfRecordIsSelectableUsing(fn ($record) => auth('admin')->user()?->isSuperAdmin()
+                || !in_array($record->name, ['super_admin', 'administrador']))
             ->defaultSort('name');
     }
 }

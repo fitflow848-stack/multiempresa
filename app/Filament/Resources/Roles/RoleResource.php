@@ -57,8 +57,10 @@ class RoleResource extends Resource
     }
 
     /**
-     * El administrador (dueño del negocio) no puede ver ni tocar los roles de infraestructura del sistema.
-     * El super_admin ve todos los roles.
+     * El administrador (dueño del negocio) puede ver el rol "administrador" en la
+     * lista (para saber qué permisos tiene), pero no editarlo ni borrarlo: eso lo
+     * bloquea RolePolicy::update()/delete(), no esta consulta. El super_admin ve
+     * todos los roles.
      */
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
     {
@@ -72,9 +74,11 @@ class RoleResource extends Resource
             // El dueño del negocio solo ve roles de su propia empresa
             $query->where('company_id', $user->company_id);
 
-            // Los roles de sistema no deben ser editables por el dueño del negocio
-            $systemRoles = ['super_admin', 'administrador'];
-            $query->whereNotIn('name', $systemRoles);
+            // "super_admin" nunca debe listarse para el dueño del negocio, ni
+            // siquiera la copia que se sembró por accidente dentro de su propia
+            // empresa al crearla (es una plantilla de infraestructura, no un rol
+            // de negocio real).
+            $query->where('name', '!=', 'super_admin');
         }
 
         return $query;

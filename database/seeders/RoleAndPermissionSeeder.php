@@ -168,8 +168,8 @@ class RoleAndPermissionSeeder extends Seeder
             $allPermissions = Permission::where('guard_name', $guard)->get();
             $superAdminRole->syncPermissions($allPermissions);
 
-            // Admin Empresa
-            $adminEmpresaRole = Role::firstOrCreate(['name' => 'admin_empresa', 'guard_name' => $guard]);
+            // Administrador (dueño del negocio)
+            $adminEmpresaRole = Role::firstOrCreate(['name' => 'administrador', 'guard_name' => $guard]);
             $adminEmpresaRole->syncPermissions($allPermissions->filter(function ($p) {
                 $soloSuperAdmin = [
                     'empresas.crear',

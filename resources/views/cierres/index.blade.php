@@ -42,7 +42,7 @@
         <div class="card mb-4">
             <div class="card-body">
                 <form method="GET" action="{{ route('cierre-caja.index') }}" class="row g-3">
-                    @if(auth()->user()->hasAnyRole(['super_admin', 'admin_empresa', 'supervisor']))
+                    @if(auth()->user()->hasAnyRole(['super_admin', 'administrador', 'supervisor']))
                         <div class="col-md-2">
                             <label class="form-label">Usuario</label>
                             <select name="user_id" class="form-select">
