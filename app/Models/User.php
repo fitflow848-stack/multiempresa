@@ -165,7 +165,7 @@ class User extends Authenticatable implements FilamentUser
      * Obtener las cajas a las que tiene acceso según su rol.
      *
      * - super_admin     → todas las cajas del sistema
-     * - admin_empresa   → todas las cajas de su empresa
+     * - administrador   → todas las cajas de su empresa
      * - supervisor      → todas las cajas de su sucursal
      * - vendedor/cajero  → solo las cajas asignadas via pivot
      */
@@ -177,7 +177,7 @@ class User extends Authenticatable implements FilamentUser
         if ($this->isSuperAdmin() || $this->isAdminEmpresa() || $this->hasRole('supervisor')) {
             $query = Caja::activas();
 
-            // Forzamos el filtro por la sucursal actual para que roles altos como super_admin o admin_empresa 
+            // Forzamos el filtro por la sucursal actual para que roles altos como super_admin o administrador 
             // solo vean en el dropdown las cajas de la sucursal desde la que han iniciado sesión
             if ($this->branch_id) {
                 $query->where('sucursal_id', $this->branch_id);
@@ -200,7 +200,7 @@ class User extends Authenticatable implements FilamentUser
         }
 
         if ($this->isAdminEmpresa()) {
-            // El admin_empresa puede acceder a cualquier caja de su empresa
+            // El administrador puede acceder a cualquier caja de su empresa
             // (no se restringe por sucursal, él puede moverse entre ellas)
             return Caja::withoutGlobalScopes()
                 ->where('id', $cajaId)

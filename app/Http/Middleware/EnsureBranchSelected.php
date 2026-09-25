@@ -38,7 +38,7 @@ class EnsureBranchSelected
 
             // Si no ha seleccionado sucursal en esta sesion
             if (!session('branch_selected')) {
-                // Si es admin_empresa, puede entrar a CUALQUIERA de su empresa.
+                // Si es administrador, puede entrar a CUALQUIERA de su empresa.
                 // Los demás roles solo las que tengan asignadas en el pivot.
                 if ($user->isAdminEmpresa()) {
                     $branches = $user->company->sucursales ?? collect();
@@ -57,7 +57,7 @@ class EnsureBranchSelected
                         'branch_selected' => true
                     ]);
                 } else {
-                    // Si no tiene sucursales pero no es super admin, deberia estar bloqueado o ser admin_empresa
+                    // Si no tiene sucursales pero no es super admin, deberia estar bloqueado o ser administrador
                     if (!$user->isAdminEmpresa()) {
                         // abort(403, 'No tienes sucursales asignadas.');
                     }

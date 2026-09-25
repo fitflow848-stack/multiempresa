@@ -21,7 +21,7 @@ class SucursalPolicy
 
     /**
      * Puede ver la lista de sucursales de su empresa.
-     * El admin_empresa necesita verlas para asignar usuarios y cajas.
+     * El administrador necesita verlas para asignar usuarios y cajas.
      */
     public function viewAny(User $user): bool
     {
@@ -39,7 +39,7 @@ class SucursalPolicy
 
     /**
      * Solo el super_admin puede crear sucursales (gestionadas por before()).
-     * El admin_empresa NO puede: la estructura de sucursales la define el super_admin.
+     * El administrador NO puede: la estructura de sucursales la define el super_admin.
      */
     public function create(User $user): bool
     {
@@ -48,7 +48,7 @@ class SucursalPolicy
 
     /**
      * Solo el super_admin puede editar sucursales (gestionadas por before()).
-     * Excepto admin_empresa para sucursales de su propia empresa.
+     * Excepto administrador para sucursales de su propia empresa.
      */
     public function update(User $user, Sucursal $sucursal): bool
     {

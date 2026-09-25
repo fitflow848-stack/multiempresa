@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
  * por la sucursal del usuario autenticado.
  *
  * Solo aplica a roles operativos (vendedor, cajero, supervisor).
- * Los roles super_admin y admin_empresa ven todas las sucursales de su empresa.
+ * Los roles super_admin y administrador ven todas las sucursales de su empresa.
  *
  * Requisito: El modelo debe tener una columna `sucursal_id` o `sucursal`.
  *
@@ -43,13 +43,13 @@ trait BelongsToSucursal
                 return;
             }
 
-            // Solo el super_admin y admin_empresa ven todas las sucursales sin restricciones automáticas
+            // Solo el super_admin y administrador ven todas las sucursales sin restricciones automáticas
             if ($user->hasRole('super_admin') || (method_exists($user, 'isAdmin') && $user->isAdmin())) {
                 logger()->info("Trait: User is admin, skipping branch scope");
                 return;
             }
 
-            // Roles operativos y admin_empresa: filtrar por su sucursal asignada
+            // Roles operativos y administrador: filtrar por su sucursal asignada
             if ($user->branch_id) {
                 $instance = new static;
                 $column = $instance->getSucursalForeignKey();

@@ -38,7 +38,7 @@ class CajaPolicy
     }
 
     /**
-     * El dueño del negocio (admin_empresa) puede crear cajas en su empresa.
+     * El dueño del negocio (administrador) puede crear cajas en su empresa.
      * Es una función de administración del negocio, no de infraestructura.
      */
     public function create(User $user): bool

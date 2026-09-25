@@ -22,7 +22,7 @@ class DeudaController extends Controller
         // Cargar sucursales para el filtro
         $sucursales = \App\Models\Sucursal::where('company_id', $user->company_id)->get();
 
-        // Si el usuario es super_admin o admin_empresa, permitimos ver de otras sucursales
+        // Si el usuario es super_admin o administrador, permitimos ver de otras sucursales
         // O si el usuario específicamente quiere ver "todas" (consolidado)
         // Para igualar al reporte, por defecto si no hay filtro mostramos lo de la empresa
         

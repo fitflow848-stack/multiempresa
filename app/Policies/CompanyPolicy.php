@@ -21,7 +21,7 @@ class CompanyPolicy
     }
 
     /**
-     * El admin_empresa puede ver su propia empresa en el panel para conocer los datos.
+     * El administrador puede ver su propia empresa en el panel para conocer los datos.
      * El super_admin ve todas las empresas (gestionado por before()).
      */
     public function viewAny(User $user): bool
@@ -42,7 +42,7 @@ class CompanyPolicy
 
     /**
      * SOLO el super_admin puede crear empresas nuevas.
-     * El admin_empresa no tiene esta función.
+     * El administrador no tiene esta función.
      */
     public function create(User $user): bool
     {
@@ -50,7 +50,7 @@ class CompanyPolicy
     }
 
     /**
-     * El admin_empresa puede actualizar los datos de su propia empresa
+     * El administrador puede actualizar los datos de su propia empresa
      * (razón social, dirección, logo, configuración fiscal, etc.).
      * No puede modificar empresas ajenas.
      */

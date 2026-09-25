@@ -56,7 +56,7 @@ class BranchSelectionController extends Controller
         
         // Verificar que el usuario tenga acceso a esa sucursal
         if ($user->isAdminEmpresa()) {
-            // Un admin_empresa puede elegir CUALQUIERA de su propia empresa
+            // Un administrador puede elegir CUALQUIERA de su propia empresa
             $hasAccess = $branch && $branch->company_id == $user->company_id;
         } elseif ($user->hasRole('super_admin')) {
             $hasAccess = true;

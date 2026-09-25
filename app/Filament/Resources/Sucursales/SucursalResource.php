@@ -36,7 +36,7 @@ class SucursalResource extends Resource
         $user = auth('admin')->user();
         if (!$user) return false;
         if ($user->hasRole('super_admin')) return true;
-        // admin_empresa can edit branches of their own company
+        // administrador can edit branches of their own company
         return $user->isAdminEmpresa()
             && (int)$user->attributes['company_id'] === (int)$record->company_id;
     }

@@ -27,10 +27,8 @@ echo "=== Reparación de permisos por empresa ===\n\n";
 $rolePermissions = [
 
     // Roles de sistema – reciben TODOS los permisos
-    'admin'         => '__ALL__',
     'administrador' => '__ALL__',
     'super_admin'   => '__ALL__',
-    'admin_empresa' => '__ALL__',  // el admin de empresa también recibe todo
 
     // Supervisor – todo excepto gestión de usuarios/roles/empresas/sucursales
     'supervisor' => [
