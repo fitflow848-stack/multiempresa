@@ -32,10 +32,14 @@ class CreateCompany extends CreateRecord
         $templateRoles = \Spatie\Permission\Models\Role::whereNull('company_id')->get();
 
         foreach ($templateRoles as $template) {
-            $newRole = \Spatie\Permission\Models\Role::create([
+            // firstOrCreate en vez de create: si ya existiera un rol con el mismo
+            // nombre/guard para esta empresa (p.ej. una plantilla global duplicada),
+            // evita que la excepción de índice único aborte todo el sembrado y deje
+            // a la empresa sin roles.
+            $newRole = \Spatie\Permission\Models\Role::firstOrCreate([
                 'name' => $template->name,
                 'guard_name' => $template->guard_name,
-                'company_id' => $record->id
+                'company_id' => $record->id,
             ]);
 
             // Copiar los permisos del rol plantilla
