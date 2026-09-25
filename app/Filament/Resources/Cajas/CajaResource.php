@@ -22,25 +22,25 @@ class CajaResource extends Resource
     public static function canAccess(): bool
     {
         $user = auth('admin')->user();
-        return $user && ($user->can('cajas.ver', 'admin') || $user->hasRole(['super_admin', 'admin_empresa']));
+        return $user && ($user->can('cajas.ver', 'admin') || $user->hasRole(['super_admin', 'administrador']));
     }
 
     public static function canCreate(): bool
     {
         $user = auth('admin')->user();
-        return $user && ($user->can('cajas.crear', 'admin') || $user->hasRole(['super_admin', 'admin_empresa']));
+        return $user && ($user->can('cajas.crear', 'admin') || $user->hasRole(['super_admin', 'administrador']));
     }
 
     public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
     {
         $user = auth('admin')->user();
-        return $user && ($user->can('cajas.editar', 'admin') || $user->hasRole(['super_admin', 'admin_empresa']));
+        return $user && ($user->can('cajas.editar', 'admin') || $user->hasRole(['super_admin', 'administrador']));
     }
 
     public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
     {
         $user = auth('admin')->user();
-        return $user && ($user->can('cajas.eliminar', 'admin') || $user->hasRole(['super_admin', 'admin_empresa']));
+        return $user && ($user->can('cajas.eliminar', 'admin') || $user->hasRole(['super_admin', 'administrador']));
     }
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-calculator';

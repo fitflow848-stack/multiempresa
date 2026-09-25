@@ -57,7 +57,7 @@ class CierreCajaController extends Controller
         // Aplicar el ID de caja a la consulta si no está vacío
         if (!empty($filtroCajaId)) {
             $query->where('caja_id', $filtroCajaId);
-        } elseif (!$user->hasAnyRole(['super_admin', 'admin_empresa', 'supervisor'])) {
+        } elseif (!$user->hasAnyRole(['super_admin', 'administrador', 'supervisor'])) {
             // Un usuario normal DEBE tener una caja asignada por sesión para ver. 
             // Si la caja seleccionada no es del tipo actual, aún forzamos filtro por su ID de caja asignada 
             // (que hará que no vea nada) o simplemente filtraremos a sus cajas asignadas de este tipo.
@@ -68,7 +68,7 @@ class CierreCajaController extends Controller
         }
 
         // Si no es admin/supervisor, solo ve sus propios cierres
-        if (!$user->hasAnyRole(['super_admin', 'admin_empresa', 'supervisor'])) {
+        if (!$user->hasAnyRole(['super_admin', 'administrador', 'supervisor'])) {
             $query->where('user_id', $user->id);
         } else {
             // Filtro manual de usuario
@@ -312,7 +312,7 @@ class CierreCajaController extends Controller
 
         // Seguridad: Solo el dueño de la sesión abierta o un admin/supervisor puede acceder
         if (!$cierre->fecha_cierre && $cierre->user_id !== $user->id) {
-            if (!$user->hasAnyRole(['super_admin', 'admin_empresa', 'supervisor'])) {
+            if (!$user->hasAnyRole(['super_admin', 'administrador', 'supervisor'])) {
                 return redirect()->route('cierre-caja.index')
                     ->with('error', 'No tienes permiso para acceder a esta sesión de caja abierta por otro usuario.');
             }

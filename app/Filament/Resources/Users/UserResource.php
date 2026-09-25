@@ -34,7 +34,7 @@ class UserResource extends Resource
     public static function canAccess(): bool
     {
         $user = auth('admin')->user();
-        return $user && ($user->can('usuarios.ver', 'admin') || $user->hasRole(['super_admin', 'admin_empresa']));
+        return $user && ($user->can('usuarios.ver', 'admin') || $user->hasRole(['super_admin', 'administrador']));
     }
 
     public static function form(Schema $schema): Schema

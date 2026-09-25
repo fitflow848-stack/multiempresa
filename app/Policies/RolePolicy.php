@@ -22,7 +22,7 @@ class RolePolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('roles.ver') || $user->hasRole('admin_empresa');
+        return $user->can('roles.ver') || $user->hasRole('administrador');
     }
 
     /**
@@ -30,7 +30,7 @@ class RolePolicy
      */
     public function view(User $user, Role $role): bool
     {
-        return $user->can('roles.ver') || $user->hasRole('admin_empresa');
+        return $user->can('roles.ver') || $user->hasRole('administrador');
     }
 
     /**
@@ -47,8 +47,8 @@ class RolePolicy
      */
     public function update(User $user, Role $role): bool
     {
-        // No puede editar roles de sistema (super_admin, admin_empresa)
-        $systemRoles = ['super_admin', 'admin_empresa'];
+        // No puede editar roles de sistema (super_admin, administrador)
+        $systemRoles = ['super_admin', 'administrador'];
         if (in_array($role->name, $systemRoles)) {
             return false;
         }
@@ -61,7 +61,7 @@ class RolePolicy
     public function delete(User $user, Role $role): bool
     {
         // No puede eliminar roles críticos del sistema
-        $systemRoles = ['super_admin', 'admin_empresa', 'admin', 'administrador'];
+        $systemRoles = ['super_admin', 'administrador'];
         if (in_array($role->name, $systemRoles)) {
             return false;
         }

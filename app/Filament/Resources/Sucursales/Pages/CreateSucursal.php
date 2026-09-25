@@ -28,8 +28,8 @@ class CreateSucursal extends CreateRecord
                 'is_boveda' => true,
             ]);
 
-            // Assign to users with super_admin or admin_empresa
-            $users = \App\Models\User::role(['super_admin', 'admin_empresa', 'Admin'])
+            // Assign to users with super_admin or administrador
+            $users = \App\Models\User::role(['super_admin', 'administrador'])
                 ->where('company_id', $sucursal->company_id)
                 ->get();
 

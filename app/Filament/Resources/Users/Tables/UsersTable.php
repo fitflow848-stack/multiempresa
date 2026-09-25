@@ -66,8 +66,6 @@ class UsersTable
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
                         'super_admin'   => 'danger',
-                        'admin_empresa' => 'warning',
-                        'admin'         => 'danger',
                         'administrador' => 'danger',
                         'supervisor'    => 'warning',
                         'vendedor'      => 'success',

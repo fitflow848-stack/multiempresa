@@ -21,10 +21,8 @@ class RolesTable
                     ->sortable()
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
-                        'admin'         => 'danger',
                         'administrador' => 'danger',
                         'super_admin'   => 'danger',
-                        'admin_empresa' => 'warning',
                         'supervisor'    => 'warning',
                         'vendedor'      => 'success',
                         'cajero'        => 'info',

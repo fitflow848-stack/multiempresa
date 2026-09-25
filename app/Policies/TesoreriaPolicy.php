@@ -22,7 +22,7 @@ class TesoreriaPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('tesoreria.ver') || $user->hasRole('admin_empresa');
+        return $user->can('tesoreria.ver') || $user->hasRole('administrador');
     }
 
     /**
@@ -30,7 +30,7 @@ class TesoreriaPolicy
      */
     public function view(User $user, Tesoreria $tesoreria): bool
     {
-        $canView = $user->can('tesoreria.ver') || $user->hasRole('admin_empresa');
+        $canView = $user->can('tesoreria.ver') || $user->hasRole('administrador');
         return $canView && $user->company_id === $tesoreria->company_id;
     }
 
@@ -39,7 +39,7 @@ class TesoreriaPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('tesoreria.crear') || $user->hasRole('admin_empresa');
+        return $user->can('tesoreria.crear') || $user->hasRole('administrador');
     }
 
     /**
@@ -47,7 +47,7 @@ class TesoreriaPolicy
      */
     public function update(User $user, Tesoreria $tesoreria): bool
     {
-        $canUpdate = $user->can('tesoreria.editar') || $user->hasRole('admin_empresa');
+        $canUpdate = $user->can('tesoreria.editar') || $user->hasRole('administrador');
         return $canUpdate && $user->company_id === $tesoreria->company_id;
     }
 
@@ -56,7 +56,7 @@ class TesoreriaPolicy
      */
     public function delete(User $user, Tesoreria $tesoreria): bool
     {
-        $canDelete = $user->can('tesoreria.eliminar') || $user->hasRole('admin_empresa');
+        $canDelete = $user->can('tesoreria.eliminar') || $user->hasRole('administrador');
         return $canDelete && $user->company_id === $tesoreria->company_id;
     }
 }

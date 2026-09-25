@@ -27,7 +27,7 @@ class RoleResource extends Resource
     public static function canAccess(): bool
     {
         $user = auth('admin')->user();
-        return $user && ($user->can('roles.ver', 'admin') || $user->hasRole(['super_admin', 'admin_empresa']));
+        return $user && ($user->can('roles.ver', 'admin') || $user->hasRole(['super_admin', 'administrador']));
     }
 
     public static function form(Schema $schema): Schema
@@ -57,7 +57,7 @@ class RoleResource extends Resource
     }
 
     /**
-     * El admin_empresa no puede ver ni tocar los roles de infraestructura del sistema.
+     * El administrador (dueño del negocio) no puede ver ni tocar los roles de infraestructura del sistema.
      * El super_admin ve todos los roles.
      */
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
@@ -69,11 +69,11 @@ class RoleResource extends Resource
         $query->where('guard_name', 'admin');
 
         if ($user && !$user->isSuperAdmin()) {
-            // El admin_empresa solo ve roles de su propia empresa
+            // El dueño del negocio solo ve roles de su propia empresa
             $query->where('company_id', $user->company_id);
-            
+
             // Los roles de sistema no deben ser editables por el dueño del negocio
-            $systemRoles = ['super_admin', 'admin_empresa'];
+            $systemRoles = ['super_admin', 'administrador'];
             $query->whereNotIn('name', $systemRoles);
         }
 

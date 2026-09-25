@@ -21,7 +21,7 @@ class UserPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('usuarios.ver') || $user->hasRole('admin_empresa');
+        return $user->can('usuarios.ver') || $user->hasRole('administrador');
     }
 
     /**
@@ -29,7 +29,7 @@ class UserPolicy
      */
     public function view(User $user, User $model): bool
     {
-        $canView = $user->can('usuarios.ver') || $user->hasRole('admin_empresa');
+        $canView = $user->can('usuarios.ver') || $user->hasRole('administrador');
         return $canView && $user->company_id === $model->company_id;
     }
 
@@ -38,7 +38,7 @@ class UserPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('usuarios.crear') || $user->hasRole('admin_empresa');
+        return $user->can('usuarios.crear') || $user->hasRole('administrador');
     }
 
     /**
@@ -46,7 +46,7 @@ class UserPolicy
      */
     public function update(User $user, User $model): bool
     {
-        $canUpdate = $user->can('usuarios.editar') || $user->hasRole('admin_empresa');
+        $canUpdate = $user->can('usuarios.editar') || $user->hasRole('administrador');
         return $canUpdate && $user->company_id === $model->company_id;
     }
 
@@ -55,7 +55,7 @@ class UserPolicy
      */
     public function delete(User $user, User $model): bool
     {
-        $canDelete = $user->can('usuarios.eliminar') || $user->hasRole('admin_empresa');
+        $canDelete = $user->can('usuarios.eliminar') || $user->hasRole('administrador');
         return $canDelete && $user->company_id === $model->company_id && $user->id !== $model->id;
     }
 }

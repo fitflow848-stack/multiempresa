@@ -302,7 +302,7 @@ class OperacionCajaController extends Controller
 
         $user = Auth::user();
 
-        if (!$user->hasAnyRole(['super_admin', 'admin_empresa', 'supervisor'])) {
+        if (!$user->hasAnyRole(['super_admin', 'administrador', 'supervisor'])) {
             return response()->json(['success' => false, 'message' => 'No tiene permisos para realizar transferencias desde la Bóveda.'], 403);
         }
 

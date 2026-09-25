@@ -21,7 +21,7 @@ class TesoreriaResource extends Resource
     public static function canAccess(): bool
     {
         $user = auth('admin')->user();
-        return $user && ($user->can('tesoreria.ver', 'admin') || $user->hasRole(['super_admin', 'admin_empresa']));
+        return $user && ($user->can('tesoreria.ver', 'admin') || $user->hasRole(['super_admin', 'administrador']));
     }
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-archive-box';
 

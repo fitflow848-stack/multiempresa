@@ -148,7 +148,7 @@ class User extends Authenticatable implements FilamentUser
         return \Illuminate\Support\Facades\DB::table('model_has_roles')
             ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
             ->where('model_has_roles.model_id', $this->id)
-            ->whereIn('roles.name', ['super_admin', 'admin_empresa', 'admin', 'administrador'])
+            ->whereIn('roles.name', ['super_admin', 'administrador'])
             ->exists();
     }
 
@@ -229,6 +229,6 @@ class User extends Authenticatable implements FilamentUser
             setPermissionsTeamId($this->company_id);
         }
         
-        return $this->hasAnyRole(['super_admin', 'admin', 'admin_empresa', 'supervisor']);
+        return $this->hasAnyRole(['super_admin', 'administrador', 'supervisor']);
     }
 }
