@@ -134,19 +134,18 @@ class UserForm
                                 if ($authUser->isSuperAdmin()) {
                                     $companyId = $get('company_id');
                                     if ($companyId) {
-                                        // Mostrar roles de la empresa seleccionada Y roles globales (sin empresa)
-                                        $query->where(function ($q) use ($companyId) {
-                                            $q->where('roles.company_id', $companyId)
-                                              ->orWhereNull('roles.company_id');
-                                        });
+                                        // Solo los roles propios de la empresa seleccionada. Ya no se
+                                        // incluyen las plantillas globales (company_id NULL): cada
+                                        // empresa tiene su propio juego completo de roles, e incluir
+                                        // también la plantilla duplicaba las opciones en el selector y
+                                        // permitía asignar por error el rol "plantilla" en vez del propio.
+                                        $query->where('roles.company_id', $companyId);
                                     }
                                     // Si no hay empresa seleccionada, no filtrar por company_id (mostrar todos)
                                 } else {
                                     $rawCompanyId = $authUser->getRawOriginal('company_id') ?? $authUser->company_id;
-                                    $query->where(function ($q) use ($rawCompanyId) {
-                                        $q->where('roles.company_id', $rawCompanyId)
-                                          ->orWhereNull('roles.company_id');
-                                    })->whereNotIn('roles.name', ['super_admin']);
+                                    $query->where('roles.company_id', $rawCompanyId)
+                                        ->whereNotIn('roles.name', ['super_admin']);
                                 }
 
                                 return $query->orderBy('roles.name');
