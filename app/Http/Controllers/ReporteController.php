@@ -1337,7 +1337,8 @@ class ReporteController extends Controller
             ->leftJoin('tipos_pagos as tp', 'tp.id', '=', 'v.id_tipo_pago')
             ->leftJoin('cierre_cajas as cc', 'cc.id', '=', 'v.cierre_caja_id')
             ->leftJoin('cajas as cj', 'cj.id', '=', 'cc.caja_id')
-            ->where('v.estado', '!=', '0');
+            ->where('v.estado', '!=', '0')
+            ->where('v.id_empresa', Auth::user()->company_id);
 
         $localId = $request->input('local_id');
 
@@ -1355,7 +1356,8 @@ class ReporteController extends Controller
             )
             ->join('users as u', 'u.id', '=', 'o.user_id')
             ->leftJoin('cierre_cajas as cc', 'cc.id', '=', 'o.cierre_caja_id')
-            ->leftJoin('cajas as cj', 'cj.id', '=', 'cc.caja_id');
+            ->leftJoin('cajas as cj', 'cj.id', '=', 'cc.caja_id')
+            ->where('o.company_id', Auth::user()->company_id);
 
         if ($localId) {
             // Filtrar ventas por sucursal del cierre de caja asociado
@@ -1419,7 +1421,9 @@ class ReporteController extends Controller
 
     private function reporteMovimientosBanco(Request $request)
     {
+        $companyId = Auth::user()->company_id;
         $query = \App\Models\BancoMovimiento::with(['cuenta', 'user', 'sucursal'])
+            ->whereHas('cuenta', fn($q) => $q->where('company_id', $companyId))
             ->orderByDesc('fecha');
 
         if ($request->input('desde')) {
