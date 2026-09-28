@@ -2,11 +2,14 @@
 
 namespace App\Filament\Resources\Roles\Pages;
 
+use App\Filament\Resources\Roles\Concerns\SyncsRoleAcrossGuards;
 use App\Filament\Resources\Roles\RoleResource;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateRole extends CreateRecord
 {
+    use SyncsRoleAcrossGuards;
+
     protected static string $resource = RoleResource::class;
 
     public function getMaxContentWidth(): string
@@ -35,15 +38,20 @@ class CreateRole extends CreateRecord
         ]);
 
         // Asignar permisos
+        $permissionNames = [];
         if (isset($data['permissions']) && is_array($data['permissions'])) {
             // Convertir IDs a nombres de permisos
             $permissionNames = \Spatie\Permission\Models\Permission::whereIn('id', $data['permissions'])
                 ->where('guard_name', 'admin')
                 ->pluck('name')
                 ->toArray();
-            
+
             $role->syncPermissions($permissionNames);
         }
+
+        // El panel solo crea el rol "admin"; replicar hacia su gemelo "web"
+        // para que el rol nuevo funcione en la app real (POS, sidebar, etc.).
+        $this->syncWebGuardRole($role, $permissionNames);
 
         return $role;
     }

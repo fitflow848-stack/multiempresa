@@ -2,12 +2,15 @@
 
 namespace App\Filament\Resources\Roles\Pages;
 
+use App\Filament\Resources\Roles\Concerns\SyncsRoleAcrossGuards;
 use App\Filament\Resources\Roles\RoleResource;
 use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditRole extends EditRecord
 {
+    use SyncsRoleAcrossGuards;
+
     protected static string $resource = RoleResource::class;
 
     protected function getHeaderActions(): array
@@ -52,17 +55,19 @@ class EditRole extends EditRecord
         ]);
 
         // Sincronizar permisos
+        $permissionNames = [];
         if (isset($data['permissions'])) {
             // Convertir IDs a nombres de permisos
             $permissionNames = \Spatie\Permission\Models\Permission::whereIn('id', $data['permissions'])
                 ->where('guard_name', 'admin')
                 ->pluck('name')
                 ->toArray();
-            
-            $record->syncPermissions($permissionNames);
-        } else {
-            $record->syncPermissions([]);
         }
+        $record->syncPermissions($permissionNames);
+
+        // El panel solo edita el rol "admin"; replicar hacia su gemelo "web"
+        // para que el cambio surta efecto en la app real (POS, sidebar, etc.).
+        $this->syncWebGuardRole($record, $permissionNames);
 
         return $record;
     }
