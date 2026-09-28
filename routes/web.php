@@ -288,30 +288,34 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
     })->name('session.store');
 
     // Rutas del módulo de almacén
-    Route::prefix('almacen')->name('almacen.')->middleware('can:inventario.ver')->group(function () {
-        Route::get('/', [AlmacenController::class, 'index'])->name('index');
-        Route::post('/barcodes-pdf', [AlmacenController::class, 'generateBarcodesPdf'])->name('barcodes-pdf');
+    // Nota: cada ruta pide el permiso puntual que le corresponde (kardex,
+    // transferir, ajustar...) en vez de exigir "inventario.ver" para todo el
+    // grupo, para que un rol pueda tener acceso a Kardex/Transferencias sin
+    // necesariamente ver el listado completo de Inventario.
+    Route::prefix('almacen')->name('almacen.')->group(function () {
+        Route::get('/', [AlmacenController::class, 'index'])->name('index')->middleware('can:inventario.ver');
+        Route::post('/barcodes-pdf', [AlmacenController::class, 'generateBarcodesPdf'])->name('barcodes-pdf')->middleware('can:inventario.ver');
         Route::get('/ajustar-existencias/{id}', [AlmacenController::class, 'ajustarExistencias'])->name('ajustar-existencias')->middleware('can:inventario.ajustar');
         Route::post('/ajustar-existencias/{id}', [AlmacenController::class, 'guardarAjuste'])->name('guardar-ajuste')->middleware('can:inventario.ajustar');
         Route::get('/alta-rapida', [AlmacenController::class, 'altaRapida'])->name('alta-rapida')->middleware('can:productos.crear');
         Route::post('/alta-rapida', [AlmacenController::class, 'guardarProducto'])->name('guardar-producto')->middleware('can:productos.crear');
-        Route::get('/buscar', [AlmacenController::class, 'buscar'])->name('buscar');
+        Route::get('/buscar', [AlmacenController::class, 'buscar'])->name('buscar')->middleware('can:inventario.ver');
         Route::get('/kardex', [AlmacenController::class, 'kardex'])->name('kardex')->middleware('can:inventario.kardex');
         Route::get('/transferir', [AlmacenController::class, 'transferir'])->name('transferir')->middleware('can:inventario.transferir');
-        Route::post('/transferir/draft', [AlmacenController::class, 'updateTransferDraft'])->name('transferir.draft.update');
-        Route::post('/transferir/draft/clear', [AlmacenController::class, 'clearTransferDraft'])->name('transferir.draft.clear');
+        Route::post('/transferir/draft', [AlmacenController::class, 'updateTransferDraft'])->name('transferir.draft.update')->middleware('can:inventario.transferir');
+        Route::post('/transferir/draft/clear', [AlmacenController::class, 'clearTransferDraft'])->name('transferir.draft.clear')->middleware('can:inventario.transferir');
         Route::post('/transferir', [AlmacenController::class, 'storeTransferencia'])->name('transferir.store')->middleware('can:inventario.transferir');
-        Route::get('/transferencia/success/{codigo}', [AlmacenController::class, 'transferenciaSuccess'])->name('transferencia.success');
-        Route::get('/transferencia/pdf/{codigo}', [AlmacenController::class, 'transferenciaPdf'])->name('transferencia.pdf');
-        Route::get('/api/lotes', [AlmacenController::class, 'getLotesAvailable'])->name('api.lotes')->withoutMiddleware('can:inventario.ver');
+        Route::get('/transferencia/success/{codigo}', [AlmacenController::class, 'transferenciaSuccess'])->name('transferencia.success')->middleware('can:inventario.transferir');
+        Route::get('/transferencia/pdf/{codigo}', [AlmacenController::class, 'transferenciaPdf'])->name('transferencia.pdf')->middleware('can:inventario.transferir');
+        Route::get('/api/lotes', [AlmacenController::class, 'getLotesAvailable'])->name('api.lotes');
         Route::get('/edit/{id}', [AlmacenController::class, 'edit'])->name('edit')->middleware('can:inventario.ajustar');
         Route::post('/edit-detailed/{id}', [AlmacenController::class, 'editDetailed'])->name('edit-detailed')->middleware('can:inventario.ajustar');
         Route::post('/update/{id}', [AlmacenController::class, 'update'])->name('update')->middleware('can:inventario.ajustar');
         Route::delete('/destroy/{id}', [AlmacenController::class, 'destroy'])->name('destroy')->middleware('can:inventario.ajustar');
-        
+
         // Rutas de Importación
-        Route::get('/import-template', [AlmacenController::class, 'downloadTemplate'])->name('import-template');
-        Route::post('/import', [AlmacenController::class, 'import'])->name('import');
+        Route::get('/import-template', [AlmacenController::class, 'downloadTemplate'])->name('import-template')->middleware('can:inventario.ver');
+        Route::post('/import', [AlmacenController::class, 'import'])->name('import')->middleware('can:inventario.ver');
     });
 
     Route::prefix('guia')->middleware('can:guias_remision.ver')->group(function () {

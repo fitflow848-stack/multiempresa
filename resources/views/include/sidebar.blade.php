@@ -179,18 +179,20 @@
                     </li>
                 @endcan
 
-                @can('inventario.ver')
+                @canany(['inventario.ver', 'inventario.kardex', 'inventario.transferir'])
                     <li class="nav-item dropdown">
                         <a href="#" class="nav-link dropdown-toggle {{ request()->is('almacen*') ? 'active' : '' }}"
                             id="almacenDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bx bx-package"></i> Almacén
                         </a>
                         <ul class="dropdown-menu border-0 shadow-sm" aria-labelledby="almacenDropdown">
-                            <li>
-                                <a class="dropdown-item" href="{{ route('almacen.index') }}">
-                                    Inventario
-                                </a>
-                            </li>
+                            @can('inventario.ver')
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('almacen.index') }}">
+                                        Inventario
+                                    </a>
+                                </li>
+                            @endcan
                             @can('inventario.kardex')
                                 <li>
                                     <a class="dropdown-item" href="{{ route('almacen.kardex') }}">
