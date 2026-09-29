@@ -681,8 +681,17 @@ class PosController extends Controller
             }
 
             return response()->json([
-                'pvpd' => $pvpd,
-                'maxAmount' => $maxAmount,
+                'pvpd'     => $pvpd,
+                'maxAmount'=> $maxAmount,
+                '_debug'   => [
+                    'campo'    => $campo,
+                    'tipo'     => $tipo,
+                    'precio'   => $precio,
+                    'cantidad' => $cantidad,
+                    'pvcd_raw' => $pvpd,            // valor encontrado en BD
+                    'almacen_detalle_id' => $almacen_detalle_id,
+                    'producto_id'        => $producto_id,
+                ],
             ]);
         } catch (\Exception $e) {
             Log::error('getDescuentoProducto Error: ' . $e->getMessage(), [
