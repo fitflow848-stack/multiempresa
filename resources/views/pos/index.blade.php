@@ -2712,7 +2712,17 @@
 
             // Validar contra el descuento máximo configurado por producto (solo vendedores)
             if (!isAdmin && !skipValidation) {
-                const maxPermitido = await obtenerMaxDescuentoProducto(producto);
+                const resultado = await obtenerMaxDescuentoProducto(producto);
+                const maxPermitido = resultado.maxAmount;
+                const pvpdConf = resultado.pvpd;
+
+                // Si el producto tiene configuración de descuento pero el límite no está calculable
+                if (pvpdConf !== null && (maxPermitido === null || isNaN(maxPermitido))) {
+                    alert('No se puede aplicar descuento: el límite de descuento no está definido correctamente para este producto. Consulte al administrador.');
+                    renderTicket();
+                    return;
+                }
+
                 if (maxPermitido !== null && montoDescuento > (maxPermitido + 0.01)) {
                     alert(`¡Error! El descuento máximo para este producto es de S/ ${maxPermitido.toFixed(2)}. No puede aplicar S/ ${montoDescuento.toFixed(2)}`);
                     renderTicket();
@@ -2742,7 +2752,17 @@
 
             // Validar contra el descuento máximo configurado por producto (solo vendedores)
             if (!isAdmin && !skipValidation) {
-                const maxPermitido = await obtenerMaxDescuentoProducto(producto);
+                const resultado = await obtenerMaxDescuentoProducto(producto);
+                const maxPermitido = resultado.maxAmount;
+                const pvpdConf = resultado.pvpd;
+
+                // Si el producto tiene configuración de descuento pero el límite no está calculable
+                if (pvpdConf !== null && (maxPermitido === null || isNaN(maxPermitido))) {
+                    alert('No se puede aplicar descuento: el límite de descuento no está definido correctamente para este producto. Consulte al administrador.');
+                    renderTicket();
+                    return;
+                }
+
                 if (maxPermitido !== null && montoFijo > (maxPermitido + 0.01)) {
                     alert(`¡Error! El descuento máximo para este producto es de S/ ${maxPermitido.toFixed(2)}. No puede aplicar S/ ${montoFijo.toFixed(2)}`);
                     renderTicket();
@@ -2769,6 +2789,9 @@
     }
 
     // Función auxiliar para obtener el descuento máximo permitido de un producto
+    // Retorna: { maxAmount: number|null, pvpd: number|null }
+    // maxAmount === null con pvpd !== null => límite no calculable (ej: pvcd > precio)
+    // pvpd === null => producto sin descuento configurado
     async function obtenerMaxDescuentoProducto(producto) {
         try {
             const q = new URLSearchParams({
@@ -2780,15 +2803,19 @@
             });
 
             const resp = await fetch(`{{ route('pos.pvpd') }}?${q.toString()}`);
-            if (!resp.ok) return null;
+            if (!resp.ok) return { maxAmount: null, pvpd: null };
 
             const data = await resp.json();
             const maxAmount = parseFloat(data.maxAmount);
+            const pvpd = parseFloat(data.pvpd);
 
-            return isNaN(maxAmount) ? null : maxAmount;
+            return {
+                maxAmount: isNaN(maxAmount) ? null : maxAmount,
+                pvpd: isNaN(pvpd) ? null : pvpd
+            };
         } catch (e) {
             console.error('Error al obtener descuento máximo:', e);
-            return null; // En caso de error, permitir (no bloquear la venta)
+            return { maxAmount: null, pvpd: null }; // Error: no bloquear
         }
     }
 
@@ -2824,9 +2851,9 @@
         let limitesProductos = {};
         if (!isAdmin) {
             for (const producto of ticket) {
-                const maxPermitido = await obtenerMaxDescuentoProducto(producto);
+                const resultado = await obtenerMaxDescuentoProducto(producto);
                 const key = `${producto.producto_id}_${producto.almacen_detalle_id}`;
-                limitesProductos[key] = maxPermitido;
+                limitesProductos[key] = resultado; // { maxAmount, pvpd }
             }
         }
 
@@ -2846,14 +2873,22 @@
             ticket.forEach(producto => {
                 const subtotalSinDescuento = producto.cantidad * producto.precio;
                 const key = `${producto.producto_id}_${producto.almacen_detalle_id}`;
-                const maxPermitido = limitesProductos[key];
+                const limite = limitesProductos[key] || { maxAmount: null, pvpd: null };
+                const maxPermitido = limite.maxAmount;
+                const pvpdConf = limite.pvpd;
                 let descuentoAplicar = montoFijo;
 
                 // Validar contra máximo permitido por producto
-                if (!isAdmin && maxPermitido !== null && maxPermitido !== undefined) {
-                    if (descuentoAplicar > (maxPermitido + 0.01)) {
-                        descuentoAplicar = maxPermitido;
-                        productosExcedidos.push(producto.nombre);
+                if (!isAdmin) {
+                    // Si tiene configuración de descuento pero el límite no es calculable
+                    if (pvpdConf !== null && (maxPermitido === null || isNaN(maxPermitido))) {
+                        descuentoAplicar = 0; // No aplicar descuento
+                        productosExcedidos.push(producto.nombre + ' (límite no definido)');
+                    } else if (maxPermitido !== null && !isNaN(maxPermitido)) {
+                        if (descuentoAplicar > (maxPermitido + 0.01)) {
+                            descuentoAplicar = maxPermitido;
+                            productosExcedidos.push(producto.nombre);
+                        }
                     }
                 }
 
@@ -2888,13 +2923,21 @@
                 const subtotalSinDescuento = producto.cantidad * producto.precio;
                 let montoDescuento = subtotalSinDescuento * porcentaje / 100;
                 const key = `${producto.producto_id}_${producto.almacen_detalle_id}`;
-                const maxPermitido = limitesProductos[key];
+                const limite = limitesProductos[key] || { maxAmount: null, pvpd: null };
+                const maxPermitido = limite.maxAmount;
+                const pvpdConf = limite.pvpd;
 
                 // Validar contra máximo permitido por producto
-                if (!isAdmin && maxPermitido !== null && maxPermitido !== undefined) {
-                    if (montoDescuento > (maxPermitido + 0.01)) {
-                        montoDescuento = maxPermitido;
-                        productosExcedidos.push(producto.nombre);
+                if (!isAdmin) {
+                    // Si tiene configuración de descuento pero el límite no es calculable
+                    if (pvpdConf !== null && (maxPermitido === null || isNaN(maxPermitido))) {
+                        montoDescuento = 0; // No aplicar descuento
+                        productosExcedidos.push(producto.nombre + ' (límite no definido)');
+                    } else if (maxPermitido !== null && !isNaN(maxPermitido)) {
+                        if (montoDescuento > (maxPermitido + 0.01)) {
+                            montoDescuento = maxPermitido;
+                            productosExcedidos.push(producto.nombre);
+                        }
                     }
                 }
 

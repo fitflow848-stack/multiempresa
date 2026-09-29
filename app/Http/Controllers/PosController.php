@@ -670,12 +670,12 @@ class PosController extends Controller
                     // pvpd es un porcentaje decimal (ej: 0.25 = 25%)
                     $maxAmount = $cantidad * $precio * $pvpd;
                 } else {
-                    // pvpd es el precio con descuento (precio mínimo permitido)
+                    // pvpd es el precio mínimo permitido (precio con descuento máximo ya aplicado)
                     $maxAmount = ($precio - $pvpd) * $cantidad;
                     if ($maxAmount < 0) {
-                        // Si pvcd > precio actual, el precio fue reducido después de configurar pvcd.
-                        // Retornamos null para no bloquear descuentos (sin restricción)
-                        $maxAmount = null;
+                        // Si pvcd > precio actual, el precio de venta ya está por debajo del mínimo
+                        // configurado. No se permite ningún descuento adicional.
+                        $maxAmount = 0;
                     }
                 }
             }

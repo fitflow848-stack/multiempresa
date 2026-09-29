@@ -185,10 +185,15 @@
 
             if (isNaN(pvpd)) return alert('Este producto no tiene descuento máximo configurado.');
 
-            // 2. Pedir el monto al usuario
+            // 2. Verificar que el límite esté definido para no-admins
+            if (!isAdmin && (maxMontoPermitido === null || isNaN(maxMontoPermitido))) {
+                return alert('No se puede aplicar descuento: el límite de descuento no está definido para este producto. Consulte al administrador.');
+            }
+
+            // 3. Pedir el monto al usuario
             const mensajeGuia = (maxMontoPermitido !== null && !isNaN(maxMontoPermitido))
                 ? `Máximo descuento permitido: S/ ${maxMontoPermitido.toFixed(2)}`
-                : `Máximo descuento permitido: Sin límite definido`;
+                : `Máximo descuento permitido: Sin límite definido (solo Admin)`;
             const inputUsuario = prompt(`Ingrese el monto a descontar (S/):\n${mensajeGuia}`, '0');
 
             if (inputUsuario === null) return;
@@ -200,7 +205,7 @@
                 return alert('Monto inválido.');
             }
 
-            // 3. VALIDACIÓN ESTRICTA contra el monto de la ruta
+            // 4. VALIDACIÓN ESTRICTA contra el monto de la ruta
             if (!isAdmin && maxMontoPermitido !== null && !isNaN(maxMontoPermitido) && montoIngresado > (maxMontoPermitido + 0.01)) {
                 return alert(
                     `¡Error! El descuento máximo para este producto es de S/ ${maxMontoPermitido.toFixed(2)}. No puede aplicar S/ ${montoIngresado.toFixed(2)}`
@@ -223,17 +228,72 @@
         }
     }
 
-    function modificarImporteLinea() {
+    async function modificarImporteLinea() {
         const idx = findTicketIndexFromCurrent();
         cerrarContextMenuTicket();
         if (idx === -1) return alert('No se encontró la línea del ticket');
-        const nuevo = prompt('Ingrese importe total para la línea:', ticket[idx].importe.toFixed(2));
+
+        // --- Obtener el límite de descuento antes de pedir el importe ---
+        let importeMinimo = null; // importe mínimo permitido (precio_con_descuento_max * cantidad)
+        let importeMaximo = parseFloat((ticket[idx].precio * ticket[idx].cantidad).toFixed(2)); // importe sin descuento
+
+        if (!isAdmin) {
+            try {
+                const q = new URLSearchParams({
+                    producto_id: ticket[idx].producto_id || '',
+                    almacen_detalle_id: ticket[idx].almacen_detalle_id || '',
+                    cantidad: ticket[idx].cantidad || 1,
+                    precio: ticket[idx].precio || 0,
+                    tipo: ticket[idx].es_precio_corporativo ? 'corporativo' : 'publico'
+                });
+                const resp = await fetch(`{{ route('pos.pvpd') }}?${q.toString()}`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const pvpd = parseFloat(data.pvpd);
+                    const maxDescuento = parseFloat(data.maxAmount);
+
+                    if (isNaN(pvpd)) {
+                        return alert('Este producto no tiene descuento máximo configurado. No puede modificar el importe.');
+                    }
+
+                    if (isNaN(maxDescuento) || maxDescuento === null) {
+                        return alert('No se puede modificar el importe: el límite de descuento no está definido para este producto. Consulte al administrador.');
+                    }
+
+                    // importeMinimo = importe original - descuento máximo permitido
+                    importeMinimo = parseFloat((importeMaximo - maxDescuento).toFixed(2));
+                    if (importeMinimo < 0) importeMinimo = 0;
+                } else {
+                    return alert('Error al verificar el límite de descuento. Intente nuevamente.');
+                }
+            } catch (e) {
+                console.error(e);
+                return alert('Error al verificar el límite de descuento.');
+            }
+        }
+
+        const mensajeGuia = importeMinimo !== null
+            ? `\nRango permitido: S/ ${importeMinimo.toFixed(2)} a S/ ${importeMaximo.toFixed(2)}`
+            : '';
+        const nuevo = prompt(`Ingrese importe total para la línea:${mensajeGuia}`, ticket[idx].importe.toFixed(2));
         if (nuevo === null) return;
         const val = parseFloat(nuevo);
         if (isNaN(val) || val < 0) return alert('Importe inválido');
+
+        // Validar que el importe no sea inferior al mínimo permitido (descuento máximo)
+        if (!isAdmin && importeMinimo !== null && val < (importeMinimo - 0.01)) {
+            return alert(
+                `¡Error! El importe mínimo permitido es S/ ${importeMinimo.toFixed(2)} (descuento máximo: S/ ${(importeMaximo - importeMinimo).toFixed(2)}).\nNo puede ingresar S/ ${val.toFixed(2)}.`
+            );
+        }
+
+        // Validar que no supere el importe original
+        if (val > (importeMaximo + 0.01)) {
+            return alert(`¡Error! El importe no puede superar el precio original de S/ ${importeMaximo.toFixed(2)}.`);
+        }
+
         // Ajustar precio en función de la cantidad
-        ticket[idx].precio = ticket[idx].cantidad > 0 ? parseFloat((val / ticket[idx].cantidad).toFixed(2)) : ticket[
-            idx].precio;
+        ticket[idx].precio = ticket[idx].cantidad > 0 ? parseFloat((val / ticket[idx].cantidad).toFixed(2)) : ticket[idx].precio;
         ticket[idx].importe = parseFloat(val.toFixed(2));
         renderTicket();
     }
