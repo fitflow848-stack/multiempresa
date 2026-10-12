@@ -1166,9 +1166,19 @@ class AlmacenController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
-        // Seguridad: Filtro por Sucursal (excepto super_admin)
-        if (!$user->isSuperAdmin() && $detalle->ingreso->sucursal_id != $user->branch_id) {
-            abort(403, 'No tienes permiso para editar este registro.');
+        // Seguridad: el super_admin edita todo; el admin de empresa edita cualquier sucursal de su empresa;
+        // el resto solo su propia sucursal. (Se ignoran los scopes para no perder el ingreso de otra sucursal.)
+        $ingresoEdit = AlmacenIngreso::withoutGlobalScopes()->find($detalle->ingreso_id);
+        if (!$ingresoEdit) {
+            abort(404);
+        }
+        if (!$user->isSuperAdmin()) {
+            $permitido = $user->isAdminEmpresa()
+                ? $ingresoEdit->company_id == $user->company_id
+                : $ingresoEdit->sucursal_id == $user->branch_id;
+            if (!$permitido) {
+                abort(403, 'No tienes permiso para editar este registro.');
+            }
         }
 
         $producto = $detalle->producto;
