@@ -217,12 +217,16 @@ class Sunat
             $descripcion = $producto->nombre ?? ($producto->descripcion ?? $producto->nombre_servicio ?? '');
             $igv = 0;
             $costo = $producto->costo ?? $producto->precio_unitario ?? 0;
+            $importeYaNeto = false;
             // Si hay un importe distinto al precio original, usamos el neto por unidad:
             if (isset($producto->importe) && $producto->cantidad > 0) {
                 $costo = $producto->importe / $producto->cantidad;
+                // El importe de la línea ya incluye el descuento (el PDF lo muestra así),
+                // aplicar el % de la venta otra vez descuenta dos veces.
+                $importeYaNeto = true;
             }
             $precio = $costo + $igv;
-            $descuento = isset($venta->descuento_porcentaje) ? round($precio * ($venta->descuento_porcentaje / 100), 2)  : 0;
+            $descuento = (!$importeYaNeto && isset($venta->descuento_porcentaje)) ? round($precio * ($venta->descuento_porcentaje / 100), 2) : 0;
             $precio -= $descuento;
             // detraccion se trata por separado en cuotas; no restamos aquí
             $data['detalles'][] = [
