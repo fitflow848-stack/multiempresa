@@ -282,6 +282,19 @@ class ComprobantesController extends Controller
                                 // Usar el costo original al momento de la venta (guardado en venta_detalles)
                                 $costoOriginal = $detalle->costo_unitario > 0 ? $detalle->costo_unitario : $loteOriginal->costo;
 
+                                // Precios vigentes: la fila nueva queda como la más reciente y el inventario/POS
+                                // toman el último precio, así que NO se debe copiar el precio viejo del lote
+                                // (si se modificó el precio después de la venta, volvería al anterior).
+                                $precioVigente = \App\Models\AlmacenIngresoDetalle::query()
+                                    ->join('almacen_ingresos as ai_pr', 'ai_pr.id', '=', 'almacen_ingreso_detalle.ingreso_id')
+                                    ->where('almacen_ingreso_detalle.producto_id', $loteOriginal->producto_id)
+                                    ->where('almacen_ingreso_detalle.producto_linea_id', $loteOriginal->producto_linea_id)
+                                    ->where('ai_pr.sucursal_id', $ingresoOriginal->sucursal_id)
+                                    ->where('almacen_ingreso_detalle.pvp', '>', 0)
+                                    ->orderByDesc('almacen_ingreso_detalle.id')
+                                    ->select('almacen_ingreso_detalle.pvp', 'almacen_ingreso_detalle.pvpd', 'almacen_ingreso_detalle.pvc', 'almacen_ingreso_detalle.pvcd')
+                                    ->first() ?? $loteOriginal;
+
                                 \App\Models\AlmacenIngresoDetalle::create([
                                     'ingreso_id'          => $ingresoDevolucion->id,
                                     'producto_id'         => $loteOriginal->producto_id,
@@ -292,10 +305,10 @@ class ComprobantesController extends Controller
                                     'mu'                  => $loteOriginal->mu,
                                     'mud'                 => $loteOriginal->mud,
                                     'mup'                 => $loteOriginal->mup,
-                                    'pvp'                 => $loteOriginal->pvp,
-                                    'pvpd'                => $loteOriginal->pvpd,
-                                    'pvc'                 => $loteOriginal->pvc,
-                                    'pvcd'                => $loteOriginal->pvcd,
+                                    'pvp'                 => $precioVigente->pvp,
+                                    'pvpd'                => $precioVigente->pvpd,
+                                    'pvc'                 => $precioVigente->pvc,
+                                    'pvcd'                => $precioVigente->pvcd,
                                     'lote'                => $loteOriginal->lote,
                                     'fecha_vencimiento'   => $loteOriginal->fecha_vencimiento,
                                     'stock_min'           => $loteOriginal->stock_min,
