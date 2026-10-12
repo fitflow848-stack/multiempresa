@@ -206,6 +206,27 @@ class AlmacenController extends Controller
             ->select('almacen_ingreso_detalle.id', 'almacen_ingreso_detalle.lote', 'almacen_ingreso_detalle.cantidad', 'almacen_ingreso_detalle.costo', 'almacen_ingreso_detalle.pvp', 'ai_l.fecha')
             ->get();
 
+        // Neteo: si hay movimientos negativos que no pertenecen a ningún lote (una transferencia o anulación
+        // antigua), la suma de los lotes queda por encima del stock real. Ese exceso se descuenta de los
+        // lotes más pequeños primero (misma convención que el POS), así lo que se lista suma el stock real.
+        $deficit = round((float) $lotes->sum('cantidad') - (float) $totalExistencias, 2);
+        if ($deficit > 0.0001) {
+            foreach ($lotes->sortBy(fn($l) => (float) $l->cantidad) as $l) {
+                if ($deficit <= 0.0001) {
+                    break;
+                }
+                $cant = (float) $l->cantidad;
+                if ($cant <= $deficit + 0.0001) {
+                    $l->setAttribute('cantidad', 0);
+                    $deficit = round($deficit - $cant, 2);
+                } else {
+                    $l->setAttribute('cantidad', round($cant - $deficit, 2));
+                    $deficit = 0;
+                }
+            }
+            $lotes = $lotes->filter(fn($l) => (float) $l->cantidad > 0.0001)->sortBy('id')->values();
+        }
+
         $producto = [
             'id' => $detalles->id,
             'codigo' => $producto_lineas->cb,
