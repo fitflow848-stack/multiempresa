@@ -276,6 +276,25 @@ class EditCompany extends EditRecord
             ->delete();
     }
 
+    /**
+     * El correlativo guardado nunca puede quedar por debajo del último número realmente emitido
+     * para esa serie y sucursal, ni por debajo del valor actual en base de datos. Un formulario
+     * abierto desde hace rato trae un número viejo; guardarlo tal cual reinicia la numeración
+     * y provoca comprobantes duplicados.
+     */
+    private function correlativoSeguro(int $sucursalId, ?string $serie, $numeroFormulario, $numeroActual): int
+    {
+        $ultimoEmitido = 0;
+        if ($serie) {
+            $ultimoEmitido = (int) \App\Models\Venta::withoutGlobalScopes()
+                ->where('sucursal', $sucursalId)
+                ->where('serie', $serie)
+                ->max(DB::raw('CAST(numero AS UNSIGNED)'));
+        }
+
+        return max((int) $numeroFormulario, (int) $numeroActual, $ultimoEmitido);
+    }
+
     private function syncDocuments(int $sucursalId, array $documentsData, int $companyId): void
     {
         $processedIds = [];
@@ -283,13 +302,18 @@ class EditCompany extends EditRecord
         foreach ($documentsData as $docData) {
 
             if (!empty($docData['id'])) {
-                $doc = CompanyDocument::find($docData['id']);
+                // withoutGlobalScopes: el scope de empresa del usuario logueado no debe ocultar la fila.
+                $doc = CompanyDocument::withoutGlobalScopes()->find($docData['id']);
 
-                if ($doc && $doc->branch_id === $sucursalId) {
+                if ($doc && (int) $doc->branch_id === $sucursalId) {
+                    $serie = $docData['series'] ?? $doc->series;
                     $doc->update([
+                        // La serie siempre pertenece a la empresa de la sucursal que se está guardando
+                        // (si no, el POS y la numeración de ventas dejan de verla).
+                        'company_id'        => $companyId,
                         'sunat_document_id' => $docData['sunat_document_id'] ?? $doc->sunat_document_id,
-                        'series'            => $docData['series'] ?? $doc->series,
-                        'number'            => $docData['number'] ?? $doc->number,
+                        'series'            => $serie,
+                        'number'            => $this->correlativoSeguro($sucursalId, $serie, $docData['number'] ?? $doc->number, $doc->number),
                     ]);
 
                     $processedIds[] = $doc->id;
@@ -304,7 +328,8 @@ class EditCompany extends EditRecord
 
                 if ($existe) {
                     $existe->update([
-                        'number' => $docData['number'] ?? $existe->number
+                        'company_id' => $companyId,
+                        'number'     => $this->correlativoSeguro($sucursalId, $existe->series, $docData['number'] ?? $existe->number, $existe->number),
                     ]);
 
                     $processedIds[] = $existe->id;
