@@ -1,42 +1,8 @@
-<div class="row mb-3">
+﻿<div class="row mb-3">
     <div class="col-12 text-center">
         <h5>VENTAS - POR PRODUCTO</h5>
     </div>
 </div>
-
-@if (isset($resumenVendedor) && count($resultados) > 0)
-    <div class="row mb-4">
-        @foreach ([['Utilidad bruta por vendedor', $resumenVendedor, 'Vendedor'], ['Utilidad bruta por sucursal', $resumenSucursal, 'Sucursal']] as [$titulo, $filas, $col])
-            <div class="col-lg-6 mb-3">
-                <h6 class="fw-bold">{{ $titulo }}</h6>
-                <table class="table table-bordered table-sm">
-                    <thead class="bg-light">
-                        <tr>
-                            <th>{{ $col }}</th>
-                            <th class="text-center">Ventas</th>
-                            <th class="text-end">Total Venta</th>
-                            <th class="text-end">Costo</th>
-                            <th class="text-end">Utilidad</th>
-                            <th class="text-end">Margen</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($filas as $f)
-                            <tr>
-                                <td>{{ $f->nombre }}</td>
-                                <td class="text-center">{{ $f->ventas }}</td>
-                                <td class="text-end">{{ number_format($f->total_venta, 2) }}</td>
-                                <td class="text-end text-danger">{{ number_format($f->costo, 2) }}</td>
-                                <td class="text-end fw-bold {{ $f->ganancia >= 0 ? 'text-success' : 'text-danger' }}">{{ number_format($f->ganancia, 2) }}</td>
-                                <td class="text-end">{{ number_format($f->margen, 1) }}%</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        @endforeach
-    </div>
-@endif
 
 <div class="table-responsive">
     <table class="table table-bordered table-sm table-hover">

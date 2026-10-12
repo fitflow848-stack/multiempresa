@@ -317,7 +317,19 @@ class ReporteController extends Controller
             'ganancia' => $resultados->sum('ganancia'),
         ];
 
-        // Resumen de utilidad bruta por vendedor (usuario que emitió la venta) y por sucursal
+        return [
+            'view' => 'reportes.partials.por_producto',
+            'data' => compact('resultados', 'totales')
+        ];
+    }
+
+    private function reporteUtilidadBruta(Request $request)
+    {
+        // Reutiliza el mismo cálculo de "Por producto" y lo resume por vendedor y por sucursal
+        $base = $this->reportePorProducto($request)['data'];
+        $resultados = $base['resultados'];
+        $totales = $base['totales'];
+
         $resumen = function ($grupos, $nombreFn) {
             return $grupos->map(function ($items, $key) use ($nombreFn) {
                 $venta = $items->sum('subtotal');
@@ -346,8 +358,8 @@ class ReporteController extends Controller
         );
 
         return [
-            'view' => 'reportes.partials.por_producto',
-            'data' => compact('resultados', 'totales', 'resumenVendedor', 'resumenSucursal')
+            'view' => 'reportes.partials.utilidad_bruta',
+            'data' => compact('totales', 'resumenVendedor', 'resumenSucursal')
         ];
     }
 

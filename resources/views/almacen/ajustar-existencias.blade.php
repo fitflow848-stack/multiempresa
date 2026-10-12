@@ -110,8 +110,8 @@
                             value="{{ old('pv_docena', $producto['pv_docena'] ?? '') }}" {{ !$canModificarPrecio ? 'readonly' : '' }}>
                     </div>
 
-                    <div class="col-md-6" id="boxLoteQuitar" style="display:none;">
-                        <label class="form-label">Lote del que se descuenta <span class="text-danger">*</span></label>
+                    <div class="col-md-6" id="boxLoteQuitar">
+                        <label class="form-label">Lote a descontar <small class="text-muted">(obligatorio si reduces stock)</small></label>
                         <select name="lote_id" id="loteQuitar" class="form-select">
                             <option value="">-- Seleccione el lote --</option>
                             @foreach ($lotes as $l)
@@ -124,7 +124,7 @@
                         </select>
                     </div>
 
-                    <div class="col-md-6" id="boxLoteNuevo" style="display:none;">
+                    <div class="col-md-6" id="boxLoteNuevo">
                         <label class="form-label">Nombre del nuevo lote</label>
                         <input type="text" name="lote_nuevo" class="form-control" maxlength="100"
                             value="{{ old('lote_nuevo') }}" placeholder="Opcional. Se genera un lote nuevo con los precios indicados">
@@ -159,9 +159,10 @@
                     inputAjuste.style.color = diferencia >= 0 ? 'green' : 'red';
 
                     const quitar = diferencia < -0.0001;
-                    document.getElementById('boxLoteQuitar').style.display = quitar ? '' : 'none';
-                    document.getElementById('loteQuitar').required = quitar;
-                    document.getElementById('boxLoteNuevo').style.display = diferencia > 0.0001 ? '' : 'none';
+                    const selLote = document.getElementById('loteQuitar');
+                    selLote.required = quitar;
+                    selLote.disabled = diferencia >= -0.0001;
+                    document.querySelector('input[name="lote_nuevo"]').disabled = diferencia <= 0.0001;
                 });
                 inputFisico.dispatchEvent(new Event('input'));
             });
