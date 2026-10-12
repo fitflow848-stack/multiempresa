@@ -10,8 +10,8 @@
             <tr><th>Total venta</th><td class="text-end">S/ {{ number_format($totales->subtotal, 2) }}</td></tr>
             <tr><th>Total gravado</th><td class="text-end">S/ {{ number_format($totales->gravado, 2) }}</td></tr>
             <tr><th>Total exonerado</th><td class="text-end">S/ {{ number_format($totales->exonerado, 2) }}</td></tr>
-            <tr><th>Total valor venta</th><td class="text-end">S/ {{ number_format($totales->valor_venta, 2) }}</td></tr>
-            <tr><th>Total IGV</th><td class="text-end">S/ {{ number_format($totales->igv, 2) }}</td></tr>
+            <tr><th>Total valor venta</th><td class="text-end">S/ {{ number_format($totales->gravado + $totales->exonerado, 2) }}</td></tr>
+            <tr><th>Total IGV</th><td class="text-end">S/ {{ number_format($totales->igv_real, 2) }}</td></tr>
             <tr><th>Total compra (costo)</th><td class="text-end text-danger">S/ {{ number_format($totales->costo_total, 2) }}</td></tr>
             <tr class="table-dark"><th>Total utilidad</th>
                 <td class="text-end fw-bold {{ $totales->ganancia >= 0 ? 'text-success' : 'text-danger' }}">S/ {{ number_format($totales->ganancia, 2) }}</td></tr>

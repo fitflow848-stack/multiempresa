@@ -276,9 +276,11 @@ class ReporteController extends Controller
             }
 
             // Clasificación tributaria: exonerado/inafecto vs gravado (base sin IGV)
-            $esExonerado = in_array(strtolower($primero->producto->tipo_impuesto ?? 'gravado'), ['exonerado', 'inafecto']) && $igvGrupo <= 0;
+            $esExonerado = in_array(strtolower($primero->producto->tipo_impuesto ?? 'gravado'), ['exonerado', 'inafecto']);
             $montoExonerado = $esExonerado ? $subtotalVenta : 0;
             $montoGravado = $esExonerado ? 0 : $valorVenta;
+            // IGV real: un producto exonerado no genera IGV (el prorrateo de la venta no aplica)
+            $igvReal = $esExonerado ? 0 : $igvGrupo;
 
             // Ganancia = Total Venta (con IGV) - Costo (según se ingresó)
             $ganancia = $subtotalVenta - $costoTotalGrupo;
@@ -297,6 +299,7 @@ class ReporteController extends Controller
                 'igv' => $igvGrupo,
                 'gravado' => $montoGravado,
                 'exonerado' => $montoExonerado,
+                'igv_real' => $igvReal,
                 'costo_total' => $costoTotalGrupo,
                 'ganancia' => $ganancia,
             ];
@@ -322,6 +325,7 @@ class ReporteController extends Controller
             'igv' => $resultados->sum('igv'),
             'gravado' => $resultados->sum('gravado'),
             'exonerado' => $resultados->sum('exonerado'),
+            'igv_real' => $resultados->sum('igv_real'),
             'costo_total' => $resultados->sum('costo_total'),
             'ganancia' => $resultados->sum('ganancia'),
         ];
