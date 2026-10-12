@@ -111,7 +111,7 @@
                     </div>
 
                     <div class="col-md-6" id="boxLoteQuitar">
-                        <label class="form-label">Lote a descontar <small class="text-muted">(obligatorio si reduces stock)</small></label>
+                        <label class="form-label">Lote a descontar <small class="text-muted">(obligatorio si reduces stock; si no alcanza, el resto sale de los siguientes lotes)</small></label>
                         <select name="lote_id" id="loteQuitar" class="form-select">
                             <option value="">-- Seleccione el lote --</option>
                             @foreach ($lotes as $l)

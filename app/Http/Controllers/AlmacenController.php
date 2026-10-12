@@ -368,11 +368,36 @@ class AlmacenController extends Controller
                     if (!$loteElegido) {
                         throw new \Exception('El lote seleccionado no es válido o no tiene stock.');
                     }
-                    if ($loteElegido->cantidad + 0.0001 < abs($diferencia)) {
-                        throw new \Exception("El lote seleccionado solo tiene {$loteElegido->cantidad} disponibles; no alcanza para descontar " . abs($diferencia) . '.');
+                    // Se descuenta primero del lote elegido; si no alcanza, el resto sale de los demás
+                    // lotes con stock de la misma sucursal (más antiguos primero), como en una venta.
+                    $pendiente = abs($diferencia);
+                    $deElegido = min($pendiente, (float) $loteElegido->cantidad);
+                    $loteElegido->decrement('cantidad', $deElegido);
+                    $pendiente -= $deElegido;
+
+                    if ($pendiente > 0.0001) {
+                        $otros = AlmacenIngresoDetalle::join('almacen_ingresos as ai_otros', 'ai_otros.id', '=', 'almacen_ingreso_detalle.ingreso_id')
+                            ->where('almacen_ingreso_detalle.producto_id', $detalleOriginal->producto_id)
+                            ->where('almacen_ingreso_detalle.producto_linea_id', $detalleOriginal->producto_linea_id)
+                            ->where('ai_otros.sucursal_id', $ingresoOriginal->sucursal_id)
+                            ->where('almacen_ingreso_detalle.cantidad', '>', 0)
+                            ->where('almacen_ingreso_detalle.id', '!=', $loteElegido->id)
+                            ->orderBy('almacen_ingreso_detalle.id', 'asc')
+                            ->select('almacen_ingreso_detalle.*')
+                            ->get();
+
+                        foreach ($otros as $otro) {
+                            if ($pendiente <= 0.0001) break;
+                            $toma = min($pendiente, (float) $otro->cantidad);
+                            $otro->decrement('cantidad', $toma);
+                            $pendiente -= $toma;
+                        }
+
+                        if ($pendiente > 0.0001) {
+                            throw new \Exception('Los lotes con stock no alcanzan para descontar ' . abs($diferencia) . '. Faltan ' . round($pendiente, 2) . ' (hay movimientos negativos que no pertenecen a ningún lote).');
+                        }
                     }
 
-                    $loteElegido->decrement('cantidad', abs($diferencia));
                     $loteNombre = $loteElegido->lote ?? 'AJUSTE';
                 }
 
