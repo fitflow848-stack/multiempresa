@@ -264,11 +264,20 @@ class ReporteController extends Controller
             $totalVenta = (float) ($venta->total ?? 0);
             $igvVenta = (float) ($venta->igv ?? 0);
 
-            if ($igvEnLineas > 0) {
+            // Producto exonerado/inafecto: nunca lleva IGV. El IGV de la venta pertenece solo a las
+            // líneas gravadas (antes se prorrateaba entre todas las líneas, y un producto exonerado
+            // aparecía con IGV cuando la venta tenía otros productos gravados).
+            $esExonerado = in_array(strtolower($primero->producto->tipo_impuesto ?? 'gravado'), ['exonerado', 'inafecto']);
+
+            if ($esExonerado) {
+                $igvGrupo = 0;
+                $valorVenta = $subtotalVenta;
+            } elseif ($igvEnLineas > 0) {
                 $igvGrupo = $igvEnLineas;
                 $valorVenta = $subtotalVenta - $igvGrupo;
             } elseif ($totalVenta > 0 && $igvVenta > 0) {
-                $igvGrupo = round($igvVenta * ($subtotalVenta / $totalVenta), 2);
+                // Precios con IGV incluido: IGV = importe - importe / 1.18
+                $igvGrupo = round($subtotalVenta - ($subtotalVenta / 1.18), 2);
                 $valorVenta = $subtotalVenta - $igvGrupo;
             } else {
                 $igvGrupo = 0;
@@ -276,11 +285,10 @@ class ReporteController extends Controller
             }
 
             // Clasificación tributaria: exonerado/inafecto vs gravado (base sin IGV)
-            $esExonerado = in_array(strtolower($primero->producto->tipo_impuesto ?? 'gravado'), ['exonerado', 'inafecto']);
             $montoExonerado = $esExonerado ? $subtotalVenta : 0;
             $montoGravado = $esExonerado ? 0 : $valorVenta;
             // IGV real: un producto exonerado no genera IGV (el prorrateo de la venta no aplica)
-            $igvReal = $esExonerado ? 0 : $igvGrupo;
+            $igvReal = $igvGrupo;
 
             // Ganancia = Total Venta (con IGV) - Costo (según se ingresó)
             $ganancia = $subtotalVenta - $costoTotalGrupo;
