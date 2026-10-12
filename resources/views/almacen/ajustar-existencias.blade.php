@@ -111,8 +111,8 @@
                     </div>
 
                     <div class="col-md-8" id="boxLoteQuitar">
-                        <label class="form-label">Cantidad a descontar por lote
-                            <small class="text-muted">(la suma debe ser igual a lo que reduces)</small></label>
+                        <label class="form-label">Lotes
+                            <small class="text-muted">(puedes corregir el costo de cada lote; para reducir stock reparte la cantidad por lote, la suma debe ser igual a lo que reduces)</small></label>
                         <div class="table-responsive border rounded">
                             <table class="table table-sm align-middle mb-0">
                                 <thead class="bg-light">
@@ -130,7 +130,14 @@
                                             <td>{{ $l->lote ?: 'Sin nombre' }}</td>
                                             <td>{{ \Carbon\Carbon::parse($l->fecha)->format('d/m/Y') }}</td>
                                             <td class="text-end">{{ rtrim(rtrim(number_format($l->cantidad, 2, '.', ''), '0'), '.') }}</td>
-                                            <td class="text-end">S/. {{ number_format($l->costo, 2) }}</td>
+                                            <td class="text-end" style="width:120px;">
+                                                @if ($canModificarPrecio)
+                                                    <input type="number" step="0.01" min="0" name="costos_lote[{{ $l->id }}]"
+                                                        class="form-control form-control-sm text-end" value="{{ old('costos_lote.' . $l->id, round($l->costo, 4)) }}">
+                                                @else
+                                                    S/. {{ number_format($l->costo, 2) }}
+                                                @endif
+                                            </td>
                                             <td>
                                                 <input type="number" step="0.01" min="0" max="{{ $l->cantidad }}"
                                                     name="lotes_cant[{{ $l->id }}]" class="form-control form-control-sm lote-cant"

@@ -300,6 +300,8 @@ class AlmacenController extends Controller
                 'observacion' => 'nullable|string|max:1000',
                 'lote_id' => 'nullable|integer',
                 'lotes_cant' => 'nullable|array',
+                'costos_lote' => 'nullable|array',
+                'costos_lote.*' => 'nullable|numeric|min:0',
                 'lotes_cant.*' => 'nullable|numeric|min:0',
                 'lote_nuevo' => 'nullable|string|max:100',
             ]);
@@ -341,6 +343,29 @@ class AlmacenController extends Controller
                     'pv_docena' => ($canModificarPrecio && $request->filled('pv_docena')) ? $request->pv_docena : $productoUpdate->pv_docena,
                 ];
                 $productoUpdate->update($updateData);
+            }
+
+            // Corrección de costo por lote (solo con permiso de modificar precios).
+            // Afecta a las ventas futuras que salgan de ese lote; las ventas ya hechas conservan su costo.
+            if ($canModificarPrecio && is_array($request->input('costos_lote'))) {
+                $lotesCosto = AlmacenIngresoDetalle::join('almacen_ingresos as ai_cost', 'ai_cost.id', '=', 'almacen_ingreso_detalle.ingreso_id')
+                    ->whereIn('almacen_ingreso_detalle.id', array_keys($request->input('costos_lote')))
+                    ->where('almacen_ingreso_detalle.producto_id', $detalleOriginal->producto_id)
+                    ->where('almacen_ingreso_detalle.producto_linea_id', $detalleOriginal->producto_linea_id)
+                    ->where('ai_cost.sucursal_id', $ingresoOriginal->sucursal_id)
+                    ->select('almacen_ingreso_detalle.*')
+                    ->get()
+                    ->keyBy('id');
+                foreach ($request->input('costos_lote') as $loteId => $nuevoCosto) {
+                    $lote = $lotesCosto->get((int) $loteId);
+                    if (!$lote || !is_numeric($nuevoCosto) || (float) $nuevoCosto < 0) {
+                        continue;
+                    }
+                    if (abs((float) $lote->costo - (float) $nuevoCosto) > 0.00009) {
+                        Log::info("Costo del lote {$lote->id} cambiado de {$lote->costo} a {$nuevoCosto} por el usuario " . Auth::id());
+                        $lote->update(['costo' => (float) $nuevoCosto]);
+                    }
+                }
             }
 
             // Si hay una diferencia en cantidad, creamos un registro de ajuste para el Kardex
