@@ -111,6 +111,23 @@ class Sunat
         return json_encode($data);
     }
 
+    /**
+     * Código de afectación IGV (catálogo 07 SUNAT) según el tipo_impuesto del producto:
+     * 10 gravado (default), 20 exonerado, 30 inafecto.
+     */
+    private function tipAfeIgvProducto($productoId): string
+    {
+        if (!$productoId) {
+            return '10';
+        }
+        $tipo = \App\Models\Producto::withoutGlobalScopes()->where('id', $productoId)->value('tipo_impuesto');
+        $tipo = strtolower(trim((string) $tipo));
+
+        if ($tipo === '20' || $tipo === 'exonerado') return '20';
+        if ($tipo === '30' || $tipo === 'inafecto') return '30';
+        return '10';
+    }
+
     private function formatString($string)
     {
         $replace = [
@@ -206,8 +223,9 @@ class Sunat
                 "unidad" => 'NIU',
                 "descripcion" => $descripcion,
                 "cantidad" => isset($producto->cantidad) ? (float)$producto->cantidad : 1,
-                // precio que se envía aquí debe ser precio unitario EXCL. IGV (handled later if needed)
-                "precio" => (float) $precio
+                // precio unitario final; la API extrae el IGV solo si es gravado
+                "precio" => (float) $precio,
+                "tipAfeIgv" => $this->tipAfeIgvProducto($producto->producto_id ?? $producto->servicio_id ?? $producto->id_servicio ?? $producto->id ?? null)
             ];
         }
 
@@ -370,7 +388,8 @@ class Sunat
                 "unidad" => "NIU",
                 "descripcion" => $descripcion,
                 "cantidad" => (float)$prod->cantidad,
-                "precio" => (float)$precio
+                "precio" => (float)$precio,
+                "tipAfeIgv" => $this->tipAfeIgvProducto($prod->producto_id ?? $prod->servicio_id ?? null)
             ];
         }
 
