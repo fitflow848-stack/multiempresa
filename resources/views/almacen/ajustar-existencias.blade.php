@@ -122,6 +122,14 @@
                                 </option>
                             @endforeach
                         </select>
+                        @php $sumaLotes = round($lotes->sum('cantidad'), 2); $stockTotal = round((float) ($producto['existencias_kardex'] ?? 0), 2); @endphp
+                        @if (abs($sumaLotes - $stockTotal) > 0.001)
+                            <small class="text-warning d-block mt-1">
+                                Los lotes suman {{ rtrim(rtrim(number_format($sumaLotes, 2, '.', ''), '0'), '.') }} y el stock total es
+                                {{ rtrim(rtrim(number_format($stockTotal, 2, '.', ''), '0'), '.') }}: hay movimientos negativos
+                                (por ejemplo anulaciones) que no se muestran como lote.
+                            </small>
+                        @endif
                     </div>
 
                     <div class="col-md-6" id="boxLoteNuevo">
