@@ -61,7 +61,7 @@
                     </div>
 
                     <div class="col-md-4">
-                        <label class="form-label">Precio Compra</label>
+                        <label class="form-label">Precio Compra <small class="text-muted">(costo del lote nuevo si aumentas stock)</small></label>
                         <input type="number" step="0.01" name="precio_compra" class="form-control {{ !$canModificarPrecio ? 'bg-light' : '' }}"
                             value="{{ old('precio_compra', $producto['precio_compra'] ?? '') }}" {{ !$canModificarPrecio ? 'readonly' : '' }} required>
                     </div>
