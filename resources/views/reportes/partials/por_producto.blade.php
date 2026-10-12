@@ -1,4 +1,4 @@
-﻿<div class="row mb-3">
+<div class="row mb-3">
     <div class="col-12 text-center">
         <h5>VENTAS - POR PRODUCTO</h5>
     </div>
