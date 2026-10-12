@@ -204,11 +204,6 @@
     <div class="hr"></div>
     <table style="margin-left: auto; width: 70%;">
         <tr>
-            <td class="text-right">Total a pagar:</td>
-            <td class="text-right">S/
-                 {{ number_format($venta->total, 2) }}</td>
-        </tr>
-        <tr>
             <td class="text-right">Total Descuento:</td>
             <td class="text-right">S/ {{ number_format($venta->descuento_monto ?? 0, 2) }}</td>
         </tr>

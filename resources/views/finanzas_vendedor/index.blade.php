@@ -70,6 +70,15 @@
                             <option value="1" {{ $agrupar ? 'selected' : '' }}>Agrupado por Persona</option>
                         </select>
                     </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Estado</label>
+                        <select name="estado" class="form-select">
+                            <option value="">Todos</option>
+                            @foreach (['pendiente' => 'Pendiente', 'aprobado' => 'Aprobado', 'parcial' => 'Parcial', 'pagado' => 'Pagado'] as $k => $v)
+                                <option value="{{ $k }}" {{ ($estadoFiltro ?? '') == $k ? 'selected' : '' }}>{{ $v }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div class="col-md-3 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary me-2">
                             <i class="bx bx-filter-alt"></i> Filtrar

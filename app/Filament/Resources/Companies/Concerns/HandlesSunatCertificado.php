@@ -53,10 +53,20 @@ trait HandlesSunatCertificado
         }
 
         $sunatService = app(Sunat::class);
-        $sunatService->guardarCertificado($record->ruc, base64_encode($contenidoParaEnviar));
+        $respuesta = json_decode((string) $sunatService->guardarCertificado($record->ruc, base64_encode($contenidoParaEnviar)), true);
+
+        if (!is_array($respuesta) || empty($respuesta['estado'])) {
+            Notification::make()
+                ->title('El API rechazó el certificado')
+                ->body($respuesta['mensaje'] ?? 'Sin respuesta válida del API. Verifique SUNAT_API_URL y SUNAT_API_TOKEN en el .env.')
+                ->danger()
+                ->send();
+            return;
+        }
 
         Notification::make()
             ->title('Certificado enviado correctamente al API')
+            ->body('Válido hasta: ' . ($respuesta['valido_hasta'] ?? '-'))
             ->success()
             ->send();
     }

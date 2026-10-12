@@ -72,11 +72,8 @@ class AlmacenController extends Controller
         // Seguridad: Filtro por Sucursal
         if (!$user->isSuperAdmin()) {
             if ($user->isAdminEmpresa()) {
-                // El admin de empresa puede ver todo o filtrar por la sucursal seleccionada
-                $branchId = $request->get('sucursal') ?: session('active_branch_id');
-                if ($branchId) {
-                    $query->where('i.sucursal_id', $branchId);
-                }
+                // El admin de empresa ve todos los locales; solo se filtra si elige uno
+                // explícitamente (el filtro 'sucursal' se aplica más abajo).
             } else {
                 // Usuarios limitados a su sucursal
                 $query->where('i.sucursal_id', $user->branch_id);
@@ -157,6 +154,16 @@ class AlmacenController extends Controller
             })
             ->sum('d.cantidad') ?? 0;
 
+        // Lotes con stock disponible (para elegir de cuál descontar)
+        $lotes = AlmacenIngresoDetalle::join('almacen_ingresos as ai_l', 'ai_l.id', '=', 'almacen_ingreso_detalle.ingreso_id')
+            ->where('almacen_ingreso_detalle.producto_id', $detalles->producto_id)
+            ->where('almacen_ingreso_detalle.producto_linea_id', $detalles->producto_linea_id)
+            ->where('ai_l.sucursal_id', $ingreso->sucursal_id)
+            ->where('almacen_ingreso_detalle.cantidad', '>', 0)
+            ->orderBy('almacen_ingreso_detalle.id', 'asc')
+            ->select('almacen_ingreso_detalle.id', 'almacen_ingreso_detalle.lote', 'almacen_ingreso_detalle.cantidad', 'almacen_ingreso_detalle.costo', 'almacen_ingreso_detalle.pvp', 'ai_l.fecha')
+            ->get();
+
         $producto = [
             'id' => $detalles->id,
             'codigo' => $producto_lineas->cb,
@@ -174,7 +181,7 @@ class AlmacenController extends Controller
             'pv_docena' => $productoModel->pv_docena ?? 0,
         ];
 
-        return view('almacen.ajustar-existencias', compact('user', 'company', 'producto'));
+        return view('almacen.ajustar-existencias', compact('user', 'company', 'producto', 'lotes'));
     }
 
     public function altaRapida()
@@ -249,6 +256,8 @@ class AlmacenController extends Controller
                 'precio_compra' => 'required|numeric|min:0',
                 'pvp' => 'required|numeric|min:0',
                 'observacion' => 'nullable|string|max:1000',
+                'lote_id' => 'nullable|integer',
+                'lote_nuevo' => 'nullable|string|max:100',
             ]);
 
             DB::beginTransaction();
@@ -295,26 +304,34 @@ class AlmacenController extends Controller
                 // Cuando se reduce stock, vaciar los lotes existentes (FIFO) para que el
                 // FIFO de ventas no vuelva a tomarlos. Los registros de ajuste negativos
                 // solo sirven de auditoría en el kardex; no deben influir en costos.
+                $loteNombre = $request->filled('lote_nuevo')
+                    ? $request->lote_nuevo
+                    : 'AJUSTE-' . now()->format('YmdHis');
+
                 if ($diferencia < 0) {
-                    $pendienteReducir = abs($diferencia);
-                    // FIFO incluye tanto lotes regulares como lotes de [AJUSTE] positivos
-                    // (p.ej. de Conversión/Rotura). Los [AJUSTE] negativos quedan excluidos
-                    // automáticamente por el filtro cantidad > 0.
-                    $lotesPositivos = AlmacenIngresoDetalle::join('almacen_ingresos as ai_fifo', 'ai_fifo.id', '=', 'almacen_ingreso_detalle.ingreso_id')
+                    if (!$request->filled('lote_id')) {
+                        throw new \Exception('Debe seleccionar el lote del cual se descontará el stock.');
+                    }
+
+                    // Solo se descuenta del lote elegido (de la misma sucursal y producto)
+                    $loteElegido = AlmacenIngresoDetalle::join('almacen_ingresos as ai_fifo', 'ai_fifo.id', '=', 'almacen_ingreso_detalle.ingreso_id')
+                        ->where('almacen_ingreso_detalle.id', $request->lote_id)
                         ->where('almacen_ingreso_detalle.producto_id', $detalleOriginal->producto_id)
                         ->where('almacen_ingreso_detalle.producto_linea_id', $detalleOriginal->producto_linea_id)
                         ->where('ai_fifo.sucursal_id', $ingresoOriginal->sucursal_id)
                         ->where('almacen_ingreso_detalle.cantidad', '>', 0)
-                        ->orderBy('almacen_ingreso_detalle.id', 'asc')
                         ->select('almacen_ingreso_detalle.*')
-                        ->get();
+                        ->first();
 
-                    foreach ($lotesPositivos as $lote) {
-                        if ($pendienteReducir <= 0) break;
-                        $reducir = min($lote->cantidad, $pendienteReducir);
-                        $lote->decrement('cantidad', $reducir);
-                        $pendienteReducir -= $reducir;
+                    if (!$loteElegido) {
+                        throw new \Exception('El lote seleccionado no es válido o no tiene stock.');
                     }
+                    if ($loteElegido->cantidad + 0.0001 < abs($diferencia)) {
+                        throw new \Exception("El lote seleccionado solo tiene {$loteElegido->cantidad} disponibles; no alcanza para descontar " . abs($diferencia) . '.');
+                    }
+
+                    $loteElegido->decrement('cantidad', abs($diferencia));
+                    $loteNombre = $loteElegido->lote ?? 'AJUSTE';
                 }
 
                 $ingresoAjuste = AlmacenIngreso::create([
@@ -340,7 +357,7 @@ class AlmacenController extends Controller
                     'pvpd' => $canModificarPrecio ? $request->pvp_dcto : $detalleOriginal->pvpd,
                     'pvc' => $canModificarPrecio ? $request->pvc : $detalleOriginal->pvc,
                     'pvcd' => $canModificarPrecio ? $request->pvc_dcto : $detalleOriginal->pvcd,
-                    'lote' => $detalleOriginal->lote ?? 'AJUSTE',
+                    'lote' => $loteNombre,
                     'fecha_vencimiento' => $detalleOriginal->fecha_vencimiento,
                     'stock_min' => $detalleOriginal->stock_min,
                     'stock_max' => $detalleOriginal->stock_max,

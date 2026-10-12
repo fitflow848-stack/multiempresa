@@ -51,6 +51,11 @@ class FinanzasVendedorController extends Controller
         // Quitamos el filtro que ocultaba los saldados para que el usuario pueda ver el historial
         // y realizar acciones como imprimir ticket o editar/eliminar si fuera necesario.
 
+        $estadoFiltro = $request->get('estado');
+        if ($estadoFiltro) {
+            $query->where('estado', $estadoFiltro);
+        }
+
         // Filtros adicionales
         if ($fechaDesde) {
             $query->whereDate('fecha_registro', '>=', $fechaDesde);
@@ -122,6 +127,9 @@ class FinanzasVendedorController extends Controller
                     'created_at'      => $activo->created_at,
                 ];
             });
+            if ($estadoFiltro) {
+                $activosPersonalItems = $activosPersonalItems->where('estado', $estadoFiltro)->values();
+            }
         }
 
         if ($agrupar) {
@@ -203,7 +211,7 @@ class FinanzasVendedorController extends Controller
         ];
         $tituloSeccion = $titulos[$tipoFiltro] ?? 'Todas las Operaciones';
 
-        return view('finanzas_vendedor.index', compact('operaciones', 'tipoActivo', 'tituloSeccion', 'agrupar', 'fechaDesde', 'fechaHasta', 'search'));
+        return view('finanzas_vendedor.index', compact('operaciones', 'tipoActivo', 'tituloSeccion', 'agrupar', 'fechaDesde', 'fechaHasta', 'search', 'estadoFiltro'));
     }
 
     public function export(Request $request)

@@ -110,6 +110,26 @@
                             value="{{ old('pv_docena', $producto['pv_docena'] ?? '') }}" {{ !$canModificarPrecio ? 'readonly' : '' }}>
                     </div>
 
+                    <div class="col-md-6" id="boxLoteQuitar" style="display:none;">
+                        <label class="form-label">Lote del que se descuenta <span class="text-danger">*</span></label>
+                        <select name="lote_id" id="loteQuitar" class="form-select">
+                            <option value="">-- Seleccione el lote --</option>
+                            @foreach ($lotes as $l)
+                                <option value="{{ $l->id }}" data-cant="{{ $l->cantidad }}" @selected(old('lote_id') == $l->id)>
+                                    {{ $l->lote ?: 'Sin nombre' }} · {{ \Carbon\Carbon::parse($l->fecha)->format('d/m/Y') }}
+                                    · Disp: {{ rtrim(rtrim(number_format($l->cantidad, 2, '.', ''), '0'), '.') }}
+                                    · Costo S/. {{ number_format($l->costo, 2) }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="col-md-6" id="boxLoteNuevo" style="display:none;">
+                        <label class="form-label">Nombre del nuevo lote</label>
+                        <input type="text" name="lote_nuevo" class="form-control" maxlength="100"
+                            value="{{ old('lote_nuevo') }}" placeholder="Opcional. Se genera un lote nuevo con los precios indicados">
+                    </div>
+
                     <div class="col-12">
                         <label class="form-label">Observación</label>
                         <textarea name="observacion" class="form-control" rows="2" placeholder="Ej: Ajuste por rotura, ingreso inicial, etc.">{{ old('observacion') }}</textarea>
@@ -137,7 +157,13 @@
                     // Formatear con color si es positivo o negativo
                     inputAjuste.value = diferencia.toFixed(2);
                     inputAjuste.style.color = diferencia >= 0 ? 'green' : 'red';
+
+                    const quitar = diferencia < -0.0001;
+                    document.getElementById('boxLoteQuitar').style.display = quitar ? '' : 'none';
+                    document.getElementById('loteQuitar').required = quitar;
+                    document.getElementById('boxLoteNuevo').style.display = diferencia > 0.0001 ? '' : 'none';
                 });
+                inputFisico.dispatchEvent(new Event('input'));
             });
         </script>
 

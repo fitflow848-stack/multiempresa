@@ -317,11 +317,37 @@ class ReporteController extends Controller
             'ganancia' => $resultados->sum('ganancia'),
         ];
 
-        // $resultados ya contiene agrupados ordenado
+        // Resumen de utilidad bruta por vendedor (usuario que emitió la venta) y por sucursal
+        $resumen = function ($grupos, $nombreFn) {
+            return $grupos->map(function ($items, $key) use ($nombreFn) {
+                $venta = $items->sum('subtotal');
+                $costo = $items->sum('costo_total');
+                $ganancia = $items->sum('ganancia');
+                return (object) [
+                    'nombre' => $nombreFn($items->first(), $key),
+                    'ventas' => $items->pluck('venta.id_venta')->unique()->count(),
+                    'total_venta' => $venta,
+                    'costo' => $costo,
+                    'ganancia' => $ganancia,
+                    'margen' => $venta > 0 ? ($ganancia / $venta) * 100 : 0,
+                ];
+            })->sortByDesc('ganancia')->values();
+        };
+
+        $resumenVendedor = $resumen(
+            $resultados->groupBy(fn($r) => $r->venta->id_usuario ?? 0),
+            fn($r) => $r->venta->user->name ?? 'Sin vendedor'
+        );
+
+        $nombresSucursal = DB::table('sucursales')->pluck('nombre', 'id');
+        $resumenSucursal = $resumen(
+            $resultados->groupBy(fn($r) => $r->venta->sucursal ?? 0),
+            fn($r, $key) => $nombresSucursal[$key] ?? 'Sin sucursal'
+        );
 
         return [
             'view' => 'reportes.partials.por_producto',
-            'data' => compact('resultados', 'totales')
+            'data' => compact('resultados', 'totales', 'resumenVendedor', 'resumenSucursal')
         ];
     }
 
