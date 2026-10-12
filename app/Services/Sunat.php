@@ -15,7 +15,11 @@ class Sunat
     public function __construct()
     {
         $this->client = new Client();
-        $this->apiUrl = "https://magus-qa.com/api-sunat-laravel/api/v1";
+        $baseUrl = env('SUNAT_API_URL');
+        if (empty($baseUrl)) {
+            throw new \RuntimeException('Falta configurar SUNAT_API_URL en el .env');
+        }
+        $this->apiUrl = rtrim($baseUrl, '/') . '/v1';
     }
 
     public function sendRequest($endpoint, $method = 'POST', $data = [])
@@ -25,10 +29,14 @@ class Sunat
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        $headers = [
             'Content-Type: application/json',
             'User-Agent: PostmanRuntime/7.42.0'
-        ]);
+        ];
+        if ($token = env('SUNAT_API_TOKEN')) {
+            $headers[] = 'X-API-KEY: ' . $token;
+        }
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         $result = curl_exec($ch);
         curl_close($ch);
         $result = trim((string)$result);
