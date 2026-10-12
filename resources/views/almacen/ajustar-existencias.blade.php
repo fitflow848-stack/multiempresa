@@ -110,18 +110,41 @@
                             value="{{ old('pv_docena', $producto['pv_docena'] ?? '') }}" {{ !$canModificarPrecio ? 'readonly' : '' }}>
                     </div>
 
-                    <div class="col-md-6" id="boxLoteQuitar">
-                        <label class="form-label">Lote a descontar <small class="text-muted">(obligatorio si reduces stock; si no alcanza, el resto sale de los siguientes lotes)</small></label>
-                        <select name="lote_id" id="loteQuitar" class="form-select">
-                            <option value="">-- Seleccione el lote --</option>
-                            @foreach ($lotes as $l)
-                                <option value="{{ $l->id }}" data-cant="{{ $l->cantidad }}" @selected(old('lote_id') == $l->id)>
-                                    {{ $l->lote ?: 'Sin nombre' }} · {{ \Carbon\Carbon::parse($l->fecha)->format('d/m/Y') }}
-                                    · Disp: {{ rtrim(rtrim(number_format($l->cantidad, 2, '.', ''), '0'), '.') }}
-                                    · Costo S/. {{ number_format($l->costo, 2) }}
-                                </option>
-                            @endforeach
-                        </select>
+                    <div class="col-md-8" id="boxLoteQuitar">
+                        <label class="form-label">Cantidad a descontar por lote
+                            <small class="text-muted">(la suma debe ser igual a lo que reduces)</small></label>
+                        <div class="table-responsive border rounded">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Lote</th>
+                                        <th>Fecha</th>
+                                        <th class="text-end">Disponible</th>
+                                        <th class="text-end">Costo</th>
+                                        <th style="width:130px;">Descontar</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($lotes as $l)
+                                        <tr>
+                                            <td>{{ $l->lote ?: 'Sin nombre' }}</td>
+                                            <td>{{ \Carbon\Carbon::parse($l->fecha)->format('d/m/Y') }}</td>
+                                            <td class="text-end">{{ rtrim(rtrim(number_format($l->cantidad, 2, '.', ''), '0'), '.') }}</td>
+                                            <td class="text-end">S/. {{ number_format($l->costo, 2) }}</td>
+                                            <td>
+                                                <input type="number" step="0.01" min="0" max="{{ $l->cantidad }}"
+                                                    name="lotes_cant[{{ $l->id }}]" class="form-control form-control-sm lote-cant"
+                                                    data-max="{{ $l->cantidad }}" value="{{ old('lotes_cant.' . $l->id) }}" placeholder="0">
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                            <small id="resumenLotes" class="fw-semibold"></small>
+                            <button type="button" id="btnAutoLotes" class="btn btn-sm btn-outline-secondary">Autocompletar (más antiguos primero)</button>
+                        </div>
                         @php $sumaLotes = round($lotes->sum('cantidad'), 2); $stockTotal = round((float) ($producto['existencias_kardex'] ?? 0), 2); @endphp
                         @if (abs($sumaLotes - $stockTotal) > 0.001)
                             <small class="text-warning d-block mt-1">
@@ -158,6 +181,39 @@
                 const inputAjuste = document.querySelector('input[disabled]'); // El campo de ajuste
                 const kardexOriginal = {{ $producto['existencias_kardex'] ?? 0 }};
 
+                function actualizarResumenLotes() {
+                    const necesario = Math.max(0, kardexOriginal - (parseFloat(inputFisico.value) || 0));
+                    let suma = 0;
+                    document.querySelectorAll('.lote-cant').forEach(function(i) { suma += parseFloat(i.value) || 0; });
+                    const el = document.getElementById('resumenLotes');
+                    if (necesario <= 0.0001) { el.textContent = ''; return; }
+                    const falta = Math.round((necesario - suma) * 100) / 100;
+                    el.textContent = 'Asignado ' + suma.toFixed(2) + ' de ' + necesario.toFixed(2) +
+                        (falta > 0 ? ' · faltan ' + falta.toFixed(2) : (falta < 0 ? ' · te pasas por ' + Math.abs(falta).toFixed(2) : ' · completo'));
+                    el.style.color = Math.abs(falta) < 0.005 ? 'green' : 'crimson';
+                }
+                document.querySelectorAll('.lote-cant').forEach(function(i) {
+                    i.addEventListener('input', actualizarResumenLotes);
+                });
+                document.getElementById('btnAutoLotes').addEventListener('click', function() {
+                    let restante = Math.max(0, kardexOriginal - (parseFloat(inputFisico.value) || 0));
+                    document.querySelectorAll('.lote-cant').forEach(function(i) {
+                        const toma = Math.min(restante, parseFloat(i.dataset.max) || 0);
+                        i.value = toma > 0 ? (Math.round(toma * 100) / 100) : '';
+                        restante -= toma;
+                    });
+                    actualizarResumenLotes();
+                });
+                inputFisico.closest('form').addEventListener('submit', function(e) {
+                    const necesario = Math.max(0, kardexOriginal - (parseFloat(inputFisico.value) || 0));
+                    if (necesario <= 0.0001) return;
+                    let suma = 0;
+                    document.querySelectorAll('.lote-cant').forEach(function(i) { suma += parseFloat(i.value) || 0; });
+                    if (Math.abs(suma - necesario) > 0.005) {
+                        e.preventDefault();
+                        alert('Debes repartir exactamente ' + necesario.toFixed(2) + ' entre los lotes. Asignado: ' + suma.toFixed(2));
+                    }
+                });
                 inputFisico.addEventListener('input', function() {
                     const fisico = parseFloat(this.value) || 0;
                     const diferencia = fisico - kardexOriginal;
@@ -167,10 +223,13 @@
                     inputAjuste.style.color = diferencia >= 0 ? 'green' : 'red';
 
                     const quitar = diferencia < -0.0001;
-                    const selLote = document.getElementById('loteQuitar');
-                    selLote.required = quitar;
-                    selLote.disabled = diferencia >= -0.0001;
+                    document.querySelectorAll('.lote-cant').forEach(function(i) {
+                        i.disabled = !quitar;
+                        if (!quitar) i.value = '';
+                    });
+                    document.getElementById('btnAutoLotes').disabled = !quitar;
                     document.querySelector('input[name="lote_nuevo"]').disabled = diferencia <= 0.0001;
+                    actualizarResumenLotes();
                 });
                 inputFisico.dispatchEvent(new Event('input'));
             });

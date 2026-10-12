@@ -299,6 +299,8 @@ class AlmacenController extends Controller
                 'pvp' => 'required|numeric|min:0',
                 'observacion' => 'nullable|string|max:1000',
                 'lote_id' => 'nullable|integer',
+                'lotes_cant' => 'nullable|array',
+                'lotes_cant.*' => 'nullable|numeric|min:0',
                 'lote_nuevo' => 'nullable|string|max:100',
             ]);
 
@@ -350,9 +352,45 @@ class AlmacenController extends Controller
                     ? $request->lote_nuevo
                     : 'AJUSTE-' . now()->format('YmdHis');
 
-                if ($diferencia < 0) {
+                $repartoLotes = array_filter((array) $request->input('lotes_cant', []), fn($c) => (float) $c > 0);
+
+                if ($diferencia < 0 && !empty($repartoLotes)) {
+                    // Reparto manual: cantidad a descontar por lote
+                    $necesario = round(abs($diferencia), 2);
+                    $asignado = round(array_sum(array_map('floatval', $repartoLotes)), 2);
+                    if (abs($asignado - $necesario) > 0.005) {
+                        throw new \Exception("La suma de lo descontado por lote ({$asignado}) debe ser igual a lo que reduces ({$necesario}).");
+                    }
+
+                    $lotesDb = AlmacenIngresoDetalle::join('almacen_ingresos as ai_rep', 'ai_rep.id', '=', 'almacen_ingreso_detalle.ingreso_id')
+                        ->whereIn('almacen_ingreso_detalle.id', array_keys($repartoLotes))
+                        ->where('almacen_ingreso_detalle.producto_id', $detalleOriginal->producto_id)
+                        ->where('almacen_ingreso_detalle.producto_linea_id', $detalleOriginal->producto_linea_id)
+                        ->where('ai_rep.sucursal_id', $ingresoOriginal->sucursal_id)
+                        ->where('almacen_ingreso_detalle.cantidad', '>', 0)
+                        ->select('almacen_ingreso_detalle.*')
+                        ->get()
+                        ->keyBy('id');
+
+                    $mayor = null;
+                    foreach ($repartoLotes as $loteId => $cant) {
+                        $cant = (float) $cant;
+                        $lote = $lotesDb->get((int) $loteId);
+                        if (!$lote) {
+                            throw new \Exception("El lote {$loteId} no es válido para este producto o no tiene stock.");
+                        }
+                        if ($cant > (float) $lote->cantidad + 0.0001) {
+                            throw new \Exception("El lote {$lote->lote} solo tiene {$lote->cantidad} disponibles y se intentó descontar {$cant}.");
+                        }
+                        $lote->decrement('cantidad', $cant);
+                        if (!$mayor || $cant > $mayor['cant']) {
+                            $mayor = ['cant' => $cant, 'lote' => $lote->lote];
+                        }
+                    }
+                    $loteNombre = $mayor['lote'] ?? 'AJUSTE';
+                } elseif ($diferencia < 0) {
                     if (!$request->filled('lote_id')) {
-                        throw new \Exception('Debe seleccionar el lote del cual se descontará el stock.');
+                        throw new \Exception('Debe indicar cuánto descontar de cada lote.');
                     }
 
                     // Solo se descuenta del lote elegido (de la misma sucursal y producto)
