@@ -8,6 +8,8 @@
     <table class="table table-bordered table-sm" style="max-width: 520px; margin: 0 auto;">
         <tbody>
             <tr><th>Total venta</th><td class="text-end">S/ {{ number_format($totales->subtotal, 2) }}</td></tr>
+            <tr><th>Total gravado</th><td class="text-end">S/ {{ number_format($totales->gravado, 2) }}</td></tr>
+            <tr><th>Total exonerado</th><td class="text-end">S/ {{ number_format($totales->exonerado, 2) }}</td></tr>
             <tr><th>Total valor venta</th><td class="text-end">S/ {{ number_format($totales->valor_venta, 2) }}</td></tr>
             <tr><th>Total IGV</th><td class="text-end">S/ {{ number_format($totales->igv, 2) }}</td></tr>
             <tr><th>Total compra (costo)</th><td class="text-end text-danger">S/ {{ number_format($totales->costo_total, 2) }}</td></tr>

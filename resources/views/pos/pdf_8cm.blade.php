@@ -203,9 +203,33 @@
 
     <div class="hr"></div>
     <table style="margin-left: auto; width: 70%;">
+        @php
+            $totGravado = 0; $totExonerado = 0; $totDescItems = 0;
+            foreach ($itemsConsolidados as $it) {
+                $imp = $it->importe_consolidado ?? $it->subtotal ?? ($it->precio_unitario * $it->cantidad);
+                $totDescItems += max(0, ($it->precio_unitario * $it->cantidad) - $imp);
+                $tipoImp = strtolower($it->almacenIngresoDetalle?->producto?->tipo_impuesto ?? 'gravado');
+                if (in_array($tipoImp, ['exonerado', 'inafecto'])) {
+                    $totExonerado += $imp;
+                } else {
+                    $totGravado += $imp;
+                }
+            }
+            // Los precios incluyen IGV: la base gravada es el importe gravado menos su IGV
+            $baseGravada = ($venta->igv ?? 0) > 0 ? $totGravado - $venta->igv : $totGravado;
+            $descuentoTotal = ($venta->descuento_monto ?? 0) > 0 ? $venta->descuento_monto : $totDescItems;
+        @endphp
         <tr>
             <td class="text-right">Total Descuento:</td>
-            <td class="text-right">S/ {{ number_format($venta->descuento_monto ?? 0, 2) }}</td>
+            <td class="text-right">S/ {{ number_format($descuentoTotal, 2) }}</td>
+        </tr>
+        <tr>
+            <td class="text-right">Total Gravado:</td>
+            <td class="text-right">S/ {{ number_format($baseGravada, 2) }}</td>
+        </tr>
+        <tr>
+            <td class="text-right">Total Exonerado:</td>
+            <td class="text-right">S/ {{ number_format($totExonerado, 2) }}</td>
         </tr>
         <tr>
             <td class="text-right">IGV:</td>

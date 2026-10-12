@@ -250,13 +250,6 @@
             </div>
 
             <table class="total-box">
-                <tr>
-                    <td>Total a pagar</td>
-                    <td align="right">S/</td>
-                    <td align="right">
-                         {{ number_format($venta->total, 2) }}
-                    </td>
-                </tr>
                 @php
                     $totGravado = 0; $totExonerado = 0; $totDescItems = 0;
                     foreach ($itemsConsolidados as $it) {

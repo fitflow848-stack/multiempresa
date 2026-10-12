@@ -1,37 +1,74 @@
-name: Deploy Scorpion (Laravel on CentOS)
+name: Deploy Multiempresa (Laravel en VPS CentOS)
 
 on:
   push:
     branches:
       - main
-      - master
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🚀 Deploy to CentOS via SSH
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Compilar assets (Vite)
+        run: |
+          npm ci
+          npm run build
+
+      - name: Subir assets compilados al servidor
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          source: public/build/*
+          target: ${{ secrets.SERVER_PATH }}/
+          overwrite: true
+
+      - name: Desplegar en el servidor
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}   # root
-          key: ${{ secrets.SERVER_SSH_KEY }}     # tu id_rsa
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
+          script_stop: true
           script: |
-            echo "Entrando al proyecto..."
-            cd /usr/share/nginx/html/genack
+            set -e
+            cd ${{ secrets.SERVER_PATH }}
 
-            echo "Actualizando repo..."
-            git pull
+            echo "Actualizando código..."
+            git fetch origin main
+            git reset --hard origin/main
 
             echo "Instalando dependencias de PHP..."
-            composer install --no-interaction --prefer-dist --optimize-autoloader
+            composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
 
-            echo "Ejecutando migraciones..."
+            echo "Migraciones..."
             php artisan migrate --force
 
-            echo "Limpiando y optimizando caché..."
+            echo "Limpiando y regenerando caché..."
             php artisan optimize:clear
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+
+            echo "Reiniciando colas (si existen)..."
+            php artisan queue:restart || true
 
             echo "Deploy completado."
