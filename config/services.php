@@ -40,6 +40,11 @@ return [
         'base_url' => env('APISPERU_BASE_URL', 'https://dniruc.apisperu.com/api/v1'),
     ],
 
+    'sunat' => [
+        'url' => env('SUNAT_API_URL'),
+        'token' => env('SUNAT_API_TOKEN'),
+    ],
+
     'apiperu_dev' => [
         'token' => env('APIPERU_DEV_TOKEN'),
         'base_url' => env('APIPERU_DEV_BASE_URL', 'https://api.apiperu.dev'),

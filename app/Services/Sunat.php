@@ -15,7 +15,7 @@ class Sunat
     public function __construct()
     {
         $this->client = new Client();
-        $baseUrl = env('SUNAT_API_URL');
+        $baseUrl = config('services.sunat.url');
         if (empty($baseUrl)) {
             throw new \RuntimeException('Falta configurar SUNAT_API_URL en el .env');
         }
@@ -33,7 +33,7 @@ class Sunat
             'Content-Type: application/json',
             'User-Agent: PostmanRuntime/7.42.0'
         ];
-        if ($token = env('SUNAT_API_TOKEN')) {
+        if ($token = config('services.sunat.token')) {
             $headers[] = 'X-API-KEY: ' . $token;
         }
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
