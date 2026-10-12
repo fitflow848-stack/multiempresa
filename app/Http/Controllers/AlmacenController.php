@@ -38,6 +38,23 @@ class AlmacenController extends Controller
             ->where('company_id', $company->id)
             ->get();
 
+        $query = $this->buildInventarioQuery($request);
+
+        $stocks = $query->paginate(20);
+
+        $productos = $stocks;
+
+        return view('almacen.index', compact('user', 'company', 'productos', 'sucursales'));
+    }
+
+    /**
+     * Query del listado de inventario (compartida entre el listado y la exportación).
+     */
+    private function buildInventarioQuery(Request $request)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
         // Query base: agrupamos por producto_linea_id para sumar existencias de diferentes lotes
         $query = DB::table('almacen_ingreso_detalle as d')
             ->join('productos as p', 'p.id', '=', 'd.producto_id')
@@ -111,11 +128,36 @@ class AlmacenController extends Controller
         // para no traer precios de otra sucursal)
         $query->groupBy('d.producto_id', 'd.producto_linea_id', 'p.nombre', 'pl.cb', 'pl.presentacion', 'pl.concentracion', 's.nombre', 'i.sucursal_id');
 
-        $stocks = $query->paginate(20);
+        return $query;
+    }
 
-        $productos = $stocks;
+    public function exportar(Request $request)
+    {
+        $filas = $this->buildInventarioQuery($request)->orderBy('p.nombre')->get()->map(function ($r) {
+            $nombre = trim($r->producto . ' ' . ($r->presentacion ?? '') . ' ' . ($r->concentracion ?? ''));
+            return [
+                $r->codigo,
+                $nombre,
+                $r->almacen_nombre,
+                round((float) $r->costo, 2),
+                (float) $r->pvp,
+                (float) $r->pvpd,
+                (float) $r->pvc,
+                (float) $r->pvcd,
+                round((float) $r->existencias, 2),
+            ];
+        });
 
-        return view('almacen.index', compact('user', 'company', 'productos', 'sucursales'));
+        $export = new class($filas) implements \Maatwebsite\Excel\Concerns\FromCollection, \Maatwebsite\Excel\Concerns\WithHeadings, \Maatwebsite\Excel\Concerns\ShouldAutoSize {
+            public function __construct(private $filas) {}
+            public function collection() { return $this->filas; }
+            public function headings(): array
+            {
+                return ['CODIGO', 'PRODUCTO', 'LOCAL', 'COSTO', 'PVP', 'PVP DTO', 'PVC', 'PVC DTO', 'STOCK'];
+            }
+        };
+
+        return Excel::download($export, 'inventario_' . date('Ymd_His') . '.xlsx');
     }
 
     public function ajustarExistencias($id)

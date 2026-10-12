@@ -89,6 +89,9 @@
                 <a href="{{ route('almacen.import-template') }}" class="btn btn-outline-success me-2 border-0 shadow-sm" style="background: #f0fdf4; color: #15803d;">
                     <i class="fas fa-file-download me-2"></i>Plantilla Excel
                 </a>
+                <a href="{{ route('almacen.exportar', request()->query()) }}" class="btn btn-outline-success me-2 border-0 shadow-sm" style="background: #f0fdf4; color: #15803d;">
+                    <i class="fas fa-file-excel me-2"></i>Exportar Excel
+                </a>
                 <button type="button" class="btn btn-outline-primary me-2 border-0 shadow-sm" style="background: #eff6ff; color: #1d4ed8;" data-bs-toggle="modal" data-bs-target="#importModal">
                     <i class="fas fa-file-upload me-2"></i>Importar Excel
                 </button>

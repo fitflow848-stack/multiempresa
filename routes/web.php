@@ -294,6 +294,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
     // necesariamente ver el listado completo de Inventario.
     Route::prefix('almacen')->name('almacen.')->group(function () {
         Route::get('/', [AlmacenController::class, 'index'])->name('index')->middleware('can:inventario.ver');
+        Route::get('/exportar', [AlmacenController::class, 'exportar'])->name('exportar')->middleware('can:inventario.ver');
         Route::post('/barcodes-pdf', [AlmacenController::class, 'generateBarcodesPdf'])->name('barcodes-pdf')->middleware('can:inventario.ver');
         Route::get('/ajustar-existencias/{id}', [AlmacenController::class, 'ajustarExistencias'])->name('ajustar-existencias')->middleware('can:inventario.ajustar');
         Route::post('/ajustar-existencias/{id}', [AlmacenController::class, 'guardarAjuste'])->name('guardar-ajuste')->middleware('can:inventario.ajustar');
