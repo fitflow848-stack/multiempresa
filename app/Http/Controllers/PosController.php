@@ -71,11 +71,9 @@ class PosController extends Controller
                             'marca' => $detalle->producto->marca->nombre ?? '',
                             'cantidad' => $detalle->cantidad,
                             'precio' => $detalle->precio_unitario,
-                            'descuento' => $detalle->descuento,
-                            // Descuento por monto fijo (cuando no hay %): bruto menos importe guardado
-                            'descuento_fijo' => ((float) $detalle->descuento > 0)
-                                ? 0
-                                : max(0, round(((float) $detalle->precio_unitario * (float) $detalle->cantidad) - (float) $detalle->subtotal, 2)),
+                            // En cotizaciones `descuento` es un MONTO (ver CotizacionDetalle): el POS lo carga como descuento fijo
+                            'descuento' => 0,
+                            'descuento_fijo' => max(0, round((float) $detalle->descuento, 2)),
                             'importe' => $detalle->subtotal,
                             'lote' => $detalle->lote,
                             'fecha_vencimiento' => $detalle->fecha_vencimiento,

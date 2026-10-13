@@ -225,7 +225,10 @@ class CotizacionController extends Controller
                     // Importe neto de la línea (ya con descuento, sea % o monto fijo). Antes se guardaba el
                     // importe bruto y el descuento se perdía al imprimir la cotización.
                     $importeNeto = isset($item['importe']) ? (float) $item['importe'] : $precio_total;
-                    $descuentoAcumulado += max(0, round($precio_total - $importeNeto, 2));
+                    // El modelo CotizacionDetalle recalcula subtotal = cantidad × precio − descuento al guardar,
+                    // y trata `descuento` como MONTO. Se guarda el monto real descontado en la línea.
+                    $descuentoLinea = max(0, round($precio_total - $importeNeto, 2));
+                    $descuentoAcumulado += $descuentoLinea;
 
                     $detalle = new CotizacionDetalle();
                     $detalle->cotizacion_id = $venta->id;
@@ -233,7 +236,7 @@ class CotizacionController extends Controller
                     $detalle->descripcion = $item['nombre'] ?? 'Producto sin nombre';
                     $detalle->cantidad = $cantidad;
                     $detalle->precio_unitario = (float) $precio_unitario;
-                    $detalle->descuento = (float) ($item['descuento'] ?? 0);
+                    $detalle->descuento = (float) $descuentoLinea;
                     $detalle->subtotal = (float) $importeNeto;
                     $detalle->lote = $item['lote'] ?? null;
                     $detalle->fecha_vencimiento = $item['fecha_vencimiento'] ?? null;
