@@ -216,11 +216,16 @@ class CotizacionController extends Controller
             $venta->save();
 
             // Crear detalles de la venta
+            $descuentoAcumulado = 0.0;
             if (is_array($ticket)) {
                 foreach ($ticket as $index => $item) {
                     $precio_unitario = floatval($item['precio'] ?? 0);
                     $cantidad = intval($item['cantidad'] ?? 1);
                     $precio_total = $precio_unitario * $cantidad;
+                    // Importe neto de la línea (ya con descuento, sea % o monto fijo). Antes se guardaba el
+                    // importe bruto y el descuento se perdía al imprimir la cotización.
+                    $importeNeto = isset($item['importe']) ? (float) $item['importe'] : $precio_total;
+                    $descuentoAcumulado += max(0, round($precio_total - $importeNeto, 2));
 
                     $detalle = new CotizacionDetalle();
                     $detalle->cotizacion_id = $venta->id;
@@ -229,11 +234,15 @@ class CotizacionController extends Controller
                     $detalle->cantidad = $cantidad;
                     $detalle->precio_unitario = (float) $precio_unitario;
                     $detalle->descuento = (float) ($item['descuento'] ?? 0);
-                    $detalle->subtotal = (float) $precio_total;
+                    $detalle->subtotal = (float) $importeNeto;
                     $detalle->lote = $item['lote'] ?? null;
                     $detalle->fecha_vencimiento = $item['fecha_vencimiento'] ?? null;
                     $detalle->save();
                 }
+            }
+            if ((float) $venta->descuento_total <= 0 && $descuentoAcumulado > 0) {
+                $venta->descuento_total = round($descuentoAcumulado, 2);
+                $venta->save();
             }
             DB::commit();
 

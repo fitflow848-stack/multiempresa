@@ -72,6 +72,10 @@ class PosController extends Controller
                             'cantidad' => $detalle->cantidad,
                             'precio' => $detalle->precio_unitario,
                             'descuento' => $detalle->descuento,
+                            // Descuento por monto fijo (cuando no hay %): bruto menos importe guardado
+                            'descuento_fijo' => ((float) $detalle->descuento > 0)
+                                ? 0
+                                : max(0, round(((float) $detalle->precio_unitario * (float) $detalle->cantidad) - (float) $detalle->subtotal, 2)),
                             'importe' => $detalle->subtotal,
                             'lote' => $detalle->lote,
                             'fecha_vencimiento' => $detalle->fecha_vencimiento,

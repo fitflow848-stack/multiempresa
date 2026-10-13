@@ -470,8 +470,8 @@
                         fecha_vencimiento: p.fecha_vencimiento,
                         es_lote_especifico: !!p.lote,
                         descuento: p.descuento || 0,
-                        descuentoFijo: 0,
-                        descuentoTexto: (p.descuento ? p.descuento + '%' : '0%'),
+                        descuentoFijo: parseFloat(p.descuento_fijo) || 0,
+                        descuentoTexto: (p.descuento ? p.descuento + '%' : ((parseFloat(p.descuento_fijo) || 0) > 0 ? 'S/' + parseFloat(p.descuento_fijo).toFixed(2) : '0%')),
                         imagen_principal: p.imagen_principal || ''
                     });
                 });
