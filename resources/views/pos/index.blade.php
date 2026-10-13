@@ -1391,6 +1391,7 @@
             id: `corp_${currentProduct.producto_id}_${Date.now()}`,
             id: `corp_${currentProduct.producto_id}_${Date.now()}`,
             producto_id: currentProduct.producto_id,
+            tipo_impuesto: currentProduct.tipo_impuesto || 'gravado',
             producto_linea_id: currentProduct.product_linea_id || currentProduct.producto_linea_id || null,
             nombre: currentProduct.nombre + ' (Precio Corp.)',
             marca: currentProduct.marca || '',
@@ -1512,6 +1513,7 @@
         const productoConPrecioPublico = {
             id: `pub_${currentProduct.producto_id}_${Date.now()}`,
             producto_id: currentProduct.producto_id,
+            tipo_impuesto: currentProduct.tipo_impuesto || 'gravado',
             producto_linea_id: currentProduct.product_linea_id || currentProduct.producto_linea_id || null,
             nombre: currentProduct.nombre,
             marca: currentProduct.marca || '',
@@ -2034,6 +2036,7 @@
         const productoCompleto = {
             id: `prod_${producto.producto_id}`,
             producto_id: producto.producto_id,
+            tipo_impuesto: producto.tipo_impuesto || 'gravado',
             nombre: producto.nombre,
             cantidad_disponible: producto.cantidad_total,
             precio: parseFloat(producto.pvp),
@@ -2971,7 +2974,7 @@
         let icbper = 0.00;
 
         ticket.forEach(item => {
-            if (item.tipo_impuesto === 'exonerado') {
+            if (item.tipo_impuesto === 'exonerado' || item.tipo_impuesto === 'inafecto') {
                 exonerada += item.importe;
             } else {
                 let mGravada = item.importe / 1.18;
