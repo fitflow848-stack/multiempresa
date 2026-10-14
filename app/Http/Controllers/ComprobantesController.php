@@ -30,6 +30,24 @@ class ComprobantesController extends Controller
     {
         $this->sunatService = $sunatService;
     }
+    /**
+     * Filtra por tipo de comprobante usando id_tido (la columna `ventas.tipo_documento` está vacía en
+     * casi todas las ventas; el nombre que se muestra se deduce de la serie/id_tido).
+     */
+    private function aplicarFiltroTipoDocumento($query, ?string $tipoDocumento): void
+    {
+        $ids = match (strtolower((string) $tipoDocumento)) {
+            'ticket' => [13, 6],   // Ticket y Nota de venta (documentos internos)
+            'boleta' => [1],
+            'factura' => [2],
+            default => null,
+        };
+
+        if ($ids) {
+            $query->whereIn('id_tido', $ids);
+        }
+    }
+
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -72,9 +90,7 @@ class ComprobantesController extends Controller
         }
 
         // Aplicar filtro de tipo de documento
-        if ($tipoDocumento !== 'todos') {
-            $ventasQuery->where('tipo_documento', $tipoDocumento);
-        }
+        $this->aplicarFiltroTipoDocumento($ventasQuery, $tipoDocumento);
 
         $ventas = $ventasQuery->orderBy('fecha_emision', 'desc')
             ->orderBy('id_venta', 'desc')
@@ -225,9 +241,7 @@ class ComprobantesController extends Controller
             });
         }
 
-        if ($tipoDocumento !== 'todos') {
-            $ventasQuery->where('tipo_documento', $tipoDocumento);
-        }
+        $this->aplicarFiltroTipoDocumento($ventasQuery, $tipoDocumento);
 
         $ventas = $ventasQuery->get();
         $resumen = $this->calcularResumen($ventas);

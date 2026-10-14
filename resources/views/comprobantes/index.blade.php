@@ -914,7 +914,7 @@
                     const ventaId = $('#imprimirVentaId').val();
                     const format = $(this).data('format');
 
-                    const url = '{{ route('pos.pdf', ['id' => ':id', 'format' => ':format']) }}'
+                    const url = '{{ route('comprobantes.pdf', ['id' => ':id', 'format' => ':format']) }}'
                         .replace(':id', ventaId)
                         .replace(':format', format);
 

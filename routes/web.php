@@ -170,6 +170,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
         Route::get('/', [ComprobantesController::class, 'index'])->name('index');
         Route::get('/{id}/detalle', [ComprobantesController::class, 'detalle'])->name('detalle');
         Route::get('/{id}/imprimir', [ComprobantesController::class, 'imprimir'])->name('imprimir')->middleware('can:comprobantes.imprimir');
+        Route::get('/{id}/pdf/{format?}', [PosController::class, 'pdfVenta'])->where('format', '8cm|5.8cm|media-a4|default')->name('pdf')->middleware('can:comprobantes.imprimir');
         Route::post('/seleccionar-todo', [ComprobantesController::class, 'seleccionarTodo'])->name('seleccionar-todo');
         Route::post('/cancelar', [ComprobantesController::class, 'cancelar'])->name('cancelar')->middleware('can:comprobantes.cancelar');
         Route::post('/devolver', [ComprobantesController::class, 'devolver'])->name('devolver')->middleware('can:comprobantes.anular');
