@@ -415,8 +415,12 @@ class ReporteController extends Controller
 
     private function reporteComprobantes(Request $request)
     {
+        // Se incluyen las anuladas que SUNAT ya tiene (marcadas ANULADO) y sus notas de crédito (restan);
+        // las anuladas internamente, que nunca se enviaron, quedan fuera.
         $query = Venta::withoutGlobalScope('sucursal')->with(['cliente.deudas', 'user', 'tipoPago', 'deuda'])
-            ->where('estado', '!=', '0')
+            ->where(function ($q) {
+                $q->where('estado', '!=', '0')->orWhere('enviado_sunat', 1);
+            })
             ->orderByDesc('fecha_emision');
 
         if ($request->input('desde'))
@@ -443,7 +447,11 @@ class ReporteController extends Controller
 
         // Procesar datos para la vista
         $resultados->each(function ($v) {
-            if ($v->deuda) {
+            if ($v->estado == 0 || $v->id_tido == 5) {
+                // Anulado o nota de crédito: no hay cobro ni deuda sobre este documento
+                $v->monto_pagado_doc = 0;
+                $v->monto_pendiente_doc = 0;
+            } elseif ($v->deuda) {
                 $v->monto_pagado_doc = $v->deuda->monto_pagado;
                 $v->monto_pendiente_doc = $v->deuda->monto_deuda;
             } else {

@@ -59,9 +59,12 @@ class ComprobantesController extends Controller
         $cliente = $request->get('cliente', '');
         $tipoDocumento = $request->get('tipo_documento', 'todos');
 
-        // Query base - excluir anulados
+        // Query base - se ocultan las anuladas internamente (nunca enviadas a SUNAT); las que SUNAT ya aceptó
+        // siguen visibles como ANULADO, junto a su nota de crédito, para que el IGV del periodo cuadre.
         $ventasQuery = Venta::where('id_empresa', $company->id)
-            ->where('estado', '!=', 0); // No mostrar anulados
+            ->where(function ($q) {
+                $q->where('estado', '!=', 0)->orWhere('enviado_sunat', 1);
+            });
 
         if ($user->branch_id) {
             $ventasQuery->where('sucursal', $user->branch_id);
@@ -459,6 +462,7 @@ class ComprobantesController extends Controller
                     $nc->enviado_sunat = 0;
                     $nc->cierre_caja_id = $venta->cierre_caja_id;
                     $nc->id_usuario = $user->id;
+                    $nc->igv = $venta->igv;
                     $nc->observacion = mb_substr('NC de ' . $venta->serie . '-' . $venta->numero . ': ' . $descripcionNC, 0, 220);
                     $nc->save();
 
@@ -759,6 +763,7 @@ class ComprobantesController extends Controller
                     $nc->serie = $serieNC;
                     $nc->numero = $numeroNC;
                     $nc->total = $venta->total; // Monto por el que se emite la NC
+                    $nc->igv = $venta->igv;
                     $nc->moneda = $venta->moneda;
                     $nc->estado = 1; // Emitida
                     $nc->enviado_sunat = 0;

@@ -199,14 +199,14 @@
                                             $pendiente = 0;
                                             $deudaTotal = 0;
                                             $pagado = 0;
-                                            $estadoPago = 'CANCELADO';
+                                            $estadoPago = 'ANULADO';
                                         }
 
                                         if ($isNotaCredito) {
                                             $pendiente = 0;
                                             $deudaTotal = 0;
                                             $pagado = 0;
-                                            $estadoPago = 'ANULADO';
+                                            $estadoPago = 'NOTA DE CRÉDITO';
                                         }
                                     @endphp
                                     <tr class="comprobante-row {{ $comprobanteSeleccionado && $comprobanteSeleccionado->id_venta == $venta->id_venta ? 'table-active' : '' }} {{ $isCancelado ? 'comprobante-cancelado' : '' }} {{ $isNotaCredito ? 'comprobante-nc' : '' }}"
@@ -240,8 +240,8 @@
                                         <td class="text-end text-muted">
                                             S/ {{ number_format($venta->descuento_monto ?? 0, 2) }}
                                         </td>
-                                        <td class="text-end fw-bold text-dark">
-                                            S/ {{ number_format($venta->total, 2) }}
+                                        <td class="text-end fw-bold {{ $isNotaCredito ? 'text-danger' : 'text-dark' }}">
+                                            {{ $isNotaCredito ? '-' : '' }}S/ {{ number_format($venta->total, 2) }}
                                         </td>
                                         <td class="text-end text-success fw-bold">
                                             S/ {{ number_format($pagado, 2) }}
@@ -251,9 +251,9 @@
                                         </td>
                                         <td class="text-center">
                                             @if ($isNotaCredito)
-                                                <span class="badge bg-danger">ANULADO</span>
+                                                <span class="badge bg-secondary">NOTA DE CRÉDITO</span>
                                             @elseif ($isCancelado)
-                                                <span class="badge bg-danger">CANCELADA</span>
+                                                <span class="badge bg-danger">ANULADO</span>
                                             @elseif(isset($venta->estado) && $venta->estado == 3)
                                                 <span class="badge bg-warning text-dark">DEVUELTO</span>
                                             @else
