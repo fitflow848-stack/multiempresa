@@ -109,7 +109,7 @@ class DeudaController extends Controller
         }
 
         $clientes = $query->orderByDesc('deudas_sum_monto_deuda')
-            ->paginate(15);
+            ->paginate(50);
 
         // Estadísticas rápidas (Empresa-wide por defecto si no se filtra)
         $statsQuery = Deuda::query();
