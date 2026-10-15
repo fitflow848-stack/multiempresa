@@ -950,17 +950,33 @@
 
                     Swal.fire({
                         title: '¿Anular comprobantes?',
-                        text: `¿Deseas anular ${seleccionados.length} comprobante(s) seleccionado(s)? Esta acción no se puede deshacer.`,
+                        html: `<p class="mb-2">¿Deseas anular ${seleccionados.length} comprobante(s) seleccionado(s)? Esta acción no se puede deshacer.</p>` +
+                            `<div class="text-start small">` +
+                            `<label class="fw-bold mt-2">Motivo de la nota de crédito</label>` +
+                            `<select id="swal-motivo-nc" class="form-select form-select-sm">` +
+                            `<option value="01">01 - Anulación de la operación</option>` +
+                            `<option value="02">02 - Anulación por error en el RUC</option>` +
+                            `<option value="03">03 - Corrección por error en la descripción</option>` +
+                            `<option value="06">06 - Devolución total</option></select>` +
+                            `<label class="fw-bold mt-2">Razón de la anulación</label>` +
+                            `<textarea id="swal-razon-nc" class="form-control form-control-sm" rows="2" maxlength="150" placeholder="Obligatoria si el comprobante ya fue enviado a SUNAT y pasaron más de 7 días"></textarea>` +
+                            `<div class="text-muted mt-1">El motivo y la razón solo se usan cuando se genera nota de crédito (comprobante ya enviado a SUNAT).</div></div>`,
                         icon: 'warning',
                         showCancelButton: true,
                         confirmButtonColor: '#dc3545',
                         confirmButtonText: 'Sí, anular',
-                        cancelButtonText: 'Cancelar'
+                        cancelButtonText: 'Cancelar',
+                        preConfirm: () => ({
+                            motivo: document.getElementById('swal-motivo-nc').value,
+                            razon: document.getElementById('swal-razon-nc').value.trim()
+                        })
                     }).then((result) => {
                         if (result.isConfirmed) {
                             $.post('{{ route('comprobantes.cancelar') }}', {
                                     _token: '{{ csrf_token() }}',
-                                    ventas_ids: seleccionados
+                                    ventas_ids: seleccionados,
+                                    motivo_nc: result.value.motivo,
+                                    descripcion_nc: result.value.razon
                                 })
                                 .done(function(response) {
                                     if (response.success) {

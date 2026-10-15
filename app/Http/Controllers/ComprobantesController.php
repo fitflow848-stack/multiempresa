@@ -270,6 +270,16 @@ class ComprobantesController extends Controller
             $count = 0;
             $ncsGenerated = 0;
 
+            // Motivo de la nota de crédito (catálogo SUNAT 09) y razón escrita por el usuario.
+            $motivosNC = [
+                '01' => 'Anulación de la operación',
+                '02' => 'Anulación por error en el RUC',
+                '03' => 'Corrección por error en la descripción',
+                '06' => 'Devolución total',
+            ];
+            $motivoNC = array_key_exists((string) $request->get('motivo_nc'), $motivosNC) ? (string) $request->get('motivo_nc') : '01';
+            $razonNC = trim((string) $request->get('descripcion_nc', ''));
+
             foreach ($ventas as $venta) {
                 // 1. Restaurar Stock mediante nuevo movimiento en Kardex (no altera histórico)
                 foreach ($venta->detalles as $detalle) {
@@ -406,9 +416,22 @@ class ComprobantesController extends Controller
                     $deudaAsociada->delete();
                 }
 
-                // 3. Generar Nota de Crédito SOLO si ya se envió a SUNAT
-                $enviadoSunat = $venta->enviado_sunat || $venta->ventaSunat()->exists();
+                // 3. Generar Nota de Crédito SOLO si SUNAT ya aceptó el comprobante.
+                // El XML se genera al emitir la venta, así que su existencia NO prueba que se haya enviado:
+                // se considera enviado únicamente con enviado_sunat = 1 o con un CDR guardado.
+                $enviadoSunat = ((int) $venta->enviado_sunat === 1)
+                    || $venta->ventaSunat()->whereNotNull('cdr_path')->exists();
+                $esAnulacionInterna = !$enviadoSunat;
+
                 if (in_array($venta->id_tido, [1, 2]) && $enviadoSunat) {
+                    // Después de 7 días de emitido ya no se puede dar de baja: corresponde una nota de crédito
+                    // que anule el comprobante por una razón que debe quedar indicada.
+                    $diasDesdeEmision = Carbon::parse($venta->fecha_emision)->startOfDay()->diffInDays(now()->startOfDay());
+                    if ($diasDesdeEmision > 7 && $razonNC === '') {
+                        throw new \Exception("El comprobante {$venta->serie}-{$venta->numero} tiene más de 7 días de emitido y ya fue enviado a SUNAT: indique la razón de la nota de crédito.");
+                    }
+                    $descripcionNC = $razonNC !== '' ? $razonNC : $motivosNC[$motivoNC];
+
                     // Determinar serie NC (F... -> FC.., B... -> BC..)
                     $serieNC = $venta->id_tido == 2 ? 'FC01' : 'BC01';
 
@@ -436,6 +459,7 @@ class ComprobantesController extends Controller
                     $nc->enviado_sunat = 0;
                     $nc->cierre_caja_id = $venta->cierre_caja_id;
                     $nc->id_usuario = $user->id;
+                    $nc->observacion = mb_substr('NC de ' . $venta->serie . '-' . $venta->numero . ': ' . $descripcionNC, 0, 220);
                     $nc->save();
 
                     // Copiar detalles de la venta a la NC
@@ -445,8 +469,8 @@ class ComprobantesController extends Controller
                         $ncDetalle->save();
                     }
 
-                    // Generar JSON NC (Motivo 01: Anulacion de la operacion)
-                    $jsonGenerar = $this->sunatService->formatJsonNotaCreditoFull($nc, $venta, $venta->cliente, $venta->detalles, '01', 'Anulación de la operación');
+                    // Generar JSON NC con el motivo y la razón elegidos (por defecto 01: Anulación de la operación)
+                    $jsonGenerar = $this->sunatService->formatJsonNotaCreditoFull($nc, $venta, $venta->cliente, $venta->detalles, $motivoNC, $descripcionNC);
 
                     $responseGenerar = $this->sunatService->generarNotaCredito($jsonGenerar);
                     $dataGenerar = json_decode($responseGenerar);
@@ -525,8 +549,29 @@ class ComprobantesController extends Controller
 
                 // 4. Cambiar estado
                 $venta->estado = 0; // 0: Anulada
+                if ($esAnulacionInterna) {
+                    $venta->observacion = mb_substr(trim(($venta->observacion ?? '') . ' [ANULACION INTERNA]'), 0, 220);
+                }
                 $venta->save();
                 $count++;
+
+                // 4.1 Anulación interna (nunca enviada a SUNAT): no hay nota de crédito y, si era el último
+                // número emitido de la serie, el correlativo vuelve atrás para que la numeración continúe
+                // desde antes del documento anulado.
+                if ($esAnulacionInterna && $venta->serie && is_numeric($venta->numero)) {
+                    $docSerie = \App\Models\CompanyDocument::withoutGlobalScopes()
+                        ->where('company_id', $venta->id_empresa)
+                        ->where('branch_id', $venta->sucursal)
+                        ->where('sunat_document_id', $venta->id_tido)
+                        ->where('series', $venta->serie)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($docSerie && (int) $docSerie->number === (int) $venta->numero) {
+                        $docSerie->number = (int) $venta->numero - 1;
+                        $docSerie->save();
+                    }
+                }
 
                 // 5. Guardar los ítems de la venta anulada como pre-venta (venta guardada)
                 // para que el usuario pueda retomarla desde el POS sin tener que cargar todo de nuevo.

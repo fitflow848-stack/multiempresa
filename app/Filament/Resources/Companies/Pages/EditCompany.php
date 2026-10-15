@@ -286,9 +286,13 @@ class EditCompany extends EditRecord
     {
         $ultimoEmitido = 0;
         if ($serie) {
+            // Se ignoran las ventas anuladas que nunca se enviaron a SUNAT: su número queda libre para reutilizarse.
             $ultimoEmitido = (int) \App\Models\Venta::withoutGlobalScopes()
                 ->where('sucursal', $sucursalId)
                 ->where('serie', $serie)
+                ->where(function ($q) {
+                    $q->where('estado', '!=', 0)->orWhere('enviado_sunat', 1);
+                })
                 ->max(DB::raw('CAST(numero AS UNSIGNED)'));
         }
 
