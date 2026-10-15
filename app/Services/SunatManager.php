@@ -176,17 +176,35 @@ class SunatManager
     }
 
     /**
-     * Procesa todas las ventas pendientes (opcional para cron). Devuelve resumen.
+     * Días calendario que se espera antes de enviar un comprobante a SUNAT. El plazo máximo de SUNAT es de
+     * 3 días calendario contados desde el día siguiente a la fecha de emisión (R.S. 097-2012/SUNAT); se envía
+     * un día antes del límite para dejar margen de reintento. Mientras tanto, una anulación interna no
+     * necesita nota de crédito.
+     */
+    public const DIAS_ESPERA_ENVIO = 2;
+
+    /**
+     * Días hacia atrás en que se sigue reintentando el envío de comprobantes que fallaron.
+     */
+    public const DIAS_MAX_REINTENTO = 7;
+
+    /**
+     * Procesa las ventas pendientes (cron diario). Solo envía las que ya cumplieron los días de espera.
+     * Devuelve resumen.
      */
     public function procesarPendientes(): array
     {
         $result = ['processed' => [], 'failed' => []];
+
+        $fechaEnvio = now()->subDays(self::DIAS_ESPERA_ENVIO)->toDateString();       // emitidas hasta esta fecha
+        $fechaMinima = now()->subDays(self::DIAS_MAX_REINTENTO)->toDateString();     // no más antiguas que esta
         
         Venta::withoutGlobalScopes()
             ->where('enviado_sunat', 0)
             ->where('estado', 1)
             ->whereIn('id_tido', [1, 2]) // 1: Boleta, 2: Factura
-            ->where('fecha_emision', '>=', now()->subDays(2)->startOfDay())
+            ->whereDate('fecha_emision', '<=', $fechaEnvio)
+            ->whereDate('fecha_emision', '>=', $fechaMinima)
             ->chunkById(10, function ($ventas) use (&$result) {
                 foreach ($ventas as $venta) {
                     try {

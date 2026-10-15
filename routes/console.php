@@ -10,4 +10,5 @@ Artisan::command('inspire', function () {
 use Illuminate\Support\Facades\Schedule;
 use App\Jobs\SendSalesToSunatJob;
 
-Schedule::command('sunat:send-pending')->dailyAt('00:00');
+// Envía a SUNAT los comprobantes que cumplieron 2 días calendario desde su emisión (el límite de SUNAT es 3) (ver SunatManager::procesarPendientes)
+Schedule::command('sunat:send-pending')->dailyAt('11:00')->timezone('America/Lima')->withoutOverlapping();
