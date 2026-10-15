@@ -427,11 +427,10 @@ class ComprobantesController extends Controller
                 $esAnulacionInterna = !$enviadoSunat;
 
                 if (in_array($venta->id_tido, [1, 2]) && $enviadoSunat) {
-                    // Después de 7 días de emitido ya no se puede dar de baja: corresponde una nota de crédito
-                    // que anule el comprobante por una razón que debe quedar indicada.
-                    $diasDesdeEmision = Carbon::parse($venta->fecha_emision)->startOfDay()->diffInDays(now()->startOfDay());
-                    if ($diasDesdeEmision > 7 && $razonNC === '') {
-                        throw new \Exception("El comprobante {$venta->serie}-{$venta->numero} tiene más de 7 días de emitido y ya fue enviado a SUNAT: indique la razón de la nota de crédito.");
+                    // Un comprobante ya enviado a SUNAT solo se anula con nota de crédito, en cualquier momento
+                    // (sin límite de días): siempre se pide el motivo y la razón, que quedan en la nota.
+                    if ($razonNC === '') {
+                        throw new \Exception("El comprobante {$venta->serie}-{$venta->numero} ya fue enviado a SUNAT y se anula con nota de crédito: indique la razón.");
                     }
                     $descripcionNC = $razonNC !== '' ? $razonNC : $motivosNC[$motivoNC];
 

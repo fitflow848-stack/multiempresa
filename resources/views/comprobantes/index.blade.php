@@ -959,7 +959,7 @@
                             `<option value="03">03 - Corrección por error en la descripción</option>` +
                             `<option value="06">06 - Devolución total</option></select>` +
                             `<label class="fw-bold mt-2">Razón de la anulación</label>` +
-                            `<textarea id="swal-razon-nc" class="form-control form-control-sm" rows="2" maxlength="150" placeholder="Obligatoria si el comprobante ya fue enviado a SUNAT y pasaron más de 7 días"></textarea>` +
+                            `<textarea id="swal-razon-nc" class="form-control form-control-sm" rows="2" maxlength="150" placeholder="Obligatoria si el comprobante ya fue enviado a SUNAT (se anula con nota de crédito)"></textarea>` +
                             `<div class="text-muted mt-1">El motivo y la razón solo se usan cuando se genera nota de crédito (comprobante ya enviado a SUNAT).</div></div>`,
                         icon: 'warning',
                         showCancelButton: true,
