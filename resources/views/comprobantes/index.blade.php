@@ -220,7 +220,8 @@
                                         data-pagado_monto="{{ $venta->deuda ? $venta->deuda->monto_pagado : ($venta->pagado ? $venta->total : 0) }}"
                                         data-pendiente_monto="{{ $isCancelado ? 0 : ($venta->deuda ? $venta->deuda->monto_deuda : ($venta->pagado ? 0 : $venta->total)) }}"
                                         data-deuda_total_cliente="{{ $venta->cliente ? $venta->cliente->debe : 0 }}"
-                                        data-estado="{{ $venta->estado ?? 1 }}">
+                                        data-estado="{{ $venta->estado ?? 1 }}"
+                                        data-enviado="{{ (int) $venta->enviado_sunat }}" data-tido="{{ $venta->id_tido }}">
                                         <td class="ps-3">
                                             <input type="checkbox" class="form-check-input comprobante-check"
                                                 value="{{ $venta->id_venta }}" {{ $isCancelado ? 'disabled' : '' }}>
@@ -931,28 +932,42 @@
                         return;
                     }
 
-                    Swal.fire({
-                        title: '¿Anular comprobantes?',
-                        html: `<p class="mb-2">¿Deseas anular ${seleccionados.length} comprobante(s) seleccionado(s)? Esta acción no se puede deshacer.</p>` +
-                            `<div class="text-start small">` +
+                    // ¿Alguno ya fue aceptado por SUNAT? Solo esos se anulan con nota de crédito.
+                    const hayEnviados = seleccionados.some(function(id) {
+                        const r = $(`tr[data-venta-id="${id}"]`);
+                        return parseInt(r.data('enviado')) === 1 && [1, 2].includes(parseInt(r.data('tido')));
+                    });
+                    const bloqueNC = hayEnviados
+                        ? `<div class="text-start small">` +
                             `<label class="fw-bold mt-2">Motivo de la nota de crédito</label>` +
                             `<select id="swal-motivo-nc" class="form-select form-select-sm">` +
                             `<option value="01">01 - Anulación de la operación</option>` +
                             `<option value="02">02 - Anulación por error en el RUC</option>` +
                             `<option value="03">03 - Corrección por error en la descripción</option>` +
                             `<option value="06">06 - Devolución total</option></select>` +
-                            `<label class="fw-bold mt-2">Razón de la anulación</label>` +
-                            `<textarea id="swal-razon-nc" class="form-control form-control-sm" rows="2" maxlength="150" placeholder="Obligatoria si el comprobante ya fue enviado a SUNAT (se anula con nota de crédito)"></textarea>` +
-                            `<div class="text-muted mt-1">El motivo y la razón solo se usan cuando se genera nota de crédito (comprobante ya enviado a SUNAT).</div></div>`,
+                            `<label class="fw-bold mt-2">Razón de la anulación <span class="text-danger">*</span></label>` +
+                            `<textarea id="swal-razon-nc" class="form-control form-control-sm" rows="2" maxlength="150" placeholder="Obligatoria: el comprobante ya fue enviado a SUNAT y se anula con nota de crédito"></textarea></div>`
+                        : `<div class="alert alert-info small text-start mt-2 mb-0">` +
+                            `<b>Anulación interna:</b> el comprobante aún no se envió a SUNAT, por eso <b>no genera nota de crédito</b>. ` +
+                            `Si era el último número de la serie (o queda un hueco), ese número se vuelve a usar.</div>`;
+
+    Swal.fire({
+                        title: '¿Anular comprobantes?',
+                        html: `<p class="mb-2">¿Deseas anular ${seleccionados.length} comprobante(s) seleccionado(s)? Esta acción no se puede deshacer.</p>` + bloqueNC,
                         icon: 'warning',
                         showCancelButton: true,
                         confirmButtonColor: '#dc3545',
                         confirmButtonText: 'Sí, anular',
                         cancelButtonText: 'Cancelar',
-                        preConfirm: () => ({
-                            motivo: document.getElementById('swal-motivo-nc').value,
-                            razon: document.getElementById('swal-razon-nc').value.trim()
-                        })
+                        preConfirm: () => {
+                            const mot = document.getElementById('swal-motivo-nc');
+                            const raz = document.getElementById('swal-razon-nc');
+                            if (hayEnviados && (!raz || raz.value.trim() === '')) {
+                                Swal.showValidationMessage('Indica la razón de la anulación');
+                                return false;
+                            }
+                            return { motivo: mot ? mot.value : '01', razon: raz ? raz.value.trim() : '' };
+                        }
                     }).then((result) => {
                         if (result.isConfirmed) {
                             $.post('{{ route('comprobantes.cancelar') }}', {

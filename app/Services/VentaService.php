@@ -150,7 +150,8 @@ class VentaService
                 ->where('branch_id', Auth::user()->branch_id)
                 ->first();
 
-            $companyDocument->number = $siguienteNumero;
+            // Si se reutilizó un número libre (hueco de una anulación interna), el contador no retrocede
+            $companyDocument->number = max((int) $companyDocument->number, (int) $siguienteNumero);
             $companyDocument->save();
 
             // Crear la venta
@@ -465,6 +466,38 @@ class VentaService
         return $ultimaVenta ? (intval($ultimaVenta->numero) + 1) : 1;
     }
 
+    /**
+     * Número libre más bajo de la serie: el de un comprobante anulado internamente (nunca enviado a SUNAT)
+     * que dejó un hueco por debajo del último emitido y que no fue ocupado por otro comprobante vigente.
+     * Así la numeración no queda con saltos cuando se anula uno que no era el último.
+     */
+    private function primerNumeroLibre($companyDoc, $user): ?int
+    {
+        $ultimo = (int) $companyDoc->number;
+
+        $hueco = DB::table('ventas as a')
+            ->where('a.id_empresa', $companyDoc->company_id)
+            ->where('a.sucursal', $companyDoc->branch_id)
+            ->where('a.id_tido', $companyDoc->sunat_document_id)
+            ->where('a.serie', $companyDoc->series)
+            ->where('a.estado', 0)
+            ->where('a.enviado_sunat', 0)
+            ->where('a.observacion', 'like', '%ANULACION INTERNA%')
+            ->whereRaw('CAST(a.numero AS UNSIGNED) < ?', [$ultimo])
+            ->whereNotExists(function ($q) use ($companyDoc) {
+                $q->select(DB::raw(1))
+                    ->from('ventas as b')
+                    ->whereColumn('b.serie', 'a.serie')
+                    ->whereColumn('b.numero', 'a.numero')
+                    ->where('b.sucursal', $companyDoc->branch_id)
+                    ->where('b.estado', '!=', 0);
+            })
+            ->orderByRaw('CAST(a.numero AS UNSIGNED) ASC')
+            ->value('a.numero');
+
+        return $hueco !== null ? (int) $hueco : null;
+    }
+
     public function obtenerSiguienteNumeroSerie($serie, $tipoDocumento, $es_venta = false)
     {
         $user = Auth::user();
@@ -482,7 +515,7 @@ class VentaService
             ->first();
 
         if ($companyDoc) {
-            $siguienteNumero = $companyDoc->number + 1;
+            $siguienteNumero = $this->primerNumeroLibre($companyDoc, $user) ?? ($companyDoc->number + 1);
         } else {
             $siguienteNumero = $this->obtenerSiguienteNumero($user->company_id, $serie);
         }
