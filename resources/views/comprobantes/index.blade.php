@@ -103,7 +103,7 @@
                         <input type="date" class="form-control border-0 bg-light" name="fecha_hasta"
                             value="{{ $fechaHasta }}">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label small fw-bold text-muted mb-1">Buscar Cliente</label>
                         <div class="input-group">
                             <span class="input-group-text border-0 bg-light text-muted"><i class="bx bx-search"></i></span>
@@ -121,8 +121,14 @@
                             <option value="factura" {{ $tipoDocumento == 'factura' ? 'selected' : '' }}>🏢 Factura</option>
                         </select>
                     </div>
-                    <div class="col-md-3 text-end d-flex gap-2">
-                        <div class="btn-group shadow-sm w-100">
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary px-3 py-2 shadow-sm small d-flex align-items-center justify-content-center"
+                            id="btn-buscar" style="font-size: 0.8rem;">
+                            <i class="bx bx-search me-1"></i> Buscar
+                        </button>
+                    </div>
+                    <div class="col-auto ms-auto text-end d-flex gap-2">
+                        <div class="btn-group shadow-sm">
                             <button type="button" class="btn btn-white border px-2 py-2 small" id="btn-seleccionar-todo"
                                 style="font-size: 0.8rem;">
                                 <i class="bx bx-check-double me-1 text-primary"></i> Todo
@@ -673,30 +679,7 @@
             $(document).ready(function() {
                 let seleccionados = [];
 
-                // Auto-submit filters when user changes inputs (debounced for text input)
-                const $formFiltros = $('#form-filtros');
-                const debounce = (fn, delay) => {
-                    let timer = null;
-                    return function(...args) {
-                        clearTimeout(timer);
-                        timer = setTimeout(() => fn.apply(this, args), delay);
-                    };
-                };
 
-                // Date inputs: submit on change
-                $formFiltros.find('input[name="fecha_desde"], input[name="fecha_hasta"]').on('change', function() {
-                    $formFiltros.submit();
-                });
-
-                // Tipo documento: submit on change
-                $formFiltros.find('select[name="tipo_documento"]').on('change', function() {
-                    $formFiltros.submit();
-                });
-
-                // Cliente search: debounce input
-                $formFiltros.find('input[name="cliente"]').on('input', debounce(function() {
-                    $formFiltros.submit();
-                }, 600));
 
                 // Manejar click en filas para seleccionar comprobante (sin recargar la página)
                 function fetchDetalleVenta(ventaId, markRow = true) {
