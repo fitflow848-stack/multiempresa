@@ -35,8 +35,9 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between">
                             <div>
-                                <h4>{{ $estadisticas['cantidad_pendiente'] }}</h4>
-                                <p class="mb-0">Deudas Pendientes</p>
+                                <h4>{{ $estadisticas['clientes_pendiente'] }}</h4>
+                                <p class="mb-0">Clientes con Deuda
+                                    <small>({{ $estadisticas['cantidad_pendiente'] }} comprobantes)</small></p>
                             </div>
                             <div class="align-self-center">
                                 <i class="fa fa-list fa-2x"></i>
@@ -51,7 +52,8 @@
                         <div class="d-flex justify-content-between">
                             <div>
                                 <h4>{{ $estadisticas['vencidas'] }}</h4>
-                                <p class="mb-0">Deudas Vencidas</p>
+                                <p class="mb-0">Comprobantes Vencidos
+                                    <small>({{ $estadisticas['clientes_vencidos'] }} clientes)</small></p>
                             </div>
                             <div class="align-self-center">
                                 <i class="fa fa-exclamation-triangle fa-2x"></i>
@@ -119,6 +121,9 @@
                                 </button>
                                 <a href="{{ route('deudas.index') }}" class="btn btn-secondary">
                                     <i class="fa fa-times"></i> Limpiar
+                                </a>
+                                <a href="{{ route('deudas.exportar', request()->query()) }}" class="btn btn-success">
+                                    <i class="fa fa-file-excel"></i> Exportar Excel
                                 </a>
                             </div>
                         </div>

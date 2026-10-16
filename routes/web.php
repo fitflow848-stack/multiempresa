@@ -107,6 +107,7 @@ Route::middleware(['auth', 'company.scope', 'branch.selected'])->group(function 
     Route::prefix('deudas')->name('deudas.')->middleware('can:deudas.ver')->group(function () {
         Route::get('/', [DeudaController::class, 'index'])->name('index');
         Route::get('/cliente/{id}', [DeudaController::class, 'deudasPorCliente'])->name('cliente');
+        Route::get('/exportar', [DeudaController::class, 'exportar'])->name('exportar');
         Route::get('/{deuda}', [DeudaController::class, 'show'])->name('show');
         Route::get('/{deuda}/historial', [DeudaController::class, 'historial'])->name('historial'); // Nueva ruta
         Route::post('/pagar-acumulado', [DeudaController::class, 'aplicarPagoAcumulado'])->name('pagar-acumulado')->middleware('can:deudas.pagar');

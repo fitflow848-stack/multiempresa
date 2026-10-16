@@ -77,8 +77,12 @@ class Deuda extends Model
 
     public function scopeVencidas($query)
     {
-        return $query->where('estado', self::ESTADO_VENCIDA)
-            ->orWhere('fecha_vencimiento', '<', now());
+        return $query->where('estado', '!=', self::ESTADO_PAGADA)
+            ->where('monto_deuda', '>', 0)
+            ->where(function ($q) {
+                $q->where('estado', self::ESTADO_VENCIDA)
+                    ->orWhere('fecha_vencimiento', '<', now());
+            });
     }
 
     // Métodos auxiliares

@@ -119,19 +119,92 @@ class DeudaController extends Controller
             ]);
         }
 
-        // Estadísticas rápidas (Empresa-wide por defecto si no se filtra)
-        $statsQuery = Deuda::query();
-        if ($request->has('sucursal_id') && !empty($request->sucursal_id)) {
-            $statsQuery->where('sucursal_id', $request->sucursal_id);
-        }
+        // Estadísticas: con los mismos filtros que la lista (estado, sucursal, fechas y búsqueda)
+        $statsQuery = $this->deudasFiltradas($request);
 
+        $vencidasQuery = (clone $statsQuery)->vencidas();
         $estadisticas = [
-            'total_pendiente' => (clone $statsQuery)->pendientes()->sum('monto_deuda'),
-            'cantidad_pendiente' => (clone $statsQuery)->pendientes()->count(),
-            'vencidas' => (clone $statsQuery)->vencidas()->count(),
+            'total_pendiente' => (clone $statsQuery)->sum('monto_deuda'),
+            'cantidad_pendiente' => (clone $statsQuery)->count(),
+            'clientes_pendiente' => (clone $statsQuery)->distinct('cliente_id')->count('cliente_id'),
+            'vencidas' => (clone $vencidasQuery)->count(),
+            'clientes_vencidos' => (clone $vencidasQuery)->distinct('cliente_id')->count('cliente_id'),
         ];
 
         return view('deudas.index', compact('clientes', 'estadisticas', 'sucursales'));
+    }
+
+    /**
+     * Deudas que cumplen los filtros de la pantalla (estado, sucursal, fechas y búsqueda de cliente).
+     * Por defecto solo deudas no pagadas y con saldo.
+     */
+    private function deudasFiltradas(Request $request)
+    {
+        $query = Deuda::query();
+
+        if ($request->filled('estado')) {
+            $query->where('estado', $request->estado);
+        } elseif (!$request->has('mostrar_todas')) {
+            $query->where('estado', '!=', Deuda::ESTADO_PAGADA)->where('monto_deuda', '>', 0);
+        }
+
+        if ($request->filled('sucursal_id')) {
+            $query->where('sucursal_id', $request->sucursal_id);
+        }
+        if ($request->fecha_desde) {
+            $query->where('fecha_venta', '>=', $request->fecha_desde);
+        }
+        if ($request->fecha_hasta) {
+            $query->where('fecha_venta', '<=', $request->fecha_hasta);
+        }
+        if ($request->filled('search')) {
+            $query->whereHas('cliente', function ($q) use ($request) {
+                $q->where('nombre', 'like', '%' . $request->search . '%')
+                    ->orWhere('numero_documento', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        return $query;
+    }
+
+    /**
+     * Exporta a Excel las deudas con los filtros de la pantalla (una fila por comprobante).
+     */
+    public function exportar(Request $request)
+    {
+        $filas = $this->deudasFiltradas($request)
+            ->with(['cliente', 'sucursal'])
+            ->orderBy('cliente_id')
+            ->orderBy('fecha_venta')
+            ->get()
+            ->map(function ($d) {
+                $venc = $d->fecha_vencimiento;
+                $atraso = ($venc && $d->estado !== Deuda::ESTADO_PAGADA && $venc->isPast()) ? $venc->diffInDays(now()) : 0;
+                return [
+                    $d->cliente->nombre ?? '-',
+                    $d->cliente->numero_documento ?? '-',
+                    $d->sucursal->nombre ?? '-',
+                    $d->numero_comprobante,
+                    optional($d->fecha_venta)->format('d/m/Y'),
+                    $venc ? $venc->format('d/m/Y') : '',
+                    round((float) $d->monto_total, 2),
+                    round((float) $d->monto_pagado, 2),
+                    round((float) $d->monto_deuda, 2),
+                    ucfirst($d->estado),
+                    $atraso,
+                ];
+            });
+
+        $export = new class($filas) implements \Maatwebsite\Excel\Concerns\FromCollection, \Maatwebsite\Excel\Concerns\WithHeadings, \Maatwebsite\Excel\Concerns\ShouldAutoSize {
+            public function __construct(private $filas) {}
+            public function collection() { return $this->filas; }
+            public function headings(): array
+            {
+                return ['CLIENTE', 'DOCUMENTO', 'SUCURSAL', 'COMPROBANTE', 'FECHA VENTA', 'VENCIMIENTO', 'TOTAL', 'PAGADO', 'SALDO', 'ESTADO', 'DIAS DE ATRASO'];
+            }
+        };
+
+        return \Maatwebsite\Excel\Facades\Excel::download($export, 'deudas_' . date('Ymd_His') . '.xlsx');
     }
 
     public function deudasPorCliente(Request $request, $id)
