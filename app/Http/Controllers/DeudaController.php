@@ -30,15 +30,14 @@ class DeudaController extends Controller
         
         // Filtro opcional por sucursal (si se desea mantener el comportamiento por defecto de la sesión)
         // Pero el reporte muestra todo por defecto si no se filtra local.
-        if ($request->has('sucursal_id') && !empty($request->sucursal_id)) {
-            $query->where('sucursal_id', $request->sucursal_id);
-        }
+        // La sucursal se filtra por las DEUDAS (más abajo), no por la sucursal propia del cliente,
+        // que casi siempre está vacía y dejaba la lista casi vacía al filtrar.
 
         $query->whereHas('deudas', function ($q) use ($request) {
                 if ($request->has('estado') && !empty($request->estado)) {
                     $q->where('estado', $request->estado);
                 } elseif (!$request->has('mostrar_todas')) {
-                    $q->where('estado', '!=', Deuda::ESTADO_PAGADA);
+                    $q->where('estado', '!=', Deuda::ESTADO_PAGADA)->where('monto_deuda', '>', 0);
                 }
                 
                 if ($request->has('sucursal_id') && !empty($request->sucursal_id)) {
@@ -55,7 +54,7 @@ class DeudaController extends Controller
                     if ($request->has('estado') && !empty($request->estado)) {
                         $q->where('estado', $request->estado);
                     } elseif (!$request->has('mostrar_todas')) {
-                        $q->where('estado', '!=', Deuda::ESTADO_PAGADA);
+                        $q->where('estado', '!=', Deuda::ESTADO_PAGADA)->where('monto_deuda', '>', 0);
                     }
                     if ($request->has('sucursal_id') && !empty($request->sucursal_id)) {
                         $q->where('sucursal_id', $request->sucursal_id);
@@ -71,7 +70,7 @@ class DeudaController extends Controller
                     if ($request->has('estado') && !empty($request->estado)) {
                         $q->where('estado', $request->estado);
                     } elseif (!$request->has('mostrar_todas')) {
-                        $q->where('estado', '!=', Deuda::ESTADO_PAGADA);
+                        $q->where('estado', '!=', Deuda::ESTADO_PAGADA)->where('monto_deuda', '>', 0);
                     }
                     if ($request->has('sucursal_id') && !empty($request->sucursal_id)) {
                         $q->where('sucursal_id', $request->sucursal_id);
@@ -87,7 +86,7 @@ class DeudaController extends Controller
                     if ($request->has('estado') && !empty($request->estado)) {
                         $q->where('estado', $request->estado);
                     } elseif (!$request->has('mostrar_todas')) {
-                        $q->where('estado', '!=', Deuda::ESTADO_PAGADA);
+                        $q->where('estado', '!=', Deuda::ESTADO_PAGADA)->where('monto_deuda', '>', 0);
                     }
                     if ($request->has('sucursal_id') && !empty($request->sucursal_id)) {
                         $q->where('sucursal_id', $request->sucursal_id);
