@@ -78,12 +78,24 @@ class CierreCaja extends Model
                 CONCAT( v.serie, ' ', v.numero ) AS concepto,
                 COALESCE(tp_pago.nombre, tp_main.nombre) AS metodo_pago,
                 COALESCE(tp_pago.es_efectivo, tp_main.es_efectivo) AS es_efectivo,
-                COALESCE(vp.monto, 
+                CASE WHEN v.estado = 0 AND EXISTS (
+                        SELECT 1 FROM operaciones_caja oa
+                        WHERE oa.cierre_caja_id = v.cierre_caja_id
+                          AND oa.partida IN ('Anulación con Nota de Crédito', 'Anulación Interna')
+                          AND oa.concepto LIKE CONCAT('%[', v.serie, '-', v.numero, ']%')
+                    )
+                    THEN (
+                        SELECT COALESCE(SUM(oa2.importe), 0) FROM operaciones_caja oa2
+                        WHERE oa2.cierre_caja_id = v.cierre_caja_id
+                          AND oa2.partida IN ('Anulación con Nota de Crédito', 'Anulación Interna')
+                          AND oa2.concepto LIKE CONCAT('%[', v.serie, '-', v.numero, ']%')
+                    )
+                    ELSE COALESCE(vp.monto,
                     CASE 
                         WHEN d.id IS NULL THEN v.total
                         ELSE (v.total - (d.monto_deuda + COALESCE((SELECT SUM(monto) FROM deuda_pagos WHERE deuda_id = d.id), 0)))
                     END
-                ) AS importe,
+                    ) END AS importe,
                 u.name AS usuario,
                 v.id_venta AS id_movimiento,
                 'venta' AS origen_movimiento
@@ -97,7 +109,20 @@ class CierreCaja extends Model
                     LEFT JOIN tipos_pagos tp_pago ON tp_pago.id = vp.tipo_pago_id
                 WHERE
                     v.cierre_caja_id = :cierre_id AND v.id_tido != 5
-                    AND (v.estado != 0 OR v.enviado_sunat = 1 OR (:is_closed = 1 AND v.updated_at > :fecha_cierre))
+                    AND (
+                        v.estado != 0
+                        OR (
+                            v.estado = 0
+                            AND EXISTS (
+                                SELECT 1 FROM operaciones_caja oa3
+                                WHERE oa3.cierre_caja_id = v.cierre_caja_id
+                                  AND oa3.partida IN ('Anulación con Nota de Crédito', 'Anulación Interna')
+                                  AND oa3.concepto LIKE CONCAT('%[', v.serie, '-', v.numero, ']%')
+                            )
+                            AND (vp.id IS NULL OR vp.id = (SELECT MIN(vp2.id) FROM venta_pagos vp2 WHERE vp2.venta_id = v.id_venta))
+                        )
+                        OR (:is_closed = 1 AND v.updated_at > :fecha_cierre)
+                    )
                 ) UNION
                 (
                 SELECT

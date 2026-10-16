@@ -404,6 +404,25 @@ class ComprobantesController extends Controller
                 }
                 }
 
+                // Anulación interna (sin nota de crédito) en la misma caja: se deja la salida de dinero visible.
+                // La venta anulada sigue apareciendo como ingreso y esta salida la compensa (neto en cero).
+                if ($montoADescontar > 0 && !$anulaConNC && $cajaActual && $cajaActual->id == $venta->cierre_caja_id) {
+                    \App\Models\OperacionCaja::create([
+                        'company_id' => $user->company_id,
+                        'sucursal_id' => $user->branch_id,
+                        'cierre_caja_id' => $cajaActual->id,
+                        'user_id' => Auth::id(),
+                        'tipo' => 'sustraccion',
+                        'partida' => 'Anulación Interna',
+                        'concepto' => mb_substr('Anulación de ' . $venta->tipo_documento . ' [' . $venta->serie . '-' . $venta->numero . '] (no enviado a SUNAT, sin nota de crédito)', 0, 250),
+                        'importe' => $montoADescontar,
+                        'metodo_pago' => $venta->tipoPago->nombre ?? 'Efectivo',
+                        'es_efectivo' => $venta->tipoPago->es_efectivo ?? true
+                    ]);
+                    $cajaActual->sustracciones = floatval($cajaActual->sustracciones) + floatval($montoADescontar);
+                    $cajaActual->save();
+                }
+
                 // 2.2 Revertir movimientos bancarios asociados a la venta
                 $movimientosBanco = \App\Models\BancoMovimiento::where('id_venta', $venta->id_venta)->get();
                 foreach ($movimientosBanco as $movBanco) {
@@ -563,7 +582,7 @@ class ComprobantesController extends Controller
                                 'tipo' => 'sustraccion',
                                 'partida' => 'Anulación con Nota de Crédito',
                                 'concepto' => mb_substr(
-                                    'Anulación de ' . $venta->tipo_documento . ' ' . $venta->serie . '-' . $venta->numero
+                                    'Anulación de ' . $venta->tipo_documento . ' [' . $venta->serie . '-' . $venta->numero . ']'
                                     . ' con NC ' . $nc->serie . '-' . $nc->numero . ' (' . $motivosNC[$motivoNC] . ': ' . $descripcionNC . ')',
                                     0, 250
                                 ),
