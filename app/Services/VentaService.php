@@ -320,7 +320,11 @@ class VentaService
                     }
                 }
 
-                if (!empty($marca) && $marca !== '-' && !str_contains($marca, 'Sin marca')) {
+                // La marca se agrega una sola vez: cuando el ticket viene de una venta anulada que se retoma,
+                // el nombre ya trae " / marca" al final y volver a sumarla la duplicaba en cada ciclo.
+                $nombreServicio = $this->quitarMarcasRepetidas($nombreServicio);
+                if (!empty($marca) && $marca !== '-' && !str_contains($marca, 'Sin marca')
+                    && !str_ends_with(rtrim($nombreServicio), " / {$marca}")) {
                     $nombreServicio .= " / {$marca}";
                 }
 
@@ -464,6 +468,18 @@ class VentaService
             ->first();
 
         return $ultimaVenta ? (intval($ultimaVenta->numero) + 1) : 1;
+    }
+
+    /**
+     * Quita los segmentos finales repetidos del nombre ("... / Balantech / Balantech" -> "... / Balantech").
+     */
+    private function quitarMarcasRepetidas(string $nombre): string
+    {
+        $partes = array_map('trim', explode(' / ', $nombre));
+        while (count($partes) > 1 && $partes[count($partes) - 1] === $partes[count($partes) - 2]) {
+            array_pop($partes);
+        }
+        return implode(' / ', $partes);
     }
 
     /**
