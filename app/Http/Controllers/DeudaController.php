@@ -109,7 +109,16 @@ class DeudaController extends Controller
         }
 
         $clientes = $query->orderByDesc('deudas_sum_monto_deuda')
-            ->paginate(50);
+            ->orderBy('id')   // desempate estable para que la paginación no repita ni omita clientes
+            ->paginate(30);
+
+        // Carga infinita: las páginas siguientes se piden como fragmento HTML
+        if ($request->ajax() || $request->boolean('partial')) {
+            return response()->json([
+                'html' => view('deudas._filas', compact('clientes'))->render(),
+                'next' => $clientes->appends($request->except('page', 'partial'))->nextPageUrl(),
+            ]);
+        }
 
         // Estadísticas rápidas (Empresa-wide por defecto si no se filtra)
         $statsQuery = Deuda::query();
