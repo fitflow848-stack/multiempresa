@@ -74,7 +74,7 @@ class PdfVentaService
             2 => 'Factura Electrónica',
             3 => 'Nota de Venta',
             4 => 'Ticket',
-            5 => 'Nota de Credito',
+            5 => 'Nota de Crédito Electrónica',
             default => 'Boleta de Venta Electrónica',
         };
 

@@ -112,7 +112,7 @@
 
         <div class="documento-caja bold">
             @if(isset($venta->serie))
-                {{ $venta->tipo_documento ?? 'TICKET' }}<br>
+                {{ ($venta->id_tido ?? null) == 5 ? 'Nota de Crédito Electrónica' : ($venta->tipo_documento ?? 'TICKET') }}<br>
                 {{ $venta->serie }}-{{ str_pad($venta->numero, 8, '0', STR_PAD_LEFT) }}
             @else
                 {{ 'COTIZACIÓN' }}<br>
@@ -146,6 +146,16 @@
         <tr>
             <td class="bold">Fecha V.:</td>
             <td>{{ $venta->fecha_vencimiento->format('d/m/Y') }}</td>
+        </tr>
+        @endif
+        @if(($venta->id_tido ?? null) == 5 && preg_match('/^NC de (\S+): (.+)$/u', $venta->observacion ?? '', $ncRef))
+        <tr>
+            <td class="bold">Modifica:</td>
+            <td>{{ $ncRef[1] }}</td>
+        </tr>
+        <tr>
+            <td class="bold">Motivo:</td>
+            <td>{{ $ncRef[2] }}</td>
         </tr>
         @endif
         <tr>
@@ -301,7 +311,7 @@
     @endif
 
     <div class="center small">
-        Representación impresa de la {{ $venta->tipo_documento ?? 'COTIZACIÓN' }}<br>
+        Representación impresa de la {{ ($venta->id_tido ?? null) == 5 ? 'Nota de Crédito Electrónica' : ($venta->tipo_documento ?? 'COTIZACIÓN') }}<br>
         Consulte en: <strong>{{ $empresa->website ?? 'www.tuempresa.com' }}</strong>
     </div>
 
