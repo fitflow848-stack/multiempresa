@@ -212,15 +212,9 @@
                 );
             }
 
-            // 4. CONVERSIÓN A PORCENTAJE (Por detrás)
-            // Fórmula: (Monto Descuento / Subtotal) * 100
-            const porcentajeCalculado = (montoIngresado / subtotal) * 100;
-
-            // 5. APLICAR
-            // Guardamos el texto como porcentaje para que el resto de tu sistema lo procese
-            const descuentoTexto = `${porcentajeCalculado.toFixed(2)}%`;
-
-            actualizarDescuento(idx, descuentoTexto, true); // skipValidation: ya validado arriba
+            // 5. APLICAR como monto fijo exacto. Antes se convertía a porcentaje redondeado a 2 decimales
+            // y el descuento salía en fracciones (S/ 1 en un producto de 187 pasaba a 0.99).
+            actualizarDescuento(idx, `S/${montoIngresado.toFixed(2)}`, true); // skipValidation: ya validado arriba
 
         } catch (e) {
             console.error(e);
