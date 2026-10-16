@@ -362,6 +362,14 @@ class ComprobantesController extends Controller
                     }
                 }
 
+                // Si el comprobante ya fue aceptado por SUNAT, se anula con nota de crédito: la salida de dinero
+                // se registra más abajo, con el detalle de esa nota (en la misma caja o en otra).
+                $cajaActual = null;
+                $anulaConNC = in_array($venta->id_tido, [1, 2]) && (
+                    ((int) $venta->enviado_sunat === 1)
+                    || $venta->ventaSunat()->whereNotNull('cdr_path')->exists()
+                );
+
                 if ($montoADescontar > 0) {
                     // Buscar caja para registrar la salida
                     $cajaActual = getSelectedCaja();
@@ -374,7 +382,7 @@ class ComprobantesController extends Controller
                             throw new \Exception("La venta {$venta->serie}-{$venta->numero} requiere una devolución de dinero, pero no tienes una caja específicamente seleccionada. Por favor, seleccione una caja desde el menú lateral antes de continuar.");
                         }
 
-                        if ($cajaActual) {
+                        if ($cajaActual && !$anulaConNC) {
                         // Registrar como operación de caja para que sea visible
                         \App\Models\OperacionCaja::create([
                             'company_id' => $user->company_id,
@@ -544,6 +552,29 @@ class ComprobantesController extends Controller
                         }
 
                         $ncsGenerated++;
+
+                        // Salida de dinero en caja con el detalle de la nota de crédito (misma caja u otra)
+                        if ($montoADescontar > 0 && $cajaActual) {
+                            \App\Models\OperacionCaja::create([
+                                'company_id' => $user->company_id,
+                                'sucursal_id' => $user->branch_id,
+                                'cierre_caja_id' => $cajaActual->id,
+                                'user_id' => Auth::id(),
+                                'tipo' => 'sustraccion',
+                                'partida' => 'Anulación con Nota de Crédito',
+                                'concepto' => mb_substr(
+                                    'Anulación de ' . $venta->tipo_documento . ' ' . $venta->serie . '-' . $venta->numero
+                                    . ' con NC ' . $nc->serie . '-' . $nc->numero . ' (' . $motivosNC[$motivoNC] . ': ' . $descripcionNC . ')',
+                                    0, 250
+                                ),
+                                'importe' => $montoADescontar,
+                                'metodo_pago' => $venta->tipoPago->nombre ?? 'Efectivo',
+                                'es_efectivo' => $venta->tipoPago->es_efectivo ?? true
+                            ]);
+
+                            $cajaActual->sustracciones = floatval($cajaActual->sustracciones) + floatval($montoADescontar);
+                            $cajaActual->save();
+                        }
                     } else {
                         \Illuminate\Support\Facades\Log::error("Error generating NC for sale {$venta->id_venta}: " . $responseGenerar);
                         throw new \Exception("Error generando Nota de Crédito: " . ($dataGenerar->mensaje ?? 'Respuesta inválida de API'));
