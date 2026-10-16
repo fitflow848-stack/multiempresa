@@ -468,7 +468,8 @@ class VentaService
 
     /**
      * Número libre más bajo de la serie: el de un comprobante anulado internamente (nunca enviado a SUNAT)
-     * que dejó un hueco por debajo del último emitido y que no fue ocupado por otro comprobante vigente.
+     * que dejó un hueco por debajo del último emitido, que no fue ocupado por otro comprobante vigente y que no tiene
+     * por delante ningún comprobante ya enviado a SUNAT.
      * Así la numeración no queda con saltos cuando se anula uno que no era el último.
      */
     private function primerNumeroLibre($companyDoc, $user): ?int
@@ -491,6 +492,16 @@ class VentaService
                     ->whereColumn('b.numero', 'a.numero')
                     ->where('b.sucursal', $companyDoc->branch_id)
                     ->where('b.estado', '!=', 0);
+            })
+            // Solo se reutiliza si ningún comprobante con número MAYOR ya fue enviado a SUNAT: enviar el hueco
+            // después de uno posterior dejaría a SUNAT con los correlativos fuera de orden.
+            ->whereNotExists(function ($q) use ($companyDoc) {
+                $q->select(DB::raw(1))
+                    ->from('ventas as c')
+                    ->whereColumn('c.serie', 'a.serie')
+                    ->where('c.sucursal', $companyDoc->branch_id)
+                    ->where('c.enviado_sunat', 1)
+                    ->whereRaw('CAST(c.numero AS UNSIGNED) > CAST(a.numero AS UNSIGNED)');
             })
             ->orderByRaw('CAST(a.numero AS UNSIGNED) ASC')
             ->value('a.numero');
