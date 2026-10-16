@@ -199,30 +199,35 @@ class SunatManager
         $fechaEnvio = now()->subDays(self::DIAS_ESPERA_ENVIO)->toDateString();       // emitidas hasta esta fecha
         $fechaMinima = now()->subDays(self::DIAS_MAX_REINTENTO)->toDateString();     // no más antiguas que esta
         
-        Venta::withoutGlobalScopes()
+        // Se envía en orden de serie y número (no por orden de registro): un número reutilizado, como el de un
+        // hueco por anulación interna, no debe llegar a SUNAT después de los que tienen un correlativo mayor.
+        $ventas = Venta::withoutGlobalScopes()
             ->where('enviado_sunat', 0)
             ->where('estado', 1)
             ->whereIn('id_tido', [1, 2]) // 1: Boleta, 2: Factura
             ->whereDate('fecha_emision', '<=', $fechaEnvio)
             ->whereDate('fecha_emision', '>=', $fechaMinima)
-            ->chunkById(10, function ($ventas) use (&$result) {
-                foreach ($ventas as $venta) {
-                    try {
-                        $this->enviarDocumento($venta);
-                        $result['processed'][] = $venta->id_venta;
-                        
-                        // Pausa de 1 segundo para evitar error 429
-                        sleep(1);
-                    } catch (\Throwable $e) {
-                        $this->logAttempt($venta, 'error', $e->getMessage());
-                        Log::error("Error procesando pendiente venta {$venta->id_venta}: " . $e->getMessage());
-                        $result['failed'][] = ['id' => $venta->id_venta, 'error' => $e->getMessage()];
-                        
-                        // También pausar en caso de error
-                        sleep(1);
-                    }
-                }
-            }, 'id_venta');
+            ->orderBy('serie')
+            ->orderByRaw('CAST(numero AS UNSIGNED) ASC')
+            ->orderBy('id_venta')
+            ->get();
+
+        foreach ($ventas as $venta) {
+            try {
+                $this->enviarDocumento($venta);
+                $result['processed'][] = $venta->id_venta;
+
+                // Pausa de 1 segundo para evitar error 429
+                sleep(1);
+            } catch (\Throwable $e) {
+                $this->logAttempt($venta, 'error', $e->getMessage());
+                Log::error("Error procesando pendiente venta {$venta->id_venta}: " . $e->getMessage());
+                $result['failed'][] = ['id' => $venta->id_venta, 'error' => $e->getMessage()];
+
+                // También pausar en caso de error
+                sleep(1);
+            }
+        }
 
         return $result;
     }
