@@ -457,7 +457,7 @@
                                                 </td>
                                                 <td class="text-end text-danger">
                                                     {{ number_format(max(0, $descuento), 2) }}</td>
-                                                <td class="text-end">{{ number_format($detalle->igv ?? 0, 3) }}</td>
+                                                <td class="text-end">{{ number_format($detalle->igv_linea ?? 0, 3) }}</td>
                                                 <td class="text-end">0.00</td>
                                                 <td class="text-end pe-3 fw-bold">S/
                                                     {{ number_format($detalle->importe ?? ($detalle->precio_total ?? 0), 2) }}
@@ -714,7 +714,7 @@
                                         const pvu = parseFloat(d.precio_unitario || 0);
                                         const importe = parseFloat(d.importe || d.precio_total || 0);
                                         const dscto = Math.max(0, (pvu * cantidad) - importe).toFixed(2);
-                                        const igv = parseFloat(d.igv || 0).toFixed(3);
+                                        const igv = parseFloat(d.igv_linea || 0).toFixed(3);
 
                                         html += `<tr>` +
                                             `<td class="ps-2 text-center text-muted">${index + 1}</td>` +

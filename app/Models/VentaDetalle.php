@@ -33,7 +33,7 @@ class VentaDetalle extends Model
         'costo_unitario' => 'decimal:4'
     ];
 
-    protected $appends = ['subtotal'];
+    protected $appends = ['subtotal', 'igv_linea'];
 
     /**
      * Alias para importe (usado en plantillas PDF que comparten lógica con Cotizaciones)
@@ -41,6 +41,26 @@ class VentaDetalle extends Model
     public function getSubtotalAttribute()
     {
         return $this->importe;
+    }
+
+    /**
+     * IGV de la línea para mostrarlo en pantalla (la tabla no guarda IGV por línea).
+     * Producto exonerado/inafecto o venta sin IGV: 0. Gravado: el precio incluye IGV (importe - importe / 1.18).
+     */
+    public function getIgvLineaAttribute()
+    {
+        $venta = $this->venta;
+        if (!$venta || (float) $venta->igv <= 0) {
+            return 0;
+        }
+
+        $tipo = strtolower((string) ($this->producto->tipo_impuesto ?? 'gravado'));
+        if (in_array($tipo, ['exonerado', 'inafecto', '20', '30'], true)) {
+            return 0;
+        }
+
+        $importe = (float) $this->importe;
+        return round($importe - ($importe / 1.18), 3);
     }
 
     /**
