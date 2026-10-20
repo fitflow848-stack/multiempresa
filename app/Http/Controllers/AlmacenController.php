@@ -1454,6 +1454,7 @@ class AlmacenController extends Controller
                 'marca_id' => $request->marca_id,
                 'unidad_medida_id' => $request->unidad_medida_id,
                 'tipo_impuesto' => $request->tipo_impuesto,
+                'transferencia_gratuita' => $request->boolean('transferencia_gratuita'),
                 'condicion_venta' => $request->condicion_venta,
                 'caracteristicas' => $caracteristicas,
                 'ficha_tecnica' => $request->input('ficha_tecnica', []),

@@ -41,6 +41,7 @@ class ProductRepository
             SELECT
                 p.id AS producto_id,
                 MAX(p.tipo_impuesto) as tipo_impuesto,
+                MAX(p.transferencia_gratuita) as transferencia_gratuita,
                 ad.producto_linea_id AS product_linea_id,
                 MIN(CASE WHEN ad.cantidad > 0 THEN ad.id ELSE NULL END) AS id,
                 CONCAT_WS(' / ', 
@@ -128,6 +129,7 @@ class ProductRepository
             SELECT
                 p.id AS producto_id,
                 MAX(p.tipo_impuesto) as tipo_impuesto,
+                MAX(p.transferencia_gratuita) as transferencia_gratuita,
                 ad.producto_linea_id AS product_linea_id,
                 MIN(CASE WHEN ad.cantidad > 0 THEN ad.id ELSE NULL END) AS id,
                 CONCAT_WS(' / ', 

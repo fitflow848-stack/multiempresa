@@ -305,6 +305,14 @@
                                                             <option value="exonerado" {{ (isset($productoClon) && $productoClon->tipo_impuesto == 'exonerado') ? 'selected' : '' }}>Exonerado</option>
                                                             <option value="inafecto" {{ (isset($productoClon) && $productoClon->tipo_impuesto == 'inafecto') ? 'selected' : '' }}>Inafecto</option>
                                                         </select>
+                                                        <div class="form-check mt-2">
+                                                            <input type="hidden" name="transferencia_gratuita" value="0">
+                                                            <input class="form-check-input" type="checkbox" name="transferencia_gratuita" value="1" id="chk-transferencia-gratuita"
+                                                                {{ (isset($productoClon) && $productoClon->transferencia_gratuita) ? 'checked' : '' }}>
+                                                            <label class="form-check-label small" for="chk-transferencia-gratuita">
+                                                                Transferencia gratuita (regalo): se vende a S/ 0.00 y se declara a SUNAT con su valor referencial
+                                                            </label>
+                                                        </div>
                                                     </div>
                                                     <div class="col-md-6">
                                                         <label class="form-label">Condición de Venta</label>

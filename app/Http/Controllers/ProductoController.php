@@ -228,6 +228,7 @@ class ProductoController extends Controller
                 'marca_id' => $request->input('marca_id'),
                 'unidad_medida_id' => $request->input('unidad_medida_id'),
                 'tipo_impuesto' => $request->input('tipo_impuesto'),
+                'transferencia_gratuita' => $request->boolean('transferencia_gratuita'),
                 'condicion_venta' => $request->input('condicion_venta'),
                 // Campos booleanos
                 'opciones_avanzadas' => $request->boolean('opciones_avanzadas'),

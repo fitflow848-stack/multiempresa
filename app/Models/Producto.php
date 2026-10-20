@@ -16,6 +16,7 @@ class Producto extends Model
     protected $table = 'productos';
 
     protected $fillable = [
+        'transferencia_gratuita',
         'id_empresa',
         'nombre',
         'laboratorio',
@@ -56,6 +57,7 @@ class Producto extends Model
     ];
 
     protected $casts = [
+        'transferencia_gratuita' => 'boolean',
         'opciones_avanzadas' => 'boolean',
         'attr_numero_serie' => 'boolean',
         'attr_fecha_vencimiento' => 'boolean',

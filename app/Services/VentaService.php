@@ -59,6 +59,9 @@ class VentaService
         $proforma = $meta['proforma'] ?? 0;
         $exonerarIgv = (bool) ($meta['exonerar_igv'] ?? false);
         $tasaIgv = (float) ($meta['tasa_igv'] ?? 18);
+        if (!in_array($tasaIgv, array_map('floatval', config('ventas.tasas_igv', [18])), true)) {
+            $tasaIgv = 18.0; // solo se aceptan las tasas permitidas
+        }
 
         // Decodificar ticket y cliente si vienen como strings (mantenemos la lógica de manejo de comillas extra)
         $ticket = $this->decodePossibleEscapedJson($ticketRaw);
@@ -71,6 +74,8 @@ class VentaService
         if (empty($ticket)) {
             throw new Exception('El ticket no puede estar vacío');
         }
+
+        $ticket = $this->aplicarTransferenciaGratuita($ticket);
 
         DB::beginTransaction();
         Log::info('VentaService: Iniciando creación de venta', [
@@ -487,6 +492,41 @@ class VentaService
     /**
      * Quita los segmentos finales repetidos del nombre ("... / Balantech / Balantech" -> "... / Balantech").
      */
+    /**
+     * Productos marcados como transferencia gratuita (regalo): se venden a S/ 0.00 y conservan su valor
+     * referencial (el PVP) para declararlos a SUNAT. Lo decide el servidor, no la pantalla.
+     */
+    private function aplicarTransferenciaGratuita(array $ticket): array
+    {
+        $ids = collect($ticket)->map(fn($i) => $i['producto_id'] ?? ($i['id'] ?? null))->filter()->unique()->values();
+        if ($ids->isEmpty()) {
+            return $ticket;
+        }
+
+        $gratuitos = \App\Models\Producto::whereIn('id', $ids)->where('transferencia_gratuita', true)->pluck('pvp', 'id');
+        if ($gratuitos->isEmpty()) {
+            return $ticket;
+        }
+
+        foreach ($ticket as $k => $item) {
+            $id = $item['producto_id'] ?? ($item['id'] ?? null);
+            if ($id && $gratuitos->has($id)) {
+                $referencial = (float) ($item['precio_referencial'] ?? 0);
+                if ($referencial <= 0) {
+                    $referencial = (float) ($item['pvp'] ?? 0);
+                }
+                if ($referencial <= 0) {
+                    $referencial = (float) $gratuitos[$id];
+                }
+                $ticket[$k]['precio_referencial'] = $referencial;
+                $ticket[$k]['precio'] = 0;
+                $ticket[$k]['importe'] = 0;
+            }
+        }
+
+        return $ticket;
+    }
+
     private function quitarMarcasRepetidas(string $nombre): string
     {
         $partes = array_map('trim', explode(' / ', $nombre));

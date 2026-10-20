@@ -180,8 +180,11 @@
                     <label class="form-check-label small fw-semibold" for="emitir-editar-tasa-igv">Modificar tasa de IGV</label>
                 </div>
                 <div class="input-group input-group-sm">
-                    <input type="number" class="form-control" id="emitir-tasa-igv" value="18" min="0" max="100"
-                        step="0.01" disabled oninput="actualizarResumenIgv()">
+                    <select class="form-select" id="emitir-tasa-igv" disabled onchange="actualizarResumenIgv()">
+                        @foreach (config('ventas.tasas_igv', [18]) as $tasaOpcion)
+                            <option value="{{ $tasaOpcion }}" {{ (float) $tasaOpcion === 18.0 ? 'selected' : '' }}>{{ $tasaOpcion }}</option>
+                        @endforeach
+                    </select>
                     <span class="input-group-text">%</span>
                 </div>
                 <div class="small text-muted mt-2" id="emitir-resumen-igv"></div>

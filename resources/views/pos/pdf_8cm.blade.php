@@ -229,6 +229,20 @@
             $baseGravada = ($venta->igv ?? 0) > 0 ? $totGravado - $venta->igv : $totGravado;
             $descuentoTotal = ($venta->descuento_monto ?? 0) > 0 ? $venta->descuento_monto : $totDescItems;
         @endphp
+        @php
+            $totGratuitas = 0;
+            foreach ($venta->detalles ?? [] as $dg) {
+                if ((float) $dg->importe <= 0 && (float) ($dg->precio_referencial ?? 0) > 0) {
+                    $totGratuitas += (float) $dg->precio_referencial * (float) $dg->cantidad;
+                }
+            }
+        @endphp
+        @if ($totGratuitas > 0)
+        <tr>
+            <td class="text-right">Total Op. Gratuitas:</td>
+            <td class="text-right">S/ {{ number_format($totGratuitas, 2) }}</td>
+        </tr>
+        @endif
         <tr>
             <td class="text-right">Total Descuento:</td>
             <td class="text-right">S/ {{ number_format($descuentoTotal, 2) }}</td>

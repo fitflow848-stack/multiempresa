@@ -281,6 +281,21 @@
                     <td align="right">S/</td>
                     <td align="right">{{ number_format($totExonerado, 2) }}</td>
                 </tr>
+                @php
+                    $totGratuitas = 0;
+                    foreach ($venta->detalles ?? [] as $dg) {
+                        if ((float) $dg->importe <= 0 && (float) ($dg->precio_referencial ?? 0) > 0) {
+                            $totGratuitas += (float) $dg->precio_referencial * (float) $dg->cantidad;
+                        }
+                    }
+                @endphp
+                @if ($totGratuitas > 0)
+                <tr>
+                    <td>Total Op. Gratuitas</td>
+                    <td align="right">S/</td>
+                    <td align="right">{{ number_format($totGratuitas, 2) }}</td>
+                </tr>
+                @endif
                 <tr>
                     <td>IGV</td>
                     <td align="right">S/</td>

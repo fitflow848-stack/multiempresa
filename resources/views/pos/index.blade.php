@@ -227,8 +227,11 @@
                 <label class="form-check-label" for="pos-editar-tasa-igv">Modificar tasa de IGV</label>
             </div>
             <div class="input-group input-group-sm">
-                <input type="number" id="pos-tasa-igv" class="form-control" value="18" min="0" max="100"
-                    step="0.01" disabled oninput="renderTicket()">
+                <select id="pos-tasa-igv" class="form-select" disabled onchange="renderTicket()">
+                    @foreach (config('ventas.tasas_igv', [18]) as $tasaOpcion)
+                        <option value="{{ $tasaOpcion }}" {{ (float) $tasaOpcion === 18.0 ? 'selected' : '' }}>{{ $tasaOpcion }}</option>
+                    @endforeach
+                </select>
                 <span class="input-group-text">%</span>
             </div>
         </div>
@@ -707,6 +710,7 @@
                 importe: parseFloat(p.pvp || 0),
                 cantidad_disponible: parseFloat(p.cantidad_total || 0),
                 tipo_impuesto: p.tipo_impuesto,
+                transferencia_gratuita: p.transferencia_gratuita || 0,
                 imagen_principal: p.imagen_principal || '',
                 almacen_detalle_id: p.id
             };
@@ -999,6 +1003,7 @@
                     importe: parseFloat(p.pvp || 0),
                     cantidad_disponible: parseFloat(p.cantidad_total || 0),
                     tipo_impuesto: p.tipo_impuesto,
+                    transferencia_gratuita: p.transferencia_gratuita || 0,
                     imagen_principal: p.imagen_principal || '',
                     almacen_detalle_id: p.id // Usar el ID de lote directo del resultado
                 };
@@ -1520,6 +1525,7 @@
             id: `corp_${currentProduct.producto_id}_${Date.now()}`,
             producto_id: currentProduct.producto_id,
             tipo_impuesto: currentProduct.tipo_impuesto || 'gravado',
+            transferencia_gratuita: currentProduct.transferencia_gratuita || 0,
             producto_linea_id: currentProduct.product_linea_id || currentProduct.producto_linea_id || null,
             nombre: currentProduct.nombre + ' (Precio Corp.)',
             marca: currentProduct.marca || '',
@@ -1642,6 +1648,7 @@
             id: `pub_${currentProduct.producto_id}_${Date.now()}`,
             producto_id: currentProduct.producto_id,
             tipo_impuesto: currentProduct.tipo_impuesto || 'gravado',
+            transferencia_gratuita: currentProduct.transferencia_gratuita || 0,
             producto_linea_id: currentProduct.product_linea_id || currentProduct.producto_linea_id || null,
             nombre: currentProduct.nombre,
             marca: currentProduct.marca || '',
@@ -2165,6 +2172,7 @@
             id: `prod_${producto.producto_id}`,
             producto_id: producto.producto_id,
             tipo_impuesto: producto.tipo_impuesto || 'gravado',
+            transferencia_gratuita: producto.transferencia_gratuita || 0,
             nombre: producto.nombre,
             cantidad_disponible: producto.cantidad_total,
             precio: parseFloat(producto.pvp),
@@ -2245,6 +2253,7 @@
                     id: `pub_${p.producto_id}_${Date.now()}`,
                     producto_id: p.producto_id,
                     tipo_impuesto: p.tipo_impuesto || 'gravado',
+                    transferencia_gratuita: p.transferencia_gratuita || 0,
                     producto_linea_id: p.product_linea_id || p.producto_linea_id || null,
                     nombre: p.nombre,
                     marca: p.marca || '',
@@ -2417,6 +2426,16 @@
 
             // Siempre recalcular importe con el precio final (puede ser docena)
             nuevoProducto.importe = parseFloat((qtyToAdd * nuevoProducto.precio).toFixed(2));
+
+            // Transferencia gratuita (regalo): se muestra a S/ 0.00 y conserva su valor referencial para SUNAT
+            if (parseInt(nuevoProducto.transferencia_gratuita) === 1) {
+                nuevoProducto.precio_referencial = parseFloat(nuevoProducto.precio_referencial || nuevoProducto.pvp || nuevoProducto.precio) || 0;
+                nuevoProducto.precio = 0;
+                nuevoProducto.importe = 0;
+                nuevoProducto.descuento = 0;
+                nuevoProducto.descuentoFijo = 0;
+                nuevoProducto.descuentoTexto = '0%';
+            }
 
             ticket.push(nuevoProducto);
         }
