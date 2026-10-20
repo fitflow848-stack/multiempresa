@@ -29,9 +29,15 @@
                     $signo = $esNC ? -1 : 1;
                     $igvValue = $venta->igv ?? 0;
                     $subtotal = $venta->total - $igvValue;
-                    $netoSubtotal += $signo * $subtotal;
-                    $netoIgv += $signo * $igvValue;
-                    $netoTotal += $signo * $venta->total;
+                    // Anulado con comunicado de baja (aceptado o en trámite): SUNAT ya no lo considera y no hay nota de
+                    // crédito que lo reste, por eso no suma en el total neto.
+                    $obs = (string) ($venta->observacion ?? '');
+                    $porBaja = $venta->estado == 0 && str_contains($obs, 'COMUNICADO DE BAJA') && !str_contains($obs, 'BAJA RECHAZADA');
+                    if (!$porBaja) {
+                        $netoSubtotal += $signo * $subtotal;
+                        $netoIgv += $signo * $igvValue;
+                        $netoTotal += $signo * $venta->total;
+                    }
                 @endphp
                 <tr>
                     <td>{{ $venta->fecha_emision ? $venta->fecha_emision->format('d/m/Y H:i') : '' }}</td>
@@ -54,6 +60,8 @@
                             <span class="badge bg-secondary" style="font-size: 0.7rem;">NOTA DE CRÉDITO</span>
                         @elseif ($venta->estado == '1')
                             <span class="badge bg-success" style="font-size: 0.7rem;">OK</span>
+                        @elseif ($porBaja)
+                            <span class="badge bg-danger" style="font-size: 0.7rem;">ANULADO (BAJA SUNAT)</span>
                         @else
                             <span class="badge bg-danger" style="font-size: 0.7rem;">ANULADO</span>
                         @endif
@@ -70,7 +78,7 @@
         @if (count($resultados) > 0)
             <tfoot class="table-dark">
                 <tr>
-                    <th colspan="4" class="text-end">TOTAL NETO (las notas de crédito restan):</th>
+                    <th colspan="4" class="text-end">TOTAL NETO (notas de crédito restan; anulados por baja no cuentan):</th>
                     <th class="text-end">{{ number_format($netoSubtotal, 2) }}</th>
                     <th class="text-end">{{ number_format($netoIgv, 2) }}</th>
                     <th class="text-end">{{ number_format($netoTotal, 2) }}</th>

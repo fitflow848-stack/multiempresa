@@ -81,13 +81,13 @@ class CierreCaja extends Model
                 CASE WHEN v.estado = 0 AND EXISTS (
                         SELECT 1 FROM operaciones_caja oa
                         WHERE oa.cierre_caja_id = v.cierre_caja_id
-                          AND oa.partida IN ('Anulación con Nota de Crédito', 'Anulación Interna')
+                          AND oa.partida IN ('Anulación con Nota de Crédito', 'Anulación Interna', 'Comunicado de Baja')
                           AND oa.concepto LIKE CONCAT('%[', v.serie, '-', v.numero, ']%')
                     )
                     THEN (
                         SELECT COALESCE(SUM(oa2.importe), 0) FROM operaciones_caja oa2
                         WHERE oa2.cierre_caja_id = v.cierre_caja_id
-                          AND oa2.partida IN ('Anulación con Nota de Crédito', 'Anulación Interna')
+                          AND oa2.partida IN ('Anulación con Nota de Crédito', 'Anulación Interna', 'Comunicado de Baja')
                           AND oa2.concepto LIKE CONCAT('%[', v.serie, '-', v.numero, ']%')
                     )
                     ELSE COALESCE(vp.monto,
@@ -116,7 +116,7 @@ class CierreCaja extends Model
                             AND EXISTS (
                                 SELECT 1 FROM operaciones_caja oa3
                                 WHERE oa3.cierre_caja_id = v.cierre_caja_id
-                                  AND oa3.partida IN ('Anulación con Nota de Crédito', 'Anulación Interna')
+                                  AND oa3.partida IN ('Anulación con Nota de Crédito', 'Anulación Interna', 'Comunicado de Baja')
                                   AND oa3.concepto LIKE CONCAT('%[', v.serie, '-', v.numero, ']%')
                             )
                             AND (vp.id IS NULL OR vp.id = (SELECT MIN(vp2.id) FROM venta_pagos vp2 WHERE vp2.venta_id = v.id_venta))
