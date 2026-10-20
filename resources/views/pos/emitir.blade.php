@@ -38,13 +38,64 @@
             border-radius: 4px;
             margin: 10px 0;
         }
+
+        .pos-emit-page {
+            height: calc(100vh - 75px);
+            display: flex;
+            gap: 15px;
+            padding: 10px;
+            overflow: hidden;
+        }
+
+        .pos-emit-products {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            overflow: hidden;
+        }
+
+        .pos-emit-payment {
+            width: clamp(320px, 30vw, 460px);
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 800px) {
+            .pos-emit-page {
+                height: auto;
+                min-height: calc(100vh - 75px);
+                flex-direction: column;
+                overflow: visible;
+            }
+
+            .pos-emit-products,
+            .pos-emit-payment {
+                width: 100%;
+                min-width: 0;
+            }
+
+            .pos-emit-products {
+                min-height: 280px;
+                max-height: 45vh;
+            }
+        }
     </style>
 
-    <div style="height: calc(100vh - 75px); display: flex; gap: 15px; padding: 10px; overflow: hidden;">
+    <div class="pos-emit-page">
 
         <!-- COLUMNA IZQUIERDA: PRODUCTOS -->
-        <div
-            style="flex: 1; display: flex; flex-direction: column; background: #fff; border-radius: 8px; border: 1px solid #ddd; padding: 15px; overflow: hidden;">
+        <div class="pos-emit-products">
             <h3
                 style="margin: 0 0 15px 0; color: #b33; font-size: 18px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
                 Detalle de Productos
@@ -105,8 +156,7 @@
         </div>
 
         <!-- COLUMNA DERECHA: PAGO Y DOCUMENTO -->
-        <div
-            style="width: 400px; display: flex; flex-direction: column; background: #fff; border-radius: 8px; border: 1px solid #ddd; padding: 15px; overflow-y: auto;">
+        <div class="pos-emit-payment">
 
             <!-- SECCIÓN RESUMEN TOTAL -->
             <div
@@ -117,6 +167,24 @@
                 <div style="font-size: 32px; font-weight: 800; color: #00d2d3;">
                     S/ {{ number_format($total, 2) }}
                 </div>
+            </div>
+
+            <div class="border rounded p-3 mb-3">
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="emitir-exonerar-igv" onchange="actualizarResumenIgv()">
+                    <label class="form-check-label small fw-semibold" for="emitir-exonerar-igv">Exonerar IGV sin variar el total</label>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="emitir-editar-tasa-igv"
+                        onchange="document.getElementById('emitir-tasa-igv').disabled = !this.checked; actualizarResumenIgv()">
+                    <label class="form-check-label small fw-semibold" for="emitir-editar-tasa-igv">Modificar tasa de IGV</label>
+                </div>
+                <div class="input-group input-group-sm">
+                    <input type="number" class="form-control" id="emitir-tasa-igv" value="18" min="0" max="100"
+                        step="0.01" disabled oninput="actualizarResumenIgv()">
+                    <span class="input-group-text">%</span>
+                </div>
+                <div class="small text-muted mt-2" id="emitir-resumen-igv"></div>
             </div>
 
             <!-- SECCIÓN PAGO -->
@@ -296,6 +364,25 @@
         const tipoDocumentoSeleccionado = '{{ $tipoDocumento ?? 'boleta' }}';
         const isProforma = '{{ $isProforma ?? 0 }}';
         const idCoti = '{{ $idCoti ?? '' }}';
+        const ticketItems = typeof ticketData === 'string' ? JSON.parse(ticketData || '[]') : ticketData;
+
+        function actualizarResumenIgv() {
+            const tasaInput = document.getElementById('emitir-tasa-igv');
+            const tasa = document.getElementById('emitir-editar-tasa-igv').checked
+                ? (parseFloat(tasaInput.value) || 0)
+                : 18;
+            const exonerar = document.getElementById('emitir-exonerar-igv').checked;
+            const totalGravado = (ticketItems || []).reduce((sum, item) => {
+                const importe = parseFloat(item.importe ?? (item.precio * item.cantidad)) || 0;
+                const tipo = String(item.tipo_impuesto ?? '').toLowerCase();
+                if (exonerar || ['exonerado', 'inafecto', '20', '30'].includes(tipo)) return sum;
+                return sum + importe;
+            }, 0);
+            const igv = exonerar ? 0 : totalGravado - (totalGravado / (1 + tasa / 100));
+            document.getElementById('emitir-resumen-igv').textContent = exonerar
+                ? `Importe exonerado: S/ ${totalVenta.toFixed(2)} · IGV: S/ 0.00`
+                : `Tasa ${tasa}% · IGV estimado: S/ ${igv.toFixed(2)} · Total sin cambios`;
+        }
 
         function calcularCambio() {
             const entrega = parseFloat(document.getElementById('entrega').value) || 0;
@@ -354,6 +441,10 @@
                 tipo_documento: tipoDocumentoSeleccionado,
                 tipo_pago_id: document.getElementById('medio-pago').value,
                 total: totalVenta,
+                exonerar_igv: document.getElementById('emitir-exonerar-igv').checked,
+                tasa_igv: document.getElementById('emitir-editar-tasa-igv').checked
+                    ? (parseFloat(document.getElementById('emitir-tasa-igv').value) || 0)
+                    : 18,
                 entrega: entrega,
                 cambio: parseFloat(document.getElementById('cambio').textContent) || 0,
                 deuda: deuda,

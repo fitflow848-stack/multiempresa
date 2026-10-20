@@ -57,6 +57,8 @@ class VentaService
         $entrega = (float) $meta['entrega'];
         $observaciones = $meta['observaciones'] ?? '';
         $proforma = $meta['proforma'] ?? 0;
+        $exonerarIgv = (bool) ($meta['exonerar_igv'] ?? false);
+        $tasaIgv = (float) ($meta['tasa_igv'] ?? 18);
 
         // Decodificar ticket y cliente si vienen como strings (mantenemos la lógica de manejo de comillas extra)
         $ticket = $this->decodePossibleEscapedJson($ticketRaw);
@@ -115,13 +117,15 @@ class VentaService
                     }
 
                     // Calcular según tipo
-                    if ($tipoImpuesto == 20 || $tipoImpuesto === 'exonerado') { // Exonerado - Operación Onerosa
+                    if ($exonerarIgv) {
                         $op_exoneradas += $importe_pagado;
-                    } elseif ($tipoImpuesto == 30 || $tipoImpuesto === 'inafecto') { // Inafecto - Operación Onerosa
+                    } elseif (in_array(strtolower((string) $tipoImpuesto), ['20', 'exonerado'], true)) { // Exonerado - Operación Onerosa
+                        $op_exoneradas += $importe_pagado;
+                    } elseif (in_array(strtolower((string) $tipoImpuesto), ['30', 'inafecto'], true)) { // Inafecto - Operación Onerosa
                         $op_inafectas += $importe_pagado;
                     } else { // Gravado (10 u otros por defecto)
-                        // El precio unitario (PVP) incluye IGV
-                        $base = $importe_pagado / 1.18;
+                        // El precio de venta incluye IGV; cambiar la tasa no altera el importe pagado.
+                        $base = $importe_pagado / (1 + ($tasaIgv / 100));
                         $igv_item = $importe_pagado - $base;
                         $op_gravadas += $base;
                         $igv_total += $igv_item;
@@ -176,6 +180,8 @@ class VentaService
             $venta->monto_recibido = $entrega;
             $venta->vuelto = ($meta['cambio'] ?? 0);
             $venta->igv = $igv;
+            $venta->exonerar_igv = $exonerarIgv;
+            $venta->tasa_igv = $tasaIgv;
             $venta->observacion = $observaciones;
             $venta->estado = 1;
             $venta->enviado_sunat = false;
@@ -331,6 +337,14 @@ class VentaService
                 $detalle->nombre_servicio = $nombreServicio;
                 $detalle->cantidad = $cantidad;
                 $detalle->precio_unitario = $precio_original;
+                $precioReferencial = (float) ($item['precio_referencial'] ?? $item['pvp'] ?? $precio_original);
+                if ($precio_original <= 0 && $importe_pagado <= 0 && $precioReferencial <= 0 && $prodId) {
+                    $precioReferencial = (float) (\App\Models\Producto::whereKey($prodId)->value('pvp') ?? 0);
+                }
+                if ($precio_original <= 0 && $importe_pagado <= 0 && $precioReferencial <= 0) {
+                    throw new Exception("El producto '{$nombreServicio}' tiene precio cero y necesita un precio referencial mayor a cero para declararlo como transferencia gratuita a SUNAT.");
+                }
+                $detalle->precio_referencial = $precioReferencial;
                 $detalle->importe = $importe_pagado;
                 $detalle->orden = $index + 1;
                 $detalle->save();

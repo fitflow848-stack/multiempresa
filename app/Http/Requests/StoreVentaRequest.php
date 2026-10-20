@@ -20,6 +20,8 @@ class StoreVentaRequest extends FormRequest
             'tipo_documento' => 'required|string',
             'tipo_pago_id' => 'required|exists:tipos_pagos,id',
             'total' => 'required|numeric|min:0',
+            'exonerar_igv' => 'nullable|boolean',
+            'tasa_igv' => 'nullable|numeric|min:0|max:100',
             'entrega' => 'required|numeric|min:0',
             'deuda' => 'nullable|numeric|min:0',
             'genera_deuda' => 'nullable|boolean',

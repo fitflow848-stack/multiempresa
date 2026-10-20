@@ -52,6 +52,11 @@
         </div>
     </aside>
 
+    <div class="pos-resize-handle" data-resize="left" role="separator" aria-orientation="vertical"
+        aria-label="Ajustar ancho de la lista de productos" aria-valuemin="220" aria-valuemax="600"
+        tabindex="0" title="Arrastra para ajustar; doble clic para restaurar">
+    </div>
+
     <!-- SECCIÓN CENTRAL: TICKET -->
     <main class="pos-center-content">
         <header class="ticket-header-new">
@@ -112,6 +117,11 @@
             </div>
         </footer>
     </main>
+
+    <div class="pos-resize-handle" data-resize="right" role="separator" aria-orientation="vertical"
+        aria-label="Ajustar ancho del panel de pago" aria-valuemin="280" aria-valuemax="600"
+        tabindex="0" title="Arrastra para ajustar; doble clic para restaurar">
+    </div>
 
     <!-- COLUMNA DERECHA: EMISIÓN -->
     <aside class="pos-right-sidebar">
@@ -205,6 +215,24 @@
             </select>
         </div>
 
+        <div class="form-group pos-tax-options">
+            <label>Impuestos de la venta</label>
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="pos-exonerar-igv" onchange="renderTicket()">
+                <label class="form-check-label" for="pos-exonerar-igv">Exonerar IGV sin variar el total</label>
+            </div>
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="pos-editar-tasa-igv"
+                    onchange="document.getElementById('pos-tasa-igv').disabled = !this.checked; renderTicket()">
+                <label class="form-check-label" for="pos-editar-tasa-igv">Modificar tasa de IGV</label>
+            </div>
+            <div class="input-group input-group-sm">
+                <input type="number" id="pos-tasa-igv" class="form-control" value="18" min="0" max="100"
+                    step="0.01" disabled oninput="renderTicket()">
+                <span class="input-group-text">%</span>
+            </div>
+        </div>
+
         <!-- Campos Ocultos para Compatibilidad con el Script de Venta -->
         <div id="pos-documento-section" style="display:none">
             <select id="tipo-documento-select" class="form-control-new">
@@ -229,6 +257,102 @@
         <img src="" alt="Vista previa" id="tooltip-img">
     </div>
 </div>
+
+<script>
+    (function () {
+        const container = document.querySelector('.pos-container');
+        if (!container) return;
+
+        const handles = container.querySelectorAll('.pos-resize-handle');
+        const storageKey = 'pos-column-widths';
+        const defaultWidths = {
+            left: Math.min(Math.max(container.clientWidth * 0.17, 240), 360),
+            right: Math.min(Math.max(container.clientWidth * 0.20, 300), 400)
+        };
+        let widths = { left: null, right: null };
+        let activeResize = null;
+
+        function setWidth(side, width) {
+            widths[side] = width;
+            container.style.setProperty(`--pos-${side}-width`, `${width}px`);
+            const handle = container.querySelector(`[data-resize="${side}"]`);
+            handle.setAttribute('aria-valuenow', String(Math.round(width)));
+        }
+
+        function clampWidth(side, requestedWidth) {
+            const bounds = container.getBoundingClientRect();
+            const leftWidth = side === 'left' ? requestedWidth : widths.left;
+            const rightWidth = side === 'right' ? requestedWidth : widths.right;
+            const minWidth = side === 'left' ? 220 : 280;
+            const maxWidth = Math.min(bounds.width * 0.45, bounds.width - (side === 'left' ? rightWidth : leftWidth) - 380 - 20);
+            return Math.min(Math.max(requestedWidth, minWidth), Math.max(minWidth, maxWidth));
+        }
+
+        function restoreDefaults() {
+            setWidth('left', clampWidth('left', defaultWidths.left));
+            setWidth('right', clampWidth('right', defaultWidths.right));
+            localStorage.removeItem(storageKey);
+        }
+
+        const savedWidths = JSON.parse(localStorage.getItem(storageKey) || 'null');
+        widths.left = Number.isFinite(savedWidths?.left) ? savedWidths.left : defaultWidths.left;
+        widths.right = Number.isFinite(savedWidths?.right) ? savedWidths.right : defaultWidths.right;
+        setWidth('left', clampWidth('left', widths.left));
+        setWidth('right', clampWidth('right', widths.right));
+
+        window.addEventListener('resize', function () {
+            if (window.matchMedia('(max-width: 1024px)').matches) return;
+            setWidth('left', clampWidth('left', widths.left));
+            setWidth('right', clampWidth('right', widths.right));
+        });
+
+        handles.forEach(function (handle) {
+            const side = handle.dataset.resize;
+
+            handle.addEventListener('pointerdown', function (event) {
+                if (window.matchMedia('(max-width: 1024px)').matches) return;
+                event.preventDefault();
+                activeResize = {
+                    side: side,
+                    pointerId: event.pointerId,
+                    startX: event.clientX,
+                    startWidth: widths[side]
+                };
+                handle.setPointerCapture(event.pointerId);
+                container.classList.add('is-resizing');
+            });
+
+            handle.addEventListener('pointermove', function (event) {
+                if (!activeResize || activeResize.pointerId !== event.pointerId) return;
+                const delta = event.clientX - activeResize.startX;
+                const newWidth = activeResize.side === 'left'
+                    ? activeResize.startWidth + delta
+                    : activeResize.startWidth - delta;
+                setWidth(activeResize.side, clampWidth(activeResize.side, newWidth));
+            });
+
+            function finishResize(event) {
+                if (!activeResize || activeResize.pointerId !== event.pointerId) return;
+                activeResize = null;
+                container.classList.remove('is-resizing');
+                localStorage.setItem(storageKey, JSON.stringify(widths));
+            }
+
+            handle.addEventListener('pointerup', finishResize);
+            handle.addEventListener('pointercancel', finishResize);
+            handle.addEventListener('dblclick', restoreDefaults);
+
+            handle.addEventListener('keydown', function (event) {
+                if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+                event.preventDefault();
+                const direction = event.key === 'ArrowRight' ? 1 : -1;
+                const delta = side === 'left' ? direction : -direction;
+                setWidth(side, clampWidth(side, widths[side] + delta * 20));
+                localStorage.setItem(storageKey, JSON.stringify(widths));
+            });
+        });
+    })();
+</script>
 
 <!-- Modal de Atajos de Teclado -->
 <div id="modal-atajos"
@@ -1123,6 +1247,10 @@
                 tipo_pago_id: tipoPagoId,
                 metodo_pago: tipoPagoString,
                 total: total.toFixed(2),
+                exonerar_igv: document.getElementById('pos-exonerar-igv').checked,
+                tasa_igv: document.getElementById('pos-editar-tasa-igv').checked
+                    ? (parseFloat(document.getElementById('pos-tasa-igv').value) || 0)
+                    : 18,
                 entrega: amountPaid.toFixed(2),
                 cambio: change.toFixed(2),
                 serie: serie,
@@ -2270,6 +2398,7 @@
             const nuevoProducto = {
                 ...producto,
                 cantidad: qtyToAdd,
+                precio_referencial: Number(producto.precio_referencial ?? producto.pvp ?? producto.precio ?? 0),
                 descuento: producto.descuento || 0,
                 descuentoFijo: producto.descuentoFijo || 0,
                 descuentoTexto: producto.descuentoTexto || '0%',
@@ -2385,6 +2514,7 @@
                         <div style="font-weight: 700; font-size: 13px; color: #333; line-height: 1.2; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 320px;">
                             ${nombreDisplay}${loteInfo}
                             ${p.es_precio_docena ? '<span style="background: #2196f3; color: white; padding: 1px 4px; border-radius: 4px; font-size: 9px; margin-left: 5px; vertical-align: middle;">DOCENA</span>' : ''}
+                            ${Number(p.precio) === 0 && Number(p.importe) === 0 && Number(p.precio_referencial || p.pvp) > 0 ? '<span style="background: #f59e0b; color: #1f2937; padding: 1px 4px; border-radius: 4px; font-size: 9px; margin-left: 5px; vertical-align: middle;">BONIFICACIÓN SUNAT</span>' : ''}
                         </div>
                         <div style="font-size: 10px; color: #64748b; font-weight: 500; margin-top: 2px;">
                             MARCA: ${p.marca || '-'}
@@ -2973,11 +3103,21 @@
         let igv = 0;
         let icbper = 0.00;
 
+        const exonerarIgv = document.getElementById('pos-exonerar-igv')?.checked ?? false;
+        const tasaControl = document.getElementById('pos-tasa-igv');
+        const tasaIgv = document.getElementById('pos-editar-tasa-igv')?.checked && tasaControl
+            ? (parseFloat(tasaControl.value) || 0)
+            : 18;
+
         ticket.forEach(item => {
-            if (item.tipo_impuesto === 'exonerado' || item.tipo_impuesto === 'inafecto') {
+            const tipoImpuesto = String(item.tipo_impuesto ?? '').toLowerCase();
+
+            if (exonerarIgv) {
+                exonerada += item.importe;
+            } else if (['exonerado', 'inafecto', '20', '30'].includes(tipoImpuesto)) {
                 exonerada += item.importe;
             } else {
-                let mGravada = item.importe / 1.18;
+                let mGravada = item.importe / (1 + tasaIgv / 100);
                 gravada += mGravada;
                 igv += (item.importe - mGravada);
             }
@@ -3007,6 +3147,8 @@
         setEl('pos-footer-gravada', gravada.toFixed(2), 'S/ ');
         setEl('pos-footer-igv', igv.toFixed(2), 'S/ ');
         setEl('pos-footer-exonerada', exonerada.toFixed(2), 'S/ ');
+        const igvLabel = document.querySelector('.footer-left-totals .total-item-small:nth-child(3) > span:first-child');
+        if (igvLabel) igvLabel.textContent = `I.G.V. (${tasaIgv}%)`;
         setEl('pos-footer-discount', totalDescuentos.toFixed(2), 'S/ ');
         setEl('pos-footer-total', total.toFixed(2), 'S/ ');
 

@@ -40,6 +40,7 @@ class ComprobantesController extends Controller
             'ticket' => [13, 6],   // Ticket y Nota de venta (documentos internos)
             'boleta' => [1],
             'factura' => [2],
+            'nota_credito', 'credito' => [5],
             default => null,
         };
 
@@ -258,30 +259,101 @@ class ComprobantesController extends Controller
 
     public function cancelar(Request $request)
     {
-        // Lógica para cancelar comprobantes seleccionados
         $ventasIds = $request->get('ventas_ids', []);
         $user = Auth::user();
         \Illuminate\Support\Facades\Log::info("Intento de cancelar ventas: " . json_encode($ventasIds) . " Usuario: " . $user->id);
 
-        DB::beginTransaction();
         try {
+            if (!is_array($ventasIds) || $ventasIds === []) {
+                return response()->json(['success' => false, 'message' => 'Selecciona al menos un comprobante.'], 422);
+            }
+
+            $tipoAnulacion = $request->input('tipo_anulacion', 'nota_credito');
+            if (!in_array($tipoAnulacion, ['baja', 'nota_credito'], true)) {
+                return response()->json(['success' => false, 'message' => 'Selecciona Comunicado de Baja o Nota de Crédito.'], 422);
+            }
+
             $ventas = Venta::where('id_empresa', $user->company_id)
                 ->whereIn('id_venta', $ventasIds)
                 ->where('estado', '!=', 0) // Solo anular las que no están anuladas
                 ->get();
 
-            $count = 0;
-            $ncsGenerated = 0;
+            if ($ventas->isEmpty()) {
+                return response()->json(['success' => false, 'message' => 'No se encontraron comprobantes vigentes para anular.'], 404);
+            }
 
-            // Motivo de la nota de crédito (catálogo SUNAT 09) y razón escrita por el usuario.
             $motivosNC = [
                 '01' => 'Anulación de la operación',
-                '02' => 'Anulación por error en el RUC',
-                '03' => 'Corrección por error en la descripción',
                 '06' => 'Devolución total',
             ];
-            $motivoNC = array_key_exists((string) $request->get('motivo_nc'), $motivosNC) ? (string) $request->get('motivo_nc') : '01';
-            $razonNC = trim((string) $request->get('descripcion_nc', ''));
+            $motivoNC = (string) $request->input('motivo_nc', '01');
+            if (!array_key_exists($motivoNC, $motivosNC)) {
+                return response()->json(['success' => false, 'message' => 'El motivo debe ser 01 (Anulación de la operación) o 06 (Devolución total).'], 422);
+            }
+
+            $ventasEnviadasSunat = $ventas->filter(function ($venta) {
+                return in_array((int) $venta->id_tido, [1, 2], true)
+                    && (((int) $venta->enviado_sunat === 1)
+                        || $venta->ventaSunat()->whereNotNull('cdr_path')->exists());
+            })->values();
+
+            if ($tipoAnulacion === 'baja') {
+                $fueraDePlazo = $ventasEnviadasSunat->first(function ($venta) {
+                    return Carbon::parse($venta->fecha_emision)->startOfDay()->diffInDays(now()->startOfDay()) > 7;
+                });
+
+                if ($fueraDePlazo) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "El comprobante {$fueraDePlazo->serie}-{$fueraDePlazo->numero} supera los 7 días. Debe anularse con Nota de Crédito.",
+                        'requiere_nota_credito' => true,
+                    ], 422);
+                }
+            }
+
+            $bajaTicket = null;
+            if ($tipoAnulacion === 'baja' && $ventasEnviadasSunat->isNotEmpty()) {
+                $empresa = $user->company;
+                $motivoBaja = $motivosNC[$motivoNC];
+                $comprobantesBaja = $ventasEnviadasSunat->map(function ($venta) use ($motivoBaja) {
+                    return [
+                        'tipo_doc' => (int) $venta->id_tido === 1 ? '03' : '01',
+                        'serie' => $venta->serie,
+                        'correlativo' => (string) $venta->numero,
+                        'fecha_emision' => Carbon::parse($venta->fecha_emision)->toDateString(),
+                        'motivo' => $motivoBaja,
+                    ];
+                })->all();
+
+                $respuestaBaja = $this->sunatService->enviarComunicadoBaja([
+                    'endpoint' => $empresa->sunat_produccion ? 'produccion' : 'beta',
+                    'ruc' => $empresa->ruc,
+                    'usuario' => $empresa->sol_user,
+                    'clave' => $empresa->sol_password,
+                    'correlativo' => now()->format('His'),
+                    'fecha_emision' => now()->toDateString(),
+                    'razon_social' => $empresa->razon_social,
+                    'nombreComercial' => $empresa->nombre_comercial,
+                    'comprobantes' => $comprobantesBaja,
+                ]);
+                $resultadoBaja = json_decode($respuestaBaja, true);
+
+                if (empty($resultadoBaja['estado']) || empty($resultadoBaja['ticket'])) {
+                    \Illuminate\Support\Facades\Log::error('SUNAT no aceptó el Comunicado de Baja.', [
+                        'response' => $resultadoBaja ?? $respuestaBaja,
+                    ]);
+                    return response()->json([
+                        'success' => false,
+                        'message' => $resultadoBaja['mensaje'] ?? 'No se pudo enviar el Comunicado de Baja a SUNAT.',
+                    ], 502);
+                }
+
+                $bajaTicket = (string) $resultadoBaja['ticket'];
+            }
+
+            DB::beginTransaction();
+            $count = 0;
+            $ncsGenerated = 0;
 
             foreach ($ventas as $venta) {
                 // 1. Restaurar Stock mediante nuevo movimiento en Kardex (no altera histórico)
@@ -365,10 +437,11 @@ class ComprobantesController extends Controller
                 // Si el comprobante ya fue aceptado por SUNAT, se anula con nota de crédito: la salida de dinero
                 // se registra más abajo, con el detalle de esa nota (en la misma caja o en otra).
                 $cajaActual = null;
-                $anulaConNC = in_array($venta->id_tido, [1, 2]) && (
+                $enviadoSunat = in_array((int) $venta->id_tido, [1, 2], true) && (
                     ((int) $venta->enviado_sunat === 1)
                     || $venta->ventaSunat()->whereNotNull('cdr_path')->exists()
                 );
+                $anulaConNC = $enviadoSunat && $tipoAnulacion === 'nota_credito';
 
                 if ($montoADescontar > 0) {
                     // Buscar caja para registrar la salida
@@ -404,8 +477,7 @@ class ComprobantesController extends Controller
                 }
                 }
 
-                // Anulación interna (sin nota de crédito) en la misma caja: se deja la salida de dinero visible.
-                // La venta anulada sigue apareciendo como ingreso y esta salida la compensa (neto en cero).
+                // Si no se genera NC, registrar la salida como ajuste de caja.
                 if ($montoADescontar > 0 && !$anulaConNC && $cajaActual && $cajaActual->id == $venta->cierre_caja_id) {
                     \App\Models\OperacionCaja::create([
                         'company_id' => $user->company_id,
@@ -413,8 +485,8 @@ class ComprobantesController extends Controller
                         'cierre_caja_id' => $cajaActual->id,
                         'user_id' => Auth::id(),
                         'tipo' => 'sustraccion',
-                        'partida' => 'Anulación Interna',
-                        'concepto' => mb_substr('Anulación de ' . $venta->tipo_documento . ' [' . $venta->serie . '-' . $venta->numero . '] (no enviado a SUNAT, sin nota de crédito)', 0, 250),
+                        'partida' => $esAnulacionInterna ? 'Anulación Interna' : 'Comunicado de Baja',
+                        'concepto' => mb_substr('Anulación de ' . $venta->tipo_documento . ' [' . $venta->serie . '-' . $venta->numero . ']' . ($esAnulacionInterna ? ' (no enviado a SUNAT)' : ' (Comunicado de Baja SUNAT: ' . $bajaTicket . ')'), 0, 250),
                         'importe' => $montoADescontar,
                         'metodo_pago' => $venta->tipoPago->nombre ?? 'Efectivo',
                         'es_efectivo' => $venta->tipoPago->es_efectivo ?? true
@@ -446,20 +518,13 @@ class ComprobantesController extends Controller
                     $deudaAsociada->delete();
                 }
 
-                // 3. Generar Nota de Crédito SOLO si SUNAT ya aceptó el comprobante.
+                // 3. Generar Nota de Crédito solo si se eligió ese método para un CPE enviado a SUNAT.
                 // El XML se genera al emitir la venta, así que su existencia NO prueba que se haya enviado:
                 // se considera enviado únicamente con enviado_sunat = 1 o con un CDR guardado.
-                $enviadoSunat = ((int) $venta->enviado_sunat === 1)
-                    || $venta->ventaSunat()->whereNotNull('cdr_path')->exists();
                 $esAnulacionInterna = !$enviadoSunat;
 
-                if (in_array($venta->id_tido, [1, 2]) && $enviadoSunat) {
-                    // Un comprobante ya enviado a SUNAT solo se anula con nota de crédito, en cualquier momento
-                    // (sin límite de días): siempre se pide el motivo y la razón, que quedan en la nota.
-                    if ($razonNC === '') {
-                        throw new \Exception("El comprobante {$venta->serie}-{$venta->numero} ya fue enviado a SUNAT y se anula con nota de crédito: indique la razón.");
-                    }
-                    $descripcionNC = $razonNC !== '' ? $razonNC : $motivosNC[$motivoNC];
+                if (in_array((int) $venta->id_tido, [1, 2], true) && $enviadoSunat && $tipoAnulacion === 'nota_credito') {
+                    $descripcionNC = $motivosNC[$motivoNC];
 
                     // Determinar serie NC (F... -> FC.., B... -> BC..)
                     $serieNC = $venta->id_tido == 2 ? 'FC01' : 'BC01';
@@ -604,6 +669,8 @@ class ComprobantesController extends Controller
                 $venta->estado = 0; // 0: Anulada
                 if ($esAnulacionInterna) {
                     $venta->observacion = mb_substr(trim(($venta->observacion ?? '') . ' [ANULACION INTERNA]'), 0, 220);
+                } elseif ($tipoAnulacion === 'baja' && $bajaTicket) {
+                    $venta->observacion = mb_substr(trim(($venta->observacion ?? '') . ' [COMUNICADO DE BAJA SUNAT: ' . $bajaTicket . ']'), 0, 220);
                 }
                 $venta->save();
                 $count++;
@@ -685,11 +752,14 @@ class ComprobantesController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => "Se cancelaron $count comprobantes. ($ncsGenerated Notas de Crédito generadas). Los ítems han sido guardados en Ventas en Espera para retomar desde el POS.",
-                'cancelados' => $count
+                'message' => "Se cancelaron $count comprobantes. ($ncsGenerated Notas de Crédito generadas)." . ($bajaTicket ? " Comunicado de Baja enviado a SUNAT. Ticket: {$bajaTicket}." : '') . ' Los ítems han sido guardados en Ventas en Espera para retomar desde el POS.',
+                'cancelados' => $count,
+                'ticket_baja' => $bajaTicket,
             ]);
         } catch (\Exception $e) {
-            DB::rollBack();
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
             return response()->json([
                 'success' => false,
                 'message' => "Error al cancelar: " . $e->getMessage()

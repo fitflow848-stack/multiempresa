@@ -100,6 +100,11 @@ class Sunat
         return $this->sendRequest('/generar/nota', 'POST', $data);
     }
 
+    public function enviarComunicadoBaja(array $data): string
+    {
+        return $this->sendRequest('/enviar/baja', 'POST', json_encode($data, JSON_UNESCAPED_UNICODE));
+    }
+
     public function formatJsonFacturaBoleta($nombre_documento, $contenido_documento, $companyId = null)
     {
         $id = $companyId ?? (auth()->check() ? auth()->user()->company_id : null);
@@ -196,6 +201,8 @@ class Sunat
             ],
             "total" => (float) $total,
             "moneda" => $venta->moneda == 1 ? "PEN" : "USD",
+            "exonerar_igv" => (bool) ($venta->exonerar_igv ?? false),
+            "tasa_igv" => (float) ($venta->tasa_igv ?? 18),
             "serie" => (string) $venta->serie,
             "numero" => (string) $numeroSinCeros,
             "fecha_emision" => date('Y-m-d', strtotime($venta->fecha_emision)),
@@ -228,6 +235,18 @@ class Sunat
             $precio = $costo + $igv;
             $descuento = (!$importeYaNeto && isset($venta->descuento_porcentaje)) ? round($precio * ($venta->descuento_porcentaje / 100), 2) : 0;
             $precio -= $descuento;
+            $precioReferencial = (float) ($producto->precio_referencial ?? 0);
+            $esGratuito = (float) ($producto->precio_unitario ?? $precio) <= 0
+                && (float) ($producto->importe ?? 0) <= 0
+                && $precioReferencial > 0;
+            $tipoAfectacion = $this->tipAfeIgvProducto(
+                $producto->producto_id ?? $producto->servicio_id ?? $producto->id_servicio ?? $producto->id ?? null
+            );
+            if ($esGratuito) {
+                $tipoAfectacion = (bool) ($venta->exonerar_igv ?? false) || $tipoAfectacion === '20'
+                    ? '21'
+                    : ($tipoAfectacion === '30' ? '31' : '11');
+            }
             // detraccion se trata por separado en cuotas; no restamos aquí
             $data['detalles'][] = [
                 "cod_producto" => (string)($producto->id_servicio ?? $producto->servicio_id ?? ''),
@@ -237,7 +256,9 @@ class Sunat
                 "cantidad" => isset($producto->cantidad) ? (float)$producto->cantidad : 1,
                 // precio unitario final; la API extrae el IGV solo si es gravado
                 "precio" => (float) $precio,
-                "tipAfeIgv" => $this->tipAfeIgvProducto($producto->producto_id ?? $producto->servicio_id ?? $producto->id_servicio ?? $producto->id ?? null)
+                "tipAfeIgv" => $tipoAfectacion,
+                "es_gratuito" => $esGratuito,
+                "precio_referencial" => $precioReferencial,
             ];
         }
 
@@ -393,6 +414,16 @@ class Sunat
             if (isset($prod->importe) && isset($prod->cantidad) && $prod->cantidad > 0) {
                 $precio = $prod->importe / $prod->cantidad;
             }
+            $precioReferencial = (float) ($prod->precio_referencial ?? 0);
+            $esGratuito = (float) ($prod->precio_unitario ?? $precio) <= 0
+                && (float) ($prod->importe ?? 0) <= 0
+                && $precioReferencial > 0;
+            $tipoAfectacion = $this->tipAfeIgvProducto($prod->producto_id ?? $prod->servicio_id ?? null);
+            if ($esGratuito) {
+                $tipoAfectacion = (bool) ($ventaAfectada->exonerar_igv ?? false) || $tipoAfectacion === '20'
+                    ? '21'
+                    : ($tipoAfectacion === '30' ? '31' : '11');
+            }
 
             $items[] = [
                 "cod_producto" => (string)($prod->producto_id ?? $prod->servicio_id ?? ''),
@@ -401,7 +432,9 @@ class Sunat
                 "descripcion" => $descripcion,
                 "cantidad" => (float)$prod->cantidad,
                 "precio" => (float)$precio,
-                "tipAfeIgv" => $this->tipAfeIgvProducto($prod->producto_id ?? $prod->servicio_id ?? null)
+                "tipAfeIgv" => $tipoAfectacion,
+                "es_gratuito" => $esGratuito,
+                "precio_referencial" => $precioReferencial,
             ];
         }
 
@@ -417,6 +450,9 @@ class Sunat
             "serie_numero_afectado" => $serieNumeroAfectado,
             "cod_motivo" => (string)$motivo,
             "des_motivo" => $descripcionMotivo, // Ej: "Devolución"
+            "es_anulacion" => true,
+            "exonerar_igv" => (bool) ($ventaAfectada->exonerar_igv ?? false),
+            "tasa_igv" => (float) ($ventaAfectada->tasa_igv ?? 18),
             "moneda" => $ventaNC->moneda == 1 ? "PEN" : "USD",
             "total" => (float)$ventaNC->total,
             "empresa" => [

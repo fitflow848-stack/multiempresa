@@ -256,7 +256,7 @@
                         $imp = $it->importe_consolidado ?? $it->subtotal ?? ($it->precio_unitario * $it->cantidad);
                         $totDescItems += max(0, ($it->precio_unitario * $it->cantidad) - $imp);
                         $tipoImp = strtolower($it->almacenIngresoDetalle?->producto?->tipo_impuesto ?? 'gravado');
-                        if (in_array($tipoImp, ['exonerado', 'inafecto'])) {
+                        if ($venta->exonerar_igv || in_array($tipoImp, ['exonerado', 'inafecto', '20', '30'])) {
                             $totExonerado += $imp;
                         } else {
                             $totGravado += $imp;

@@ -49,6 +49,8 @@ class Venta extends Model
         'apli_igv',
         'observacion',
         'igv',
+        'exonerar_igv',
+        'tasa_igv',
         'medoto_pago_id',
         'pagado',
         'moneda',
@@ -66,6 +68,8 @@ class Venta extends Model
         'fecha_vencimiento' => 'datetime',
         'total' => 'decimal:2',
         'igv' => 'decimal:2',
+        'exonerar_igv' => 'boolean',
+        'tasa_igv' => 'decimal:2',
         'descuento_monto' => 'decimal:2',
         'detraccion_monto' => 'decimal:2',
         'total_neto_pendiente' => 'decimal:2',
@@ -150,6 +154,10 @@ class Venta extends Model
      */
     public function getTipoDocumentoAttribute($value)
     {
+        if ((int) $this->id_tido === 5) {
+            return 'NOTA DE CRÉDITO';
+        }
+
         $tipo = $value;
         
         // Si no tiene valor, intentar deducir de la serie

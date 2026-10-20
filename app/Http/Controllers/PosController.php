@@ -344,6 +344,8 @@ class PosController extends Controller
                 'plazo_dias' => $request->plazo_dias ?? 0,
                 'vendedor_id' => $request->vendedor_id ?? null,
                 'pago_mixto' => $request->pago_mixto ?? null,
+                'exonerar_igv' => $request->boolean('exonerar_igv'),
+                'tasa_igv' => $request->input('tasa_igv', 18),
             ];
             // $request->ticket y $request->cliente se pasan tal cual (el service decodifica si es string)
             $venta = $this->ventaService->crearVentaDesdeTicket($request->ticket, $request->cliente, $meta);
@@ -355,7 +357,9 @@ class PosController extends Controller
                 'data' => [
                     'venta_id' => $venta->id_venta,
                     'numero_completo' => $venta->serie . '-' . str_pad($venta->numero, 8, '0', STR_PAD_LEFT),
-                    'total' => $venta->total
+                    'total' => $venta->total,
+                    'exonerar_igv' => $venta->exonerar_igv,
+                    'tasa_igv' => $venta->tasa_igv
                 ]
             ]);
         } catch (\Illuminate\Database\QueryException $e) {

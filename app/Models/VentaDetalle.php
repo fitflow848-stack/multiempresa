@@ -17,6 +17,7 @@ class VentaDetalle extends Model
         'nombre_servicio',
         'cantidad',
         'precio_unitario',
+        'precio_referencial',
         'importe',
         'igv',
         'orden',
@@ -27,6 +28,7 @@ class VentaDetalle extends Model
     protected $casts = [
         'cantidad' => 'decimal:2',
         'precio_unitario' => 'decimal:2',
+        'precio_referencial' => 'decimal:4',
         'precio_total' => 'decimal:2',
         'igv' => 'decimal:2',
         'orden' => 'integer',
@@ -45,12 +47,16 @@ class VentaDetalle extends Model
 
     /**
      * IGV de la línea para mostrarlo en pantalla (la tabla no guarda IGV por línea).
-     * Producto exonerado/inafecto o venta sin IGV: 0. Gravado: el precio incluye IGV (importe - importe / 1.18).
+     * Producto exonerado/inafecto o venta exonerada: 0. El precio gravado incluye la tasa guardada en la venta.
      */
     public function getIgvLineaAttribute()
     {
         $venta = $this->venta;
         if (!$venta || (float) $venta->igv <= 0) {
+            return 0;
+        }
+
+        if ($venta->exonerar_igv) {
             return 0;
         }
 
@@ -60,7 +66,8 @@ class VentaDetalle extends Model
         }
 
         $importe = (float) $this->importe;
-        return round($importe - ($importe / 1.18), 3);
+        $tasaIgv = (float) ($venta->tasa_igv ?? 18);
+        return round($importe - ($importe / (1 + ($tasaIgv / 100))), 3);
     }
 
     /**

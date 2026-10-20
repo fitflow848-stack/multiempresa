@@ -119,6 +119,7 @@
                             <option value="ticket" {{ $tipoDocumento == 'ticket' ? 'selected' : '' }}>🎫 Ticket</option>
                             <option value="boleta" {{ $tipoDocumento == 'boleta' ? 'selected' : '' }}>🧾 Boleta</option>
                             <option value="factura" {{ $tipoDocumento == 'factura' ? 'selected' : '' }}>🏢 Factura</option>
+                            <option value="nota_credito" {{ $tipoDocumento == 'nota_credito' ? 'selected' : '' }}>🧾 Nota de Crédito</option>
                         </select>
                     </div>
                     <div class="col-auto">
@@ -221,7 +222,8 @@
                                         data-pendiente_monto="{{ $isCancelado ? 0 : ($venta->deuda ? $venta->deuda->monto_deuda : ($venta->pagado ? 0 : $venta->total)) }}"
                                         data-deuda_total_cliente="{{ $venta->cliente ? $venta->cliente->debe : 0 }}"
                                         data-estado="{{ $venta->estado ?? 1 }}"
-                                        data-enviado="{{ (int) $venta->enviado_sunat }}" data-tido="{{ $venta->id_tido }}">
+                                        data-enviado="{{ (int) ($venta->enviado_sunat || ($venta->ventaSunat && $venta->ventaSunat->cdr_path)) }}" data-tido="{{ $venta->id_tido }}"
+                                        data-fecha-emision="{{ $venta->fecha_emision->toDateString() }}">
                                         <td class="ps-3">
                                             <input type="checkbox" class="form-check-input comprobante-check"
                                                 value="{{ $venta->id_venta }}" {{ $isCancelado ? 'disabled' : '' }}>
@@ -932,26 +934,36 @@
                         return;
                     }
 
-                    // ¿Alguno ya fue aceptado por SUNAT? Solo esos se anulan con nota de crédito.
-                    const hayEnviados = seleccionados.some(function(id) {
+                    const filasEnviadas = seleccionados.map(function(id) {
                         const r = $(`tr[data-venta-id="${id}"]`);
-                        return parseInt(r.data('enviado')) === 1 && [1, 2].includes(parseInt(r.data('tido')));
+                        return r.length && parseInt(r.data('enviado')) === 1 && [1, 2].includes(parseInt(r.data('tido')))
+                            ? r
+                            : null;
+                    }).filter(Boolean);
+                    const hayEnviados = filasEnviadas.length > 0;
+                    const fechaHoy = new Date();
+                    fechaHoy.setHours(0, 0, 0, 0);
+                    const hayFueraDePlazo = filasEnviadas.some(function($fila) {
+                        const fechaEmision = new Date(`${$fila.data('fecha-emision')}T00:00:00`);
+                        return Math.floor((fechaHoy - fechaEmision) / 86400000) > 7;
                     });
                     const bloqueNC = hayEnviados
                         ? `<div class="text-start small">` +
-                            `<label class="fw-bold mt-2">Motivo de la nota de crédito</label>` +
+                            `<label class="fw-bold mt-2" for="swal-tipo-anulacion">Tipo de anulación</label>` +
+                            `<select id="swal-tipo-anulacion" class="form-select form-select-sm">` +
+                            (hayFueraDePlazo
+                                ? `<option value="nota_credito">Nota de Crédito (obligatoria: supera 7 días)</option>`
+                                : `<option value="baja">Comunicado de Baja (dentro de 7 días)</option><option value="nota_credito">Nota de Crédito</option>`) +
+                            `</select>` +
+                            `<label class="fw-bold mt-2" for="swal-motivo-nc">Motivo</label>` +
                             `<select id="swal-motivo-nc" class="form-select form-select-sm">` +
                             `<option value="01">01 - Anulación de la operación</option>` +
-                            `<option value="02">02 - Anulación por error en el RUC</option>` +
-                            `<option value="03">03 - Corrección por error en la descripción</option>` +
-                            `<option value="06">06 - Devolución total</option></select>` +
-                            `<label class="fw-bold mt-2">Razón de la anulación <span class="text-danger">*</span></label>` +
-                            `<textarea id="swal-razon-nc" class="form-control form-control-sm" rows="2" maxlength="150" placeholder="Obligatoria: el comprobante ya fue enviado a SUNAT y se anula con nota de crédito"></textarea></div>`
+                            `<option value="06">06 - Devolución total</option></select></div>`
                         : `<div class="alert alert-info small text-start mt-2 mb-0">` +
-                            `<b>Anulación interna:</b> el comprobante aún no se envió a SUNAT, por eso <b>no genera nota de crédito</b>. ` +
-                            `Si era el último número de la serie (o queda un hueco), ese número se vuelve a usar.</div>`;
+                            `<b>Anulación interna:</b> el comprobante aún no se envió a SUNAT, por eso <b>no genera Nota de Crédito ni Comunicado de Baja</b>. ` +
+                            `Si era el último número de la serie, ese número se vuelve a usar.</div>`;
 
-    Swal.fire({
+                    Swal.fire({
                         title: '¿Anular comprobantes?',
                         html: `<p class="mb-2">¿Deseas anular ${seleccionados.length} comprobante(s) seleccionado(s)? Esta acción no se puede deshacer.</p>` + bloqueNC,
                         icon: 'warning',
@@ -961,12 +973,11 @@
                         cancelButtonText: 'Cancelar',
                         preConfirm: () => {
                             const mot = document.getElementById('swal-motivo-nc');
-                            const raz = document.getElementById('swal-razon-nc');
-                            if (hayEnviados && (!raz || raz.value.trim() === '')) {
-                                Swal.showValidationMessage('Indica la razón de la anulación');
-                                return false;
-                            }
-                            return { motivo: mot ? mot.value : '01', razon: raz ? raz.value.trim() : '' };
+                            const tipo = document.getElementById('swal-tipo-anulacion');
+                            return {
+                                motivo: mot ? mot.value : '01',
+                                tipo: tipo ? tipo.value : 'nota_credito'
+                            };
                         }
                     }).then((result) => {
                         if (result.isConfirmed) {
@@ -974,7 +985,7 @@
                                     _token: '{{ csrf_token() }}',
                                     ventas_ids: seleccionados,
                                     motivo_nc: result.value.motivo,
-                                    descripcion_nc: result.value.razon
+                                    tipo_anulacion: result.value.tipo
                                 })
                                 .done(function(response) {
                                     if (response.success) {
