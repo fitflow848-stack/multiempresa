@@ -947,12 +947,15 @@
                         const fechaEmision = new Date(`${$fila.data('fecha-emision')}T00:00:00`);
                         return Math.floor((fechaHoy - fechaEmision) / 86400000) > 7;
                     });
+                    // SUNAT no admite comunicado de baja para boletas (se darían de baja por resumen diario): solo NC
+                    const hayBoletaEnviada = filasEnviadas.some(function($fila) { return parseInt($fila.data('tido')) === 1; });
+                    const soloNC = hayFueraDePlazo || hayBoletaEnviada;
                     const bloqueNC = hayEnviados
                         ? `<div class="text-start small">` +
                             `<label class="fw-bold mt-2" for="swal-tipo-anulacion">Tipo de anulación</label>` +
                             `<select id="swal-tipo-anulacion" class="form-select form-select-sm">` +
-                            (hayFueraDePlazo
-                                ? `<option value="nota_credito">Nota de Crédito (obligatoria: supera 7 días)</option>`
+                            (soloNC
+                                ? `<option value="nota_credito">Nota de Crédito (obligatoria: ${hayBoletaEnviada && !hayFueraDePlazo ? 'las boletas no admiten comunicado de baja' : 'supera 7 días'})</option>`
                                 : `<option value="baja">Comunicado de Baja (dentro de 7 días)</option><option value="nota_credito">Nota de Crédito</option>`) +
                             `</select>` +
                             `<label class="fw-bold mt-2" for="swal-motivo-nc">Motivo</label>` +

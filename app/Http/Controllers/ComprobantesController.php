@@ -298,6 +298,16 @@ class ComprobantesController extends Controller
             })->values();
 
             if ($tipoAnulacion === 'baja') {
+                // SUNAT rechaza el comunicado de baja para boletas (error 2308): se anulan con nota de crédito
+                $boletaEnviada = $ventasEnviadasSunat->first(fn($venta) => (int) $venta->id_tido === 1);
+                if ($boletaEnviada) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "La boleta {$boletaEnviada->serie}-{$boletaEnviada->numero} no admite Comunicado de Baja en SUNAT. Anúlala con Nota de Crédito.",
+                        'requiere_nota_credito' => true,
+                    ], 422);
+                }
+
                 $fueraDePlazo = $ventasEnviadasSunat->first(function ($venta) {
                     return Carbon::parse($venta->fecha_emision)->startOfDay()->diffInDays(now()->startOfDay()) > 7;
                 });
@@ -330,7 +340,8 @@ class ComprobantesController extends Controller
                     'ruc' => $empresa->ruc,
                     'usuario' => $empresa->sol_user,
                     'clave' => $empresa->sol_password,
-                    'correlativo' => now()->format('His'),
+                    // SUNAT exige un correlativo numérico de máximo 5 dígitos (RA-AAAAMMDD-#####); los segundos del día (0-86399) no se repiten
+                    'correlativo' => (string) ((int) now()->secondsSinceMidnight()),
                     'fecha_emision' => now()->toDateString(),
                     'razon_social' => $empresa->razon_social,
                     'nombreComercial' => $empresa->nombre_comercial,

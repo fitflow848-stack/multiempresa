@@ -196,6 +196,10 @@
                     $nombreLimpio = str_replace(['(Precio Corp.)', '(Precio Publico)', '(Precio Pub.)'], '', $item->nombre_servicio ?? $item->descripcion ?? '');
                     $nombreLimpio = trim($nombreLimpio, ' /');
                     $importeItem = $item->importe_consolidado ?? $item->subtotal ?? ($item->precio_unitario * $item->cantidad);
+                    // Transferencia gratuita: se muestra el valor referencial como P.U. y el importe en 0.00
+                    $esGratuita = (float) $importeItem <= 0 && (float) ($item->precio_referencial ?? 0) > 0;
+                    $puMostrado = $esGratuita ? (float) $item->precio_referencial : (float) $item->precio_unitario;
+                    if ($esGratuita) { $nombreLimpio .= ' (Transferencia Gratuita)'; }
                 @endphp
                 <tr>
                     <td style="white-space: nowrap;">{{ number_format($item->cantidad, 2) }}</td>
@@ -203,7 +207,7 @@
                     <td style="font-size: 7.5pt; line-height: 1.1;">
                         {{ $nombreLimpio }}
                     </td>
-                    <td class="text-right">{{ number_format($item->precio_unitario, 2) }}</td>
+                    <td class="text-right">{{ number_format($puMostrado, 2) }}</td>
                     <td class="text-right">{{ number_format(($item->precio_unitario * $item->cantidad) - $importeItem, 2) }}</td>
                     <td class="text-right" style="font-weight: bold;">{{ number_format($importeItem, 2) }}</td>
                 </tr>
