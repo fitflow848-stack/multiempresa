@@ -4,14 +4,17 @@
 
 @section('content')
     @if (!empty($alertasSunat) && $alertasSunat->count())
-        <div class="alert alert-danger" role="alert">
-            <strong>{{ $alertasSunat->count() }} comprobante(s) no llegaron a SUNAT y necesitan revisión:</strong>
-            <ul class="mb-0 mt-1 small">
+        <details class="alert alert-warning py-2 mb-3">
+            <summary style="cursor: pointer;">
+                <strong>Comprobantes pendientes de envío a SUNAT: {{ $alertasSunat->count() }}</strong>
+                <span class="small text-muted">(clic para ver el detalle)</span>
+            </summary>
+            <ul class="mb-0 mt-2 small" style="max-height: 220px; overflow-y: auto;">
                 @foreach ($alertasSunat as $a)
                     <li>{{ $a->serie }}-{{ $a->numero }} ({{ \Carbon\Carbon::parse($a->fecha_emision)->format('d/m/Y') }}) &mdash; {{ $a->error_sunat ?? 'sin enviar' }}</li>
                 @endforeach
             </ul>
-        </div>
+        </details>
     @endif
     <style>
         .card {
