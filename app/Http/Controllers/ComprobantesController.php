@@ -119,7 +119,11 @@ class ComprobantesController extends Controller
             }
         }
 
-        return view('comprobantes.index', compact(
+        $sunatManager = app(\App\Services\SunatManager::class);
+        $alertasSunat = $sunatManager->pendientesConError($company->id)->limit(30)->get()
+            ->each(fn($v) => $v->error_sunat = $sunatManager->ultimoError($v->id_venta));
+
+        return view('comprobantes.index', compact('alertasSunat', 
             'user',
             'company',
             'ventas',
@@ -453,6 +457,7 @@ class ComprobantesController extends Controller
                     || $venta->ventaSunat()->whereNotNull('cdr_path')->exists()
                 );
                 $anulaConNC = $enviadoSunat && $tipoAnulacion === 'nota_credito';
+                $esAnulacionInterna = !$enviadoSunat; // se usa más abajo en caja; debe existir antes de ese bloque
 
                 if ($montoADescontar > 0) {
                     // Buscar caja para registrar la salida

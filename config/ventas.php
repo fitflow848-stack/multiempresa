@@ -6,5 +6,5 @@ return [
     | Agrega solo tasas que la ley permita a la empresa (por ejemplo, regímenes especiales); con una tasa
     | que no corresponda, SUNAT puede rechazar el comprobante.
     */
-    'tasas_igv' => [18, 10],
+    'tasas_igv' => [18],
 ];

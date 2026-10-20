@@ -176,17 +176,29 @@ class SunatManager
     }
 
     /**
-     * Días calendario que se espera antes de enviar un comprobante a SUNAT. El plazo máximo de SUNAT es de
-     * 3 días calendario contados desde el día siguiente a la fecha de emisión (R.S. 097-2012/SUNAT); se envía
-     * un día antes del límite para dejar margen de reintento. Mientras tanto, una anulación interna no
-     * necesita nota de crédito.
+     * Días calendario que se espera antes de enviar un comprobante a SUNAT. Se envía el mismo día de la emisión
+     * (el plazo máximo de SUNAT es de 3 días calendario, R.S. 097-2012/SUNAT); los que fallan se reintentan
+     * en las siguientes corridas hasta DIAS_MAX_REINTENTO.
      */
-    public const DIAS_ESPERA_ENVIO = 2;
+    public const DIAS_ESPERA_ENVIO = 0;
 
     /**
      * Días hacia atrás en que se sigue reintentando el envío de comprobantes que fallaron.
      */
     public const DIAS_MAX_REINTENTO = 7;
+
+    /** Plazo de envío a SUNAT por tipo: boletas 3 días, facturas 5 días (se reintentan mientras estén dentro). */
+    public const PLAZO_BOLETA = 3;
+    public const PLAZO_FACTURA = 5;
+
+    /** Limita la consulta a los comprobantes aún dentro de su plazo de envío (según boleta o factura). */
+    private function dentroDePlazo($q)
+    {
+        return $q->where(function ($w) {
+            $w->where(fn($b) => $b->where('id_tido', 1)->whereDate('fecha_emision', '>=', now()->subDays(self::PLAZO_BOLETA)->toDateString()))
+                ->orWhere(fn($f) => $f->where('id_tido', 2)->whereDate('fecha_emision', '>=', now()->subDays(self::PLAZO_FACTURA)->toDateString()));
+        });
+    }
 
     /**
      * Procesa las ventas pendientes (cron diario). Solo envía las que ya cumplieron los días de espera.
@@ -197,7 +209,6 @@ class SunatManager
         $result = ['processed' => [], 'failed' => []];
 
         $fechaEnvio = now()->subDays(self::DIAS_ESPERA_ENVIO)->toDateString();       // emitidas hasta esta fecha
-        $fechaMinima = now()->subDays(self::DIAS_MAX_REINTENTO)->toDateString();     // no más antiguas que esta
         
         // Se envía en orden de serie y número (no por orden de registro): un número reutilizado, como el de un
         // hueco por anulación interna, no debe llegar a SUNAT después de los que tienen un correlativo mayor.
@@ -206,7 +217,7 @@ class SunatManager
             ->where('estado', 1)
             ->whereIn('id_tido', [1, 2]) // 1: Boleta, 2: Factura
             ->whereDate('fecha_emision', '<=', $fechaEnvio)
-            ->whereDate('fecha_emision', '>=', $fechaMinima)
+            ->where(fn($q) => $this->dentroDePlazo($q))
             ->orderBy('serie')
             ->orderByRaw('CAST(numero AS UNSIGNED) ASC')
             ->orderBy('id_venta')
@@ -231,6 +242,40 @@ class SunatManager
 
         return $result;
     }
+    /**
+     * Comprobantes que no llegaron a SUNAT y necesitan atención: no enviados, con un error registrado en el último
+     * intento o de un día anterior (ya debieron enviarse). Excluye los de hoy sin error, que aún están en espera.
+     */
+    public function pendientesConError(?int $idEmpresa = null)
+    {
+        $ultimoError = \App\Models\SunatLog::select('venta_id')
+            ->whereIn('id', function ($q) {
+                $q->selectRaw('MAX(id)')->from('sunat_logs')->groupBy('venta_id');
+            })
+            ->where('status', 'error');
+
+        return Venta::withoutGlobalScopes()
+            ->where('enviado_sunat', 0)
+            ->where('estado', 1)
+            ->whereIn('id_tido', [1, 2])
+            ->where(fn($q) => $this->dentroDePlazo($q))
+            ->when($idEmpresa, fn($q) => $q->where('id_empresa', $idEmpresa))
+            ->where(function ($q) use ($ultimoError) {
+                $q->whereDate('fecha_emision', '<', now()->toDateString())
+                    ->orWhereIn('id_venta', $ultimoError);
+            })
+            ->orderBy('fecha_emision')
+            ->orderBy('serie')
+            ->orderByRaw('CAST(numero AS UNSIGNED)');
+    }
+
+    /** Último mensaje de error registrado para una venta (null si no hay). */
+    public function ultimoError(int $idVenta): ?string
+    {
+        $log = \App\Models\SunatLog::where('venta_id', $idVenta)->orderByDesc('id')->first();
+        return $log && $log->status === 'error' ? $log->message : null;
+    }
+
     public function logAttempt(Venta $venta, string $status, ?string $message = null, $responseData = null)
     {
         try {
