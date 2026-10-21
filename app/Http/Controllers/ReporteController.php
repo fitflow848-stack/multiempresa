@@ -1395,14 +1395,17 @@ class ReporteController extends Controller
                 DB::raw("'ingreso' as tipo"),
                 DB::raw("COALESCE(c.nombre, 'CLIENTES VARIOS') as detalle"),
                 DB::raw("CONCAT(v.serie, ' ', v.numero) as concepto"),
-                'tp.nombre as metodo_pago',
-                'v.total as importe',
+                DB::raw('COALESCE(tp_pago.nombre, tp.nombre) as metodo_pago'),
+                // pago mixto: una fila por cada método con su monto, como en el registro de caja
+                DB::raw('COALESCE(vp.monto, v.total) as importe'),
                 'u.name as usuario'
             )
             // leftJoin: las ventas a público general (cliente 999999) no tienen fila en clientes y desaparecían del reporte
             ->leftJoin('clientes as c', 'c.id', '=', 'v.id_cliente')
             ->join('users as u', 'u.id', '=', 'v.id_usuario')
             ->leftJoin('tipos_pagos as tp', 'tp.id', '=', 'v.id_tipo_pago')
+            ->leftJoin('venta_pagos as vp', 'vp.venta_id', '=', 'v.id_venta')
+            ->leftJoin('tipos_pagos as tp_pago', 'tp_pago.id', '=', 'vp.tipo_pago_id')
             ->leftJoin('cierre_cajas as cc', 'cc.id', '=', 'v.cierre_caja_id')
             ->leftJoin('cajas as cj', 'cj.id', '=', 'cc.caja_id')
             ->where('v.estado', '!=', '0')
@@ -1492,7 +1495,9 @@ class ReporteController extends Controller
         $companyId = Auth::user()->company_id;
         $query = \App\Models\BancoMovimiento::with(['cuenta', 'user', 'sucursal'])
             ->whereHas('cuenta', fn($q) => $q->where('company_id', $companyId))
-            ->orderByDesc('fecha');
+            ->orderByDesc('fecha')
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
 
         if ($request->input('desde')) {
             $query->where('fecha', '>=', $request->input('desde'));

@@ -15,7 +15,7 @@
         @php $totalIngresos = 0; $totalEgresos = 0; @endphp
         @forelse($resultados as $mov)
         <tr>
-            <td class="small">{{ \Carbon\Carbon::parse($mov->fecha)->format('d/m/Y') }}</td>
+            <td class="small">{{ \Carbon\Carbon::parse($mov->fecha)->format('d/m/Y') }} {{ optional($mov->created_at)->format('H:i') }}</td>
             <td class="small">{{ $mov->cuenta->banco_nombre ?? '-' }}</td>
             <td class="small">{{ $mov->sucursal->nombre ?? '-' }}</td>
             <td>
