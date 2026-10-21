@@ -1344,6 +1344,7 @@ class AlmacenController extends Controller
             'marca_id' => ['nullable', 'integer'],
             'unidad_medida_id' => ['nullable', 'integer'],
             'tipo_impuesto' => ['nullable', 'string'],
+            'transferencia_gratuita' => ['nullable', 'boolean'],
             'condicion_venta' => ['nullable', 'string'],
             'codigo_personalizado' => ['nullable', 'string'],
             'notas' => ['nullable', 'string'],
