@@ -11,7 +11,7 @@
             </summary>
             <ul class="mb-0 mt-2 small" style="max-height: 220px; overflow-y: auto;">
                 @foreach ($alertasSunat as $a)
-                    <li>{{ $a->serie }}-{{ $a->numero }} ({{ \Carbon\Carbon::parse($a->fecha_emision)->format('d/m/Y') }}) &mdash; {{ $a->error_sunat ?? 'sin enviar' }}</li>
+                    <li>{{ $a->serie }}-{{ $a->numero }} ({{ \Carbon\Carbon::parse($a->fecha_emision)->format('d/m/Y') }}) @if ($a->sucursal_nombre) &middot; {{ $a->sucursal_nombre }} @endif &mdash; {{ $a->error_sunat ?? 'sin enviar' }}</li>
                 @endforeach
             </ul>
         </details>
@@ -123,6 +123,15 @@
                             <input type="text" class="form-control border-0 bg-light" name="cliente"
                                 value="{{ $cliente }}" placeholder="Nombre o RUC...">
                         </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-bold text-muted mb-1">Sucursal</label>
+                        <select class="form-select border-0 bg-light" name="sucursal_id">
+                            <option value="todas" {{ $sucursalId === 'todas' ? 'selected' : '' }}>Todas las sucursales</option>
+                            @foreach ($sucursales as $suc)
+                                <option value="{{ $suc->id }}" {{ (string) $sucursalId === (string) $suc->id ? 'selected' : '' }}>{{ $suc->nombre }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label small fw-bold text-muted mb-1">Tipo Documento</label>

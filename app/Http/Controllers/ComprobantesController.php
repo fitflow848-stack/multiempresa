@@ -62,13 +62,22 @@ class ComprobantesController extends Controller
 
         // Query base - se ocultan las anuladas internamente (nunca enviadas a SUNAT); las que SUNAT ya aceptó
         // siguen visibles como ANULADO, junto a su nota de crédito, para que el IGV del periodo cuadre.
-        $ventasQuery = Venta::where('id_empresa', $company->id)
+        // Sucursal: por defecto la del usuario; puede elegir otra sucursal de su empresa o todas.
+        $sucursales = \App\Models\Sucursal::where('company_id', $company->id)->orderBy('nombre')->get();
+        $sucursalId = (string) $request->get('sucursal_id', $user->branch_id ?: 'todas');
+        if ($sucursalId !== 'todas' && !$sucursales->contains('id', (int) $sucursalId)) {
+            $sucursalId = $user->branch_id ? (string) $user->branch_id : 'todas';
+        }
+        $otraSucursal = $sucursalId === 'todas' ? (bool) $user->branch_id : (int) $sucursalId !== (int) $user->branch_id;
+
+        $ventasQuery = ($otraSucursal ? Venta::withoutGlobalScope('sucursal') : Venta::query())
+            ->where('id_empresa', $company->id)
             ->where(function ($q) {
                 $q->where('estado', '!=', 0)->orWhere('enviado_sunat', 1);
             });
 
-        if ($user->branch_id) {
-            $ventasQuery->where('sucursal', $user->branch_id);
+        if ($sucursalId !== 'todas') {
+            $ventasQuery->where('sucursal', (int) $sucursalId);
         }
 
         $ventasQuery->with(['cliente', 'detalles.producto.unidadMedida', 'tipoPago', 'ventaSunat', 'deuda'])
@@ -79,7 +88,7 @@ class ComprobantesController extends Controller
 
         // Filtrar por caja seleccionada en la sesión - solo si no se está buscando un cliente específico
         $selectedCajaId = session('selected_caja_id');
-        if ($selectedCajaId && empty($cliente)) {
+        if ($selectedCajaId && empty($cliente) && !$otraSucursal) {
             $ventasQuery->whereHas('cierreCaja', function ($q) use ($selectedCajaId) {
                 $q->where('caja_id', $selectedCajaId);
             });
@@ -121,9 +130,12 @@ class ComprobantesController extends Controller
 
         $sunatManager = app(\App\Services\SunatManager::class);
         $alertasSunat = $sunatManager->pendientesConError($company->id)->limit(30)->get()
-            ->each(fn($v) => $v->error_sunat = $sunatManager->ultimoError($v->id_venta));
+            ->each(function ($v) use ($sunatManager, $sucursales) {
+                $v->error_sunat = $sunatManager->ultimoError($v->id_venta);
+                $v->sucursal_nombre = optional($sucursales->firstWhere('id', (int) $v->sucursal))->nombre;
+            });
 
-        return view('comprobantes.index', compact('alertasSunat', 
+        return view('comprobantes.index', compact('alertasSunat', 'sucursales', 'sucursalId', 
             'user',
             'company',
             'ventas',
