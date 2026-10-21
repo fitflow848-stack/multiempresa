@@ -41,6 +41,7 @@ class AlmacenController extends Controller
         $query = $this->buildInventarioQuery($request);
 
         $stocks = $query->paginate(20);
+        $this->agregarPrecios($stocks->getCollection());
 
         $productos = $stocks;
 
@@ -77,10 +78,7 @@ class AlmacenController extends Controller
                 's.nombre as almacen_nombre',
                 DB::raw('SUM(d.cantidad) as existencias'),
                 DB::raw('COALESCE(SUM(d.cantidad * d.costo) / NULLIF(SUM(d.cantidad), 0), MAX(pl.precio_compra)) as costo'),
-                DB::raw('(SELECT sub.pvp FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = d.producto_id AND sub.producto_linea_id = d.producto_linea_id AND sai.sucursal_id = i.sucursal_id AND sub.pvp > 0 ORDER BY sub.id DESC LIMIT 1) as pvp'),
-                DB::raw('(SELECT sub.pvpd FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = d.producto_id AND sub.producto_linea_id = d.producto_linea_id AND sai.sucursal_id = i.sucursal_id AND sub.pvpd > 0 ORDER BY sub.id DESC LIMIT 1) as pvpd'),
-                DB::raw('(SELECT sub.pvc FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = d.producto_id AND sub.producto_linea_id = d.producto_linea_id AND sai.sucursal_id = i.sucursal_id AND sub.pvc > 0 ORDER BY sub.id DESC LIMIT 1) as pvc'),
-                DB::raw('(SELECT sub.pvcd FROM almacen_ingreso_detalle sub JOIN almacen_ingresos sai ON sai.id = sub.ingreso_id WHERE sub.producto_id = d.producto_id AND sub.producto_linea_id = d.producto_linea_id AND sai.sucursal_id = i.sucursal_id AND sub.pvcd > 0 ORDER BY sub.id DESC LIMIT 1) as pvcd')
+                'i.sucursal_id as sucursal_id'
             );
 
         // Seguridad: Filtro por Empresa
@@ -131,9 +129,39 @@ class AlmacenController extends Controller
         return $query;
     }
 
+    /**
+     * Agrega pvp/pvpd/pvc/pvcd (último precio > 0 del producto en su sucursal) a las filas del inventario.
+     * Se hace en una sola consulta para las filas dadas, en vez de 4 subconsultas por cada grupo del listado
+     * completo (que hacía lenta la pantalla).
+     */
+    private function agregarPrecios($filas): void
+    {
+        if ($filas->isEmpty()) {
+            return;
+        }
+
+        $precios = DB::table('almacen_ingreso_detalle as d')
+            ->join('almacen_ingresos as i', 'i.id', '=', 'd.ingreso_id')
+            ->where('i.company_id', Auth::user()->company_id)
+            ->whereIn('d.producto_id', $filas->pluck('producto_id')->unique()->all())
+            ->select('d.producto_id', 'd.producto_linea_id', 'i.sucursal_id', 'd.pvp', 'd.pvpd', 'd.pvc', 'd.pvcd')
+            ->orderByDesc('d.id')
+            ->get()
+            ->groupBy(fn($r) => $r->producto_id . '-' . $r->producto_linea_id . '-' . $r->sucursal_id);
+
+        foreach ($filas as $fila) {
+            $candidatos = $precios->get($fila->producto_id . '-' . $fila->producto_linea_id . '-' . $fila->sucursal_id, collect());
+            foreach (['pvp', 'pvpd', 'pvc', 'pvcd'] as $campo) {
+                $fila->{$campo} = optional($candidatos->first(fn($r) => (float) $r->{$campo} > 0))->{$campo};
+            }
+        }
+    }
+
     public function exportar(Request $request)
     {
-        $filas = $this->buildInventarioQuery($request)->orderBy('p.nombre')->get()->map(function ($r) {
+        $filasInventario = $this->buildInventarioQuery($request)->orderBy('p.nombre')->get();
+        $this->agregarPrecios($filasInventario);
+        $filas = $filasInventario->map(function ($r) {
             $nombre = trim($r->producto . ' ' . ($r->presentacion ?? '') . ' ' . ($r->concentracion ?? ''));
             return [
                 $r->codigo,
