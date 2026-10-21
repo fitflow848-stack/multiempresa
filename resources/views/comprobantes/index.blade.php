@@ -949,7 +949,8 @@
 
                     const filasEnviadas = seleccionados.map(function(id) {
                         const r = $(`tr[data-venta-id="${id}"]`);
-                        return r.length && parseInt(r.data('enviado')) === 1 && [1, 2].includes(parseInt(r.data('tido')))
+                        // Factura/boleta enviada o por enviar: se envía a SUNAT al anular y se anula con baja o nota de crédito
+                        return r.length && [1, 2].includes(parseInt(r.data('tido')))
                             ? r
                             : null;
                     }).filter(Boolean);
@@ -961,6 +962,7 @@
                         return Math.floor((fechaHoy - fechaEmision) / 86400000) > 7;
                     });
                     // SUNAT no admite comunicado de baja para boletas (se darían de baja por resumen diario): solo NC
+                    const hayPorEnviar = filasEnviadas.some(function($fila) { return parseInt($fila.data('enviado')) !== 1; });
                     const hayBoletaEnviada = filasEnviadas.some(function($fila) { return parseInt($fila.data('tido')) === 1; });
                     const soloNC = hayFueraDePlazo || hayBoletaEnviada;
                     const bloqueNC = hayEnviados
@@ -974,10 +976,13 @@
                             `<label class="fw-bold mt-2" for="swal-motivo-nc">Motivo</label>` +
                             `<select id="swal-motivo-nc" class="form-select form-select-sm">` +
                             `<option value="01">01 - Anulación de la operación</option>` +
-                            `<option value="06">06 - Devolución total</option></select></div>`
+                            `<option value="06">06 - Devolución total</option></select>` +
+                            (hayPorEnviar
+                                ? `<div class="alert alert-info small mt-2 mb-0">Los comprobantes que aún no se enviaron se <b>enviarán a SUNAT ahora</b> y luego se anularán con el tipo elegido.</div>`
+                                : ``) +
+                            `</div>`
                         : `<div class="alert alert-info small text-start mt-2 mb-0">` +
-                            `<b>Anulación interna:</b> el comprobante aún no se envió a SUNAT, por eso <b>no genera Nota de Crédito ni Comunicado de Baja</b>. ` +
-                            `Si era el último número de la serie, ese número se vuelve a usar.</div>`;
+                            `<b>Anulación interna:</b> no es factura ni boleta, por eso no se informa a SUNAT.</div>`;
 
                     Swal.fire({
                         title: '¿Anular comprobantes?',

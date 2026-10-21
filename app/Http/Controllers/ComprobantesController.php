@@ -295,6 +295,34 @@ class ComprobantesController extends Controller
                 return response()->json(['success' => false, 'message' => 'El motivo debe ser 01 (Anulación de la operación) o 06 (Devolución total).'], 422);
             }
 
+            // Un factura o boleta que aún no llegó a SUNAT se envía en este momento (en orden de correlativo) y luego se
+            // anula como uno ya enviado: factura con comunicado de baja, boleta con nota de crédito. Así no quedan huecos.
+            $porEnviar = $ventas->filter(function ($venta) {
+                return in_array((int) $venta->id_tido, [1, 2], true)
+                    && (int) $venta->enviado_sunat !== 1
+                    && !$venta->ventaSunat()->whereNotNull('cdr_path')->exists();
+            })->sortBy([['serie', 'asc'], [fn($a, $b) => (int) $a->numero <=> (int) $b->numero]]);
+
+            if ($porEnviar->isNotEmpty()) {
+                $sunatManager = app(\App\Services\SunatManager::class);
+                foreach ($porEnviar as $venta) {
+                    try {
+                        $vs = $venta->ventaSunat()->first();
+                        if (!$vs || empty($vs->content_xml)) {
+                            $sunatManager->procesarXmlSunat($venta);
+                        }
+                        $sunatManager->enviarDocumento($venta);
+                        $venta->refresh();
+                    } catch (\Throwable $e) {
+                        $sunatManager->logAttempt($venta, 'error', $e->getMessage());
+                        return response()->json([
+                            'success' => false,
+                            'message' => "No se pudo enviar {$venta->serie}-{$venta->numero} a SUNAT antes de anularlo: " . $e->getMessage(),
+                        ], 502);
+                    }
+                }
+            }
+
             $ventasEnviadasSunat = $ventas->filter(function ($venta) {
                 return in_array((int) $venta->id_tido, [1, 2], true)
                     && (((int) $venta->enviado_sunat === 1)
