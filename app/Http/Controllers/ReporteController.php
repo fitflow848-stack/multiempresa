@@ -1393,13 +1393,14 @@ class ReporteController extends Controller
                 'cj.nombre as caja',
                 DB::raw("'Ingreso - Venta' as operacion"),
                 DB::raw("'ingreso' as tipo"),
-                'c.nombre as detalle',
+                DB::raw("COALESCE(c.nombre, 'CLIENTES VARIOS') as detalle"),
                 DB::raw("CONCAT(v.serie, ' ', v.numero) as concepto"),
                 'tp.nombre as metodo_pago',
                 'v.total as importe',
                 'u.name as usuario'
             )
-            ->join('clientes as c', 'c.id', '=', 'v.id_cliente')
+            // leftJoin: las ventas a público general (cliente 999999) no tienen fila en clientes y desaparecían del reporte
+            ->leftJoin('clientes as c', 'c.id', '=', 'v.id_cliente')
             ->join('users as u', 'u.id', '=', 'v.id_usuario')
             ->leftJoin('tipos_pagos as tp', 'tp.id', '=', 'v.id_tipo_pago')
             ->leftJoin('cierre_cajas as cc', 'cc.id', '=', 'v.cierre_caja_id')
