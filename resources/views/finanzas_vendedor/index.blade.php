@@ -516,8 +516,16 @@
                             </div>
                         </div>
 
-                        {{-- Método de Pago (Oculto y siempre Efectivo por requerimiento) --}}
-                        <input type="hidden" name="metodo_pago" value="Efectivo">
+                        <div class="row mb-3" id="metodo_pago_container" style="display: none;">
+                            <label for="metodo_pago" class="col-sm-3 col-form-label fw-semibold">Método de Pago</label>
+                            <div class="col-sm-9">
+                                <select class="form-select" id="metodo_pago" name="metodo_pago" disabled>
+                                    <option value="Efectivo" selected>Efectivo (Caja)</option>
+                                    <option value="Transferencia">Transferencia</option>
+                                    <option value="Yape/Plin">Yape/Plin</option>
+                                </select>
+                            </div>
+                        </div>
 
                         {{-- Fecha --}}
                         <div class="row mb-3">
@@ -752,7 +760,19 @@
                 const modalEditar = new bootstrap.Modal(document.getElementById('modalEditar'));
                 const formEditar = document.getElementById('formEditar');
 
-                // Eliminado el manejo de visibilidad de método de pago por requerimiento (siempre Efectivo)
+                const tipoOperacion = document.getElementById('tipo_operacion');
+                const metodoPagoContainer = document.getElementById('metodo_pago_container');
+                const metodoPago = document.getElementById('metodo_pago');
+
+                function actualizarMetodoPago() {
+                    const esAdelantoCliente = tipoOperacion.value === 'adelanto_clientes';
+                    metodoPagoContainer.style.display = esAdelantoCliente ? '' : 'none';
+                    metodoPago.disabled = !esAdelantoCliente;
+                    metodoPago.required = esAdelantoCliente;
+                }
+
+                tipoOperacion.addEventListener('change', actualizarMetodoPago);
+                actualizarMetodoPago();
 
                 document.querySelectorAll('.btn-edit-operacion').forEach(btn => {
                     btn.addEventListener('click', function() {

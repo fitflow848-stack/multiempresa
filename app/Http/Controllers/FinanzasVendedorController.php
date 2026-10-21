@@ -320,7 +320,7 @@ class FinanzasVendedorController extends Controller
             'fecha_registro' => 'required|date',
             'documento' => 'nullable|string|max:255',
             'observaciones' => 'nullable|string',
-            'metodo_pago' => 'nullable|string|max:255'
+            'metodo_pago' => 'required_if:tipo_operacion,adelanto_clientes|in:Efectivo,Transferencia,Yape/Plin'
         ]);
 
         $tipoOperacion = $request->input('tipo_operacion');
@@ -330,7 +330,18 @@ class FinanzasVendedorController extends Controller
         $fecha = $request->input('fecha_registro');
         $documento = $request->input('documento');
         $observaciones = $request->input('observaciones');
-        $metodoPago = $request->input('metodo_pago');
+        $metodoPago = $tipoOperacion === 'adelanto_clientes'
+            ? $request->input('metodo_pago')
+            : 'Efectivo';
+        $esEfectivo = $metodoPago === 'Efectivo';
+        $banco = null;
+
+        if ($tipoOperacion === 'adelanto_clientes' && !$esEfectivo) {
+            $banco = \App\Models\CuentaBancaria::preferidaParaUsuario();
+            if (!$banco) {
+                return back()->withInput()->with('error', 'Debe registrar una cuenta bancaria activa para recibir pagos digitales.');
+            }
+        }
 
         try {
             DB::beginTransaction();
@@ -356,11 +367,10 @@ class FinanzasVendedorController extends Controller
             // Lógica de Caja
             $cajaAbierta = null;
             
-            // Validar que haya caja para operaciones que mueven efectivo (adelantos)
-            // Las compras a crédito no afectan caja inicialmente, así que no requieren caja abierta obligatoria
-            if ($tipoOperacion !== 'compras_credito') {
+            // Solo los movimientos en efectivo requieren una caja abierta.
+            if ($tipoOperacion === 'adelanto_personal' || ($tipoOperacion === 'adelanto_clientes' && $esEfectivo)) {
                 $cajaAbierta = requireSelectedCaja('registrar esta operación');
-            } else {
+            } elseif ($tipoOperacion === 'compras_credito' || $tipoOperacion === 'adelanto_clientes') {
                 $cajaAbierta = getSelectedCaja(); // Para compras crédito, obtener si existe pero no requerir
             }
 
@@ -369,11 +379,15 @@ class FinanzasVendedorController extends Controller
                 $tipoMov = 'sustraccion';
                 if ($tipoOperacion === 'adelanto_clientes') {
                     $tipoMov = 'ingreso';
-                    $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $monto;
+                    if ($esEfectivo) {
+                        $cajaAbierta->ingresos = ($cajaAbierta->ingresos ?? 0) + $monto;
+                    }
                 } else {
                     $cajaAbierta->sustracciones = ($cajaAbierta->sustracciones ?? 0) + $monto;
                 }
-                $cajaAbierta->save();
+                if ($tipoOperacion !== 'adelanto_clientes' || $esEfectivo) {
+                    $cajaAbierta->save();
+                }
 
                 $partida = '';
                 if ($tipoOperacion === 'compras_credito') $partida = 'Compras a crédito';
@@ -389,9 +403,25 @@ class FinanzasVendedorController extends Controller
                     'partida' => $partida,
                     'concepto' => $partida . ': ' . $nombre,
                     'importe' => $monto,
-                    'metodo_pago' => 'Efectivo',
+                    'metodo_pago' => $metodoPago,
+                    'es_efectivo' => $esEfectivo ? 1 : 0,
                 ]);
                 $operacionCajaId = $opCaja->id;
+            }
+
+            if ($tipoOperacion === 'adelanto_clientes' && !$esEfectivo) {
+                \App\Models\BancoMovimiento::create([
+                    'cuenta_bancaria_id' => $banco->id,
+                    'user_id' => Auth::id(),
+                    'tipo' => 'ingreso',
+                    'monto' => $monto,
+                    'concepto' => 'Adelanto clientes: ' . $nombre . ' (' . $metodoPago . ')',
+                    'referencia' => $documento,
+                    'fecha' => $fecha,
+                    'cierre_caja_id' => $cajaAbierta ? $cajaAbierta->id : null,
+                    'sucursal_id' => Auth::user()->branch_id,
+                ]);
+                $banco->increment('saldo_actual', $monto);
             }
 
             // Crear el registro financiero principal (Pasivo o ActivoCorriente)
@@ -416,7 +446,7 @@ class FinanzasVendedorController extends Controller
                     'id_operacion_caja' => $operacionCajaId,
                     'is_settled' => false,
                     'tipo_adelanto' => 'personal',
-                    'metodo_pago' => 'Efectivo'
+                    'metodo_pago' => $metodoPago
                 ]);
             } else {
                 $pasivo = Pasivo::create([
@@ -434,7 +464,7 @@ class FinanzasVendedorController extends Controller
                     'user_id' => Auth::id(),
                     'cierre_caja_id' => ($cajaAbierta && $tipoOperacion !== 'compras_credito') ? $cajaAbierta->id : null,
                     'id_operacion_caja' => $operacionCajaId,
-                    'metodo_pago' => 'Efectivo'
+                    'metodo_pago' => $metodoPago
                 ]);
             }
 
