@@ -83,12 +83,15 @@ class CierreCaja extends Model
                         WHERE oa.cierre_caja_id = v.cierre_caja_id
                           AND oa.partida IN ('Anulación con Nota de Crédito', 'Anulación Interna', 'Comunicado de Baja')
                           AND oa.concepto LIKE CONCAT('%[', v.serie, '-', v.numero, ']%')
+                          AND oa.created_at >= v.created_at
                     )
                     THEN (
-                        SELECT COALESCE(SUM(oa2.importe), 0) FROM operaciones_caja oa2
+                        SELECT oa2.importe FROM operaciones_caja oa2
                         WHERE oa2.cierre_caja_id = v.cierre_caja_id
                           AND oa2.partida IN ('Anulación con Nota de Crédito', 'Anulación Interna', 'Comunicado de Baja')
                           AND oa2.concepto LIKE CONCAT('%[', v.serie, '-', v.numero, ']%')
+                          AND oa2.created_at >= v.created_at
+                        ORDER BY oa2.created_at ASC, oa2.id ASC LIMIT 1
                     )
                     ELSE COALESCE(vp.monto,
                     CASE 
@@ -118,6 +121,7 @@ class CierreCaja extends Model
                                 WHERE oa3.cierre_caja_id = v.cierre_caja_id
                                   AND oa3.partida IN ('Anulación con Nota de Crédito', 'Anulación Interna', 'Comunicado de Baja')
                                   AND oa3.concepto LIKE CONCAT('%[', v.serie, '-', v.numero, ']%')
+                          AND oa3.created_at >= v.created_at
                             )
                             AND (vp.id IS NULL OR vp.id = (SELECT MIN(vp2.id) FROM venta_pagos vp2 WHERE vp2.venta_id = v.id_venta))
                         )

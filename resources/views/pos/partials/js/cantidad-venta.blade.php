@@ -205,6 +205,7 @@
             pvc: currentProduct.pvc || precio,
             pv_docena: currentProduct.pv_docena || 0,
             tipo_impuesto: currentProduct.tipo_impuesto || 'gravado',
+            transferencia_gratuita: currentProduct.transferencia_gratuita || 0,
             descuento: currentProduct.descuento || 0,
             descuentoFijo: currentProduct.descuentoFijo || 0,
             descuentoTexto: currentProduct.descuentoTexto || '0%',
