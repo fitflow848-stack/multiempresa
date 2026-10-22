@@ -139,7 +139,7 @@ class SunatManager
         $data = json_decode($response);
 
         if (!$data || empty($data->nombre) || empty($data->cdr)) {
-            $msg = $data->message ?? "Respuesta SUNAT inválida";
+            $msg = $data->mensaje ?? $data->message ?? "Respuesta SUNAT inválida";
             $this->logAttempt($venta, 'error', $msg, $data);
             Log::error("Respuesta SUNAT inválida para venta {$venta->id_venta}", ['response' => $response]);
             throw new Exception("Respuesta SUNAT inválida: " . $msg);
