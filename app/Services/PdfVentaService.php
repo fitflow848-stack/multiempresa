@@ -78,9 +78,32 @@ class PdfVentaService
             default => 'Boleta de Venta Electrónica',
         };
 
-        // Preparar texto QR (reemplaza RUC por el de tu empresa si está en $empresa)
-        $rucEmpresa = $empresa->ruc ?? '20489629551';
-        $qr_text = "{$rucEmpresa}|01|{$serie_numero}|{$venta->total}|{$venta->total}|{$venta->fecha_emision}|6|" . ($cliente->numero_documento ?? '');
+        // Texto del QR según el formato de SUNAT: RUC|tipo CPE|serie|número|IGV|total|fecha|tipo doc. cliente|nro. doc. cliente|
+        $rucEmpresa = $empresa->ruc ?? '';
+        $tipoCpe = match ((int) $venta->id_tido) {
+            2 => '01',
+            5 => '07',
+            default => '03',
+        };
+        $tipoDocCliente = match (strtoupper((string) ($cliente->tipo_documento ?? ''))) {
+            'DNI' => '1',
+            'RUC' => '6',
+            'CE', 'CARNET DE EXTRANJERIA' => '4',
+            'PASAPORTE' => '7',
+            default => '0',
+        };
+        $nroDocCliente = $tipoDocCliente === '0' ? '-' : ($cliente->numero_documento ?? '-');
+        $qr_text = implode('|', [
+            $rucEmpresa,
+            $tipoCpe,
+            $venta->serie,
+            (int) $venta->numero,
+            number_format((float) $venta->igv, 2, '.', ''),
+            number_format((float) $venta->total, 2, '.', ''),
+            \Carbon\Carbon::parse($venta->fecha_emision)->format('Y-m-d'),
+            $tipoDocCliente,
+            $nroDocCliente,
+        ]) . '|';
 
         // Buscar/crear VentaSunat y actualizar QR si aplica
         $ventaSunat = VentaSunat::where('id_venta', $venta->id_venta)->first();
@@ -103,7 +126,10 @@ class PdfVentaService
             if ($ventaSunat) {
                 try {
                     $ventaSunat->qr_data = $qr_image;
-                    $ventaSunat->hash = $qr_hash;
+                    // el hash del XML firmado (de SUNAT) no se pisa con un hash del texto del QR
+                    if (empty($ventaSunat->hash) || $ventaSunat->hash === '-') {
+                        $ventaSunat->hash = $qr_hash;
+                    }
                     $ventaSunat->save();
                 } catch (\Throwable $e) {
                     Log::debug("No se pudo actualizar ventaSunat con qr para venta {$venta->id_venta}: " . $e->getMessage());
