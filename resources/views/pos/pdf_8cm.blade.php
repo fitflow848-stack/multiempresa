@@ -330,7 +330,7 @@
 
     <div class="center small">
         Representación impresa de la {{ ($venta->id_tido ?? null) == 5 ? 'Nota de Crédito Electrónica' : ($venta->tipo_documento ?? 'COTIZACIÓN') }}<br>
-        Consulte en: <strong>{{ $empresa->website ?? 'www.tuempresa.com' }}</strong>
+        Consulte en: <strong>{{ $empresa->website ?: 'e-consulta.sunat.gob.pe' }}</strong>
     </div>
 
     <div class="center qr-section">
