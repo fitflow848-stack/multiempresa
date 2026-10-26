@@ -660,6 +660,9 @@ class PosController extends Controller
                     ->where("d.{$campo}", '>', 0)
                     ->where('i.company_id', $user->company_id)
                     ->where('d.cantidad', '>', 0)
+                    // el lote debe ser de la sucursal que vende: cada local tiene sus propios precios, y tomar el último
+                    // lote de cualquier sucursal daba un descuento máximo calculado con los precios de otro local
+                    ->when($user->branch_id, fn($q) => $q->where('i.sucursal_id', $user->branch_id))
                     ->orderBy('d.id', 'desc')
                     ->select("d.{$campo}")
                     ->first();
