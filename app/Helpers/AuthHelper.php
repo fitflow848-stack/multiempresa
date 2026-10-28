@@ -11,6 +11,12 @@ class AuthHelper
      */
     public static function resolveAuthenticatedUser(): ?User
     {
+        // Los enlaces públicos de comprobantes (WhatsApp) no dependen de la sesión: quien los abre estando logueado en otra
+        // empresa o sucursal no debe recibir 404 por los filtros de empresa/sucursal.
+        if (request()->routeIs('pos.pdf.public', 'cotizacion.pdf.public')) {
+            return null;
+        }
+
         static $resolvedUser = null;
         if ($resolvedUser) return $resolvedUser;
 
