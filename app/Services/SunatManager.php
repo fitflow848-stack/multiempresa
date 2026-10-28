@@ -244,7 +244,8 @@ class SunatManager
     }
     /**
      * Comprobantes que no llegaron a SUNAT y necesitan atención: no enviados, con un error registrado en el último
-     * intento o de un día anterior (ya debieron enviarse). Excluye los de hoy sin error, que aún están en espera.
+     * intento o de un día anterior (ya debieron enviarse), incluso si ya vencieron su plazo. Excluye los de hoy
+     * sin error, que aún están en espera.
      */
     public function pendientesConError(?int $idEmpresa = null)
     {
@@ -258,7 +259,8 @@ class SunatManager
             ->where('enviado_sunat', 0)
             ->where('estado', 1)
             ->whereIn('id_tido', [1, 2])
-            ->where(fn($q) => $this->dentroDePlazo($q))
+            // incluye los vencidos (fuera de plazo de envío): son los que más necesitan atención
+            ->whereDate('fecha_emision', '>=', now()->subDays(30)->toDateString())
             ->when($idEmpresa, fn($q) => $q->where('id_empresa', $idEmpresa))
             ->where(function ($q) use ($ultimoError) {
                 $q->whereDate('fecha_emision', '<', now()->toDateString())
@@ -267,6 +269,13 @@ class SunatManager
             ->orderBy('fecha_emision')
             ->orderBy('serie')
             ->orderByRaw('CAST(numero AS UNSIGNED)');
+    }
+
+    /** Indica si el comprobante ya pasó su plazo de envío a SUNAT (3 días boleta, 5 días factura). */
+    public function fueraDePlazo(Venta $venta): bool
+    {
+        $dias = \Carbon\Carbon::parse($venta->fecha_emision)->startOfDay()->diffInDays(now()->startOfDay());
+        return $dias > ((int) $venta->id_tido === 2 ? self::PLAZO_FACTURA : self::PLAZO_BOLETA);
     }
 
     /** Último mensaje de error registrado para una venta (null si no hay). */

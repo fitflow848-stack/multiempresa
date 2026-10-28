@@ -11,7 +11,7 @@
             </summary>
             <ul class="mb-0 mt-2 small" style="max-height: 220px; overflow-y: auto;">
                 @foreach ($alertasSunat as $a)
-                    <li>{{ $a->serie }}-{{ $a->numero }} ({{ \Carbon\Carbon::parse($a->fecha_emision)->format('d/m/Y') }}) @if ($a->sucursal_nombre) &middot; {{ $a->sucursal_nombre }} @endif &mdash; {{ $a->error_sunat ?? 'sin enviar' }}</li>
+                    <li>{{ $a->serie }}-{{ $a->numero }} ({{ \Carbon\Carbon::parse($a->fecha_emision)->format('d/m/Y') }}) @if ($a->sucursal_nombre) &middot; {{ $a->sucursal_nombre }} @endif &mdash; @if ($a->fuera_plazo) <strong class="text-danger">FUERA DE PLAZO</strong> &mdash; @endif{{ $a->error_sunat ?? 'sin enviar' }}</li>
                 @endforeach
             </ul>
         </details>

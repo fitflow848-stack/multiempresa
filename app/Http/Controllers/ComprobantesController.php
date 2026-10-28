@@ -132,6 +132,7 @@ class ComprobantesController extends Controller
         $alertasSunat = $sunatManager->pendientesConError($company->id)->limit(30)->get()
             ->each(function ($v) use ($sunatManager, $sucursales) {
                 $v->error_sunat = $sunatManager->ultimoError($v->id_venta);
+                $v->fuera_plazo = $sunatManager->fueraDePlazo($v);
                 $v->sucursal_nombre = optional($sucursales->firstWhere('id', (int) $v->sucursal))->nombre;
             });
 
