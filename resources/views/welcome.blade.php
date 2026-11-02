@@ -465,7 +465,7 @@
                 <div class="label">Mes Pasado</div>
                 <div class="value">S/ {{ number_format($chartData['ventaMesPasado'], 2) }}</div>
                 <div class="comparison" style="color:#94a3b8; font-size:0.75rem;">
-                    {{ \Carbon\Carbon::now()->subMonth()->translatedFormat('F Y') }}
+                    {{ $chartData['mesPasadoLabel'] }}
                 </div>
             </div>
         </div>

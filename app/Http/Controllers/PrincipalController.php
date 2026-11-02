@@ -269,13 +269,16 @@ class PrincipalController extends Controller
         if ($branchId) $ventaAyerQuery->where('sucursal', $branchId);
         $ventaAyer = $ventaAyerQuery->sum('total');
 
+        $fechaMesActual = Carbon::now()->startOfMonth();
+        $fechaMesPasado = $fechaMesActual->copy()->subMonth();
+
         // Venta del mes
         $ventaMesQuery = Venta::where('id_empresa', $companyId)
             ->where('estado', '!=', '0')
             ->where('estado', '!=', '3')
             ->where('id_tido', '!=', 5)
-            ->whereMonth('fecha_emision', Carbon::now()->month)
-            ->whereYear('fecha_emision', Carbon::now()->year);
+            ->whereMonth('fecha_emision', $fechaMesActual->month)
+            ->whereYear('fecha_emision', $fechaMesActual->year);
         if ($branchId) $ventaMesQuery->where('sucursal', $branchId);
         $ventaMes = $ventaMesQuery->sum('total');
 
@@ -288,8 +291,8 @@ class PrincipalController extends Controller
             ->where('estado', '!=', '0')
             ->where('estado', '!=', '3')
             ->where('id_tido', '!=', 5)
-            ->whereMonth('fecha_emision', Carbon::now()->subMonth()->month)
-            ->whereYear('fecha_emision', Carbon::now()->subMonth()->year);
+            ->whereMonth('fecha_emision', $fechaMesPasado->month)
+            ->whereYear('fecha_emision', $fechaMesPasado->year);
         if ($branchId) $ventaMesPasadoQuery->where('sucursal', $branchId);
         $ventaMesPasado = $ventaMesPasadoQuery->sum('total');
 
@@ -305,6 +308,7 @@ class PrincipalController extends Controller
             'ventaAyer' => round($ventaAyer, 2),
             'ventaMes' => round($ventaMes, 2),
             'ventaMesPasado' => round($ventaMesPasado, 2),
+            'mesPasadoLabel' => $fechaMesPasado->translatedFormat('F Y'),
             'ventaPromedioDiaria' => round($ventaPromedioDiaria, 2),
         ];
 
