@@ -713,6 +713,29 @@ class AlmacenController extends Controller
                 ]);
                 $stockActual = floatval($stockActualResult->stock_actual ?? 0);
 
+                // Cantidad que se descontó del lote por ajustes/conversiones (filas [AJUSTE] negativas del mismo lote). Esas
+                // filas ya salen como su propia salida, así que se suman a la entrada para reconstruir la cantidad
+                // ORIGINAL del lote. Sin esto el descuento se contaba dos veces (menor entrada + fila de salida) y aparecía
+                // un "saldo anterior" que no existía. Se asigna solo a la primera fila de ingreso de ese lote.
+                $descontadoPorAjuste = "(CASE
+                        WHEN aid.cantidad >= 0 AND (ai.observacion IS NULL OR ai.observacion NOT LIKE '[AJUSTE]%')
+                            AND aid.id = (
+                                SELECT MIN(p2.id) FROM almacen_ingreso_detalle p2
+                                JOIN almacen_ingresos pi2 ON pi2.id = p2.ingreso_id
+                                WHERE p2.producto_id = aid.producto_id AND p2.producto_linea_id <=> aid.producto_linea_id
+                                  AND p2.lote <=> aid.lote AND pi2.sucursal_id = ai.sucursal_id AND p2.cantidad >= 0
+                                  AND (pi2.observacion IS NULL OR pi2.observacion NOT LIKE '[AJUSTE]%')
+                            )
+                        THEN COALESCE((
+                                SELECT SUM(ABS(a.cantidad)) FROM almacen_ingreso_detalle a
+                                JOIN almacen_ingresos aj ON aj.id = a.ingreso_id
+                                WHERE a.cantidad < 0 AND aj.observacion LIKE '[AJUSTE]%'
+                                  AND a.producto_id = aid.producto_id AND a.producto_linea_id <=> aid.producto_linea_id
+                                  AND a.lote <=> aid.lote AND aj.sucursal_id = ai.sucursal_id
+                                  AND aj.created_at <= '{$fecha_hasta} 23:59:59'
+                            ), 0)
+                        ELSE 0 END)";
+
                 // Consulta UNION: Entradas, Salidas (Ventas) y Transferencias en el rango
                 $movimientos = DB::select("
                     SELECT * FROM (
@@ -738,22 +761,22 @@ class AlmacenController extends Controller
                                 ' / ', COALESCE(ai.observacion, 'Ingreso')
                             ) as detalle,
                             CASE 
-                                WHEN (aid.cantidad + 
+                                WHEN (aid.cantidad + {$descontadoPorAjuste} + 
                                     COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
                                     COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
                                 ) >= 0 THEN 
-                                    (aid.cantidad + 
+                                    (aid.cantidad + {$descontadoPorAjuste} + 
                                         COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
                                         COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
                                     ) 
                                 ELSE 0 
                             END as entrada,
                             CASE 
-                                WHEN (aid.cantidad + 
+                                WHEN (aid.cantidad + {$descontadoPorAjuste} + 
                                     COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
                                     COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
                                 ) < 0 THEN 
-                                    ABS(aid.cantidad + 
+                                    ABS(aid.cantidad + {$descontadoPorAjuste} + {$descontadoPorAjuste} + 
                                         COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
                                         COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
                                     )
