@@ -732,8 +732,10 @@ class PosController extends Controller
             DB::beginTransaction();
             $user = Auth::user();
 
-            // 1. Obtener el lote más antiguo con stock disponible (FIFO)
-            $loteOrigen = AlmacenIngresoDetalle::lockForUpdate()
+            // 1. Lotes con stock disponible, del más antiguo al más nuevo (FIFO). Si el primero no alcanza para la
+            // cantidad pedida, el resto se toma del siguiente: antes solo se usaba el primer lote, se descontaba menos
+            // de lo que se anotaba y se sumaba al destino, y el stock se inflaba.
+            $lotesOrigen = AlmacenIngresoDetalle::lockForUpdate()
                 ->whereHas('ingreso', function($q) use ($user) {
                     $q->where('company_id', $user->company_id);
                     if ($user->branch_id) {
@@ -743,10 +745,17 @@ class PosController extends Controller
                 ->where('producto_id', $request->origen_producto_id)
                 ->where('cantidad', '>', 0)
                 ->orderBy('id', 'asc')
-                ->first();
+                ->get();
+
+            $loteOrigen = $lotesOrigen->first();
 
             if (!$loteOrigen) {
                 throw new \Exception('Stock insuficiente en el producto origen o lote no encontrado.');
+            }
+
+            $stockLotes = (float) $lotesOrigen->sum('cantidad');
+            if ($stockLotes + 0.0001 < (float) $request->cantidad_origen) {
+                throw new \Exception("Stock insuficiente. Disponible en lotes: {$stockLotes}, requerido: {$request->cantidad_origen}.");
             }
 
             // Validar stock total disponible del producto
@@ -768,40 +777,49 @@ class PosController extends Controller
 
             $cantidadAumentar = $request->cantidad_origen * $request->factor;
 
-            // 2. Crear Ajuste de SALIDA para el Origen (Kardex)
-            $ingresoSalidaId = DB::table('almacen_ingresos')->insertGetId([
-                'company_id' => $user->company_id,
-                'empresa_id' => $user->company_id,
-                'sucursal_id' => $user->branch_id,
-                'user_id' => $user->id,
-                'fecha' => now(),
-                'observacion' => "[AJUSTE] Conversión/Rotura (Salida): {$request->cantidad_origen} unidades de " . ($loteOrigen->producto->nombre ?? 'producto'),
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
+            // 2. Crear Ajuste de SALIDA para el Origen (Kardex): una por cada lote del que se descuenta
+            $restante = (float) $request->cantidad_origen;
+            foreach ($lotesOrigen as $loteSalida) {
+                if ($restante <= 0.0000001) {
+                    break;
+                }
+                $tomar = min($restante, (float) $loteSalida->cantidad);
+                $restante -= $tomar;
 
-            DB::table('almacen_ingreso_detalle')->insert([
-                'ingreso_id' => $ingresoSalidaId,
-                'producto_id' => $loteOrigen->producto_id,
-                'producto_linea_id' => $loteOrigen->producto_linea_id,
-                'cantidad' => -1 * $request->cantidad_origen,
-                'costo' => $loteOrigen->costo,
-                'cop' => $loteOrigen->cop,
-                'mu' => $loteOrigen->mu,
-                'mud' => $loteOrigen->mud,
-                'mup' => $loteOrigen->mup,
-                'pvp' => $loteOrigen->pvp,
-                'pvpd' => $loteOrigen->pvpd,
-                'pvc' => $loteOrigen->pvc,
-                'pvcd' => $loteOrigen->pvcd,
-                'lote' => $loteOrigen->lote,
-                'fecha_vencimiento' => $loteOrigen->fecha_vencimiento,
-                'created_at' => now(),
-                'updated_at' => now()
-            ]);
+                $ingresoSalidaId = DB::table('almacen_ingresos')->insertGetId([
+                    'company_id' => $user->company_id,
+                    'empresa_id' => $user->company_id,
+                    'sucursal_id' => $user->branch_id,
+                    'user_id' => $user->id,
+                    'fecha' => now(),
+                    'observacion' => "[AJUSTE] Conversión/Rotura (Salida): {$tomar} unidades de " . ($loteSalida->producto->nombre ?? 'producto'),
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
 
-            // Descontar del stock real del lote origen y sincronizar productos.cantidad
-            (new \App\Services\StockService())->decrementarStock($loteOrigen->id, $request->cantidad_origen);
+                DB::table('almacen_ingreso_detalle')->insert([
+                    'ingreso_id' => $ingresoSalidaId,
+                    'producto_id' => $loteSalida->producto_id,
+                    'producto_linea_id' => $loteSalida->producto_linea_id,
+                    'cantidad' => -1 * $tomar,
+                    'costo' => $loteSalida->costo,
+                    'cop' => $loteSalida->cop,
+                    'mu' => $loteSalida->mu,
+                    'mud' => $loteSalida->mud,
+                    'mup' => $loteSalida->mup,
+                    'pvp' => $loteSalida->pvp,
+                    'pvpd' => $loteSalida->pvpd,
+                    'pvc' => $loteSalida->pvc,
+                    'pvcd' => $loteSalida->pvcd,
+                    'lote' => $loteSalida->lote,
+                    'fecha_vencimiento' => $loteSalida->fecha_vencimiento,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+
+                // Descontar del stock real del lote origen y sincronizar productos.cantidad
+                (new \App\Services\StockService())->decrementarStock($loteSalida->id, $tomar);
+            }
 
             // 3. Crear Ajuste de ENTRADA para el Destino (Kardex)
             $ingresoEntradaId = DB::table('almacen_ingresos')->insertGetId([
