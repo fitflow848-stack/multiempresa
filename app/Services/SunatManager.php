@@ -138,7 +138,7 @@ class SunatManager
         $response = $this->sunatClient->sendDocumentoBoletaFactura($json);
         $data = json_decode($response);
 
-        if (!$data || empty($data->nombre) || empty($data->cdr)) {
+        if (!$data || (isset($data->estado) && $data->estado === false) || empty($data->nombre) || empty($data->cdr)) {
             $msg = $data->mensaje ?? $data->message ?? "Respuesta SUNAT inválida";
             $this->logAttempt($venta, 'error', $msg, $data);
             Log::error("Respuesta SUNAT inválida para venta {$venta->id_venta}", ['response' => $response]);

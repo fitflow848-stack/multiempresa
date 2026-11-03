@@ -171,7 +171,11 @@ class Sunat
         // documento
         $documento = $venta->id_tido == 1 ? "boleta" : "factura";
         // forma de pago: 1 => al contado, 2 => crédito (según tu uso)
-        $forma_pago = $venta->id_tipo_pago == 1 ? "contado" : "credito";
+        // Yape, transferencia o pago mixto NO son crédito: es crédito solo si la venta quedó con deuda (sin pagar).
+        // Antes todo lo que no fuera efectivo se enviaba como crédito y SUNAT rechazaba la factura (3267/3265).
+        $forma_pago = isset($venta->pagado)
+            ? (((int) $venta->pagado === 1) ? "contado" : "credito")
+            : ($venta->id_tipo_pago == 1 ? "contado" : "credito");
 
         $numeroSinCeros = ltrim((string)($venta->numero ?? ''), '0');
 
@@ -364,6 +368,18 @@ class Sunat
             // contado: dejar cuotas_credito vacío y fecha_vencimiento = fecha_emision (o venta->fecha_vencimiento si se quiere)
             $data['fecha_vencimiento'] = (string) (date('Y-m-d', strtotime($venta->fecha_vencimiento)) ?? date('Y-m-d', strtotime($venta->fecha_emision)));
         }
+        // SUNAT (3267): la fecha de cada cuota debe ser posterior a la fecha de emisión
+        if ($forma_pago === 'credito' && !empty($data['cuotas_credito'])) {
+            $emision = date('Y-m-d', strtotime($venta->fecha_emision));
+            $minima = date('Y-m-d', strtotime($emision . ' +1 day'));
+            foreach ($data['cuotas_credito'] as $i => $cuota) {
+                if (empty($cuota['fecha']) || $cuota['fecha'] <= $emision) {
+                    $data['cuotas_credito'][$i]['fecha'] = $minima;
+                }
+            }
+            $data['fecha_vencimiento'] = end($data['cuotas_credito'])['fecha'];
+        }
+
         // devolver JSON sin escapar Unicode
         return json_encode($data, JSON_UNESCAPED_UNICODE);
     }
