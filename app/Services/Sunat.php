@@ -100,6 +100,11 @@ class Sunat
         return $this->sendRequest('/generar/nota', 'POST', $data);
     }
 
+    public function consultarCdr(array $data): string
+    {
+        return $this->sendRequest('/consulta/cdr', 'POST', json_encode($data, JSON_UNESCAPED_UNICODE));
+    }
+
     public function consultarBaja(string $ticket, array $data): string
     {
         return $this->sendRequest('/consulta/baja/' . rawurlencode($ticket), 'POST', json_encode($data, JSON_UNESCAPED_UNICODE));

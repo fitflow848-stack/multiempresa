@@ -138,6 +138,16 @@ class SunatManager
         $response = $this->sunatClient->sendDocumentoBoletaFactura($json);
         $data = json_decode($response);
 
+        // 1033: SUNAT ya tiene el comprobante (el envío anterior llegó pero se cortó la respuesta). En vez de dejarlo
+        // como error, se pide a SUNAT su constancia (CDR) y, si fue aceptado, se cierra el envío con ella.
+        if ($data && isset($data->estado) && $data->estado === false && str_starts_with((string) ($data->mensaje ?? ''), '1033')) {
+            $recuperada = $this->recuperarConstancia($venta);
+            if ($recuperada) {
+                $data = $recuperada;
+                $this->logAttempt($venta, 'success', 'Recuperado con la constancia de SUNAT (el envío anterior se cortó antes de recibir la respuesta).');
+            }
+        }
+
         if (!$data || (isset($data->estado) && $data->estado === false) || empty($data->nombre) || empty($data->cdr)) {
             $msg = $data->mensaje ?? $data->message ?? "Respuesta SUNAT inválida";
             $this->logAttempt($venta, 'error', $msg, $data);
@@ -173,6 +183,39 @@ class SunatManager
             'storage_path' => $storagePath,
             'public_url' => $publicUrl,
         ];
+    }
+
+    /**
+     * Pide a SUNAT la constancia (CDR) de un comprobante ya registrado. Devuelve un objeto con nombre y cdr (como un
+     * envío exitoso) o null si SUNAT no lo tiene aceptado o no se pudo consultar.
+     */
+    private function recuperarConstancia(Venta $venta): ?object
+    {
+        try {
+            $empresa = \App\Models\Company::withoutGlobalScopes()->find($venta->id_empresa);
+            if (!$empresa) {
+                return null;
+            }
+
+            $respuesta = json_decode($this->sunatClient->consultarCdr([
+                'ruc' => $empresa->ruc,
+                'usuario' => $empresa->sol_user,
+                'clave' => $empresa->sol_password,
+                'tipo' => (int) $venta->id_tido === 2 ? '01' : '03',
+                'serie' => $venta->serie,
+                'numero' => (int) $venta->numero,
+            ]));
+
+            if ($respuesta && !empty($respuesta->estado) && !empty($respuesta->cdr) && !empty($respuesta->nombre)) {
+                return $respuesta;
+            }
+
+            Log::warning("No se pudo recuperar la constancia de {$venta->serie}-{$venta->numero}", ['respuesta' => $respuesta]);
+        } catch (\Throwable $e) {
+            Log::warning("Error al consultar la constancia de {$venta->serie}-{$venta->numero}: " . $e->getMessage());
+        }
+
+        return null;
     }
 
     /**
