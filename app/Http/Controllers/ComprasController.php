@@ -260,6 +260,20 @@ class ComprasController extends Controller
             $pvDocenas = $request->input('pv_docena', []);
             $preciosModificados = $request->input('precio_modificado', []);
 
+            // Las líneas llegan como listas paralelas (producto, línea, descripción, cantidad, costo). Si alguna llega con
+            // otra cantidad de elementos, los productos quedan corridos respecto de su descripción y el inventario se
+            // ingresa mal (pasó en la compra 1066). Se rechaza antes de guardar nada.
+            $totalLineas = count($descrs);
+            foreach (['product_id' => $productIds, 'linea_id' => $productLinesIds, 'cantidad' => $cants, 'costo' => $costos] as $campo => $lista) {
+                if (count($lista) !== $totalLineas) {
+                    DB::rollBack();
+                    Log::error('Compra con líneas desalineadas, no se guardó', ['campo' => $campo, 'elementos' => count($lista), 'lineas' => $totalLineas, 'user' => Auth::id()]);
+                    return redirect()->back()
+                        ->with('error', 'Las líneas de la compra llegaron desalineadas (' . $campo . '). No se guardó nada: vuelva a cargar la pantalla y regístrela de nuevo.')
+                        ->withInput();
+                }
+            }
+
             $n = max(
                 count($productIds),
                 count($cbs),
