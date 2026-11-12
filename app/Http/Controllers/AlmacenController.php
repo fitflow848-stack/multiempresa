@@ -691,6 +691,27 @@ class AlmacenController extends Controller
                         ELSE 0 END)";
     }
 
+    /**
+     * SQL (alias aid y ai) con la cantidad ORIGINAL de una fila de ingreso. Si el ingreso viene de una compra y es la
+     * única fila de ese lote en esa compra, se toma la cantidad comprada de la propia compra (exacta aunque las ventas
+     * hayan repartido el descuento entre varios lotes). En los demás casos se reconstruye: actual + vendido +
+     * transferido + descontado por ajustes.
+     */
+    private function sqlCantidadOriginal(string $fechaHasta): string
+    {
+        $ajuste = $this->sqlDescontadoPorAjuste($fechaHasta);
+
+        return "COALESCE(
+                    CASE WHEN aid.cantidad >= 0 AND ai.compra_id IS NOT NULL
+                        AND (SELECT COUNT(*) FROM almacen_ingreso_detalle x WHERE x.ingreso_id = aid.ingreso_id AND x.producto_linea_id <=> aid.producto_linea_id AND x.lote <=> aid.lote) = 1
+                        THEN (SELECT SUM(cl.cantidad) FROM compra_lineas cl WHERE cl.compra_id = ai.compra_id AND cl.product_linea_id <=> aid.producto_linea_id AND cl.lote <=> aid.lote)
+                    END,
+                    (aid.cantidad + {$ajuste}
+                        + COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0)
+                        + COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0))
+                )";
+    }
+
     public function kardex(Request $request)
     {
         /** @var \App\Models\User $user */
@@ -743,6 +764,7 @@ class AlmacenController extends Controller
 
                 // Cantidad original del lote: ver sqlDescontadoPorAjuste()
                 $descontadoPorAjuste = $this->sqlDescontadoPorAjuste($fecha_hasta);
+                $cantOriginal = $this->sqlCantidadOriginal($fecha_hasta);
 
                 // Consulta UNION: Entradas, Salidas (Ventas) y Transferencias en el rango
                 $movimientos = DB::select("
@@ -769,25 +791,13 @@ class AlmacenController extends Controller
                                 ' / ', COALESCE(ai.observacion, 'Ingreso')
                             ) as detalle,
                             CASE 
-                                WHEN (aid.cantidad + {$descontadoPorAjuste} + 
-                                    COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
-                                    COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
-                                ) >= 0 THEN 
-                                    (aid.cantidad + {$descontadoPorAjuste} + 
-                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
-                                        COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
-                                    ) 
+                                WHEN ({$cantOriginal}) >= 0 THEN 
+                                    ({$cantOriginal}) 
                                 ELSE 0 
                             END as entrada,
                             CASE 
-                                WHEN (aid.cantidad + {$descontadoPorAjuste} + 
-                                    COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
-                                    COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
-                                ) < 0 THEN 
-                                    ABS(aid.cantidad + {$descontadoPorAjuste} + 
-                                        COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
-                                        COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
-                                    )
+                                WHEN ({$cantOriginal}) < 0 THEN 
+                                    ABS({$cantOriginal})
                                 ELSE 0 
                             END as salida,
                             COALESCE(aid.costo, 0) as precio_unitario,
@@ -909,6 +919,7 @@ class AlmacenController extends Controller
             $dateFilterV = " AND v.created_at >= '{$fecha_desde} 00:00:00' AND v.created_at <= '{$fecha_hasta} 23:59:59'";
 
             $descontadoPorAjuste = $this->sqlDescontadoPorAjuste($fecha_hasta);
+            $cantOriginal = $this->sqlCantidadOriginal($fecha_hasta);
 
             $perPage = 100;
             $page = max(1, intval($request->get('page', 1)));
@@ -926,10 +937,7 @@ class AlmacenController extends Controller
                         END as tipo,
                         s.nombre as sucursal,
                         CONCAT(p.nombre, ' / ', COALESCE(pl.presentacion, ''), ' / L: ', COALESCE(aid.lote, '-'), ' / ', COALESCE(ai.observacion, '')) as detalle,
-                        CASE WHEN aid.cantidad >= 0 THEN (aid.cantidad
-                            + COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0)
-                            + COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
-                            + {$descontadoPorAjuste}) ELSE 0 END as entrada,
+                        CASE WHEN aid.cantidad >= 0 THEN {$cantOriginal} ELSE 0 END as entrada,
                         CASE WHEN aid.cantidad < 0 THEN ABS(aid.cantidad) ELSE 0 END as salida,
                         COALESCE(aid.costo, 0) as precio_unitario,
                         u.name as usuario,
