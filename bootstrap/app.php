@@ -16,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
             '/logout',
         ]);
 
+        // Evita registrar dos veces un pago/pase por un doble clic (solo actúa en las rutas de dinero listadas en el middleware)
+        $middleware->web(append: [\App\Http\Middleware\EvitarDobleEnvio::class]);
+
         // Alias para usar en rutas específicas si se necesita
         $middleware->alias([
             'company.scope' => \App\Http\Middleware\EnsureCompanyScope::class,

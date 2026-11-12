@@ -290,14 +290,17 @@ class FinanzasEspecialesController extends Controller
             'metodo_pago' => 'nullable|string',
         ]);
 
-        $pasivo = Pasivo::findOrFail($id);
-
-        if ($request->monto > $pasivo->saldo) {
-            return response()->json(['success' => false, 'message' => 'El monto supera el saldo pendiente.'], 400);
-        }
-
         DB::beginTransaction();
         try {
+            // Se bloquea la fila del pasivo mientras se paga: dos solicitudes simultáneas no pueden pasar a la vez la
+            // validación del saldo y registrar el mismo pago dos veces.
+            $pasivo = Pasivo::lockForUpdate()->findOrFail($id);
+
+            if ($request->monto > $pasivo->saldo) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'El monto supera el saldo pendiente.'], 400);
+            }
+
             $pago = PasivoPago::create([
                 'pasivo_id' => $pasivo->id,
                 'user_id' => Auth::id(),

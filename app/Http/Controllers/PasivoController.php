@@ -189,10 +189,12 @@ class PasivoController extends Controller
         try {
             DB::beginTransaction();
 
-            $pasivo = Pasivo::findOrFail($id);
+            // Se bloquea la fila del pasivo mientras se paga (evita registrar dos veces el mismo pago por solicitudes simultáneas)
+            $pasivo = Pasivo::lockForUpdate()->findOrFail($id);
             $monto = $request->monto;
 
             if ($monto > $pasivo->saldo) {
+                DB::rollBack();
                 return back()->with('error', 'El monto a pagar excede el saldo pendiente (S/ ' . number_format($pasivo->saldo, 2) . ')');
             }
 

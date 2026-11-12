@@ -187,6 +187,19 @@
             Swal.fire({ icon: 'info', title: 'Información', text: "{{ session('info') }}" });
         @endif
     </script>
+    <script>
+        // Doble clic / doble envío: un formulario que ya se está enviando no se vuelve a enviar durante unos segundos
+        document.addEventListener('submit', function (e) {
+            if (e.defaultPrevented) return; // cancelado por una confirmación u otro script
+            const f = e.target;
+            if (!(f instanceof HTMLFormElement) || (f.method || '').toLowerCase() !== 'post') return;
+            if (f.dataset.enviando === '1') { e.preventDefault(); return; }
+            f.dataset.enviando = '1';
+            // si algún otro script cancela el envío (validación), el formulario vuelve a quedar disponible
+            setTimeout(function () { if (e.defaultPrevented) delete f.dataset.enviando; }, 0);
+            setTimeout(function () { delete f.dataset.enviando; }, 8000);
+        });
+    </script>
     @stack('scripts')
 </body>
 
