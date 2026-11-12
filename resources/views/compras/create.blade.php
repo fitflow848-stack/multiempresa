@@ -870,7 +870,16 @@
                 function updateRowNumbers() {
                     $('#productos-tbody tr:not(#no-products)').each(function(index) {
                         $(this).attr('data-idx', index + 1);
-                        $(this).find('td:eq(0)').text(index + 1); // Primera columna (#)
+                        // Primera columna (#): solo se cambia el número. Esa celda también guarda los campos ocultos del
+                        // producto (product_id[], linea_id[], precios); con .text() se borraban y la compra quedaba con los
+                        // productos corridos una posición.
+                        const $celda = $(this).find('td:eq(0)');
+                        const nodoNumero = $celda.contents().filter(function() { return this.nodeType === 3; }).first();
+                        if (nodoNumero.length) {
+                            nodoNumero[0].nodeValue = index + 1;
+                        } else {
+                            $celda.prepend(document.createTextNode(index + 1));
+                        }
                     });
                 }
 
