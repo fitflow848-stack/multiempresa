@@ -663,6 +663,34 @@ class AlmacenController extends Controller
             'pv_docena' => 1531.20
         ];
     }
+    /**
+     * SQL (usa los alias aid y ai) con la cantidad que se descontó del lote por ajustes/conversiones: las filas
+     * [AJUSTE] negativas del mismo lote. Esas filas ya salen como su propia salida en el kardex, así que se suman a
+     * la entrada para reconstruir la cantidad ORIGINAL del lote. Sin esto el descuento se contaba dos veces (menor
+     * entrada + fila de salida). Se asigna solo a la primera fila de ingreso de ese lote.
+     */
+    private function sqlDescontadoPorAjuste(string $fechaHasta): string
+    {
+        return "(CASE
+                        WHEN aid.cantidad >= 0 AND (ai.observacion IS NULL OR ai.observacion NOT LIKE '[AJUSTE]%')
+                            AND aid.id = (
+                                SELECT MIN(p2.id) FROM almacen_ingreso_detalle p2
+                                JOIN almacen_ingresos pi2 ON pi2.id = p2.ingreso_id
+                                WHERE p2.producto_id = aid.producto_id AND p2.producto_linea_id <=> aid.producto_linea_id
+                                  AND p2.lote <=> aid.lote AND pi2.sucursal_id = ai.sucursal_id AND p2.cantidad >= 0
+                                  AND (pi2.observacion IS NULL OR pi2.observacion NOT LIKE '[AJUSTE]%')
+                            )
+                        THEN COALESCE((
+                                SELECT SUM(ABS(a.cantidad)) FROM almacen_ingreso_detalle a
+                                JOIN almacen_ingresos aj ON aj.id = a.ingreso_id
+                                WHERE a.cantidad < 0 AND aj.observacion LIKE '[AJUSTE]%'
+                                  AND a.producto_id = aid.producto_id AND a.producto_linea_id <=> aid.producto_linea_id
+                                  AND a.lote <=> aid.lote AND aj.sucursal_id = ai.sucursal_id
+                                  AND aj.created_at <= '{$fechaHasta} 23:59:59'
+                            ), 0)
+                        ELSE 0 END)";
+    }
+
     public function kardex(Request $request)
     {
         /** @var \App\Models\User $user */
@@ -713,28 +741,8 @@ class AlmacenController extends Controller
                 ]);
                 $stockActual = floatval($stockActualResult->stock_actual ?? 0);
 
-                // Cantidad que se descontó del lote por ajustes/conversiones (filas [AJUSTE] negativas del mismo lote). Esas
-                // filas ya salen como su propia salida, así que se suman a la entrada para reconstruir la cantidad
-                // ORIGINAL del lote. Sin esto el descuento se contaba dos veces (menor entrada + fila de salida) y aparecía
-                // un "saldo anterior" que no existía. Se asigna solo a la primera fila de ingreso de ese lote.
-                $descontadoPorAjuste = "(CASE
-                        WHEN aid.cantidad >= 0 AND (ai.observacion IS NULL OR ai.observacion NOT LIKE '[AJUSTE]%')
-                            AND aid.id = (
-                                SELECT MIN(p2.id) FROM almacen_ingreso_detalle p2
-                                JOIN almacen_ingresos pi2 ON pi2.id = p2.ingreso_id
-                                WHERE p2.producto_id = aid.producto_id AND p2.producto_linea_id <=> aid.producto_linea_id
-                                  AND p2.lote <=> aid.lote AND pi2.sucursal_id = ai.sucursal_id AND p2.cantidad >= 0
-                                  AND (pi2.observacion IS NULL OR pi2.observacion NOT LIKE '[AJUSTE]%')
-                            )
-                        THEN COALESCE((
-                                SELECT SUM(ABS(a.cantidad)) FROM almacen_ingreso_detalle a
-                                JOIN almacen_ingresos aj ON aj.id = a.ingreso_id
-                                WHERE a.cantidad < 0 AND aj.observacion LIKE '[AJUSTE]%'
-                                  AND a.producto_id = aid.producto_id AND a.producto_linea_id <=> aid.producto_linea_id
-                                  AND a.lote <=> aid.lote AND aj.sucursal_id = ai.sucursal_id
-                                  AND aj.created_at <= '{$fecha_hasta} 23:59:59'
-                            ), 0)
-                        ELSE 0 END)";
+                // Cantidad original del lote: ver sqlDescontadoPorAjuste()
+                $descontadoPorAjuste = $this->sqlDescontadoPorAjuste($fecha_hasta);
 
                 // Consulta UNION: Entradas, Salidas (Ventas) y Transferencias en el rango
                 $movimientos = DB::select("
@@ -776,7 +784,7 @@ class AlmacenController extends Controller
                                     COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
                                     COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
                                 ) < 0 THEN 
-                                    ABS(aid.cantidad + {$descontadoPorAjuste} + {$descontadoPorAjuste} + 
+                                    ABS(aid.cantidad + {$descontadoPorAjuste} + 
                                         COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0) +
                                         COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
                                     )
@@ -900,6 +908,8 @@ class AlmacenController extends Controller
             $dateFilter = " AND ai.created_at >= '{$fecha_desde} 00:00:00' AND ai.created_at <= '{$fecha_hasta} 23:59:59'";
             $dateFilterV = " AND v.created_at >= '{$fecha_desde} 00:00:00' AND v.created_at <= '{$fecha_hasta} 23:59:59'";
 
+            $descontadoPorAjuste = $this->sqlDescontadoPorAjuste($fecha_hasta);
+
             $perPage = 100;
             $page = max(1, intval($request->get('page', 1)));
             $offset = ($page - 1) * $perPage;
@@ -916,7 +926,10 @@ class AlmacenController extends Controller
                         END as tipo,
                         s.nombre as sucursal,
                         CONCAT(p.nombre, ' / ', COALESCE(pl.presentacion, ''), ' / L: ', COALESCE(aid.lote, '-'), ' / ', COALESCE(ai.observacion, '')) as detalle,
-                        CASE WHEN aid.cantidad >= 0 THEN aid.cantidad ELSE 0 END as entrada,
+                        CASE WHEN aid.cantidad >= 0 THEN (aid.cantidad
+                            + COALESCE((SELECT SUM(vd.cantidad) FROM venta_detalles vd JOIN ventas v ON v.id_venta = vd.id_venta WHERE vd.almacen_ingreso_detalle_id = aid.id AND v.id_tido != 5), 0)
+                            + COALESCE((SELECT SUM(cantidad) FROM almacen_transferencias WHERE origen_lote_id = aid.id), 0)
+                            + {$descontadoPorAjuste}) ELSE 0 END as entrada,
                         CASE WHEN aid.cantidad < 0 THEN ABS(aid.cantidad) ELSE 0 END as salida,
                         COALESCE(aid.costo, 0) as precio_unitario,
                         u.name as usuario,
