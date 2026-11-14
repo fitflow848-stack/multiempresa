@@ -217,6 +217,23 @@ class User extends Authenticatable implements FilamentUser
         return $this->cajas()->where('cajas.id', $cajaId)->exists();
     }
 
+    /**
+     * Roles del usuario SIN el filtro de equipo (empresa) que Spatie agrega a roles() cuando los equipos están activos
+     * (solo roles de plantilla o de la empresa del usuario conectado). La usa el formulario de usuarios de Filament:
+     * con roles() el administrador solo veía los roles de su propia empresa y la lista salía vacía al crear un usuario
+     * de otra empresa. El company_id del vínculo lo corrigen CreateUser y EditUser después de guardar.
+     */
+    public function rolesFormulario(): \Illuminate\Database\Eloquent\Relations\MorphToMany
+    {
+        return $this->morphToMany(
+            config('permission.models.role'),
+            'model',
+            config('permission.table_names.model_has_roles'),
+            config('permission.column_names.model_morph_key'),
+            app(\Spatie\Permission\PermissionRegistrar::class)->pivotRole
+        )->where(config('permission.table_names.roles') . '.guard_name', 'admin');
+    }
+
     // ─── Filament ───────────────────────────────────────────────
 
     /**

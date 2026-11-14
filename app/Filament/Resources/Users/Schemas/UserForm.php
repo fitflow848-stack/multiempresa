@@ -125,7 +125,7 @@ class UserForm
                     Select::make('roles')
                         ->label('Roles')
                         ->relationship(
-                            'roles',
+                            'rolesFormulario',
                             'name',
                             function ($query, $get) {
                                 $authUser = auth()->user();
