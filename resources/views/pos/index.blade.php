@@ -1519,6 +1519,20 @@
             return;
         }
 
+        // Verificar stock (igual que en la venta normal): se descuenta lo que ya hay de ese producto en el ticket y,
+        // si no alcanza, se avisa y el usuario decide si continúa.
+        const lineaCorp = currentProduct.product_linea_id || currentProduct.producto_linea_id || null;
+        const yaEnTicket = (typeof ticket !== 'undefined' ? ticket : [])
+            .filter(t => String(t.producto_id) === String(currentProduct.producto_id) && String(t.producto_linea_id || '') === String(lineaCorp || ''))
+            .reduce((suma, t) => suma + (parseFloat(t.cantidad) || 0), 0);
+        const disponibleCorp = (parseFloat(currentProduct.cantidad_total) || 0) - yaEnTicket;
+        if (cantidad > disponibleCorp) {
+            const disponibleTxt = Math.max(0, disponibleCorp);
+            if (!confirm(`Stock insuficiente. Disponible: ${disponibleTxt}${yaEnTicket > 0 ? ' (ya hay ' + yaEnTicket + ' en el ticket)' : ''}. ¿Agregar de todos modos?`)) {
+                return;
+            }
+        }
+
         // Crear producto para el ticket con precio corporativo
         const productoConPrecioCorp = {
             id: `corp_${currentProduct.producto_id}_${Date.now()}`,
