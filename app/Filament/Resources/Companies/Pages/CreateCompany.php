@@ -42,9 +42,14 @@ class CreateCompany extends CreateRecord
                 'company_id' => $record->id,
             ]);
 
-            // Copiar los permisos del rol plantilla
-            $permissionNames = $template->permissions()->pluck('name')->toArray();
-            $newRole->syncPermissions($permissionNames);
+            // Copiar los permisos del rol plantilla. Cada permiso se busca (o se crea) en el guard del rol nuevo:
+            // antes se sincronizaba por nombre y, si un permiso solo existía en otro guard (bancos.ver en 'web'),
+            // lanzaba PermissionDoesNotExist y abortaba el sembrado dejando a la empresa sin sus roles.
+            $permisos = $template->permissions()->pluck('name')->map(fn ($nombre) => \Spatie\Permission\Models\Permission::firstOrCreate([
+                'name' => $nombre,
+                'guard_name' => $template->guard_name,
+            ]))->all();
+            $newRole->syncPermissions($permisos);
         }
     }
 }
