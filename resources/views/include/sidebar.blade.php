@@ -509,10 +509,57 @@
                     @endphp
                     @if (isset($current_branch) && $current_branch)
                         <li class="nav-item me-1 d-none d-lg-block">
-                            <span class="badge bg-label-secondary border-0 shadow-none px-2 py-1 small"
-                                style="font-size: 0.7rem;">
-                                <i class="bx bx-map-pin"></i> {{ Str::limit($current_branch->nombre, 10) }}
-                            </span>
+                            @php
+                                $puedeSwitch = auth()->user()?->isAdminEmpresa() || auth()->user()?->isSuperAdmin();
+                                $otrosSucursales = isset($sucursales_disponibles)
+                                    ? $sucursales_disponibles->where('id', '!=', $current_branch->id)
+                                    : collect();
+                            @endphp
+
+                            @if ($puedeSwitch && $otrosSucursales->count() > 0)
+                                {{-- Dropdown de switch de sucursal para admins --}}
+                                <div class="dropdown" id="sucursal-switch-dropdown">
+                                    <button class="btn btn-sm badge bg-label-secondary border-0 shadow-none px-2 py-1 dropdown-toggle d-flex align-items-center gap-1"
+                                        style="font-size: 0.7rem; cursor: pointer;"
+                                        data-bs-toggle="dropdown" aria-expanded="false"
+                                        title="Cambiar sucursal">
+                                        <i class="bx bx-map-pin"></i>
+                                        {{ Str::limit($current_branch->nombre, 12) }}
+                                        <i class="bx bx-chevron-down" style="font-size: 0.8rem;"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0" style="min-width: 180px; font-size: 0.82rem;">
+                                        <li>
+                                            <span class="dropdown-header text-muted" style="font-size: 0.7rem;">
+                                                <i class="bx bx-buildings me-1"></i> Cambiar sucursal
+                                            </span>
+                                        </li>
+                                        {{-- Sucursal activa (marcada) --}}
+                                        <li>
+                                            <span class="dropdown-item active d-flex align-items-center gap-2" style="cursor:default;">
+                                                <i class="bx bx-check-circle text-success"></i>
+                                                {{ $current_branch->nombre }}
+                                            </span>
+                                        </li>
+                                        <li><hr class="dropdown-divider my-1"></li>
+                                        {{-- Otras sucursales disponibles --}}
+                                        @foreach ($otrosSucursales as $suc)
+                                            <li>
+                                                <button class="dropdown-item d-flex align-items-center gap-2"
+                                                    onclick="switchSucursal({{ $suc->id }}, '{{ e($suc->nombre) }}')">
+                                                    <i class="bx bx-map-alt text-muted"></i>
+                                                    {{ $suc->nombre }}
+                                                </button>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            @else
+                                {{-- Badge estático para usuarios sin permiso de switch --}}
+                                <span class="badge bg-label-secondary border-0 shadow-none px-2 py-1 small"
+                                    style="font-size: 0.7rem;">
+                                    <i class="bx bx-map-pin"></i> {{ Str::limit($current_branch->nombre, 10) }}
+                                </span>
+                            @endif
                         </li>
                     @endif
 
@@ -598,4 +645,68 @@
             document.documentElement.classList.add('nav-is-hidden');
         }
     });
+
+    /**
+     * Switch de sucursal para administradores (navbar)
+     */
+    function switchSucursal(branchId, branchName) {
+        // Cerrar el dropdown
+        const dropdown = document.getElementById('sucursal-switch-dropdown');
+        if (dropdown) {
+            const bsDropdown = bootstrap.Dropdown.getInstance(dropdown.querySelector('[data-bs-toggle="dropdown"]'));
+            if (bsDropdown) bsDropdown.hide();
+        }
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: `Cambiar a "${branchName}"`,
+                text: 'Se recargará la página con la nueva sucursal activa.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, cambiar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#696cff',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    _doSwitchSucursal(branchId);
+                }
+            });
+        } else {
+            if (confirm(`¿Cambiar a sucursal "${branchName}"?`)) {
+                _doSwitchSucursal(branchId);
+            }
+        }
+    }
+
+    function _doSwitchSucursal(branchId) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'Cambiando sucursal...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+        }
+
+        fetch('{{ route("branch.change.api") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ branch_id: branchId })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                Swal.fire('Error', data.message || 'No se pudo cambiar la sucursal', 'error');
+            }
+        })
+        .catch(() => {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Error', 'Error de conexión al cambiar sucursal', 'error');
+            }
+        });
+    }
 </script>

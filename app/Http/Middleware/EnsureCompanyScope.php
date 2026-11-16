@@ -40,6 +40,15 @@ class EnsureCompanyScope
                 view()->share('current_branch', \App\Models\Sucursal::find($activeBranchId));
             }
 
+            // Sucursales disponibles para switch (super_admin ve todas las de la empresa activa)
+            if ($activeCompanyId) {
+                $sucursalesDisponibles = \App\Models\Sucursal::where('company_id', $activeCompanyId)
+                    ->activas()->get();
+            } else {
+                $sucursalesDisponibles = collect();
+            }
+            view()->share('sucursales_disponibles', $sucursalesDisponibles);
+
             // Establecer el team id para el filtrado de roles/permisos
             if ($activeCompanyId) {
                 setPermissionsTeamId($activeCompanyId);
@@ -59,6 +68,16 @@ class EnsureCompanyScope
         view()->share('current_company', $user->company);
         view()->share('current_branch_id', $user->branch_id);
         view()->share('current_branch', $user->branch);
+
+        // Sucursales disponibles para switch (solo admin/super_admin)
+        if ($user->isAdminEmpresa()) {
+            $sucursalesDisponibles = $user->company
+                ? $user->company->sucursales()->activas()->get()
+                : collect();
+        } else {
+            $sucursalesDisponibles = collect();
+        }
+        view()->share('sucursales_disponibles', $sucursalesDisponibles);
 
         // Cargar las cajas disponibles según el rol del usuario
         $cajasDisponibles = $user->cajasDisponibles();

@@ -110,19 +110,28 @@ class PosController extends Controller
     public function buscar(Request $request)
     {
         $q = $request->get('q', '');
+        $marca = null;
+        if (str_contains($q, '/')) {
+            [$nombre, $marcaBuscada] = explode('/', $q, 2);
+            if (trim($nombre) !== '' && trim($marcaBuscada) !== '') {
+                $q = trim($nombre);
+                $marca = trim($marcaBuscada);
+            }
+        }
+
         $includeEmpty = $request->boolean('include_empty', false);
         $fuzzy = $request->boolean('fuzzy', true);
         $sucursalId = $request->filled('sucursal_id') ? (int) $request->get('sucursal_id') : null;
 
         if ($fuzzy) {
-            $productos = $this->productRepo->buscarFuzzy($q, $sucursalId, $includeEmpty);
+            $productos = $this->productRepo->buscarFuzzy($q, $sucursalId, $includeEmpty, 55, $marca);
         } else {
-            $productos = $this->productRepo->buscar($q, $sucursalId, $includeEmpty);
+            $productos = $this->productRepo->buscar($q, $sucursalId, $includeEmpty, $marca);
         }
 
         // Marcar si el match fue por código de barras exacto
         $matchPorCB = false;
-        if (count($productos) === 1 && strlen($q) >= 3) {
+        if ($marca === null && count($productos) === 1 && strlen($q) >= 3) {
             $p = $productos[0];
             $qLower = strtolower(trim($q));
             // Verificar si coincide con codigo_barras del producto o cb de la línea
@@ -132,7 +141,7 @@ class PosController extends Controller
             }
         }
 
-        if (!$matchPorCB && count($productos) === 1 && strlen($q) >= 3) {
+        if ($marca === null && !$matchPorCB && count($productos) === 1 && strlen($q) >= 3) {
             $qLower = strtolower(trim($q));
             $existe = DB::selectOne("
                 SELECT 1 FROM producto_lineas WHERE LOWER(cb) = ? LIMIT 1

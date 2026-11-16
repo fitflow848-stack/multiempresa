@@ -373,7 +373,7 @@ class ProductoController extends Controller
         $user = Auth::user();
 
         // Buscamos desde ProductoLinea con el producto relacionado
-        $query = ProductoLinea::with(['producto'])->whereHas('producto', function ($productQuery) use ($user) {
+        $query = ProductoLinea::with(['producto.marca', 'producto.familia'])->whereHas('producto', function ($productQuery) use ($user) {
             $productQuery->where('id_empresa', $user->company_id);
         })->orderBy('created_at', 'desc');
 
@@ -460,6 +460,7 @@ class ProductoController extends Controller
                 'cb' => $linea->cb ?? $producto->codigo_barras,
                 'codigo_ref' => $linea->codigo_ref ?? '',
                 'nombre' => $producto->nombre,
+                'marca' => $producto->marca ? $producto->marca->nombre : null,
                 'presentacion' => $linea->presentacion ?? $producto->presentacion_modelo,
                 'concentracion' => $linea->concentracion ?? $producto->concentracion_detalle,
                 'familia' => $producto->familia ? $producto->familia->nombre : null,

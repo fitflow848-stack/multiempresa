@@ -40,7 +40,7 @@
         <div class="pos-search-container">
             <i class='bx bx-search pos-search-icon'></i>
             <input type="text" id="main-search-input" class="pos-search-input"
-                placeholder="Buscar por Nombre | Código | Marca" autofocus>
+                placeholder="Buscar Nombre/Marca | Código (ej. Crecimiento/bedoce)" autofocus>
         </div>
 
         <div class="pos-results-scroll" id="product-results-grid">

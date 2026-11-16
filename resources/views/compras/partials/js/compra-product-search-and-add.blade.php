@@ -38,6 +38,7 @@
                 const cb = p.cb || '';
                 const ref = p.codigo_ref || '';
                 const nombre = p.nombre || '';
+                const marca = p.marca || '';
                 const familia = p.familia || '';
                 const presentacion = p.presentacion || '';
                 const concentracion = p.concentracion || '';
@@ -52,7 +53,7 @@
                 </div>
 
                 <div class="flex-grow-1">
-                    <div class="fw-bold text-dark">${escapeHtml(cb)} ${escapeHtml(ref)} &nbsp; <span class="fw-normal text-muted">${escapeHtml(nombre)}</span></div>
+                    <div class="fw-bold text-dark">${escapeHtml(cb)} ${escapeHtml(ref)} &nbsp; <span class="fw-normal text-muted">${escapeHtml(nombre)}</span> ${marca ? `<span class="badge bg-label-secondary">${escapeHtml(marca)}</span>` : ''}</div>
                     <div class="d-flex gap-2 align-items-center mt-1">
                         <small class="text-muted" style="font-size: 0.7rem;">${escapeHtml(familia)}</small>
                         ${presentacion ? `<span class="badge bg-soft-info text-info border-info" style="font-size: 0.65rem; background: #e0f2fe; border: 1px solid #7dd3fc !important;">${escapeHtml(presentacion)}</span>` : ''}

@@ -12,7 +12,7 @@ class ProductRepository
     /**
      * Buscar productos (reemplaza el DB::select del controller).
      */
-    public function buscar(string $q, ?int $sucursalId = null, bool $includeEmpty = false): array
+    public function buscar(string $q, ?int $sucursalId = null, bool $includeEmpty = false, ?string $marca = null): array
     {
         $sucursalId = $sucursalId ?? session('active_branch_id');
         $companyId = session('active_company_id') ?? (auth()->check() ? auth()->user()->company_id : null);
@@ -31,6 +31,11 @@ class ProductRepository
         $params[] = "%{$q}%";
         $params[] = "%{$q}%";
         $params[] = "%{$q}%";
+        $filtroMarca = '';
+        if ($marca !== null && $marca !== '') {
+            $filtroMarca = ' AND m.nombre LIKE ?';
+            $params[] = "%{$marca}%";
+        }
 
         $having = $includeEmpty ? "" : "HAVING SUM(ad.cantidad) > 0";
 
@@ -85,7 +90,7 @@ class ProductRepository
             LEFT JOIN marcas m ON m.id = p.marca_id
             LEFT JOIN familias f ON f.id = p.familia_id
             LEFT JOIN unidades_medida um ON um.id = p.unidad_medida_id
-            WHERE (p.nombre LIKE ? OR p.codigo_barras LIKE ? OR pl.cb LIKE ?)
+            WHERE (p.nombre LIKE ? OR p.codigo_barras LIKE ? OR pl.cb LIKE ?)$filtroMarca
             GROUP BY p.id, ad.producto_linea_id
             $having
             ORDER BY MAX(p.nombre) ASC
@@ -96,10 +101,10 @@ class ProductRepository
      * Búsqueda fuzzy: si la búsqueda exacta (LIKE) no da resultados,
      * busca todos los productos y filtra por similitud de texto.
      */
-    public function buscarFuzzy(string $q, ?int $sucursalId = null, bool $includeEmpty = false, int $umbral = 55): array
+    public function buscarFuzzy(string $q, ?int $sucursalId = null, bool $includeEmpty = false, int $umbral = 55, ?string $marca = null): array
     {
         // Primero intentar búsqueda exacta
-        $resultados = $this->buscar($q, $sucursalId, $includeEmpty);
+        $resultados = $this->buscar($q, $sucursalId, $includeEmpty, $marca);
 
         if (count($resultados) > 0) {
             return $resultados;
@@ -118,6 +123,11 @@ class ProductRepository
         $params = [$companyId];
         if ($sucursalId) {
             $params[] = $sucursalId;
+        }
+        $filtroMarca = '';
+        if ($marca !== null && $marca !== '') {
+            $filtroMarca = 'WHERE m.nombre LIKE ?';
+            $params[] = "%{$marca}%";
         }
 
         $having = $includeEmpty ? "" : "HAVING SUM(ad.cantidad) > 0";
@@ -173,6 +183,7 @@ class ProductRepository
             LEFT JOIN marcas m ON m.id = p.marca_id
             LEFT JOIN familias f ON f.id = p.familia_id
             LEFT JOIN unidades_medida um ON um.id = p.unidad_medida_id
+            $filtroMarca
             GROUP BY p.id, ad.producto_linea_id
             $having
             ORDER BY MAX(p.nombre) ASC

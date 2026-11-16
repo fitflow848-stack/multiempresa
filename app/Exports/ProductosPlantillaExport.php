@@ -7,7 +7,7 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 
 class ProductosPlantillaExport implements FromCollection, WithHeadings
 {
-    public function collection()
+    public function collection(): \Illuminate\Support\Collection
     {
         return collect([
             [

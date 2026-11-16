@@ -24,7 +24,7 @@ class DynamicReportExport implements FromView, ShouldAutoSize, WithStyles
         return view($this->view, array_merge($this->data, ['is_excel' => true]));
     }
 
-    public function styles(Worksheet $sheet)
+    public function styles(Worksheet $sheet): array
     {
         return [
             1 => ['font' => ['bold' => true]],

@@ -42,7 +42,7 @@ class VentaService
      *
      * @throws Exception en caso de error
      */
-    public function crearVentaDesdeTicket($ticketRaw, $clienteRaw = null, array $meta): Venta
+    public function crearVentaDesdeTicket($ticketRaw, $clienteRaw, array $meta): Venta
     {
         // Validaciones mínimas de meta
         if (empty($meta['user']) || empty($meta['company']) || empty($meta['serie']) || empty($meta['tipo_documento']) || !isset($meta['tipo_pago_id']) || !isset($meta['entrega'])) {

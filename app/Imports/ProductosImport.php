@@ -41,7 +41,7 @@ class ProductosImport implements ToCollection, WithHeadingRow
         }
     }
 
-    public function collection(Collection $rows)
+    public function collection(Collection $rows): void
     {
         Log::info('Import started. Initial Rows Count: ' . $rows->count());
         
