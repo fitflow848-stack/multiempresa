@@ -113,8 +113,8 @@
                         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                             <h6 class="fw-bold mb-0 text-dark">Detalle de Productos</h6>
                             <button type="button" class="btn btn-primary btn-sm btn-floating-add" data-bs-toggle="modal"
-                                data-bs-target="#productSearchModal">
-                                <i class="bx bx-plus-circle me-1"></i> Agregar Producto
+                                data-bs-target="#productSearchModal" title="Atajo: F1">
+                                <i class="bx bx-plus-circle me-1"></i> Agregar Producto <span class="opacity-75">(F1)</span>
                             </button>
                         </div>
                         <div class="card-body p-0">

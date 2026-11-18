@@ -462,6 +462,26 @@
                 // allow submit
             });
 
+            // Atajo F1: abre "Agregar Producto" (no hace nada si ya hay otro modal o aviso abierto).
+            // Cada vez que se abre ese modal, el cursor va al nombre y lo que había escrito queda seleccionado: si se
+            // escribe algo nuevo lo reemplaza, y si no, se conserva la búsqueda anterior.
+            const modalProductosEl = document.getElementById('productSearchModal');
+            document.addEventListener('keydown', function(e) {
+                if (e.key !== 'F1') return;
+                e.preventDefault(); // evita que el navegador abra su ayuda
+                if (!modalProductosEl || document.querySelector('.modal.show') || document.querySelector('.swal2-container')) return;
+                bootstrap.Modal.getOrCreateInstance(modalProductosEl).show();
+            });
+            if (modalProductosEl) {
+                modalProductosEl.addEventListener('shown.bs.modal', function() {
+                    const q = document.getElementById('search-q');
+                    if (q) {
+                        q.focus();
+                        q.select();
+                    }
+                });
+            }
+
             // util
             function debounce(fn, delay) {
                 let t;
