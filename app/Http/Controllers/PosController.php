@@ -119,6 +119,10 @@ class PosController extends Controller
             } elseif (trim($nombre) !== '') {
                 // "crecim/" (se escribió la barra pero aún no la marca): se busca solo por el nombre
                 $q = trim($nombre);
+            } elseif (trim($marcaBuscada) !== '') {
+                // "/corina": solo la marca
+                $q = '';
+                $marca = trim($marcaBuscada);
             }
         }
 

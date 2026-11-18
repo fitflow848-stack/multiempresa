@@ -32,9 +32,14 @@ class ProductRepository
         $params[] = "%{$q}%";
         $params[] = "%{$q}%";
         $filtroMarca = '';
+        $oMarca = '';
         if ($marca !== null && $marca !== '') {
             $filtroMarca = ' AND m.nombre LIKE ?';
             $params[] = "%{$marca}%";
+        } else {
+            // Sin "nombre/marca" explícito, lo escrito también puede ser la marca (buscar solo "corina" lista esa marca)
+            $oMarca = ' OR m.nombre LIKE ?';
+            $params[] = "%{$q}%";
         }
 
         $having = $includeEmpty ? "" : "HAVING SUM(ad.cantidad) > 0";
@@ -90,7 +95,7 @@ class ProductRepository
             LEFT JOIN marcas m ON m.id = p.marca_id
             LEFT JOIN familias f ON f.id = p.familia_id
             LEFT JOIN unidades_medida um ON um.id = p.unidad_medida_id
-            WHERE (p.nombre LIKE ? OR p.codigo_barras LIKE ? OR pl.cb LIKE ?)$filtroMarca
+            WHERE (p.nombre LIKE ? OR p.codigo_barras LIKE ? OR pl.cb LIKE ?$oMarca)$filtroMarca
             GROUP BY p.id, ad.producto_linea_id
             $having
             ORDER BY MAX(p.nombre) ASC
