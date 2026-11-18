@@ -83,7 +83,19 @@
         }
     }
 
+    // Terminada la venta, el cursor queda en el buscador listo para la siguiente (con lo último buscado seleccionado,
+    // así lo que se escriba lo reemplaza).
+    function enfocarBuscadorVenta() {
+        const input = document.getElementById('main-search-input');
+        if (!input || document.querySelector('.swal2-container')) return;
+        input.focus();
+        input.select();
+    }
+
     async function recargarPaginaVenta() {
+        // Bootstrap devuelve el foco al botón que abrió el modal cuando termina de cerrarse; por eso también se
+        // enfoca el buscador en 'hidden.bs.modal' (ver abajo) y no solo aquí.
+        window._enfocarBuscadorAlCerrar = true;
         if (typeof limpiarVentaCompletada === 'function') {
             await limpiarVentaCompletada();
         }
@@ -126,7 +138,21 @@
         if (typeof mostrarNotificacion === 'function') {
             mostrarNotificacion('✅ Punto de venta listo');
         }
+
+        setTimeout(enfocarBuscadorVenta, 60);
     }
+
+    (function () {
+        const modalFormatos = document.getElementById('modalFormatosVenta');
+        if (modalFormatos) {
+            modalFormatos.addEventListener('hidden.bs.modal', function () {
+                if (window._enfocarBuscadorAlCerrar) {
+                    window._enfocarBuscadorAlCerrar = false;
+                    setTimeout(enfocarBuscadorVenta, 0);
+                }
+            });
+        }
+    })();
 
     // Usar evento delegado para capturar clics en los botones de formato
     document.addEventListener('click', function (e) {
