@@ -508,7 +508,7 @@
                         };
                     @endphp
                     @if (isset($current_branch) && $current_branch)
-                        <li class="nav-item me-1 d-none d-lg-block">
+                        <li class="nav-item me-1 my-1 my-lg-0">
                             @php
                                 $puedeSwitch = auth()->user()?->isAdminEmpresa() || auth()->user()?->isSuperAdmin();
                                 $otrosSucursales = isset($sucursales_disponibles)
