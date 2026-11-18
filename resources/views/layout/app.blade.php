@@ -239,6 +239,9 @@
                     || (/width:\s*100%/.test(style) && /height:\s*100%/.test(style));
             }
             function botonCerrar(el) {
+                // Un modal puede marcar con data-esc-cerrar el botón que Escape debe usar (si el de la X no hace lo mismo)
+                const marcado = el.querySelector('[data-esc-cerrar]');
+                if (marcado && visible(marcado)) return marcado;
                 const botones = el.querySelectorAll('[data-bs-dismiss="modal"], .btn-close, .modal-close, button[aria-label="Close"], button[aria-label="Cerrar"], [onclick*="cerrar"], [onclick*="Cerrar"], [onclick*="close"]');
                 return Array.from(botones).find(visible) || null;
             }
@@ -262,14 +265,18 @@
                 const m = modalSuperior();
                 if (!m) return;
                 let cerrado = false;
-                if (m.tipo === 'bootstrap' && window.bootstrap) {
+                // Primero se presiona el botón de cerrar del propio modal: así corre su lógica de cierre (por ejemplo, el
+                // modal de impresión vacía el carrito y actualiza el stock al cerrarse). Cerrarlo directamente se la saltaba.
+                const b = botonCerrar(m.el);
+                if (b) {
+                    b.click();
+                    cerrado = true;
+                } else if (m.tipo === 'bootstrap' && window.bootstrap) {
                     const inst = bootstrap.Modal.getInstance(m.el);
                     if (inst) { inst.hide(); cerrado = true; }
-                }
-                if (!cerrado) {
-                    const b = botonCerrar(m.el);
-                    if (b) { b.click(); cerrado = true; }
-                    else if (/^modal/.test(m.el.id)) { m.el.style.display = 'none'; cerrado = true; }
+                } else if (/^modal/.test(m.el.id)) {
+                    m.el.style.display = 'none';
+                    cerrado = true;
                 }
                 if (cerrado) { e.preventDefault(); e.stopImmediatePropagation(); }
             }, true);

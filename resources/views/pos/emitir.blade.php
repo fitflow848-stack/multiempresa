@@ -353,7 +353,7 @@
                 </div>
                 <div class="modal-footer bg-light border-0">
                     <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal"
-                        id="btn-cerrar-finalizar">Cerrar y Regresar</button>
+                        id="btn-cerrar-finalizar" data-esc-cerrar>Cerrar y Regresar</button>
                 </div>
             </div>
         </div>
