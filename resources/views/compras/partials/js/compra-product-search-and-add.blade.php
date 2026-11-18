@@ -482,6 +482,18 @@
                 });
             }
 
+            // Al abrir el detalle del producto, el cursor va a Cantidad con el valor seleccionado: se escribe directo
+            const detalleProductoEl = document.getElementById('productDetailModal');
+            if (detalleProductoEl) {
+                detalleProductoEl.addEventListener('shown.bs.modal', function() {
+                    const cantidad = document.getElementById('detail-cantidad');
+                    if (cantidad) {
+                        cantidad.focus();
+                        cantidad.select();
+                    }
+                });
+            }
+
             // util
             function debounce(fn, delay) {
                 let t;
