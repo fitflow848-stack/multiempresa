@@ -742,8 +742,20 @@
         return false; // no se agregó
     }
 
+    // Cada búsqueda cancela la anterior y las respuestas viejas se descartan: antes una respuesta lenta (la búsqueda
+    // aproximada de un texto a medio escribir, como "crecim/") llegaba después de la correcta y la reemplazaba.
+    let _busquedaSeq = 0;
+    let _busquedaCtl = null;
+    function cancelarBusquedaEnCurso() {
+        _busquedaSeq++;
+        if (_busquedaCtl) { _busquedaCtl.abort(); _busquedaCtl = null; }
+    }
+
     const buscarProductosDebounced = debounce(function (q) {
         const grid = document.getElementById('product-results-grid');
+        cancelarBusquedaEnCurso();
+        const miBusqueda = _busquedaSeq;
+        _busquedaCtl = new AbortController();
         grid.innerHTML = `
             <div style="text-align: center; margin-top: 50px;">
                 <div class="spinner-border text-primary" role="status">
@@ -752,9 +764,10 @@
                 <p class="mt-2 text-muted">Buscando...</p>
             </div>`;
 
-        fetch(`{{ route('pos.buscar') }}?q=${encodeURIComponent(q)}`)
+        fetch(`{{ route('pos.buscar') }}?q=${encodeURIComponent(q)}`, { signal: _busquedaCtl.signal })
             .then(r => r.json())
             .then(data => {
+                if (miBusqueda !== _busquedaSeq) return; // llegó tarde: ya hay una búsqueda más nueva
                 const productos = data.productos || data;
                 const matchCB = data.match_cb || false;
                 // Solo auto-agregar si el backend confirma que fue match por código de barras
@@ -763,7 +776,8 @@
                 }
                 renderProductosNuevos(productos);
             })
-            .catch(() => {
+            .catch((err) => {
+                if ((err && err.name === 'AbortError') || miBusqueda !== _busquedaSeq) return;
                 grid.innerHTML = '<div style="text-align: center; padding: 20px; color: #d9534f;">Error en la búsqueda</div>';
             });
     }, 350);
@@ -907,6 +921,7 @@
         let q = this.value;
         window.selectedIndex = -1; // Resetear selección al escribir
         if (q.length < 2) {
+            cancelarBusquedaEnCurso();
             document.getElementById('product-results-grid').innerHTML = `
                 <div style="text-align: center; color: #888; margin-top: 50px;">
                     <i class='bx bx-package' style="font-size: 40px; opacity: 0.3;"></i>
