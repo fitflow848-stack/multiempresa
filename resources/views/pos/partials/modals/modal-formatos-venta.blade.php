@@ -68,6 +68,14 @@
         ultimaVentaTotal = total;
         window.imprimiendoRedirigiendo = false;
 
+        // Precargar el ticket de 8 cm (el formato por defecto) mientras el usuario elige el formato
+        const rawUrlPre = (window.currentIsProforma || false)
+            ? `{{ url("cotizaciones/pdf") }}/${id}?format=8cm`
+            : `{{ url("pos/v") }}/${id}/pdf/8cm`;
+        if (typeof precargarPDF === 'function') {
+            precargarPDF(`${rawUrlPre}${rawUrlPre.includes('?') ? '&' : '?'}print=1`);
+        }
+
         const modalEl = document.getElementById('modalFormatosVenta');
         if (modalEl) {
             const modal = new bootstrap.Modal(modalEl);
@@ -217,10 +225,12 @@
         }
     });
 
-    function imprimirPDFv2(url) {
+    async function imprimirPDFv2(url) {
+        // Si el PDF ya se descargó en segundo plano se imprime ese; si no, el de la dirección original
+        const urlImpresion = (typeof urlPDFParaImprimir === 'function') ? await urlPDFParaImprimir(url) : url;
         if (typeof printJS !== 'undefined') {
             printJS({
-                printable: url,
+                printable: urlImpresion,
                 type: 'pdf',
                 showModal: true,
                 modalMessage: 'Preparando documento...',

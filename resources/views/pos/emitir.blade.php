@@ -501,6 +501,12 @@
                         window.currentVentaId = ventaId;
                         window.currentVentaData = data.data;
 
+                        // Precargar el ticket de 8 cm (formato por defecto) mientras se elige el formato de impresión
+                        if (!(isProforma === '1' || isProforma === 1) && typeof precargarPDF === 'function') {
+                            precargarPDF('{{ route('pos.pdf', ['id' => ':id', 'format' => ':format']) }}'
+                                .replace(':id', ventaId).replace(':format', '8cm') + '?print=1');
+                        }
+
                         Swal.close();
 
                         // Mostrar el modal de formatos
@@ -621,10 +627,12 @@
             }
         });
 
-        function imprimirPDFv2(url) {
+        async function imprimirPDFv2(url) {
+            // Si el PDF ya se descargó en segundo plano se imprime ese; si no, el de la dirección original
+            const urlImpresion = (typeof urlPDFParaImprimir === 'function') ? await urlPDFParaImprimir(url) : url;
             // Print.js es más robusto para abrir el diálogo de impresión directamente
             printJS({
-                printable: url,
+                printable: urlImpresion,
                 type: 'pdf',
                 showModal: true,
                 modalMessage: 'Preparando documento...',

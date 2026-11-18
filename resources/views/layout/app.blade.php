@@ -200,6 +200,81 @@
             setTimeout(function () { delete f.dataset.enviando; }, 8000);
         });
     </script>
+    <script>
+        // Precarga del PDF a imprimir: al emitir una venta se descarga en segundo plano el ticket que más se usa, mientras
+        // el usuario mira el modal de formatos. Al imprimir, Print.js usa ese PDF ya descargado en vez de esperar al servidor.
+        window.pdfPrecargado = {};
+        window.precargarPDF = function (url) {
+            if (!url) return;
+            const previo = window.pdfPrecargado[url];
+            if (previo && (Date.now() - previo.hora) < 120000) return; // ya hay una precarga reciente
+            const promesa = fetch(url, { credentials: 'same-origin' })
+                .then(r => r.ok ? r.blob() : Promise.reject(new Error('HTTP ' + r.status)))
+                .then(blob => URL.createObjectURL(blob))
+                .catch(() => null);
+            window.pdfPrecargado[url] = { hora: Date.now(), promesa };
+        };
+        // Devuelve la dirección con la que se debe imprimir: el PDF precargado si está (y es reciente), o la original
+        window.urlPDFParaImprimir = async function (url) {
+            const p = window.pdfPrecargado[url];
+            if (!p || (Date.now() - p.hora) >= 120000) return url;
+            const blobUrl = await p.promesa;
+            return blobUrl || url;
+        };
+    </script>
+    <script>
+        // Escape cierra el modal que esté abierto (el de más arriba), en todas las pantallas: modales de Bootstrap y los
+        // cuadros propios (capas a pantalla completa con un botón de cerrar). Si no hay ningún modal abierto no hace nada,
+        // y el resto de atajos (por ejemplo "cancelar venta" del POS) siguen como antes.
+        (function () {
+            function visible(el) {
+                const st = getComputedStyle(el);
+                return st.display !== 'none' && st.visibility !== 'hidden' && el.getClientRects().length > 0;
+            }
+            function esCapaModal(el) {
+                if (getComputedStyle(el).position !== 'fixed') return false;
+                const r = el.getBoundingClientRect();
+                const style = el.getAttribute('style') || '';
+                return (r.width >= innerWidth * 0.9 && r.height >= innerHeight * 0.9)
+                    || (/width:\s*100%/.test(style) && /height:\s*100%/.test(style));
+            }
+            function botonCerrar(el) {
+                const botones = el.querySelectorAll('[data-bs-dismiss="modal"], .btn-close, .modal-close, button[aria-label="Close"], button[aria-label="Cerrar"], [onclick*="cerrar"], [onclick*="Cerrar"], [onclick*="close"]');
+                return Array.from(botones).find(visible) || null;
+            }
+            function modalSuperior() {
+                const candidatos = [];
+                document.querySelectorAll('.modal.show').forEach(el => candidatos.push({ el, tipo: 'bootstrap' }));
+                document.querySelectorAll('[style*="position: fixed"], [style*="position:fixed"], [id^="modal"], [class*="modal-overlay"]').forEach(el => {
+                    if (el.classList.contains('modal') || el.classList.contains('modal-backdrop')) return;
+                    if (visible(el) && esCapaModal(el)) candidatos.push({ el, tipo: 'capa' });
+                });
+                candidatos.sort((a, b) => {
+                    const za = parseInt(getComputedStyle(a.el).zIndex) || 0, zb = parseInt(getComputedStyle(b.el).zIndex) || 0;
+                    if (za !== zb) return za - zb;
+                    return (a.el.compareDocumentPosition(b.el) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1;
+                });
+                return candidatos.length ? candidatos[candidatos.length - 1] : null;
+            }
+            document.addEventListener('keydown', function (e) {
+                if (e.key !== 'Escape' || e.defaultPrevented) return;
+                if (document.querySelector('.swal2-container')) return; // SweetAlert ya se cierra solo con Escape
+                const m = modalSuperior();
+                if (!m) return;
+                let cerrado = false;
+                if (m.tipo === 'bootstrap' && window.bootstrap) {
+                    const inst = bootstrap.Modal.getInstance(m.el);
+                    if (inst) { inst.hide(); cerrado = true; }
+                }
+                if (!cerrado) {
+                    const b = botonCerrar(m.el);
+                    if (b) { b.click(); cerrado = true; }
+                    else if (/^modal/.test(m.el.id)) { m.el.style.display = 'none'; cerrado = true; }
+                }
+                if (cerrado) { e.preventDefault(); e.stopImmediatePropagation(); }
+            }, true);
+        })();
+    </script>
     @stack('scripts')
 </body>
 
